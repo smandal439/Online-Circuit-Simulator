@@ -6,6 +6,7 @@ class App {
     this.editor = window.EditorManager;
     this.canvas = null;
     this.serial = null;
+    this.osc = null;
     this.toastTimer = null;
     this.isRunning = false;
     this._propsComp = null;
@@ -13,10 +14,13 @@ class App {
 
   init() {
     this._bindUi();
+    this._loadTheme();
     this._initCanvas();
     this._initSerial();
+    this._initOscilloscope();
     this._attachSimulatorEvents();
     this._renderComponentLibrary();
+    this._renderExamples();
     this._restoreProject();
 
     if (this.editor) {
@@ -25,12 +29,14 @@ class App {
 
     this._updateStatus('Ready — press Run to start simulation');
     this._updateCompileStatus('Ready');
+    this._hideLoadingOverlay();
   }
 
   onEditorReady() {
     this._restoreProject();
     this._updateStatus('Editor ready');
     this._updateCompileStatus('Ready');
+    this._hideLoadingOverlay();
   }
 
   _bindUi() {
@@ -44,10 +50,27 @@ class App {
     const exportBtn = document.getElementById('btn-export-img');
     const formatBtn = document.getElementById('btn-format-code');
     const verifyBtn = document.getElementById('btn-verify');
+    const examplesBtn = document.getElementById('btn-examples');
+    const shortcutsBtn = document.getElementById('btn-shortcuts');
+    const toggleEditorBtn = document.getElementById('btn-toggle-editor');
+    const toggleComponentsBtn = document.getElementById('btn-toggle-components');
+    const toggleBottomBtn = document.getElementById('btn-toggle-bottom');
+    const zoomInBtn = document.getElementById('btn-zoom-in');
+    const zoomOutBtn = document.getElementById('btn-zoom-out');
+    const fitViewBtn = document.getElementById('btn-fit-view');
+    const undoBtn = document.getElementById('btn-undo-canvas');
+    const redoBtn = document.getElementById('btn-redo-canvas');
+    const oscClearBtn = document.getElementById('btn-osc-clear');
+    const oscPauseBtn = document.getElementById('btn-osc-pause');
+    const themeBtn = document.getElementById('btn-theme');
+    const themeIconDark = document.getElementById('theme-icon-dark');
+    const themeIconLight = document.getElementById('theme-icon-light');
     const searchBox = document.getElementById('component-search');
     const speedSel = document.getElementById('sim-speed');
     const propsApply = document.getElementById('btn-props-apply');
-    const modalCloseBtns = document.querySelectorAll('[data-modal="modal-props"]');
+    const modalCloseBtns = document.querySelectorAll('.modal-close');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const bottomTabButtons = document.querySelectorAll('.btm-tab');
 
     runBtn?.addEventListener('click', () => this.run());
     stopBtn?.addEventListener('click', () => this.stop());
@@ -58,16 +81,36 @@ class App {
     clearBtn?.addEventListener('click', () => this.clearCanvas());
     exportBtn?.addEventListener('click', () => this.exportImage());
     formatBtn?.addEventListener('click', () => this.formatCode());
-    verifyBtn?.addEventListener('click', () => this.run());
+    verifyBtn?.addEventListener('click', () => this.verify());
+    examplesBtn?.addEventListener('click', () => this._showModal('modal-examples'));
+    shortcutsBtn?.addEventListener('click', () => this._showModal('modal-shortcuts'));
+    toggleEditorBtn?.addEventListener('click', () => this._togglePanel('panel-editor', toggleEditorBtn, 'Collapse Editor', 'Expand Editor'));
+    toggleComponentsBtn?.addEventListener('click', () => this._togglePanel('panel-components', toggleComponentsBtn, 'Collapse Panel', 'Expand Panel'));
+    toggleBottomBtn?.addEventListener('click', () => this._toggleBottomPanel(toggleBottomBtn));
+    zoomInBtn?.addEventListener('click', () => this.canvas?.zoomIn());
+    zoomOutBtn?.addEventListener('click', () => this.canvas?.zoomOut());
+    fitViewBtn?.addEventListener('click', () => this.canvas?.fitView());
+    undoBtn?.addEventListener('click', () => this.canvas?.undo());
+    redoBtn?.addEventListener('click', () => this.canvas?.redo());
+    oscClearBtn?.addEventListener('click', () => this.osc?.clear());
+    oscPauseBtn?.addEventListener('click', () => this._toggleOscPause(oscPauseBtn));
+    themeBtn?.addEventListener('click', () => this._toggleTheme(themeIconDark, themeIconLight));
     searchBox?.addEventListener('input', (e) => this._filterComponents(e.target.value));
     speedSel?.addEventListener('change', (e) => this.sim.setSpeed(e.target.value));
     propsApply?.addEventListener('click', () => this._applyPropsModal());
-    modalCloseBtns.forEach(btn => btn.addEventListener('click', () => this._closePropsModal()));
+    modalCloseBtns.forEach(btn => btn.addEventListener('click', () => this._closeModal()));
+    document.querySelectorAll('[data-modal]').forEach(btn => btn.addEventListener('click', () => this._closeModal()));
+
+    bottomTabButtons.forEach(btn => btn.addEventListener('click', (e) => this._switchBottomTab(e.currentTarget)));
+    modalOverlay?.addEventListener('click', (e) => { if (e.target === modalOverlay) this._closeModal(); });
 
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         this.saveProject();
+      }
+      if (e.key === 'Escape') {
+        this._closeModal();
       }
     });
   }
@@ -100,6 +143,9 @@ class App {
     this.sim.onPinChange = (pinKey, value) => {
       if (this.canvas) {
         this.canvas.updateSimState(this.sim.pinStates);
+      }
+      if (this.osc) {
+        this.osc.sample(this.sim.simTime, this.sim.pinStates);
       }
       this._updateStatus(this.isRunning ? 'Running' : 'Idle');
     };
@@ -281,6 +327,58 @@ class App {
     if (pauseBtn) pauseBtn.disabled = !running;
   }
 
+  _hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+    setTimeout(() => {
+      overlay.style.display = 'none';
+    }, 400);
+  }
+
+  _toggleTheme(iconDark, iconLight) {
+    const body = document.body;
+    const isDark = body.classList.contains('dark-theme');
+    const darkMode = !isDark;
+
+    body.classList.toggle('dark-theme', darkMode);
+    body.classList.toggle('light-theme', !darkMode);
+
+    if (this.editor?.setTheme) {
+      this.editor.setTheme(darkMode);
+    }
+
+    if (iconDark) iconDark.classList.toggle('hidden', !darkMode);
+    if (iconLight) iconLight.classList.toggle('hidden', darkMode);
+
+    try {
+      localStorage.setItem('ardusim-theme', darkMode ? 'dark' : 'light');
+    } catch (err) {
+      // ignore storage errors
+    }
+  }
+
+  _loadTheme() {
+    let theme;
+    try {
+      theme = localStorage.getItem('ardusim-theme');
+    } catch (err) {
+      theme = null;
+    }
+
+    const darkMode = theme !== 'light';
+    const iconDark = document.getElementById('theme-icon-dark');
+    const iconLight = document.getElementById('theme-icon-light');
+
+    document.body.classList.toggle('dark-theme', darkMode);
+    document.body.classList.toggle('light-theme', !darkMode);
+    if (this.editor?.setTheme) {
+      this.editor.setTheme(darkMode);
+    }
+    if (iconDark) iconDark.classList.toggle('hidden', !darkMode);
+    if (iconLight) iconLight.classList.toggle('hidden', darkMode);
+  }
+
   _updateStatus(msg) {
     const el = document.getElementById('sim-status-text');
     if (el) el.textContent = msg;
@@ -291,13 +389,135 @@ class App {
     if (el) el.textContent = `● ${msg}`;
   }
 
+  _showModal(modalId) {
+    const overlay = document.getElementById('modal-overlay');
+    const modal = document.getElementById(modalId);
+    if (!overlay || !modal) return;
+    overlay.classList.remove('hidden');
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    modal.classList.add('active');
+  }
+
+  _closeModal() {
+    const overlay = document.getElementById('modal-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    this._closePropsModal();
+  }
+
+  _togglePanel(panelId, button, collapseTitle, expandTitle) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    const hidden = panel.classList.toggle('hidden');
+    if (button) button.title = hidden ? expandTitle : collapseTitle;
+  }
+
+  _toggleBottomPanel(button) {
+    const bottom = document.getElementById('bottom-panel');
+    if (!bottom) return;
+    const collapsed = bottom.classList.toggle('collapsed');
+    if (button) {
+      const icon = document.getElementById('bottom-toggle-icon');
+      if (icon) icon.style.transform = collapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+      button.title = collapsed ? 'Show Bottom Panel' : 'Hide Bottom Panel';
+    }
+  }
+
+  _switchBottomTab(button) {
+    if (!button) return;
+    const target = button.dataset.tab;
+    if (!target) return;
+    document.querySelectorAll('.btm-tab').forEach(tab => tab.classList.toggle('active', tab === button));
+    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.toggle('active', pane.id === `pane-${target}`));
+  }
+
+  _toggleOscPause(button) {
+    if (!this.osc) return;
+    const paused = this.osc.togglePause();
+    if (button) button.textContent = paused ? 'Resume' : 'Pause';
+  }
+
+  async verify() {
+    if (!this.editor) return;
+    const code = this.editor.getCode();
+    this._updateCompileStatus('Verifying…');
+    this._updateStatus('Verifying sketch');
+    this.serial?.log('Verifying sketch…', 'system');
+
+    const result = await this.sim.compile(code);
+    if (result.ok) {
+      this._updateCompileStatus('Verified');
+      this._updateStatus('Verification succeeded');
+      this.showToast('Verification succeeded', 'success');
+      return true;
+    }
+
+    this._updateCompileStatus(`Error: ${result.error}`);
+    this._updateStatus('Verification failed');
+    this.showToast(result.error || 'Verification failed', 'error');
+    return false;
+  }
+
+  _initOscilloscope() {
+    const oscCanvas = document.getElementById('oscilloscope-canvas');
+    if (!oscCanvas || !window.OscilloscopeClass) return;
+    this.osc = new window.OscilloscopeClass(oscCanvas);
+    this.sim.onPinChange = (pinKey, value) => {
+      if (this.canvas) {
+        this.canvas.updateSimState(this.sim.pinStates);
+      }
+      if (this.osc) {
+        this.osc.sample(this.sim.simTime, this.sim.pinStates);
+      }
+      this._updateStatus(this.isRunning ? 'Running' : 'Idle');
+    };
+  }
+
+  _renderExamples() {
+    const container = document.getElementById('examples-grid');
+    if (!container || !window.EXAMPLE_SKETCHES) return;
+    container.innerHTML = '';
+    for (const example of window.EXAMPLE_SKETCHES) {
+      const item = document.createElement('button');
+      item.className = 'example-item';
+      item.innerHTML = `<div class="example-icon">${example.icon || '📄'}</div><div class="example-info"><strong>${example.name}</strong><span>${example.desc}</span></div>`;
+      item.addEventListener('click', () => {
+        if (this.editor) this.editor.setCode(example.code || '');
+        if (example.circuit && this.canvas) {
+          this._loadExampleCircuit(example.circuit);
+        }
+        this._closeModal();
+        this.showToast(`${example.name} loaded`, 'success');
+      });
+      container.appendChild(item);
+    }
+  }
+
+  _loadExampleCircuit(key) {
+    if (!this.canvas) return;
+    const lower = String(key).toLowerCase();
+    if (lower === 'led_on_13') {
+      this.canvas.clearCanvas();
+      const board = this.canvas.addComponent('arduino_uno', 300, 120);
+      const led = this.canvas.addComponent('led', 300, 260);
+      const gnd = this.canvas.addComponent('gnd', 260, 300);
+      if (board && led) {
+        this.canvas.addWire(board.id, 'D13', led.id, 'anode');
+        if (gnd) this.canvas.addWire(led.id, 'cathode', gnd.id, 'GND');
+      }
+      this._refreshCanvasSummary();
+      this.canvas.fitView();
+    }
+  }
+
   openPropsModal(comp) {
     this._propsComp = comp;
     const title = document.getElementById('modal-props-title');
     const body = document.getElementById('modal-props-body');
     const modal = document.getElementById('modal-props');
+    const overlay = document.getElementById('modal-overlay');
 
-    if (!comp || !body || !modal) return;
+    if (!comp || !body || !modal || !overlay) return;
     if (title) title.textContent = `${comp.type} properties`;
 
     const rows = [];
@@ -326,7 +546,8 @@ class App {
 
     body.innerHTML = '';
     rows.forEach(row => body.appendChild(row));
-    modal.classList.add('show');
+    overlay.classList.remove('hidden');
+    modal.classList.add('active');
   }
 
   _applyPropsModal() {
@@ -342,13 +563,13 @@ class App {
       this._propsComp.props[key] = val;
     });
     this.canvas?._onChanged?.();
-    this._closePropsModal();
+    this._closeModal();
     this.showToast('Properties updated', 'success');
   }
 
   _closePropsModal() {
     const modal = document.getElementById('modal-props');
-    if (modal) modal.classList.remove('show');
+    if (modal) modal.classList.remove('active');
     this._propsComp = null;
   }
 

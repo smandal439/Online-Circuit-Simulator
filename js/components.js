@@ -107,132 +107,142 @@ defComp({
 
     // PCB background
     const grad = ctx.createLinearGradient(0, 0, W, H);
-    grad.addColorStop(0, '#1a5c1a');
-    grad.addColorStop(1, '#12401a');
+    grad.addColorStop(0, '#1e6d33');
+    grad.addColorStop(1, '#12461f');
     ctx.fillStyle = grad;
-    roundRect(ctx, 0, 0, W, H, 8);
+    roundRect(ctx, 0, 0, W, H, 10);
     ctx.fill();
-    ctx.strokeStyle = '#2d8c2d';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#194c24';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
-    // USB connector (left side)
-    ctx.fillStyle = '#888';
-    roundRect(ctx, -10, 50, 14, 30, 3);
-    ctx.fill();
-    ctx.fillStyle = '#555';
-    roundRect(ctx, -8, 53, 10, 24, 2);
-    ctx.fill();
+    // Silkscreen outline
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, 6, 6, W - 12, H - 12, 8);
+    ctx.stroke();
 
-    // Power jack
-    ctx.fillStyle = '#333';
-    roundRect(ctx, -8, 90, 12, 18, 3);
+    // USB Type-B connector
+    ctx.fillStyle = '#a0a0a0';
+    roundRect(ctx, -14, 48, 18, 28, 4);
     ctx.fill();
-    ctx.beginPath();
-    ctx.arc(-2, 99, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#555';
+    ctx.fillStyle = '#444';
+    roundRect(ctx, -11, 52, 12, 20, 3);
     ctx.fill();
+    ctx.fillStyle = '#ddd';
+    ctx.fillRect(-8, 59, 8, 6);
 
-    // Crystal
-    ctx.fillStyle = '#888';
-    roundRect(ctx, 80, 55, 14, 8, 2);
+    // Barrel jack
+    ctx.fillStyle = '#222';
+    roundRect(ctx, -12, 88, 16, 20, 4);
+    ctx.fill();
+    ctx.fillStyle = '#666';
+    ctx.beginPath(); ctx.arc(-4, 99, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(-4, 99, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // Crystal oscillator
+    ctx.fillStyle = '#999';
+    roundRect(ctx, 78, 52, 18, 8, 3);
+    ctx.fill();
+    ctx.fillStyle = '#eee';
+    ctx.font = '5px sans-serif';
+    ctx.fillText('16MHz', 87, 58);
+
+    // Voltage regulator
+    ctx.fillStyle = '#2e2e2e';
+    roundRect(ctx, 46, 48, 14, 18, 3);
     ctx.fill();
 
     // ATmega chip
-    ctx.fillStyle = '#1a1a1a';
-    roundRect(ctx, 60, 65, 80, 55, 4);
+    ctx.fillStyle = '#111';
+    roundRect(ctx, 60, 68, 80, 50, 5);
     ctx.fill();
-    ctx.strokeStyle = '#444';
+    ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Chip legs
-    ctx.strokeStyle = '#888';
+    // Chip pins
+    ctx.strokeStyle = '#666';
     ctx.lineWidth = 1;
-    for (let i = 0; i < 14; i++) {
-      // Top legs
-      ctx.beginPath(); ctx.moveTo(66 + i*5, 65); ctx.lineTo(66 + i*5, 60); ctx.stroke();
-      // Bottom legs  
-      ctx.beginPath(); ctx.moveTo(66 + i*5, 120); ctx.lineTo(66 + i*5, 125); ctx.stroke();
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath(); ctx.moveTo(64 + i * 9, 68); ctx.lineTo(64 + i * 9, 62); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(64 + i * 9, 118); ctx.lineTo(64 + i * 9, 124); ctx.stroke();
     }
-    // Left/right legs
-    for (let i = 0; i < 7; i++) {
-      ctx.beginPath(); ctx.moveTo(60, 71+i*7); ctx.lineTo(54, 71+i*7); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(140, 71+i*7); ctx.lineTo(146, 71+i*7); ctx.stroke();
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath(); ctx.moveTo(60, 76 + i * 11); ctx.lineTo(54, 76 + i * 11); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(140, 76 + i * 11); ctx.lineTo(146, 76 + i * 11); ctx.stroke();
     }
 
     // Chip text
-    ctx.fillStyle = '#aaa';
+    ctx.fillStyle = '#ddd';
     ctx.font = 'bold 7px JetBrains Mono, monospace';
     ctx.textAlign = 'center';
     ctx.fillText('ATmega328P', 100, 92);
     ctx.font = '6px JetBrains Mono, monospace';
-    ctx.fillText('ARDUINO', 100, 102);
+    ctx.fillText('MCU', 100, 103);
 
     // Reset button
-    ctx.fillStyle = '#cc3333';
-    ctx.beginPath();
-    ctx.arc(35, 55, 6, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = '#ee5555';
-    ctx.beginPath();
-    ctx.arc(35, 55, 4, 0, Math.PI*2);
-    ctx.fill();
+    ctx.fillStyle = '#c43c3c';
+    ctx.beginPath(); ctx.arc(30, 56, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff7373';
+    ctx.beginPath(); ctx.arc(30, 56, 3.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '5px sans-serif';
+    ctx.fillText('RST', 30, 70);
 
     // LEDs
-    drawLED_on_board(ctx, 155, 30, sim && sim.pinStates && (sim.pinStates['D13'] || 0) > 0 ? '#ffff00' : '#555', 4); // L LED
-    drawLED_on_board(ctx, 168, 30, '#00ff00', 4); // Power LED (always on when sim)
-    drawLED_on_board(ctx, 181, 30, '#ff4444', 3); // TX
-    drawLED_on_board(ctx, 188, 30, '#ff4444', 3); // RX
+    drawLED_on_board(ctx, 150, 32, sim && sim.pinStates && (sim.pinStates['pin_13'] || 0) > 0 ? '#ffff66' : '#555', 4);
+    drawLED_on_board(ctx, 166, 32, '#5cff6d', 4);
+    drawLED_on_board(ctx, 182, 32, '#ff4d4d', 3);
+    drawLED_on_board(ctx, 198, 32, '#ff4d4d', 3);
 
     // LED labels
-    ctx.fillStyle = '#888';
+    ctx.fillStyle = '#bfbfbf';
     ctx.font = '5px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('L', 155, 40);
-    ctx.fillText('ON', 168, 40);
-    ctx.fillText('TX', 181, 40);
-    ctx.fillText('RX', 188, 40);
-
-    // Pin labels on board
-    ctx.fillStyle = '#c8a84b';
-    ctx.font = '5px sans-serif';
-    ctx.textAlign = 'center';
+    ctx.fillText('L', 150, 42);
+    ctx.fillText('ON', 166, 42);
+    ctx.fillText('TX', 182, 42);
+    ctx.fillText('RX', 198, 42);
 
     // Digital pin headers (top)
+    const pinX = 186;
     for (let i = 0; i < 14; i++) {
-      const px = 186 - i * 14;
+      const px = pinX - i * 12;
       ctx.fillStyle = '#c8a84b';
-      roundRect(ctx, px - 4, 18, 8, 8, 1);
+      roundRect(ctx, px - 5, 18, 10, 10, 2);
       ctx.fill();
       ctx.fillStyle = '#333';
-      ctx.fillText(i, px, 24);
+      ctx.font = '5px sans-serif';
+      ctx.fillText(`D${13 - i}`, px, 13);
     }
 
-    // Analog pin headers (bottom)
+    // Analog pin headers (bottom left)
     for (let i = 0; i < 6; i++) {
-      const px = 14 + i * 14;
+      const px = 14 + i * 16;
       ctx.fillStyle = '#c8a84b';
-      roundRect(ctx, px - 4, 114, 8, 8, 1);
+      roundRect(ctx, px - 5, 114, 10, 10, 2);
       ctx.fill();
       ctx.fillStyle = '#333';
-      ctx.fillText('A'+i, px, 120);
+      ctx.fillText(`A${i}`, px, 122);
     }
 
-    // Power headers bottom
-    const pwrLabels = ['VIN','GND','GND','5V','3V3','RST'];
-    pwrLabels.forEach((lbl, i) => {
-      const px = 104 + i * 14;
-      ctx.fillStyle = i === 1 || i === 2 ? '#3a3a3a' : i >= 3 ? '#cc3333' : '#c8a84b';
-      roundRect(ctx, px - 4, 114, 8, 8, 1);
+    // Power headers bottom right
+    const pwrLabels = ['VIN', 'GND', 'GND', '5V', '3V3', 'RST'];
+    for (let i = 0; i < pwrLabels.length; i++) {
+      const px = 104 + i * 16;
+      ctx.fillStyle = ['GND','GND'].includes(pwrLabels[i]) ? '#3d3d3d' : pwrLabels[i] === 'RST' ? '#8b8b8b' : '#c8a84b';
+      roundRect(ctx, px - 5, 114, 10, 10, 2);
       ctx.fill();
-    });
+      ctx.fillStyle = '#333';
+      ctx.fillText(pwrLabels[i], px, 122);
+    }
 
     // Board name
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 9px sans-serif';
+    ctx.fillStyle = '#f6f6f6';
+    ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('ARDUINO', 100, 58);
+    ctx.fillText('UNO', 100, 36);
 
     // Selection outline
     if (inst.selected) {

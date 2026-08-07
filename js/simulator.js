@@ -336,7 +336,6 @@ class ArduinoSimulator {
       LED_BUILTIN: 13,
       PI: Math.PI, TWO_PI: Math.PI * 2, HALF_PI: Math.PI / 2,
       DEG_TO_RAD: Math.PI / 180, RAD_TO_DEG: 180 / Math.PI,
-      true: true, false: false,
 
       /* Servo/LCD class stubs */
       Servo: function() { return {}; },
@@ -350,8 +349,24 @@ class ArduinoSimulator {
     try {
       const js = this.transpile(code);
       const ctx = this.buildContext();
-      const keys = Object.keys(ctx);
-      const vals = Object.values(ctx);
+      const rawKeys = Object.keys(ctx);
+      const rawVals = Object.values(ctx);
+      const filtered = [];
+      const reserved = new Set([
+        'await','break','case','catch','class','const','continue','debugger','default','delete','do','else',
+        'enum','export','extends','false','finally','for','function','if','import','in','instanceof','new',
+        'null','return','super','switch','this','throw','true','try','typeof','var','void','while','with','yield'
+      ]);
+
+      for (let i = 0; i < rawKeys.length; i += 1) {
+        const key = rawKeys[i];
+        if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) continue;
+        if (reserved.has(key)) continue;
+        filtered.push({ key, val: rawVals[i] });
+      }
+
+      const keys = filtered.map(entry => entry.key);
+      const vals = filtered.map(entry => entry.val);
 
       // Try to build the function — will throw on syntax errors
       const fn = new Function(...keys, js + '\n\nif(typeof setup === "undefined") throw new Error("setup() function not found"); if(typeof loop === "undefined") throw new Error("loop() function not found"); return { setup, loop };');
