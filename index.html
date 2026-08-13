@@ -5,9 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ArduSim — Arduino Online Simulator</title>
   <meta name="description" content="Simulate Arduino circuits online with real-time code execution, component drag-and-drop, serial monitor, and oscilloscope. No installation required." />
-  <meta name="keywords" content="Arduino simulator, online circuit simulator, Arduino IDE online, circuit simulation" />
+  <meta name="keywords" content="Arduino simulator, online circuit simulator, Arduino IDE online, circuit simulation, embedded systems" />
+  <meta name="author" content="ArduSim" />
+  <meta name="theme-color" content="#00979c" />
+
+  <!-- Open Graph / Social -->
+  <meta property="og:title" content="ArduSim — Arduino Online Simulator" />
+  <meta property="og:description" content="Simulate Arduino circuits online with real-time code execution, drag-and-drop components, serial monitor, and oscilloscope. 100% free, no installation." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ardusim.app" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ArduSim — Arduino Online Simulator" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'><rect x='2' y='6' width='24' height='16' rx='3' fill='%2300979c' opacity='0.3'/><circle cx='8' cy='14' r='2.5' fill='%2300979c'/><circle cx='14' cy='14' r='2.5' fill='%2300e5ff'/><circle cx='20' cy='14' r='2.5' fill='%2300979c'/></svg>" />
+
+  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+
+  <noscript>
+    <style>.loading-overlay { display: flex !important; }</style>
+    <div style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:#0d1117;color:#e6edf3;font-family:sans-serif;flex-direction:column;gap:16px;z-index:9999">
+      <h2>JavaScript Required</h2>
+      <p>ArduSim requires JavaScript to run. Please enable JavaScript in your browser settings.</p>
+    </div>
+  </noscript>
 </head>
 <body class="dark-theme" id="body">
 
@@ -28,6 +52,12 @@
         <span class="logo-name">ArduSim</span>
         <span class="logo-tag">Arduino Simulator</span>
       </div>
+    </div>
+
+    <!-- Editable Project Name -->
+    <div class="project-name-wrapper" title="Click to rename project">
+      <span class="unsaved-dot hidden" id="unsaved-dot" title="Unsaved changes"></span>
+      <input type="text" id="project-name" class="project-name-input" value="Untitled Project" maxlength="60" aria-label="Project name" />
     </div>
 
     <div class="header-controls">
@@ -53,7 +83,7 @@
       </div>
 
       <!-- Simulation controls -->
-      <button class="hdr-btn hdr-btn-run" id="btn-run" title="Compile & Run (F5)">
+      <button class="hdr-btn hdr-btn-run" id="btn-run" title="Compile &amp; Run (F5)">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M10.804 8 5 4.633v6.734zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696z"/></svg>
         Run
       </button>
@@ -61,7 +91,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/></svg>
         Stop
       </button>
-      <button class="hdr-btn hdr-btn-ghost" id="btn-pause" title="Pause Simulation" disabled>
+      <button class="hdr-btn hdr-btn-ghost" id="btn-pause" title="Pause Simulation (F7)" disabled>
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/></svg>
         Pause
       </button>
@@ -70,24 +100,29 @@
 
       <!-- File operations -->
       <button class="hdr-btn hdr-btn-ghost" id="btn-save" title="Save Project (Ctrl+S)">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z"/></svg>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 1 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z"/></svg>
         Save
       </button>
       <button class="hdr-btn hdr-btn-ghost" id="btn-load" title="Load Project">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/></svg>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 1 1 1-.708-.708z"/></svg>
         Load
       </button>
       <button class="hdr-btn hdr-btn-ghost" id="btn-share" title="Share via URL">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5"/></svg>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 1 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5"/></svg>
         Share
       </button>
+
+      <div class="hdr-divider"></div>
+
+      <!-- Auto-save status -->
+      <span class="autosave-status" id="autosave-status" title="Auto-save status"></span>
 
       <div class="hdr-divider"></div>
 
       <!-- Theme toggle -->
       <button class="hdr-btn hdr-btn-icon" id="btn-theme" title="Toggle Theme">
         <svg id="theme-icon-dark" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 .278a.77.77 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278"/></svg>
-        <svg id="theme-icon-light" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="hidden"><path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/></svg>
+        <svg id="theme-icon-light" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="hidden"><path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 1 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/></svg>
       </button>
 
       <!-- Keyboard shortcuts -->
@@ -102,7 +137,7 @@
     <div class="sim-status-dot" id="sim-dot"></div>
     <span id="sim-status-text">Idle — Press Run to start simulation</span>
     <span class="sim-status-sep">|</span>
-    <span id="sim-time">⏱ 0.000s</span>
+    <span id="sim-time">⏱ 0.00s</span>
     <span class="sim-status-sep">|</span>
     <span id="sim-fps">0 FPS</span>
     <span class="sim-status-sep">|</span>
@@ -219,7 +254,7 @@
       </div>
       <div class="component-search-box">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="search-icon"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
-        <input type="text" id="component-search" placeholder="Search components..." />
+        <input type="text" id="component-search" placeholder="Search components…" aria-label="Search components" />
       </div>
       <div class="components-container" id="components-container">
         <!-- Rendered by JS -->
@@ -231,7 +266,7 @@
   <div class="bottom-panel" id="bottom-panel">
     <div class="bottom-panel-tabs">
       <button class="btm-tab active" id="tab-serial" data-tab="serial">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 4.5A1.5 1.5 0 0 1 1.5 3h13A1.5 1.5 0 0 1 16 4.5V6a.5.5 0 0 1-.5.5 1.5 1.5 0 0 0 0 3 .5.5 0 0 1 .5.5v1.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 11.5V10a.5.5 0 0 1 .5-.5 1.5 1.5 0 1 0 0-3A.5.5 0 0 1 0 6z"/></svg>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 4.5A1.5 1.5 0 0 1 1.5 3h13A1.5 1.5 0 0 1 16 4.5V6a.5.5 0 0 1-.5.5 1.5 1.5 0 0 0 0 3 .5.5 0 0 1 .5.5v1.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 11.5V10a.5.5 0 0 1 .5-.5 1.5 1.5 1 0 0 0-3A.5.5 0 0 1 0 6z"/></svg>
         Serial Monitor
       </button>
       <button class="btm-tab" id="tab-oscilloscope" data-tab="oscilloscope">
@@ -277,12 +312,18 @@
           <label class="serial-cb"><input type="checkbox" id="serial-autoscroll" checked /> Autoscroll</label>
           <label class="serial-cb"><input type="checkbox" id="serial-timestamp" /> Timestamp</label>
           <label class="serial-cb"><input type="checkbox" id="serial-show-hex" /> HEX</label>
+          <div class="serial-search-wrap">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
+            <input type="text" id="serial-search" class="serial-search-input" placeholder="Filter output…" aria-label="Filter serial output" />
+          </div>
+          <span id="serial-line-count" class="serial-line-count">0 lines</span>
+          <button class="serial-btn" id="btn-copy-serial" title="Copy all output">Copy</button>
           <button class="serial-btn" id="btn-clear-serial">Clear</button>
           <button class="serial-btn" id="btn-export-serial">Export</button>
         </div>
-        <div class="serial-output" id="serial-output"></div>
+        <div class="serial-output" id="serial-output" role="log" aria-live="polite"></div>
         <div class="serial-input-row">
-          <input type="text" class="serial-input" id="serial-input" placeholder="Send message to Arduino..." />
+          <input type="text" class="serial-input" id="serial-input" placeholder="Send message to Arduino…" aria-label="Serial input" />
           <button class="serial-btn serial-btn-send" id="btn-serial-send">Send</button>
         </div>
       </div>
@@ -350,10 +391,10 @@
   <div class="modal-overlay hidden" id="modal-overlay" tabindex="-1">
 
     <!-- Examples Modal -->
-    <div class="modal" id="modal-examples" role="dialog" aria-modal="true" aria-labelledby="modal-examples-title">
+    <div class="modal modal-lg" id="modal-examples" role="dialog" aria-modal="true" aria-labelledby="modal-examples-title">
       <div class="modal-header">
         <h2 id="modal-examples-title">📚 Example Projects</h2>
-        <button class="modal-close" data-modal="modal-examples">✕</button>
+        <button class="modal-close" data-modal="modal-examples" aria-label="Close">✕</button>
       </div>
       <div class="modal-body">
         <div class="examples-grid" id="examples-grid"></div>
@@ -364,7 +405,7 @@
     <div class="modal" id="modal-shortcuts" role="dialog" aria-modal="true" aria-labelledby="modal-shortcuts-title">
       <div class="modal-header">
         <h2 id="modal-shortcuts-title">⌨️ Keyboard Shortcuts</h2>
-        <button class="modal-close" data-modal="modal-shortcuts">✕</button>
+        <button class="modal-close" data-modal="modal-shortcuts" aria-label="Close">✕</button>
       </div>
       <div class="modal-body">
         <div class="shortcuts-grid">
@@ -378,8 +419,9 @@
             <h3>Editor</h3>
             <div class="shortcut-row"><kbd>Ctrl+S</kbd><span>Save Project</span></div>
             <div class="shortcut-row"><kbd>Ctrl+R</kbd><span>Verify Code</span></div>
-            <div class="shortcut-row"><kbd>Ctrl+Z</kbd><span>Undo</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+F</kbd><span>Find / Replace</span></div>
             <div class="shortcut-row"><kbd>Alt+Shift+F</kbd><span>Format Code</span></div>
+            <div class="shortcut-row"><kbd>Ctrl+Space</kbd><span>Autocomplete</span></div>
           </div>
           <div class="shortcut-group">
             <h3>Canvas</h3>
@@ -391,16 +433,17 @@
             <div class="shortcut-row"><kbd>Middle drag</kbd><span>Pan canvas</span></div>
             <div class="shortcut-row"><kbd>ESC</kbd><span>Cancel action</span></div>
             <div class="shortcut-row"><kbd>F</kbd><span>Fit to view</span></div>
+            <div class="shortcut-row"><kbd>Right-click</kbd><span>Context menu</span></div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Property Editor -->
-    <div class="modal modal-sm" id="modal-props" role="dialog" aria-modal="true">
+    <div class="modal modal-sm" id="modal-props" role="dialog" aria-modal="true" aria-labelledby="modal-props-title">
       <div class="modal-header">
         <h2 id="modal-props-title">Component Properties</h2>
-        <button class="modal-close" data-modal="modal-props">✕</button>
+        <button class="modal-close" data-modal="modal-props" aria-label="Close">✕</button>
       </div>
       <div class="modal-body" id="modal-props-body"></div>
       <div class="modal-footer">
@@ -410,16 +453,53 @@
     </div>
   </div>
 
+  <!-- ════════════════ CONFIRM DIALOG ════════════════ -->
+  <div class="confirm-overlay hidden" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="confirm-box">
+      <div class="confirm-header">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="#e3b341"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
+        <h3 id="confirm-title">Confirm</h3>
+      </div>
+      <p id="confirm-message">Are you sure?</p>
+      <div class="confirm-actions">
+        <button class="hdr-btn hdr-btn-ghost" id="confirm-cancel">Cancel</button>
+        <button class="hdr-btn hdr-btn-stop" id="confirm-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ CONTEXT MENU ════════════════ -->
+  <div class="canvas-context-menu hidden" id="canvas-context-menu" role="menu">
+    <button class="ctx-item" id="ctx-props" role="menuitem">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159A1.873 1.873 0 0 0 7.03 1.945z"/></svg>
+      Properties
+    </button>
+    <button class="ctx-item" id="ctx-rotate" role="menuitem">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
+      Rotate
+    </button>
+    <button class="ctx-item" id="ctx-duplicate" role="menuitem">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/></svg>
+      Duplicate
+    </button>
+    <div class="ctx-separator"></div>
+    <button class="ctx-item ctx-item-danger" id="ctx-delete" role="menuitem">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
+      Delete
+    </button>
+  </div>
+
   <!-- Hidden file input for load -->
   <input type="file" id="file-input" accept=".json,.ardusim" class="hidden" />
 
   <!-- Toast notifications -->
-  <div class="toast-container" id="toast-container"></div>
+  <div class="toast-container" id="toast-container" role="status" aria-live="polite"></div>
 
   <!-- Loading overlay -->
   <div class="loading-overlay" id="loading-overlay">
     <div class="loading-spinner"></div>
-    <p>Loading ArduSim...</p>
+    <p>Loading ArduSim…</p>
+    <span class="loading-sub">Initializing Monaco Editor &amp; Components</span>
   </div>
 
   <!-- ════════════════════ SCRIPTS ════════════════════ -->
@@ -428,13 +508,14 @@
     window.require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
-  <script src="js/components.js?v=20260803-1"></script>
-  <script src="js/simulator.js?v=20260803-1"></script>
-  <script src="js/canvas.js?v=20260803-1"></script>
-  <script src="js/serial.js?v=20260803-1"></script>
-  <script src="js/oscilloscope.js?v=20260803-1"></script>
-  <script src="js/storage.js?v=20260803-1"></script>
-  <script src="js/editor.js?v=20260803-1"></script>
-  <script src="js/app.js?v=20260803-1"></script>
+  <script src="js/utils.js?v=20260814-1"></script>
+  <script src="js/components.js?v=20260814-1"></script>
+  <script src="js/simulator.js?v=20260814-1"></script>
+  <script src="js/canvas.js?v=20260814-1"></script>
+  <script src="js/serial.js?v=20260814-1"></script>
+  <script src="js/oscilloscope.js?v=20260814-1"></script>
+  <script src="js/storage.js?v=20260814-1"></script>
+  <script src="js/editor.js?v=20260814-1"></script>
+  <script src="js/app.js?v=20260814-1"></script>
 </body>
 </html>

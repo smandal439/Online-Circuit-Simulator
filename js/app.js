@@ -7,29 +7,49 @@ class App {
     this.canvas = null;
     this.serial = null;
     this.osc = null;
-    this.toastTimer = null;
     this.isRunning = false;
     this._propsComp = null;
+    this._projectName = 'Untitled Project';
+    this._autoSaveDebounced = null;
   }
 
   init() {
-    this._bindUi();
-    this._loadTheme();
-    this._initCanvas();
-    this._initSerial();
-    this._initOscilloscope();
-    this._attachSimulatorEvents();
-    this._renderComponentLibrary();
-    this._renderExamples();
-    this._restoreProject();
+    try {
+      this._bindUi();
+      this._loadTheme();
+      this._initCanvas();
+      this._initSerial();
+      this._initOscilloscope();
+      this._attachSimulatorEvents();
+      this._renderComponentLibrary();
+      this._renderExamples();
+      this._restoreProject();
+      this._setupBeforeUnloadGuard();
 
-    if (this.editor) {
-      this.editor.init();
+      if (this.editor) {
+        this.editor.init();
+      }
+
+      this._updateStatus('Ready — press Run to start simulation');
+      this._updateCompileStatus('Ready');
+      this._hideLoadingOverlay();
+    } catch (err) {
+      console.error('[ArduSim] Init error:', err);
+      this._showInitError(err.message || String(err));
     }
+  }
 
-    this._updateStatus('Ready — press Run to start simulation');
-    this._updateCompileStatus('Ready');
-    this._hideLoadingOverlay();
+  _showInitError(msg) {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+      overlay.innerHTML = `
+        <div class="loading-error">
+          <svg width="48" height="48" viewBox="0 0 16 16" fill="#da3633"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1m0 3a.905.905 0 0 1 .9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
+          <h3>Failed to initialize ArduSim</h3>
+          <p>${msg}</p>
+          <button onclick="location.reload()">Reload</button>
+        </div>`;
+    }
   }
 
   onEditorReady() {
@@ -39,38 +59,41 @@ class App {
     this._hideLoadingOverlay();
   }
 
+  /* ══════════════════════ UI BINDING ══════════════════════ */
   _bindUi() {
-    const runBtn = document.getElementById('btn-run');
-    const stopBtn = document.getElementById('btn-stop');
-    const pauseBtn = document.getElementById('btn-pause');
-    const saveBtn = document.getElementById('btn-save');
-    const loadBtn = document.getElementById('btn-load');
-    const shareBtn = document.getElementById('btn-share');
-    const clearBtn = document.getElementById('btn-clear-canvas');
-    const exportBtn = document.getElementById('btn-export-img');
-    const formatBtn = document.getElementById('btn-format-code');
-    const verifyBtn = document.getElementById('btn-verify');
-    const examplesBtn = document.getElementById('btn-examples');
-    const shortcutsBtn = document.getElementById('btn-shortcuts');
-    const toggleEditorBtn = document.getElementById('btn-toggle-editor');
-    const toggleComponentsBtn = document.getElementById('btn-toggle-components');
-    const toggleBottomBtn = document.getElementById('btn-toggle-bottom');
-    const zoomInBtn = document.getElementById('btn-zoom-in');
-    const zoomOutBtn = document.getElementById('btn-zoom-out');
-    const fitViewBtn = document.getElementById('btn-fit-view');
-    const undoBtn = document.getElementById('btn-undo-canvas');
-    const redoBtn = document.getElementById('btn-redo-canvas');
-    const oscClearBtn = document.getElementById('btn-osc-clear');
-    const oscPauseBtn = document.getElementById('btn-osc-pause');
-    const themeBtn = document.getElementById('btn-theme');
-    const themeIconDark = document.getElementById('theme-icon-dark');
-    const themeIconLight = document.getElementById('theme-icon-light');
-    const searchBox = document.getElementById('component-search');
-    const speedSel = document.getElementById('sim-speed');
-    const propsApply = document.getElementById('btn-props-apply');
-    const modalCloseBtns = document.querySelectorAll('.modal-close');
-    const modalOverlay = document.getElementById('modal-overlay');
+    const get = id => document.getElementById(id);
+
+    const runBtn    = get('btn-run');
+    const stopBtn   = get('btn-stop');
+    const pauseBtn  = get('btn-pause');
+    const saveBtn   = get('btn-save');
+    const loadBtn   = get('btn-load');
+    const shareBtn  = get('btn-share');
+    const clearBtn  = get('btn-clear-canvas');
+    const exportBtn = get('btn-export-img');
+    const formatBtn = get('btn-format-code');
+    const verifyBtn = get('btn-verify');
+    const examplesBtn    = get('btn-examples');
+    const shortcutsBtn   = get('btn-shortcuts');
+    const toggleEditorBtn    = get('btn-toggle-editor');
+    const toggleComponentsBtn = get('btn-toggle-components');
+    const toggleBottomBtn     = get('btn-toggle-bottom');
+    const zoomInBtn  = get('btn-zoom-in');
+    const zoomOutBtn = get('btn-zoom-out');
+    const fitViewBtn = get('btn-fit-view');
+    const undoBtn    = get('btn-undo-canvas');
+    const redoBtn    = get('btn-redo-canvas');
+    const oscClearBtn = get('btn-osc-clear');
+    const oscPauseBtn = get('btn-osc-pause');
+    const themeBtn   = get('btn-theme');
+    const themeIconDark  = get('theme-icon-dark');
+    const themeIconLight = get('theme-icon-light');
+    const searchBox  = get('component-search');
+    const speedSel   = get('sim-speed');
+    const propsApply = get('btn-props-apply');
+    const modalOverlay = get('modal-overlay');
     const bottomTabButtons = document.querySelectorAll('.btm-tab');
+    const projectNameEl = get('project-name');
 
     runBtn?.addEventListener('click', () => this.run());
     stopBtn?.addEventListener('click', () => this.stop());
@@ -98,34 +121,85 @@ class App {
     searchBox?.addEventListener('input', (e) => this._filterComponents(e.target.value));
     speedSel?.addEventListener('change', (e) => this.sim.setSpeed(e.target.value));
     propsApply?.addEventListener('click', () => this._applyPropsModal());
-    modalCloseBtns.forEach(btn => btn.addEventListener('click', () => this._closeModal()));
-    document.querySelectorAll('[data-modal]').forEach(btn => btn.addEventListener('click', () => this._closeModal()));
 
-    bottomTabButtons.forEach(btn => btn.addEventListener('click', (e) => this._switchBottomTab(e.currentTarget)));
+    // Modal close
+    document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', () => this._closeModal()));
+    document.querySelectorAll('[data-modal]').forEach(btn => btn.addEventListener('click', () => this._closeModal()));
     modalOverlay?.addEventListener('click', (e) => { if (e.target === modalOverlay) this._closeModal(); });
 
+    // Bottom tabs
+    bottomTabButtons.forEach(btn => btn.addEventListener('click', (e) => this._switchBottomTab(e.currentTarget)));
+
+    // Editable project name
+    if (projectNameEl) {
+      projectNameEl.addEventListener('input', (e) => {
+        this._projectName = (e.target.value || 'Untitled Project').trim() || 'Untitled Project';
+        document.title = `${this._projectName} — ArduSim`;
+        window.StorageManager?.markDirty();
+      });
+      projectNameEl.addEventListener('blur', () => {
+        this._triggerAutoSave();
+      });
+    }
+
+    // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
+      // Don't intercept when user is typing in an input
+      const tag = document.activeElement?.tagName;
+      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         this.saveProject();
+        return;
       }
       if (e.key === 'Escape') {
         this._closeModal();
+        this._closeContextMenu();
+        return;
+      }
+      if (inInput) return; // don't intercept remaining shortcuts while typing
+
+      if (e.key === 'F5') { e.preventDefault(); this.run(); return; }
+      if (e.key === 'F6') { e.preventDefault(); this.stop(); return; }
+      if (e.key === 'F7') { e.preventDefault(); this.pauseResume(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (!e.shiftKey) this.canvas?.undo();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+        this.canvas?.redo();
+        return;
+      }
+    });
+
+    // Context menu
+    document.addEventListener('click', (e) => {
+      const ctxMenu = document.getElementById('canvas-context-menu');
+      if (ctxMenu && !ctxMenu.contains(e.target)) {
+        this._closeContextMenu();
       }
     });
   }
 
+  /* ══════════════════════ CANVAS INIT ══════════════════════ */
   _initCanvas() {
     const canvasEl = document.getElementById('circuit-canvas');
     const wrapperEl = document.getElementById('canvas-wrapper');
     if (canvasEl && wrapperEl && window.CircuitCanvasClass) {
       this.canvas = new window.CircuitCanvasClass(canvasEl, wrapperEl);
       window.CircuitCanvas = this.canvas;
-      this.canvas.onCompChanged = () => this._refreshCanvasSummary();
+      this.canvas.onCompChanged = () => {
+        this._refreshCanvasSummary();
+        this._triggerAutoSave();
+        window.StorageManager?.markDirty();
+      };
+      this.canvas.onContextMenu = (inst, x, y) => this._showContextMenu(inst, x, y);
       this._refreshCanvasSummary();
     }
   }
 
+  /* ══════════════════════ SERIAL INIT ══════════════════════ */
   _initSerial() {
     if (window.SerialMonitorClass) {
       this.serial = new window.SerialMonitorClass();
@@ -134,31 +208,41 @@ class App {
     }
   }
 
+  /* ══════════════════════ SIMULATOR EVENTS ══════════════════════ */
   _attachSimulatorEvents() {
     this.sim.onSerial = (text, type) => {
       this.serial?.receive(text, type);
-      this._updateStatus('Running');
     };
 
     this.sim.onPinChange = (pinKey, value) => {
-      if (this.canvas) {
-        this.canvas.updateSimState(this.sim.pinStates);
-      }
-      if (this.osc) {
-        this.osc.sample(this.sim.simTime, this.sim.pinStates);
-      }
-      this._updateStatus(this.isRunning ? 'Running' : 'Idle');
+      if (this.canvas) this.canvas.updateSimState(this.sim.pinStates);
+      if (this.osc)    this.osc.sample(this.sim.simTime, this.sim.pinStates);
+      this._updatePinMonitor();
+    };
+
+    this.sim.onTick = (simTime, fps) => {
+      const simTimeEl = document.getElementById('sim-time');
+      const fpsEl     = document.getElementById('sim-fps');
+      if (simTimeEl) simTimeEl.textContent = `⏱ ${(simTime / 1000).toFixed(2)}s`;
+      if (fpsEl)     fpsEl.textContent     = `${fps} FPS`;
     };
 
     this.sim.onError = (err) => {
       this._updateCompileStatus(`Error: ${err}`);
       this.showToast(err, 'error');
       this._setRunningState(false);
+      // Try to extract line number from error and show squiggle
+      const lineMatch = err.match(/line[:\s]+(\d+)/i);
+      if (this.editor && lineMatch) {
+        this.editor.showError(parseInt(lineMatch[1]), err);
+      }
     };
 
     this.sim.onStop = () => {
       this._setRunningState(false);
       this._updateStatus('Stopped');
+      const simDot = document.getElementById('sim-dot');
+      if (simDot) simDot.classList.remove('running');
     };
 
     this.sim.onEvent = (type, data) => {
@@ -174,12 +258,14 @@ class App {
     };
   }
 
+  /* ══════════════════════ RUN / STOP / PAUSE ══════════════════════ */
   async run() {
     if (!this.editor) return;
     const code = this.editor.getCode();
     this._updateCompileStatus('Compiling…');
     this._updateStatus('Compiling sketch');
     this.serial?.log('Compiling sketch…', 'system');
+    if (this.editor) this.editor.clearErrors();
 
     this.sim.stop();
     const result = await this.sim.run(code);
@@ -197,24 +283,40 @@ class App {
     this.sim.stop();
     this._setRunningState(false);
     this._updateStatus('Stopped');
+    const fpsEl = document.getElementById('sim-fps');
+    if (fpsEl) fpsEl.textContent = '0 FPS';
   }
 
   pauseResume() {
     if (!this.isRunning) return;
+    const pauseBtn = document.getElementById('btn-pause');
     if (this.sim.isPaused) {
       this.sim.resume();
       this._updateStatus('Simulation resumed');
-      document.getElementById('btn-pause').textContent = 'Pause';
+      if (pauseBtn) {
+        pauseBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/></svg> Pause`;
+      }
     } else {
       this.sim.pause();
       this._updateStatus('Simulation paused');
-      document.getElementById('btn-pause').textContent = 'Resume';
+      if (pauseBtn) {
+        pauseBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M10.804 8 5 4.633v6.734zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696z"/></svg> Resume`;
+      }
     }
   }
 
   clearCanvas() {
-    this.canvas?.clearCanvas();
-    this.showToast('Circuit cleared', 'info');
+    if (!this.canvas) return;
+    const hasComponents = this.canvas.components.length > 0 || this.canvas.wires.length > 0;
+    if (!hasComponents) return;
+    window.Utils?.ConfirmDialog.show('Clear the canvas? This will remove all components and wires.', 'Clear Canvas')
+      .then(ok => {
+        if (!ok) return;
+        this.canvas.clearCanvas();
+        this._refreshCanvasSummary();
+        this.showToast('Circuit cleared', 'info');
+        this._triggerAutoSave();
+      });
   }
 
   exportImage() {
@@ -225,16 +327,30 @@ class App {
     this.editor?.formatCode();
   }
 
+  /* ══════════════════════ PROJECT NAME ══════════════════════ */
+  getProjectName() {
+    return this._projectName || 'Untitled Project';
+  }
+
+  _setProjectName(name) {
+    this._projectName = name || 'Untitled Project';
+    document.title = `${this._projectName} — ArduSim`;
+    const el = document.getElementById('project-name');
+    if (el) el.value = this._projectName;
+  }
+
+  /* ══════════════════════ SAVE / LOAD / SHARE ══════════════════════ */
   saveProject() {
     const code = this.editor?.getCode() || '';
     const circuitData = this.canvas?.serialize() || { components: [], wires: [] };
-    window.StorageManager?.saveToFile(code, circuitData);
+    window.StorageManager?.saveToFile(code, circuitData, this._projectName);
   }
 
   loadProject() {
     window.StorageManager?.loadFromFile((project) => {
       if (this.editor) this.editor.setCode(project.code || '');
       if (this.canvas) this.canvas.deserialize(project.circuit || { components: [], wires: [] });
+      this._setProjectName(project.name || 'Untitled Project');
       this._refreshCanvasSummary();
     });
   }
@@ -245,6 +361,22 @@ class App {
     window.StorageManager?.shareUrl(code, circuitData);
   }
 
+  /* ══════════════════════ AUTO-SAVE ══════════════════════ */
+  _triggerAutoSave() {
+    if (!this._autoSaveDebounced) {
+      this._autoSaveDebounced = window.Utils?.debounce((code, circuit, name) => {
+        window.StorageManager?.autoSave(code, circuit, name);
+      }, 2000) ?? ((code, circuit, name) => {
+        clearTimeout(this._autoSaveTimer);
+        this._autoSaveTimer = setTimeout(() => window.StorageManager?.autoSave(code, circuit, name), 2000);
+      });
+    }
+    const code = this.editor?.getCode() || '';
+    const circuit = this.canvas?.serialize() || { components: [], wires: [] };
+    this._autoSaveDebounced(code, circuit, this._projectName);
+  }
+
+  /* ══════════════════════ COMPONENT LIBRARY ══════════════════════ */
   _renderComponentLibrary() {
     const container = document.getElementById('components-container');
     if (!container || !window.ArduinoComponents?.COMPONENT_CATALOG) return;
@@ -265,16 +397,16 @@ class App {
         if (!def) continue;
         const item = document.createElement('button');
         item.className = 'comp-item';
+        item.title = def.desc || def.name;
         item.innerHTML = `<span class="comp-icon">${def.icon || '🔧'}</span><span class="comp-name">${def.name}</span>`;
         item.addEventListener('click', () => {
           if (this.canvas) {
             this.canvas.startPlacing(id);
-            this.showToast(`${def.name} selected. Click on canvas to place it.`, 'info');
+            this.showToast(`${def.name} selected — click on canvas to place`, 'info');
           }
         });
         section.appendChild(item);
       }
-
       container.appendChild(section);
     }
   }
@@ -291,21 +423,27 @@ class App {
     });
   }
 
+  /* ══════════════════════ CANVAS SUMMARY ══════════════════════ */
   _refreshCanvasSummary() {
     const compEl = document.getElementById('canvas-comp-count');
     const wireEl = document.getElementById('canvas-wire-count');
     if (!this.canvas) return;
-    if (compEl) compEl.textContent = `${this.canvas.components.length} component${this.canvas.components.length !== 1 ? 's' : ''}`;
-    if (wireEl) wireEl.textContent = `${this.canvas.wires.length} wire${this.canvas.wires.length !== 1 ? 's' : ''}`;
+    const nc = this.canvas.components.length;
+    const nw = this.canvas.wires.length;
+    if (compEl) compEl.textContent = `${nc} component${nc !== 1 ? 's' : ''}`;
+    if (wireEl) wireEl.textContent = `${nw} wire${nw !== 1 ? 's' : ''}`;
   }
 
+  /* ══════════════════════ RESTORE PROJECT ══════════════════════ */
   _restoreProject() {
     const project = window.StorageManager?.autoLoad?.();
     if (project) {
       if (this.editor) this.editor.setCode(project.code || '');
       if (this.canvas) this.canvas.deserialize(project.circuit || { components: [], wires: [] });
+      this._setProjectName(project.name || 'Untitled Project');
       this._refreshCanvasSummary();
       this.showToast('Previous project restored', 'success');
+      window.StorageManager?.markClean();
       return;
     }
 
@@ -313,72 +451,146 @@ class App {
     if (shared) {
       if (this.editor) this.editor.setCode(shared.code || '');
       if (this.canvas) this.canvas.deserialize(shared.circuit || { components: [], wires: [] });
+      this._setProjectName(shared.name || 'Shared Project');
       this._refreshCanvasSummary();
+      this.showToast('Shared project loaded', 'success');
     }
   }
 
+  /* ══════════════════════ RUNNING STATE ══════════════════════ */
   _setRunningState(running) {
     this.isRunning = running;
-    const runBtn = document.getElementById('btn-run');
-    const stopBtn = document.getElementById('btn-stop');
+    const runBtn   = document.getElementById('btn-run');
+    const stopBtn  = document.getElementById('btn-stop');
     const pauseBtn = document.getElementById('btn-pause');
-    if (runBtn) runBtn.classList.toggle('hidden', running);
+    const simDot   = document.getElementById('sim-dot');
+    if (runBtn)  runBtn.classList.toggle('hidden', running);
     if (stopBtn) stopBtn.classList.toggle('hidden', !running);
     if (pauseBtn) pauseBtn.disabled = !running;
+    if (simDot) simDot.classList.toggle('running', running);
+    if (!running) {
+      const fpsEl = document.getElementById('sim-fps');
+      if (fpsEl) fpsEl.textContent = '0 FPS';
+    }
   }
 
+  /* ══════════════════════ PIN MONITOR ══════════════════════ */
+  _updatePinMonitor() {
+    const grid = document.getElementById('pin-monitor-grid');
+    if (!grid || !this.sim) return;
+
+    // Rebuild only if not running or empty
+    if (grid.childElementCount === 0) {
+      this._buildPinMonitor(grid);
+    }
+
+    // Update values
+    grid.querySelectorAll('.pin-row').forEach(row => {
+      const pinKey = row.dataset.pin;
+      const valEl  = row.querySelector('.pin-val');
+      const barEl  = row.querySelector('.pin-bar-fill');
+      const modeEl = row.querySelector('.pin-mode');
+      const val = this.sim.pinStates[pinKey];
+      const mode = this.sim.pinModes[pinKey];
+      if (valEl) {
+        if (val === undefined || val === null) {
+          valEl.textContent = '—';
+          row.classList.remove('pin-high', 'pin-pwm');
+        } else if (val <= 1) {
+          valEl.textContent = val ? 'HIGH' : 'LOW';
+          row.classList.toggle('pin-high', val === 1);
+          row.classList.remove('pin-pwm');
+        } else {
+          valEl.textContent = val;
+          row.classList.add('pin-pwm');
+          row.classList.remove('pin-high');
+        }
+      }
+      if (barEl) {
+        const pct = val !== undefined ? Math.round((val / 255) * 100) : 0;
+        barEl.style.width = `${pct}%`;
+      }
+      if (modeEl) {
+        modeEl.textContent = mode || '—';
+      }
+    });
+  }
+
+  _buildPinMonitor(grid) {
+    grid.innerHTML = '';
+    const pins = [
+      { key: 'pin_0',  label: 'D0' },  { key: 'pin_1',  label: 'D1' },
+      { key: 'pin_2',  label: 'D2' },  { key: 'pin_3',  label: 'D3~' },
+      { key: 'pin_4',  label: 'D4' },  { key: 'pin_5',  label: 'D5~' },
+      { key: 'pin_6',  label: 'D6~' }, { key: 'pin_7',  label: 'D7' },
+      { key: 'pin_8',  label: 'D8' },  { key: 'pin_9',  label: 'D9~' },
+      { key: 'pin_10', label: 'D10~'},  { key: 'pin_11', label: 'D11~'},
+      { key: 'pin_12', label: 'D12' }, { key: 'pin_13', label: 'D13' },
+      { key: 'pin_14', label: 'A0' },  { key: 'pin_15', label: 'A1' },
+      { key: 'pin_16', label: 'A2' },  { key: 'pin_17', label: 'A3' },
+      { key: 'pin_18', label: 'A4' },  { key: 'pin_19', label: 'A5' },
+    ];
+    pins.forEach(pin => {
+      const row = document.createElement('div');
+      row.className = 'pin-row';
+      row.dataset.pin = pin.key;
+      row.innerHTML = `
+        <span class="pin-label">${pin.label}</span>
+        <span class="pin-mode">—</span>
+        <span class="pin-val">—</span>
+        <div class="pin-bar"><div class="pin-bar-fill"></div></div>`;
+      grid.appendChild(row);
+    });
+  }
+
+  /* ══════════════════════ BEFORE UNLOAD GUARD ══════════════════════ */
+  _setupBeforeUnloadGuard() {
+    window.addEventListener('beforeunload', (e) => {
+      if (window.StorageManager?.isDirty()) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    });
+  }
+
+  /* ══════════════════════ LOADING OVERLAY ══════════════════════ */
   _hideLoadingOverlay() {
     const overlay = document.getElementById('loading-overlay');
     if (!overlay) return;
-    overlay.classList.add('hidden');
+    overlay.classList.add('fade-out');
     setTimeout(() => {
       overlay.style.display = 'none';
     }, 400);
   }
 
+  /* ══════════════════════ THEME ══════════════════════ */
   _toggleTheme(iconDark, iconLight) {
     const body = document.body;
     const isDark = body.classList.contains('dark-theme');
     const darkMode = !isDark;
-
     body.classList.toggle('dark-theme', darkMode);
     body.classList.toggle('light-theme', !darkMode);
-
-    if (this.editor?.setTheme) {
-      this.editor.setTheme(darkMode);
-    }
-
-    if (iconDark) iconDark.classList.toggle('hidden', !darkMode);
+    if (this.editor?.setTheme) this.editor.setTheme(darkMode);
+    if (iconDark)  iconDark.classList.toggle('hidden', !darkMode);
     if (iconLight) iconLight.classList.toggle('hidden', darkMode);
-
-    try {
-      localStorage.setItem('ardusim-theme', darkMode ? 'dark' : 'light');
-    } catch (err) {
-      // ignore storage errors
-    }
+    try { localStorage.setItem('ardusim-theme', darkMode ? 'dark' : 'light'); } catch (e) {}
   }
 
   _loadTheme() {
     let theme;
-    try {
-      theme = localStorage.getItem('ardusim-theme');
-    } catch (err) {
-      theme = null;
-    }
-
+    try { theme = localStorage.getItem('ardusim-theme'); } catch (e) { theme = null; }
     const darkMode = theme !== 'light';
-    const iconDark = document.getElementById('theme-icon-dark');
+    const iconDark  = document.getElementById('theme-icon-dark');
     const iconLight = document.getElementById('theme-icon-light');
-
     document.body.classList.toggle('dark-theme', darkMode);
     document.body.classList.toggle('light-theme', !darkMode);
-    if (this.editor?.setTheme) {
-      this.editor.setTheme(darkMode);
-    }
-    if (iconDark) iconDark.classList.toggle('hidden', !darkMode);
+    if (this.editor?.setTheme) this.editor.setTheme(darkMode);
+    if (iconDark)  iconDark.classList.toggle('hidden', !darkMode);
     if (iconLight) iconLight.classList.toggle('hidden', darkMode);
   }
 
+  /* ══════════════════════ STATUS BAR ══════════════════════ */
   _updateStatus(msg) {
     const el = document.getElementById('sim-status-text');
     if (el) el.textContent = msg;
@@ -389,9 +601,10 @@ class App {
     if (el) el.textContent = `● ${msg}`;
   }
 
+  /* ══════════════════════ MODALS ══════════════════════ */
   _showModal(modalId) {
     const overlay = document.getElementById('modal-overlay');
-    const modal = document.getElementById(modalId);
+    const modal   = document.getElementById(modalId);
     if (!overlay || !modal) return;
     overlay.classList.remove('hidden');
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
@@ -405,6 +618,46 @@ class App {
     this._closePropsModal();
   }
 
+  /* ══════════════════════ CONTEXT MENU ══════════════════════ */
+  _showContextMenu(inst, x, y) {
+    this._closeContextMenu();
+    const menu = document.getElementById('canvas-context-menu');
+    if (!menu) return;
+    menu.style.left = `${x}px`;
+    menu.style.top  = `${y}px`;
+    menu.classList.remove('hidden');
+    menu.classList.add('active');
+
+    const itemDelete    = document.getElementById('ctx-delete');
+    const itemProps     = document.getElementById('ctx-props');
+    const itemDuplicate = document.getElementById('ctx-duplicate');
+    const itemRotate    = document.getElementById('ctx-rotate');
+
+    const cleanup = () => this._closeContextMenu();
+
+    itemDelete?.removeEventListener('click', itemDelete._handler);
+    itemDelete._handler = () => { this.canvas?.deleteSelected(); cleanup(); };
+    itemDelete?.addEventListener('click', itemDelete._handler, { once: true });
+
+    itemProps?.removeEventListener('click', itemProps._handler);
+    itemProps._handler = () => { if (inst) this.openPropsModal(inst); cleanup(); };
+    itemProps?.addEventListener('click', itemProps._handler, { once: true });
+
+    itemDuplicate?.removeEventListener('click', itemDuplicate._handler);
+    itemDuplicate._handler = () => { this.canvas?.duplicateSelected?.(); cleanup(); };
+    itemDuplicate?.addEventListener('click', itemDuplicate._handler, { once: true });
+
+    itemRotate?.removeEventListener('click', itemRotate._handler);
+    itemRotate._handler = () => { this.canvas?.rotateSelected?.(); cleanup(); };
+    itemRotate?.addEventListener('click', itemRotate._handler, { once: true });
+  }
+
+  _closeContextMenu() {
+    const menu = document.getElementById('canvas-context-menu');
+    if (menu) { menu.classList.add('hidden'); menu.classList.remove('active'); }
+  }
+
+  /* ══════════════════════ PANEL TOGGLES ══════════════════════ */
   _togglePanel(panelId, button, collapseTitle, expandTitle) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -437,42 +690,38 @@ class App {
     if (button) button.textContent = paused ? 'Resume' : 'Pause';
   }
 
+  /* ══════════════════════ VERIFY ══════════════════════ */
   async verify() {
     if (!this.editor) return;
     const code = this.editor.getCode();
     this._updateCompileStatus('Verifying…');
     this._updateStatus('Verifying sketch');
     this.serial?.log('Verifying sketch…', 'system');
+    if (this.editor) this.editor.clearErrors();
 
     const result = await this.sim.compile(code);
     if (result.ok) {
-      this._updateCompileStatus('Verified');
+      this._updateCompileStatus('Verified ✓');
       this._updateStatus('Verification succeeded');
-      this.showToast('Verification succeeded', 'success');
+      this.showToast('✓ Sketch verified — no errors found!', 'success');
       return true;
     }
 
     this._updateCompileStatus(`Error: ${result.error}`);
     this._updateStatus('Verification failed');
     this.showToast(result.error || 'Verification failed', 'error');
+    if (this.editor) this.editor.showError(1, result.error);
     return false;
   }
 
+  /* ══════════════════════ OSCILLOSCOPE ══════════════════════ */
   _initOscilloscope() {
     const oscCanvas = document.getElementById('oscilloscope-canvas');
     if (!oscCanvas || !window.OscilloscopeClass) return;
     this.osc = new window.OscilloscopeClass(oscCanvas);
-    this.sim.onPinChange = (pinKey, value) => {
-      if (this.canvas) {
-        this.canvas.updateSimState(this.sim.pinStates);
-      }
-      if (this.osc) {
-        this.osc.sample(this.sim.simTime, this.sim.pinStates);
-      }
-      this._updateStatus(this.isRunning ? 'Running' : 'Idle');
-    };
   }
 
+  /* ══════════════════════ EXAMPLES ══════════════════════ */
   _renderExamples() {
     const container = document.getElementById('examples-grid');
     if (!container || !window.EXAMPLE_SKETCHES) return;
@@ -480,14 +729,13 @@ class App {
     for (const example of window.EXAMPLE_SKETCHES) {
       const item = document.createElement('button');
       item.className = 'example-item';
-      item.innerHTML = `<div class="example-icon">${example.icon || '📄'}</div><div class="example-info"><strong>${example.name}</strong><span>${example.desc}</span></div>`;
+      item.innerHTML = `<div class="example-icon">${example.icon || '📄'}</div><div class="example-info"><strong>${example.name}</strong><span>${example.desc}</span><div class="example-tags">${(example.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>`;
       item.addEventListener('click', () => {
         if (this.editor) this.editor.setCode(example.code || '');
-        if (example.circuit && this.canvas) {
-          this._loadExampleCircuit(example.circuit);
-        }
+        if (example.circuit && this.canvas) this._loadExampleCircuit(example.circuit);
         this._closeModal();
         this.showToast(`${example.name} loaded`, 'success');
+        this._setProjectName(example.name);
       });
       container.appendChild(item);
     }
@@ -499,8 +747,8 @@ class App {
     if (lower === 'led_on_13') {
       this.canvas.clearCanvas();
       const board = this.canvas.addComponent('arduino_uno', 300, 120);
-      const led = this.canvas.addComponent('led', 300, 260);
-      const gnd = this.canvas.addComponent('gnd', 260, 300);
+      const led   = this.canvas.addComponent('led', 300, 260);
+      const gnd   = this.canvas.addComponent('gnd', 260, 300);
       if (board && led) {
         this.canvas.addWire(board.id, 'D13', led.id, 'anode');
         if (gnd) this.canvas.addWire(led.id, 'cathode', gnd.id, 'GND');
@@ -510,35 +758,33 @@ class App {
     }
   }
 
+  /* ══════════════════════ PROPERTIES MODAL ══════════════════════ */
   openPropsModal(comp) {
     this._propsComp = comp;
-    const title = document.getElementById('modal-props-title');
-    const body = document.getElementById('modal-props-body');
-    const modal = document.getElementById('modal-props');
+    const title   = document.getElementById('modal-props-title');
+    const body    = document.getElementById('modal-props-body');
+    const modal   = document.getElementById('modal-props');
     const overlay = document.getElementById('modal-overlay');
 
     if (!comp || !body || !modal || !overlay) return;
-    if (title) title.textContent = `${comp.type} properties`;
+    if (title) title.textContent = `${comp.type} Properties`;
 
     const rows = [];
     Object.entries(comp.props || {}).forEach(([key, value]) => {
-      const row = document.createElement('div');
+      const row   = document.createElement('div');
       row.className = 'prop-row';
       const label = document.createElement('label');
-      label.textContent = key;
+      label.textContent = key.replace(/_/g, ' ');
       label.className = 'prop-label';
+      label.htmlFor = `prop-${key}`;
       const input = document.createElement('input');
       input.className = 'prop-input';
       input.name = key;
+      input.id   = `prop-${key}`;
       input.value = value;
-      if (typeof value === 'number') {
-        input.type = 'number';
-      } else if (typeof value === 'boolean') {
-        input.type = 'checkbox';
-        input.checked = value;
-      } else {
-        input.type = 'text';
-      }
+      if (typeof value === 'number') { input.type = 'number'; }
+      else if (typeof value === 'boolean') { input.type = 'checkbox'; input.checked = value; }
+      else { input.type = 'text'; }
       row.appendChild(label);
       row.appendChild(input);
       rows.push(row);
@@ -554,11 +800,10 @@ class App {
     if (!this._propsComp) return;
     const body = document.getElementById('modal-props-body');
     if (!body) return;
-    const inputs = body.querySelectorAll('.prop-input');
-    inputs.forEach(input => {
+    body.querySelectorAll('.prop-input').forEach(input => {
       const key = input.name;
       let val = input.value;
-      if (input.type === 'number') val = Number(val);
+      if (input.type === 'number')   val = Number(val);
       if (input.type === 'checkbox') val = input.checked;
       this._propsComp.props[key] = val;
     });
@@ -573,17 +818,30 @@ class App {
     this._propsComp = null;
   }
 
+  /* ══════════════════════ TOAST STACK ══════════════════════ */
   showToast(msg, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.textContent = msg;
+
+    const icons = { success: '✓', error: '✕', warn: '⚠', info: 'ℹ' };
+    toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span class="toast-msg">${msg}</span>`;
+
     container.appendChild(toast);
-    clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => {
-      toast.remove();
-    }, 2200);
+
+    // Auto-dismiss
+    const DURATION = type === 'error' ? 5000 : 3000;
+    setTimeout(() => {
+      toast.classList.add('toast-hide');
+      setTimeout(() => toast.remove(), 350);
+    }, DURATION);
+
+    // Limit stack to 5 toasts
+    while (container.childElementCount > 5) {
+      container.firstChild?.remove();
+    }
   }
 }
 

@@ -21,12 +21,23 @@ class ArduinoSimulator {
     this.onError     = null;  // callback(err)
     this.onStatus    = null;  // callback(msg)
     this.onStop      = null;  // callback()
+    this.onTick      = null;  // callback(simTime, fps, loopCount)
     this._toneActive = {};
     this._toneCtx    = null;
     this._toneOscillators = {};
     this._startRealTime = 0;
     this._delays     = [];
     this._customDelay = null;
+    // FPS / loop tracking
+    this._fps        = 0;
+    this._fpsFrames  = 0;
+    this._fpsLast    = 0;
+    this._loopCount  = 0;
+    // Infinite-loop guard: max iterations per real-second without a delay
+    this._iterSinceDelay = 0;
+    this._MAX_TIGHT_ITERS = 50000;
+    // EEPROM simulation (512 bytes)
+    this._eeprom = new Uint8Array(512);
   }
 
   /* ══════════════ TRANSPILER ══════════════ */
@@ -96,6 +107,8 @@ class ArduinoSimulator {
     js = js.replace(/\bHEX\b/g, '16');
     js = js.replace(/\bOCT\b/g,  '8');
     js = js.replace(/\bBIN\b/g,  '2');
+    js = js.replace(/\bMSBFIRST\b/g, '1');
+    js = js.replace(/\bLSBFIRST\b/g, '0');
 
     // 9. Map Arduino API calls
     const API = [
@@ -128,6 +141,15 @@ class ArduinoSimulator {
       ['floor',            'Math.floor'],
       ['ceil',             'Math.ceil'],
       ['round',            'Math.round'],
+      ['shiftIn',          '_a.shiftIn'],
+      ['shiftOut',         '_a.shiftOut'],
+      ['bitRead',          '_a.bitRead'],
+      ['bitWrite',         '_a.bitWrite'],
+      ['bitSet',           '_a.bitSet'],
+      ['bitClear',         '_a.bitClear'],
+      ['bit',              '_a.bit'],
+      ['lowByte',          '_a.lowByte'],
+      ['highByte',         '_a.highByte'],
     ];
 
     for (const [orig, mapped] of API) {
@@ -142,6 +164,30 @@ class ArduinoSimulator {
     js = js.replace(/\bSerial\.available\s*\(/g,'_a.serialAvailable(');
     js = js.replace(/\bSerial\.write\s*\(/g,    '_a.serialWrite(');
     js = js.replace(/\bSerial\.flush\s*\(/g,    '_a.serialFlush(');
+    js = js.replace(/\bSerial\.parseInt\s*\(/g,  '_a.serialParseInt(');
+    js = js.replace(/\bSerial\.parseFloat\s*\(/g,'_a.serialParseFloat(');
+    js = js.replace(/\bSerial\.peek\s*\(/g,      '_a.serialPeek(');
+    js = js.replace(/\bSerial\.readString\s*\(/g,'_a.serialReadString(');
+
+    // Wire (I2C) — stub
+    js = js.replace(/\bWire\.begin\s*\(/g,         '_a.wireBegin(');
+    js = js.replace(/\bWire\.requestFrom\s*\(/g,   '_a.wireRequestFrom(');
+    js = js.replace(/\bWire\.beginTransmission\s*\(/g,'_a.wireBeginTransmission(');
+    js = js.replace(/\bWire\.endTransmission\s*\(/g,  '_a.wireEndTransmission(');
+    js = js.replace(/\bWire\.write\s*\(/g,         '_a.wireWrite(');
+    js = js.replace(/\bWire\.read\s*\(/g,          '_a.wireRead(');
+    js = js.replace(/\bWire\.available\s*\(/g,     '_a.wireAvailable(');
+
+    // SPI — stub
+    js = js.replace(/\bSPI\.begin\s*\(/g,          '_a.spiBegin(');
+    js = js.replace(/\bSPI\.transfer\s*\(/g,       '_a.spiTransfer(');
+    js = js.replace(/\bSPI\.end\s*\(/g,            '_a.spiEnd(');
+
+    // EEPROM
+    js = js.replace(/\bEEPROM\.read\s*\(/g,        '_a.eepromRead(');
+    js = js.replace(/\bEEPROM\.write\s*\(/g,       '_a.eepromWrite(');
+    js = js.replace(/\bEEPROM\.update\s*\(/g,      '_a.eepromUpdate(');
+    js = js.replace(/\bEEPROM\.length\b/g,         '512');
 
     // Servo library
     js = js.replace(/\b(\w+)\.attach\s*\(/g,   '_a.servoAttach($1, ');
@@ -285,6 +331,44 @@ class ArduinoSimulator {
         min(a, b) { return Math.min(a, b); },
         max(a, b) { return Math.max(a, b); },
 
+        /* Bit operations */
+        bitRead(val, bit)  { return (val >> bit) & 1; },
+        bitWrite(val, bit, bv) { return bv ? val | (1 << bit) : val & ~(1 << bit); },
+        bitSet(val, bit)   { return val | (1 << bit); },
+        bitClear(val, bit) { return val & ~(1 << bit); },
+        bit(b)             { return 1 << b; },
+        lowByte(val)       { return val & 0xFF; },
+        highByte(val)      { return (val >> 8) & 0xFF; },
+
+        /* Shift in/out */
+        shiftIn(dataPin, clockPin, bitOrder) { return 0; }, // stub
+        shiftOut(dataPin, clockPin, bitOrder, val) {}, // stub
+
+        /* Wire (I2C) stubs */
+        wireBegin()                 { self._serialLog('[Wire] I2C begin\n', 'system'); },
+        wireRequestFrom(addr, qty)  { return qty; },
+        wireBeginTransmission(addr) {},
+        wireEndTransmission()       { return 0; },
+        wireWrite(val)              { return 1; },
+        wireRead()                  { return 0; },
+        wireAvailable()             { return 0; },
+
+        /* SPI stubs */
+        spiBegin()                  { self._serialLog('[SPI] begin\n', 'system'); },
+        spiTransfer(val)            { return 0; },
+        spiEnd()                    {},
+
+        /* EEPROM */
+        eepromRead(addr)            { return self._eeprom[addr & 511] || 0; },
+        eepromWrite(addr, val)      { self._eeprom[addr & 511] = val & 0xFF; },
+        eepromUpdate(addr, val)     { self._eeprom[addr & 511] = val & 0xFF; },
+
+        /* Serial extras */
+        serialParseInt()   { return 0; },
+        serialParseFloat() { return 0.0; },
+        serialPeek()       { return self.serialInputBuffer.length > 0 ? self.serialInputBuffer[0].charCodeAt(0) : -1; },
+        serialReadString() { const s = self.serialInputBuffer.join(''); self.serialInputBuffer = []; return s; },
+
         /* Tone */
         tone(pin, freq, duration) {
           const key = `pin_${pin}`;
@@ -336,11 +420,16 @@ class ArduinoSimulator {
       LED_BUILTIN: 13,
       PI: Math.PI, TWO_PI: Math.PI * 2, HALF_PI: Math.PI / 2,
       DEG_TO_RAD: Math.PI / 180, RAD_TO_DEG: 180 / Math.PI,
+      MSBFIRST: 1, LSBFIRST: 0,
+      BYTE: 0, WORD: 1,
 
       /* Servo/LCD class stubs */
       Servo: function() { return {}; },
       LiquidCrystal: function() { return {}; },
       LiquidCrystal_I2C: function() { return {}; },
+      /* Library stubs (instances) */
+      Wire: { begin(){}, requestFrom(){return 0;}, beginTransmission(){}, endTransmission(){return 0;}, write(){return 1;}, read(){return 0;}, available(){return 0;} },
+      SPI:  { begin(){}, transfer(){return 0;}, end(){}, setClockDivider(){}, setBitOrder(){}, setDataMode(){} },
     };
   }
 
@@ -369,25 +458,31 @@ class ArduinoSimulator {
       const vals = filtered.map(entry => entry.val);
 
       // Try to build the function — will throw on syntax errors
-      const fn = new Function(...keys, js + '\n\nif(typeof setup === "undefined") throw new Error("setup() function not found"); if(typeof loop === "undefined") throw new Error("loop() function not found"); return { setup, loop };');
+      const fn = new Function(...keys, js + '\n\nif(typeof setup === "undefined") throw new Error("Missing setup() function. Every Arduino sketch needs a setup() function."); if(typeof loop === "undefined") throw new Error("Missing loop() function. Every Arduino sketch needs a loop() function."); return { setup, loop };');
       this._compiledFn = fn;
       this._compiledCtx = { keys, vals, fn };
       this._compiledJs = js;
-      return { ok: true };
+      return { ok: true, compiledJs: js };
     } catch (err) {
-      return { ok: false, error: err.message };
+      const friendly = this._friendlyError(err.message);
+      return { ok: false, error: friendly, rawError: err.message };
     }
   }
 
   async run(code) {
     if (this.isRunning) this.stop();
-    this.simTime = 0;
+    this.simTime  = 0;
     this.pinStates = {};
     this.pinModes  = {};
     this._delays   = [];
     this._lcdLines = ['', ''];
     this._lcdCursor = { col: 0, row: 0 };
     this._startRealTime = Date.now();
+    this._fpsFrames = 0;
+    this._fpsLast   = Date.now();
+    this._fps       = 0;
+    this._loopCount = 0;
+    this._iterSinceDelay = 0;
 
     // Compile first
     const result = await this.compile(code);
@@ -399,10 +494,12 @@ class ArduinoSimulator {
     this.isRunning = true;
     this.isPaused  = false;
 
-    const js = this._compiledJs;
     const { keys, vals, fn } = this._compiledCtx;
 
     this._serialLog('[ArduSim] Simulation started\n', 'system');
+
+    // Start FPS ticker
+    this._fpsInterval = setInterval(() => this._tickFps(), 500);
 
     try {
       const { setup, loop } = fn(...vals);
@@ -415,15 +512,26 @@ class ArduinoSimulator {
         if (this.isPaused) {
           await new Promise(resolve => { this._resumeResolve = resolve; });
         }
+        this._iterSinceDelay++;
+        // Infinite-loop guard: yield if no delay has been called in many iterations
+        if (this._iterSinceDelay > this._MAX_TIGHT_ITERS) {
+          this._iterSinceDelay = 0;
+          await new Promise(r => setTimeout(r, 1));
+        }
         await loop();
+        this._loopCount++;
         // Yield to UI thread every iteration
         await new Promise(r => setTimeout(r, 0));
       }
     } catch (err) {
-      if (err.message !== 'SIMULATION_STOPPED') {
-        this._emitError(err.message || String(err));
-        this._serialLog(`[Error] ${err.message}\n`, 'error');
+      if (err && err.message !== 'SIMULATION_STOPPED') {
+        const friendly = this._friendlyError(err.message || String(err));
+        this._emitError(friendly);
+        this._serialLog(`[Error] ${friendly}\n`, 'error');
       }
+    } finally {
+      clearInterval(this._fpsInterval);
+      this._fpsInterval = null;
     }
 
     this.isRunning = false;
@@ -458,6 +566,33 @@ class ArduinoSimulator {
 
   setSpeed(s) {
     this.speed = parseFloat(s) || 1;
+  }
+
+  /* ── FPS tracking ── */
+  _tickFps() {
+    const now = Date.now();
+    const elapsed = now - this._fpsLast;
+    if (elapsed > 0) {
+      this._fps = Math.round((this._loopCount * 1000) / elapsed);
+    }
+    this._loopCount = 0;
+    this._fpsLast = now;
+    if (this.onTick) this.onTick(this.simTime, this._fps);
+  }
+
+  /* ── Friendly error messages ── */
+  _friendlyError(msg) {
+    if (!msg) return 'An unknown error occurred';
+    if (msg.includes('is not defined')) {
+      const m = msg.match(/'([^']+)' is not defined/);
+      if (m) return `'${m[1]}' is not defined. Did you forget to declare a variable or include a library?`;
+    }
+    if (msg.includes('SyntaxError')) return `Syntax error in your code: ${msg.replace('SyntaxError: ', '')}. Check for missing semicolons or braces.`;
+    if (msg.includes('TypeError')) return `Type error: ${msg.replace('TypeError: ', '')}. Check for null values or wrong argument types.`;
+    if (msg.includes('setup()')) return 'Missing setup() function. Every Arduino sketch needs a setup() function.';
+    if (msg.includes('loop()'))  return 'Missing loop() function. Every Arduino sketch needs a loop() function.';
+    if (msg.includes('Maximum call stack')) return 'Stack overflow: infinite recursion detected. Check your function calls.';
+    return msg;
   }
 
   sendSerialInput(text) {
@@ -510,6 +645,8 @@ class ArduinoSimulator {
   }
 
   _emitPinChange(key, val) {
+    // Reset tight-iter counter whenever a pin changes (means the sketch is doing work)
+    this._iterSinceDelay = 0;
     if (this.onPinChange) this.onPinChange(key, val);
   }
 

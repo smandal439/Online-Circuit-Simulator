@@ -132,23 +132,79 @@ void loop() {
         };
 
         const snippets = [
-          { label: 'setup', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4, insertText: 'void setup() {\n\t${1:// setup code}\n}', documentation: 'Setup function — runs once' },
-          { label: 'loop',  kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4, insertText: 'void loop() {\n\t${1:// loop code}\n}', documentation: 'Loop function — runs repeatedly' },
-          { label: 'for',   kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4, insertText: 'for (int ${1:i} = 0; ${1:i} < ${2:10}; ${1:i}++) {\n\t${3}\n}' },
-          { label: 'if',    kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4, insertText: 'if (${1:condition}) {\n\t${2}\n}' },
-          { label: 'while', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4, insertText: 'while (${1:condition}) {\n\t${2}\n}' },
-          { label: 'Serial.begin',   kind: 4, insertText: 'Serial.begin(${1:9600});',  insertTextRules: 4 },
-          { label: 'Serial.print',   kind: 4, insertText: 'Serial.print(${1:value});', insertTextRules: 4 },
-          { label: 'Serial.println', kind: 4, insertText: 'Serial.println(${1:value});', insertTextRules: 4 },
-          { label: 'pinMode',        kind: 4, insertText: 'pinMode(${1:pin}, ${2:OUTPUT});', insertTextRules: 4 },
-          { label: 'digitalWrite',   kind: 4, insertText: 'digitalWrite(${1:pin}, ${2:HIGH});', insertTextRules: 4 },
-          { label: 'digitalRead',    kind: 4, insertText: 'digitalRead(${1:pin})', insertTextRules: 4 },
-          { label: 'analogWrite',    kind: 4, insertText: 'analogWrite(${1:pin}, ${2:value});', insertTextRules: 4 },
-          { label: 'analogRead',     kind: 4, insertText: 'analogRead(${1:pin})', insertTextRules: 4 },
-          { label: 'delay',          kind: 4, insertText: 'delay(${1:1000});', insertTextRules: 4 },
-          { label: 'millis',         kind: 4, insertText: 'millis()', insertTextRules: 4 },
-          { label: 'map',            kind: 4, insertText: 'map(${1:value}, ${2:fromLow}, ${3:fromHigh}, ${4:toLow}, ${5:toHigh})', insertTextRules: 4 },
-          { label: 'constrain',      kind: 4, insertText: 'constrain(${1:x}, ${2:a}, ${3:b})', insertTextRules: 4 },
+          // Setup/loop templates
+          { label: 'setup', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'void setup() {\n\t${1:// setup code}\n}', documentation: 'Setup function — runs once at start' },
+          { label: 'loop',  kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'void loop() {\n\t${1:// loop code}\n}', documentation: 'Loop function — runs repeatedly' },
+          // Control flow
+          { label: 'for',   kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'for (int ${1:i} = 0; ${1:i} < ${2:10}; ${1:i}++) {\n\t${3}\n}' },
+          { label: 'forin', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'for (int ${1:i} = 0; ${1:i} < ${2:arr}.length; ${1:i}++) {\n\t${3}\n}',
+            documentation: 'Iterate over array' },
+          { label: 'if',    kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'if (${1:condition}) {\n\t${2}\n}' },
+          { label: 'ifelse', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'if (${1:condition}) {\n\t${2}\n} else {\n\t${3}\n}' },
+          { label: 'while', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'while (${1:condition}) {\n\t${2}\n}' },
+          { label: 'switch', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'switch (${1:variable}) {\n\tcase ${2:value}:\n\t\t${3}\n\t\tbreak;\n\tdefault:\n\t\tbreak;\n}' },
+          // Arduino core
+          { label: 'Serial.begin',    kind: 4, insertTextRules: 4, insertText: 'Serial.begin(${1:9600});',
+            documentation: 'Initialize serial communication at the given baud rate' },
+          { label: 'Serial.print',    kind: 4, insertTextRules: 4, insertText: 'Serial.print(${1:value});',
+            documentation: 'Print data to serial monitor' },
+          { label: 'Serial.println',  kind: 4, insertTextRules: 4, insertText: 'Serial.println(${1:value});',
+            documentation: 'Print data to serial monitor with newline' },
+          { label: 'Serial.read',     kind: 4, insertTextRules: 4, insertText: 'Serial.read()', documentation: 'Read incoming serial byte' },
+          { label: 'Serial.available',kind: 4, insertTextRules: 4, insertText: 'Serial.available()', documentation: 'Get number of bytes available to read' },
+          { label: 'pinMode',         kind: 4, insertTextRules: 4, insertText: 'pinMode(${1:pin}, ${2:OUTPUT});',
+            documentation: 'Configure a pin as INPUT or OUTPUT' },
+          { label: 'digitalWrite',    kind: 4, insertTextRules: 4, insertText: 'digitalWrite(${1:pin}, ${2:HIGH});',
+            documentation: 'Write HIGH or LOW to a digital pin' },
+          { label: 'digitalRead',     kind: 4, insertTextRules: 4, insertText: 'digitalRead(${1:pin})',
+            documentation: 'Read the value from a digital pin' },
+          { label: 'analogWrite',     kind: 4, insertTextRules: 4, insertText: 'analogWrite(${1:pin}, ${2:value});',
+            documentation: 'Write a PWM value (0-255) to a pin' },
+          { label: 'analogRead',      kind: 4, insertTextRules: 4, insertText: 'analogRead(${1:pin})',
+            documentation: 'Read the analog value from a pin (0-1023)' },
+          { label: 'delay',           kind: 4, insertTextRules: 4, insertText: 'delay(${1:1000});',
+            documentation: 'Pause execution for the given number of milliseconds' },
+          { label: 'delayMicroseconds', kind: 4, insertTextRules: 4, insertText: 'delayMicroseconds(${1:100});' },
+          { label: 'millis',          kind: 4, insertTextRules: 4, insertText: 'millis()',
+            documentation: 'Return the number of milliseconds since the board began running' },
+          { label: 'micros',          kind: 4, insertTextRules: 4, insertText: 'micros()' },
+          { label: 'map',             kind: 4, insertTextRules: 4,
+            insertText: 'map(${1:value}, ${2:fromLow}, ${3:fromHigh}, ${4:toLow}, ${5:toHigh})',
+            documentation: 'Re-map a number from one range to another' },
+          { label: 'constrain',       kind: 4, insertTextRules: 4, insertText: 'constrain(${1:x}, ${2:a}, ${3:b})',
+            documentation: 'Constrain a number to be within a range' },
+          { label: 'random',          kind: 4, insertTextRules: 4, insertText: 'random(${1:min}, ${2:max})' },
+          { label: 'tone',            kind: 4, insertTextRules: 4, insertText: 'tone(${1:pin}, ${2:frequency});' },
+          { label: 'noTone',          kind: 4, insertTextRules: 4, insertText: 'noTone(${1:pin});' },
+          { label: 'attachInterrupt', kind: 4, insertTextRules: 4,
+            insertText: 'attachInterrupt(digitalPinToInterrupt(${1:pin}), ${2:ISR}, ${3:RISING});' },
+          // EEPROM
+          { label: 'EEPROM.read',     kind: 4, insertTextRules: 4, insertText: 'EEPROM.read(${1:address})',
+            documentation: 'Read a byte from EEPROM' },
+          { label: 'EEPROM.write',    kind: 4, insertTextRules: 4, insertText: 'EEPROM.write(${1:address}, ${2:value});',
+            documentation: 'Write a byte to EEPROM' },
+          // Wire
+          { label: 'Wire.begin',      kind: 4, insertTextRules: 4, insertText: 'Wire.begin();' },
+          { label: 'Wire.beginTransmission', kind: 4, insertTextRules: 4, insertText: 'Wire.beginTransmission(${1:address});' },
+          { label: 'Wire.write',      kind: 4, insertTextRules: 4, insertText: 'Wire.write(${1:data});' },
+          { label: 'Wire.endTransmission', kind: 4, insertTextRules: 4, insertText: 'Wire.endTransmission();' },
+          { label: 'Wire.requestFrom', kind: 4, insertTextRules: 4, insertText: 'Wire.requestFrom(${1:address}, ${2:quantity});' },
+          { label: 'Wire.read',       kind: 4, insertTextRules: 4, insertText: 'Wire.read()' },
+          // Common patterns
+          { label: 'blink-led',  kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'digitalWrite(${1:LED_BUILTIN}, HIGH);\ndelay(${2:1000});\ndigitalWrite(${1:LED_BUILTIN}, LOW);\ndelay(${2:1000});',
+            documentation: 'Blink an LED' },
+          { label: 'non-blocking-blink', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
+            insertText: 'unsigned long ${1:previousMillis} = 0;\nconst long ${2:interval} = ${3:1000};\n\nvoid loop() {\n\tunsigned long currentMillis = millis();\n\tif (currentMillis - ${1:previousMillis} >= ${2:interval}) {\n\t\t${1:previousMillis} = currentMillis;\n\t\t// toggle LED\n\t}\n}',
+            documentation: 'Non-blocking LED blink using millis()' },
         ];
 
         return { suggestions: snippets.map(s => ({ ...s, range })) };
@@ -239,12 +295,15 @@ void loop() {
       if (pos) pos.textContent = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
     });
 
-    // Auto-save on change
+    // Auto-save on change (debounced)
     this.editor.onDidChangeModelContent(() => {
+      // Mark project dirty
+      if (window.StorageManager) window.StorageManager.markDirty();
       clearTimeout(this._saveTimer);
       this._saveTimer = setTimeout(() => {
-        if (window.CircuitCanvas && window.StorageManager) {
-          window.StorageManager.autoSave(this.getCode(), window.CircuitCanvas.serialize());
+        if (window.CircuitCanvas && window.StorageManager && window.App) {
+          const projectName = window.App.getProjectName ? window.App.getProjectName() : 'Untitled Project';
+          window.StorageManager.autoSave(this.getCode(), window.CircuitCanvas.serialize(), projectName);
         }
       }, 2000);
     });
@@ -298,6 +357,24 @@ void loop() {
     if (this.editor) {
       this.editor.getAction('editor.action.formatDocument')?.run();
     }
+  },
+
+  toggleWordWrap() {
+    if (!this.editor) return;
+    const current = this.editor.getOption(monaco.editor.EditorOption.wordWrap);
+    this.editor.updateOptions({ wordWrap: current === 'off' ? 'on' : 'off' });
+  },
+
+  increaseFontSize() {
+    if (!this.editor) return;
+    const sz = this.editor.getOption(monaco.editor.EditorOption.fontSize);
+    this.editor.updateOptions({ fontSize: Math.min(sz + 2, 28) });
+  },
+
+  decreaseFontSize() {
+    if (!this.editor) return;
+    const sz = this.editor.getOption(monaco.editor.EditorOption.fontSize);
+    this.editor.updateOptions({ fontSize: Math.max(sz - 2, 9) });
   },
 
   showError(line, msg) {
