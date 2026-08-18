@@ -48,6 +48,10 @@ class CircuitCanvas {
     this.onCompChanged  = null;
     this.onPinClick     = null;  // (inst, pin) when user clicks a pin
     this.onContextMenu  = null;
+
+    /* Pin tooltip */
+    this.tooltipEl = null;
+    this._tipKey  = null;
   }
 
   /* ══════════════ RESIZE ══════════════ */
@@ -486,6 +490,7 @@ class CircuitCanvas {
     canvas.addEventListener('wheel',      e => this._onWheel(e), { passive: false });
     canvas.addEventListener('dblclick',   e => this._onDblClick(e));
     canvas.addEventListener('contextmenu',e => this._onContextMenu(e));
+    canvas.addEventListener('mouseleave', () => this._hidePinTooltip());
 
     document.addEventListener('keydown', e => this._onKeyDown(e));
     document.addEventListener('mouseup', () => { if (this.mode === 'panning') this.mode = 'idle'; });
@@ -578,6 +583,7 @@ class CircuitCanvas {
       this.panX += dx;
       this.panY += dy;
       this._lastMouse = { x: e.clientX, y: e.clientY };
+      this._hidePinTooltip();
       return;
     }
 
@@ -588,25 +594,33 @@ class CircuitCanvas {
       this.dragging.inst.y = newY;
       this.dragging.moved = true;
       this._lastMouse = { x: e.clientX, y: e.clientY };
+      this._hidePinTooltip();
       return;
     }
 
     if (this.mode === 'wiring') {
       this.wireMouse = world;
+      this._hidePinTooltip();
       return;
     }
 
     if (this.mode === 'placing') {
       this.placingMouse = world;
+      this._hidePinTooltip();
       return;
     }
 
-    // Hover cursor
+    // Hover cursor + pin tooltip
     const pin = this._hitTestPin(world.x, world.y);
     const comp = this._hitTestComp(world.x, world.y);
-    if (pin) this.canvas.style.cursor = 'crosshair';
-    else if (comp) this.canvas.style.cursor = 'move';
-    else this.canvas.style.cursor = '';
+    if (pin) {
+      this.canvas.style.cursor = 'crosshair';
+      this._showPinTooltip(pin, e);
+    } else {
+      this._hidePinTooltip();
+      if (comp) this.canvas.style.cursor = 'move';
+      else this.canvas.style.cursor = '';
+    }
   }
 
   _onMouseUp(e) {
@@ -728,6 +742,91 @@ class CircuitCanvas {
       }
     }
     return null;
+  }
+
+  /* ══════════════ PIN TOOLTIP ══════════════ */
+  _pinTypeLabel(type) {
+    const map = {
+      digital: 'Digital I/O',
+      pwm:     'PWM (Digital)',
+      analog:  'Analog In (A/D)',
+      power:   'Power',
+      gnd:     'Ground',
+      signal:  'Signal',
+    };
+    return map[type] || type;
+  }
+
+  _showPinTooltip(hit, e) {
+    if (this.mode !== 'idle') return;
+    if (!this.tooltipEl) this.tooltipEl = document.getElementById('pin-tooltip');
+    const el = this.tooltipEl;
+    if (!el) return;
+
+    const { inst, pin } = hit;
+    const key = `${inst.id}|${pin.id}`;
+    const def = window.ArduinoComponents.COMPONENT_DEFS[inst.type];
+    const typeLabel = this._pinTypeLabel(pin.type);
+    const pinNum = this._pinToNumber(pin.id);
+    const sim = window.ArduinoSim;
+    const running = !!(sim && sim.isRunning);
+
+    // Rebuild content only when hovering a different pin
+    if (key !== this._tipKey) {
+      this._tipKey = key;
+      el.innerHTML = '';
+      const frag = document.createDocumentFragment();
+
+      const compName = (inst.props && inst.props.label)
+        ? inst.props.label
+        : ((def && def.name) || inst.type);
+      const title = document.createElement('div');
+      title.className = 'pin-tip-title';
+      title.textContent = `${compName} · ${pin.label}`;
+      frag.appendChild(title);
+
+      const addRow = (k, v, cls) => {
+        const row = document.createElement('div');
+        row.className = 'pin-tip-row';
+        const kEl = document.createElement('span');
+        kEl.textContent = k;
+        const vEl = document.createElement('b');
+        vEl.textContent = v;
+        if (cls) vEl.className = cls;
+        row.appendChild(kEl);
+        row.appendChild(vEl);
+        frag.appendChild(row);
+      };
+
+      addRow('Type', typeLabel);
+      if (inst.type === 'arduino_uno' && /^[AD]\d+$/.test(pin.id)) {
+        addRow('Arduino Pin', pinNum);
+      }
+      if (running) {
+        const val = sim.pinStates ? (sim.pinStates[`pin_${pinNum}`] || 0) : 0;
+        if (pin.type === 'gnd') addRow('State', '0V', 'pin-tip-low');
+        else if (pin.type === 'power') addRow('State', pin.label, 'pin-tip-high');
+        else if (pin.type === 'pwm' && val > 0) addRow('State', `PWM ${val}`, 'pin-tip-high');
+        else addRow('State', val > 0 ? 'HIGH' : 'LOW', val > 0 ? 'pin-tip-high' : 'pin-tip-low');
+      } else {
+        addRow('State', 'Idle');
+      }
+      el.appendChild(frag);
+    }
+
+    // Follow cursor and clamp to viewport
+    const pad = 14;
+    el.classList.remove('hidden');
+    el.style.left = `${e.clientX + pad}px`;
+    el.style.top  = `${e.clientY + pad}px`;
+    const r = el.getBoundingClientRect();
+    if (r.right > window.innerWidth - 8)  el.style.left = `${Math.max(8, e.clientX - r.width - pad)}px`;
+    if (r.bottom > window.innerHeight - 8) el.style.top  = `${Math.max(8, e.clientY - r.height - pad)}px`;
+  }
+
+  _hidePinTooltip() {
+    this._tipKey = null;
+    if (this.tooltipEl) this.tooltipEl.classList.add('hidden');
   }
 
   _hitTestComp(wx, wy) {

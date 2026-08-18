@@ -102,6 +102,8 @@ class App {
     const toggleEditorBtn    = get('btn-toggle-editor');
     const toggleComponentsBtn = get('btn-toggle-components');
     const toggleBottomBtn     = get('btn-toggle-bottom');
+    const showEditorBtn       = get('btn-show-editor');
+    const showComponentsBtn   = get('btn-show-components');
     const zoomInBtn  = get('btn-zoom-in');
     const zoomOutBtn = get('btn-zoom-out');
     const fitViewBtn = get('btn-fit-view');
@@ -136,6 +138,8 @@ class App {
     shortcutsBtn?.addEventListener('click', () => this._showModal('modal-shortcuts'));
     toggleEditorBtn?.addEventListener('click', () => this._togglePanel('panel-editor', toggleEditorBtn, 'Collapse Editor', 'Expand Editor'));
     toggleComponentsBtn?.addEventListener('click', () => this._togglePanel('panel-components', toggleComponentsBtn, 'Collapse Panel', 'Expand Panel'));
+    showEditorBtn?.addEventListener('click', () => this._togglePanel('panel-editor', toggleEditorBtn, 'Collapse Editor', 'Expand Editor'));
+    showComponentsBtn?.addEventListener('click', () => this._togglePanel('panel-components', toggleComponentsBtn, 'Collapse Panel', 'Expand Panel'));
     toggleBottomBtn?.addEventListener('click', () => this._toggleBottomPanel(toggleBottomBtn));
     zoomInBtn?.addEventListener('click', () => this.canvas?.zoomIn());
     zoomOutBtn?.addEventListener('click', () => this.canvas?.zoomOut());
@@ -732,8 +736,25 @@ class App {
   _togglePanel(panelId, button, collapseTitle, expandTitle) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
-    const hidden = panel.classList.toggle('hidden');
+    const hidden = !panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', hidden);
     if (button) button.title = hidden ? expandTitle : collapseTitle;
+
+    // Adjacent resizer follows the panel visibility
+    const resizerId = panelId === 'panel-editor' ? 'resizer-left'
+                    : panelId === 'panel-components' ? 'resizer-right' : null;
+    if (resizerId) {
+      const resizer = document.getElementById(resizerId);
+      if (resizer) resizer.classList.toggle('hidden', hidden);
+    }
+
+    // Keep a restore button visible in the canvas header while collapsed
+    const restoreId = panelId === 'panel-editor' ? 'btn-show-editor'
+                    : panelId === 'panel-components' ? 'btn-show-components' : null;
+    if (restoreId) {
+      const restoreBtn = document.getElementById(restoreId);
+      if (restoreBtn) restoreBtn.classList.toggle('hidden', !hidden);
+    }
   }
 
   _toggleBottomPanel(button) {

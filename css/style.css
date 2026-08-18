@@ -1253,6 +1253,41 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .toast.info .toast-icon    { color: var(--serial-info); }
 .toast-msg { line-height: 1.4; }
 
+/* ═══════════════ PIN TOOLTIP ═══════════════ */
+.pin-tooltip {
+  position: fixed;
+  z-index: 260;
+  min-width: 130px;
+  max-width: 260px;
+  padding: 8px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  pointer-events: none;
+  line-height: 1.4;
+}
+.pin-tip-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.pin-tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.pin-tip-row b { font-weight: 600; color: var(--text-secondary); }
+.pin-tip-row b.pin-tip-high { color: var(--run-color); }
+.pin-tip-row b.pin-tip-low  { color: var(--stop-color); }
+
 /* ═══════════════ LOADING ═══════════════ */
 .loading-overlay {
   position: fixed;
