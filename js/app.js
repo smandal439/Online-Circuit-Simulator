@@ -130,6 +130,7 @@ class App {
     saveBtn?.addEventListener('click', () => this.saveProject());
     loadBtn?.addEventListener('click', () => this.loadProject());
     shareBtn?.addEventListener('click', () => this.shareProject());
+    newProjectBtn?.addEventListener('click', () => this._newProject());
     clearBtn?.addEventListener('click', () => this.clearCanvas());
     exportBtn?.addEventListener('click', () => this.exportImage());
     formatBtn?.addEventListener('click', () => this.formatCode());
@@ -428,6 +429,17 @@ class App {
     const code = this.editor?.getCode() || '';
     const circuitData = this.canvas?.serialize() || { components: [], wires: [] };
     window.StorageManager?.shareUrl(code, circuitData);
+  }
+
+  _newProject() {
+    // Reset the canvas and editor to a fresh state
+    this.canvas?.clearCanvas();
+    this.editor?.setCode('');
+    this._setProjectName('Untitled Project');
+    this.markClean();
+    // Focus the editor for immediate typing
+    const codeEl = document.getElementById('editor-code');
+    if (codeEl) codeEl.focus();
   }
 
   /* ══════════════════════ AUTO-SAVE ══════════════════════ */

@@ -1,0 +1,17 @@
+{
+  "name": "Morse Code",
+  "id": "morse",
+  "code": "/*\n * Morse Code — Blink LED in Morse code pattern for \"SOS\"\n */\n\nint ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  // SOS: di-dah-dit\n  // dot: 100ms, dash: 300ms, gap between dots/dashes: 100ms\n  // gap between letters: 300ms, gap between SOS: 700ms\n\n  // S: ... (three dots)\n  digitalWrite(ledPin, HIGH);\n  delay(100);\n  digitalWrite(ledPin, LOW);\n  delay(100);\n  digitalWrite(ledPin, HIGH);\n  delay(100);\n  digitalWrite(ledPin, LOW);\n  delay(100);\n  digitalWrite(ledPin, HIGH);\n  delay(100);\n  digitalWrite(ledPin, LOW);\n  delay(300);\n\n  // O: --- (three dashes)\n  digitalWrite(ledPin, HIGH);\n  delay(300);\n  digitalWrite(ledPin, LOW);\n  delay(100);\n  digitalWrite(ledPin, HIGH);\n  delay(300);\n  digitalWrite(ledPin, LOW);\n  delay(100);\n  digitalWrite(ledPin, HIGH);\n  delay(300);\n  digitalWrite(ledPin, LOW);\n  delay(300);\n\n  // S: ... (three dots)\n  digitalWrite(ledPin, HIGH);\n  delay(100);\n  digitalWrite(ledPin, LOW);\n  delay(100);\n  digitalWrite(ledPin, HIGH);\n  delay(100);\n  digitalWrite(ledPin, LOW);\n  delay(300);\n\n  delay(700);\n}",
+  "circuit": {
+    "components": [
+      { "id": "b1", "type": "arduino_uno", "x": 200, "y": 100 },
+      { "id": "led1", "type": "led", "x": 120, "y": 280 },
+      { "id": "r1", "type": "resistor", "x": 120, "y": 360 }
+    ],
+    "wires": [
+      { "id": "w1", "from": { "instId": "b1", "pinId": "D13" }, "to": { "instId": "led1", "pinId": "anode" } },
+      { "id": "w2", "from": { "instId": "led1", "pinId": "cathode" }, "to": { "instId": "r1", "pinId": "p1" } },
+      { "id": "w3", "from": { "instId": "r1", "pinId": "p2" }, "to": { "instId": "b1", "pinId": "GND1" } }
+    ]
+  }
+}
