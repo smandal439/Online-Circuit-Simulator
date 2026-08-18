@@ -761,6 +761,124 @@ class ArduinoSimulator {
 }
 
 /* ═══════════════ EXAMPLE SKETCHES ═══════════════ */
+/* ═══════════════════════════════════════════════════════════
+   EXAMPLE CIRCUITS — serialized project data loaded on the canvas
+   when an example is opened. Matches the pins of each example code.
+   ═══════════════════════════════════════════════════════════ */
+const EXAMPLE_CIRCUITS = {
+  led_on_13: {
+    components: [
+      { id: 'b1',   type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'led1', type: 'led',         x: 120, y: 280 },
+      { id: 'r1',   type: 'resistor',    x: 120, y: 360 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1',   pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w2', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w3', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  fade: {
+    components: [
+      { id: 'b1',   type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'led1', type: 'led',         x: 120, y: 280 },
+      { id: 'r1',   type: 'resistor',    x: 120, y: 360 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1',   pinId: 'D9' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w2', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w3', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  button: {
+    components: [
+      { id: 'b1',   type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'btn1', type: 'push_button', x: 120, y: 300 },
+      { id: 'led1', type: 'led',         x: 340, y: 260 },
+      { id: 'r1',   type: 'resistor',    x: 340, y: 340 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1',   pinId: 'D2' }, to: { instId: 'btn1', pinId: 'p1' } },
+      { id: 'w2', from: { instId: 'btn1', pinId: 'p3' }, to: { instId: 'b1',   pinId: 'GND1' } },
+      { id: 'w3', from: { instId: 'b1',   pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w4', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w5', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  potentiometer: {
+    components: [
+      { id: 'b1',   type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'pot1', type: 'potentiometer', x: 120, y: 300 },
+      { id: 'led1', type: 'led',         x: 340, y: 260 },
+      { id: 'r1',   type: 'resistor',    x: 340, y: 340 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1',   pinId: '5V' }, to: { instId: 'pot1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'pot1', pinId: 'wiper' }, to: { instId: 'b1', pinId: 'A0' } },
+      { id: 'w3', from: { instId: 'pot1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w4', from: { instId: 'b1',   pinId: 'D9' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w5', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w6', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  servo_sweep: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'sv1', type: 'servo',      x: 120, y: 320 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: 'D9' }, to: { instId: 'sv1', pinId: 'signal' } },
+      { id: 'w2', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'sv1', pinId: 'vcc' } },
+      { id: 'w3', from: { instId: 'b1', pinId: 'GND1' }, to: { instId: 'sv1', pinId: 'gnd' } },
+    ],
+  },
+  traffic_light: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'red',  type: 'led', x: 340, y: 240 },
+      { id: 'yel',  type: 'led', x: 340, y: 340 },
+      { id: 'grn',  type: 'led', x: 340, y: 440 },
+      { id: 'rr',   type: 'resistor', x: 340, y: 320 },
+      { id: 'ry',   type: 'resistor', x: 340, y: 420 },
+      { id: 'rg',   type: 'resistor', x: 340, y: 520 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: 'D12' }, to: { instId: 'red', pinId: 'anode' } },
+      { id: 'w2', from: { instId: 'red', pinId: 'cathode' }, to: { instId: 'rr', pinId: 'p1' } },
+      { id: 'w3', from: { instId: 'rr',  pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w4', from: { instId: 'b1', pinId: 'D11' }, to: { instId: 'yel', pinId: 'anode' } },
+      { id: 'w5', from: { instId: 'yel', pinId: 'cathode' }, to: { instId: 'ry', pinId: 'p1' } },
+      { id: 'w6', from: { instId: 'ry',  pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w7', from: { instId: 'b1', pinId: 'D10' }, to: { instId: 'grn', pinId: 'anode' } },
+      { id: 'w8', from: { instId: 'grn', pinId: 'cathode' }, to: { instId: 'rg', pinId: 'p1' } },
+      { id: 'w9', from: { instId: 'rg',  pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  rainbow_rgb: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'rgb1', type: 'rgb_led',   x: 120, y: 300 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1',   pinId: 'D9' }, to: { instId: 'rgb1', pinId: 'red' } },
+      { id: 'w2', from: { instId: 'b1',   pinId: 'D10' }, to: { instId: 'rgb1', pinId: 'green' } },
+      { id: 'w3', from: { instId: 'b1',   pinId: 'D11' }, to: { instId: 'rgb1', pinId: 'blue' } },
+      { id: 'w4', from: { instId: 'rgb1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  temperature: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'dht1', type: 'dht11',     x: 120, y: 300 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1',   pinId: '5V' }, to: { instId: 'dht1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'b1',   pinId: 'D2' }, to: { instId: 'dht1', pinId: 'data' } },
+      { id: 'w3', from: { instId: 'dht1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+};
+
 const EXAMPLE_SKETCHES = [
   {
     id: 'blink',
@@ -768,7 +886,7 @@ const EXAMPLE_SKETCHES = [
     icon: '💡',
     desc: 'The classic Hello World of Arduino — blink an LED on pin 13',
     tags: ['beginner', 'LED', 'digital'],
-    circuit: 'led_on_13',
+    circuit: EXAMPLE_CIRCUITS.led_on_13,
     code: `/*
  * Blink — Classic Arduino example
  * Blinks the built-in LED on pin 13
@@ -798,6 +916,7 @@ void loop() {
     icon: '🌅',
     desc: 'Fade an LED in and out using PWM analogWrite on pin 9',
     tags: ['beginner', 'PWM', 'LED'],
+    circuit: EXAMPLE_CIRCUITS.fade,
     code: `/*
  * Fade — LED brightness fade using PWM
  */
@@ -830,6 +949,7 @@ void loop() {
     icon: '🔘',
     desc: 'Read a push button and control an LED',
     tags: ['beginner', 'input', 'button'],
+    circuit: EXAMPLE_CIRCUITS.button,
     code: `/*
  * Button — Read push button, control LED
  */
@@ -864,6 +984,7 @@ void loop() {
     icon: '🎚️',
     desc: 'Read a potentiometer on A0 and display the value',
     tags: ['beginner', 'analog', 'sensor'],
+    circuit: EXAMPLE_CIRCUITS.potentiometer,
     code: `/*
  * Potentiometer — Analog input reading
  */
@@ -898,6 +1019,7 @@ void loop() {
     icon: '⚙️',
     desc: 'Sweep a servo motor from 0° to 180° and back',
     tags: ['intermediate', 'servo', 'motor'],
+    circuit: EXAMPLE_CIRCUITS.servo_sweep,
     code: `/*
  * Servo Sweep — Sweep servo 0 to 180 degrees
  */
@@ -933,6 +1055,7 @@ void loop() {
     icon: '🚦',
     desc: 'Simulate a traffic light with 3 LEDs',
     tags: ['beginner', 'LED', 'multiple pins'],
+    circuit: EXAMPLE_CIRCUITS.traffic_light,
     code: `/*
  * Traffic Light Simulator
  * Red=12, Yellow=11, Green=10
@@ -986,6 +1109,7 @@ void loop() {
     icon: '🔢',
     desc: 'Count button presses and show on serial monitor',
     tags: ['intermediate', 'counter', 'button'],
+    circuit: EXAMPLE_CIRCUITS.button,
     code: `/*
  * Button Counter — Count presses
  */
@@ -1028,6 +1152,7 @@ void loop() {
     icon: '🌈',
     desc: 'Cycle through colors on an RGB LED',
     tags: ['intermediate', 'RGB', 'PWM', 'LED'],
+    circuit: EXAMPLE_CIRCUITS.rainbow_rgb,
     code: `/*
  * RGB LED Rainbow — Cycle through colors
  * R=9, G=10, B=11
@@ -1090,6 +1215,7 @@ void loop() {
     icon: '📡',
     desc: 'Blink LED in Morse code pattern for "SOS"',
     tags: ['intermediate', 'LED', 'morse'],
+    circuit: EXAMPLE_CIRCUITS.led_on_13,
     code: `/*
  * Morse Code — SOS via LED
  * LED on pin 13
@@ -1136,6 +1262,7 @@ void loop() {
     icon: '🌡️',
     desc: 'Read DHT11 temperature and humidity (simulated)',
     tags: ['intermediate', 'sensor', 'DHT11'],
+    circuit: EXAMPLE_CIRCUITS.temperature,
     code: `/*
  * DHT11 Temperature & Humidity (simulated)
  */

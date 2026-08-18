@@ -748,12 +748,16 @@ class App {
       if (resizer) resizer.classList.toggle('hidden', hidden);
     }
 
-    // Keep a restore button visible in the canvas header while collapsed
-    const restoreId = panelId === 'panel-editor' ? 'btn-show-editor'
-                    : panelId === 'panel-components' ? 'btn-show-components' : null;
-    if (restoreId) {
-      const restoreBtn = document.getElementById(restoreId);
-      if (restoreBtn) restoreBtn.classList.toggle('hidden', !hidden);
+    // Always-visible toggle in the canvas header (collapse + expand)
+    const canvasToggleId = panelId === 'panel-editor' ? 'btn-show-editor'
+                         : panelId === 'panel-components' ? 'btn-show-components' : null;
+    if (canvasToggleId) {
+      const canvasToggle = document.getElementById(canvasToggleId);
+      if (canvasToggle) {
+        canvasToggle.title = hidden ? expandTitle : collapseTitle;
+        const icon = canvasToggle.querySelector('svg');
+        if (icon) icon.style.transform = hidden ? 'rotate(180deg)' : '';
+      }
     }
   }
 
@@ -844,7 +848,16 @@ class App {
 
   _loadExampleCircuit(key) {
     if (!this.canvas) return;
-    const lower = String(key).toLowerCase();
+
+    // Data-driven circuit (serialized project data) — most examples use this
+    if (key && typeof key === 'object' && Array.isArray(key.components)) {
+      this.canvas.deserialize(key);
+      this._refreshCanvasSummary();
+      return;
+    }
+
+    // Legacy named circuits (hardcoded builders)
+    const lower = String(key || '').toLowerCase();
     if (lower === 'led_on_13' || lower === 'blink') {
       this.canvas.clearCanvas();
       const board = this.canvas.addComponent('arduino_uno', 200, 100);

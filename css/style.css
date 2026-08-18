@@ -452,6 +452,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .panel-icon-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 .panel-icon-btn.btn-danger:hover { background: rgba(218, 54, 51, 0.15); color: var(--stop-color); }
+.panel-icon-btn svg { transition: transform var(--trans-fast); }
 
 /* ═══════════════ CODE EDITOR ═══════════════ */
 .editor-container {
