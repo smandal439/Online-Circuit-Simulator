@@ -8,6 +8,7 @@ const StorageManager = {
   VERSION: '1.1',
   LS_KEY: 'ardusim_project',
   LS_SETTINGS_KEY: 'ardusim_settings',
+  LS_SAVED_KEY: 'ardusim_saved_projects',
 
   _lastSavedAt: null,
   _isDirty: false,
@@ -45,8 +46,53 @@ const StorageManager = {
     return project;
   },
 
-  /* ── Save project to JSON file ── */
-  saveToFile(code, circuitData, projectName = 'ArduSim Project') {
+  /* ── Save project to the Saved Projects library ── */
+  saveToLibrary(code, circuitData, projectName = 'Untitled Project') {
+    const projects = this.getSavedProjects();
+    const project = {
+      id:       this._genId(),
+      version:  this.VERSION,
+      savedAt:  new Date().toISOString(),
+      name:     projectName,
+      code,
+      circuit:  circuitData,
+    };
+    // Re-saving keeps the original id (upsert by project name)
+    const idx = projects.findIndex(p => p.name === projectName);
+    if (idx >= 0) { project.id = projects[idx].id; projects.splice(idx, 1); }
+    projects.unshift(project);
+    try {
+      localStorage.setItem(this.LS_SAVED_KEY, JSON.stringify(projects));
+      this._lastSavedAt = Date.now();
+      this.markClean();
+      this.showToast(`"${projectName}" saved to Saved Projects`, 'success');
+      return project;
+    } catch (e) {
+      this.showToast('Save failed: ' + e.message, 'error');
+      return null;
+    }
+  },
+
+  getSavedProjects() {
+    try { return JSON.parse(localStorage.getItem(this.LS_SAVED_KEY) || '[]'); }
+    catch (e) { return []; }
+  },
+
+  deleteSavedProject(id) {
+    const projects = this.getSavedProjects().filter(p => p.id !== id);
+    try {
+      localStorage.setItem(this.LS_SAVED_KEY, JSON.stringify(projects));
+      this.showToast('Project deleted', 'success');
+      return true;
+    } catch (e) { return false; }
+  },
+
+  _genId() {
+    return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  },
+
+  /* ── Download project as JSON file ── */
+  downloadProject(code, circuitData, projectName = 'ArduSim Project') {
     const project = {
       version:  this.VERSION,
       savedAt:  new Date().toISOString(),
@@ -67,7 +113,7 @@ const StorageManager = {
     URL.revokeObjectURL(url);
     this._lastSavedAt = Date.now();
     this.markClean();
-    this.showToast('Project saved!', 'success');
+    this.showToast('Project downloaded!', 'success');
   },
 
   /* ── Load project from file ── */

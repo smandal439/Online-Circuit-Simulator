@@ -93,7 +93,9 @@ class App {
     const stopBtn   = get('btn-stop');
     const pauseBtn  = get('btn-pause');
     const saveBtn   = get('btn-save');
+    const downloadBtn = get('btn-download');
     const loadBtn   = get('btn-load');
+    const savedProjectsBtn = get('btn-saved-projects');
     const shareBtn  = get('btn-share');
     const clearBtn  = get('btn-clear-canvas');
     const exportBtn = get('btn-export-img');
@@ -131,7 +133,9 @@ class App {
     stopBtn?.addEventListener('click', () => this.stop());
     pauseBtn?.addEventListener('click', () => this.pauseResume());
     saveBtn?.addEventListener('click', () => this.saveProject());
+    downloadBtn?.addEventListener('click', () => this.downloadProject());
     loadBtn?.addEventListener('click', () => this.loadProject());
+    savedProjectsBtn?.addEventListener('click', () => this._openSavedProjects());
     shareBtn?.addEventListener('click', () => this.shareProject());
     newProjectBtn?.addEventListener('click', () => this._newProject());
     clearBtn?.addEventListener('click', () => this.clearCanvas());
@@ -174,6 +178,16 @@ class App {
     // Bottom tabs
     bottomTabButtons.forEach(btn => btn.addEventListener('click', (e) => this._switchBottomTab(e.currentTarget)));
 
+    // Saved projects list (event delegation)
+    const savedList = get('saved-projects-list');
+    savedList?.addEventListener('click', (e) => {
+      const btn = e.target.closest('button.saved-load, button.saved-download, button.saved-delete');
+      if (!btn || !btn.dataset.id) return;
+      if (btn.classList.contains('saved-load')) this._loadSavedProject(btn.dataset.id);
+      else if (btn.classList.contains('saved-download')) this._downloadSavedProject(btn.dataset.id);
+      else if (btn.classList.contains('saved-delete')) this._deleteSavedProject(btn.dataset.id);
+    });
+
     // Editable project name
     if (projectNameEl) {
       projectNameEl.addEventListener('input', (e) => {
@@ -192,6 +206,11 @@ class App {
       const tag = document.activeElement?.tagName;
       const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
 
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        this.downloadProject();
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         this.saveProject();
@@ -418,11 +437,17 @@ class App {
     if (el) el.value = this._projectName;
   }
 
-  /* ══════════════════════ SAVE / LOAD / SHARE ══════════════════════ */
+  /* ══════════════════════ SAVE / DOWNLOAD / LOAD / SHARE ══════════════════════ */
   saveProject() {
     const code = this.editor?.getCode() || '';
     const circuitData = this.canvas?.serialize() || { components: [], wires: [] };
-    window.StorageManager?.saveToFile(code, circuitData, this._projectName);
+    window.StorageManager?.saveToLibrary(code, circuitData, this._projectName);
+  }
+
+  downloadProject() {
+    const code = this.editor?.getCode() || '';
+    const circuitData = this.canvas?.serialize() || { components: [], wires: [] };
+    window.StorageManager?.downloadProject(code, circuitData, this._projectName);
   }
 
   loadProject() {
@@ -438,6 +463,62 @@ class App {
     const code = this.editor?.getCode() || '';
     const circuitData = this.canvas?.serialize() || { components: [], wires: [] };
     window.StorageManager?.shareUrl(code, circuitData);
+  }
+
+  /* ══════════════════════ SAVED PROJECTS ══════════════════════ */
+  _openSavedProjects() {
+    this._renderSavedProjects();
+    this._showModal('modal-saved');
+  }
+
+  _renderSavedProjects() {
+    const list = document.getElementById('saved-projects-list');
+    if (!list) return;
+    const projects = window.StorageManager?.getSavedProjects() || [];
+    if (!projects.length) {
+      list.innerHTML = `<div class="saved-empty">No saved projects yet.<br>Click <b>Save</b> in the toolbar to save the current project here.</div>`;
+      return;
+    }
+    list.innerHTML = projects.map(p => {
+      const date = new Date(p.savedAt).toLocaleString();
+      const compCount = Array.isArray(p.circuit?.components) ? p.circuit.components.length : 0;
+      const wireCount = Array.isArray(p.circuit?.wires) ? p.circuit.wires.length : 0;
+      const name = String(p.name || 'Untitled Project').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+      return `
+        <div class="saved-project-item">
+          <div class="saved-project-info">
+            <strong class="saved-project-name">${name}</strong>
+            <span class="saved-project-meta">${compCount} components · ${wireCount} wires · ${date}</span>
+          </div>
+          <div class="saved-project-actions">
+            <button class="hdr-btn hdr-btn-ghost saved-load" data-id="${p.id}">Open</button>
+            <button class="hdr-btn hdr-btn-ghost saved-download" data-id="${p.id}" title="Download as JSON file">Download</button>
+            <button class="hdr-btn hdr-btn-ghost saved-delete" data-id="${p.id}" title="Delete from Saved Projects">Delete</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  _loadSavedProject(id) {
+    const p = (window.StorageManager?.getSavedProjects() || []).find(x => x.id === id);
+    if (!p) { this.showToast('Saved project not found', 'error'); return; }
+    if (this.editor) this.editor.setCode(p.code || '');
+    if (this.canvas) this.canvas.deserialize(p.circuit || { components: [], wires: [] });
+    this._setProjectName(p.name || 'Untitled Project');
+    this._refreshCanvasSummary();
+    this._closeModal();
+    this.showToast(`"${p.name}" opened`, 'success');
+  }
+
+  _downloadSavedProject(id) {
+    const p = (window.StorageManager?.getSavedProjects() || []).find(x => x.id === id);
+    if (!p) return;
+    window.StorageManager?.downloadProject(p.code || '', p.circuit || { components: [], wires: [] }, p.name || 'Untitled Project');
+  }
+
+  _deleteSavedProject(id) {
+    window.StorageManager?.deleteSavedProject(id);
+    this._renderSavedProjects();
   }
 
   _newProject() {
