@@ -28,6 +28,7 @@ class CircuitCanvas {
     this.wiringFrom   = null;     // { inst, pin, wx, wy }
     this.wireMouse    = null;     // { x, y } world coords
     this.placingType  = null;
+    this._wireOffsets = {};       // wireId -> {ox, oy} for custom curve position
     this.placingMouse = null;
 
     /* History */
@@ -255,7 +256,7 @@ class CircuitCanvas {
       const isSelected = this.selectedWire && this.selectedWire.id === wire.id;
       if (isSelected) color = '#00e5ff';
 
-      this._drawWire(ctx, p1, p2, color, isSelected);
+      this._drawWire(ctx, p1, p2, color, isSelected, wire.id);
     }
 
     // Active wire preview
@@ -276,20 +277,36 @@ class CircuitCanvas {
       ctx.shadowBlur = 6;
     }
 
-    // Manhattan routing
+    // Compute a smooth curved wire (quadratic Bézier) with a perpendicular offset
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist === 0) {
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.arc(p1.x, p1.y, 3 / this.zoom, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
     const mx = (p1.x + p2.x) / 2;
+    const my = (p1.y + p2.y) / 2;
+
+    // perpendicular offset (12px scaled by zoom) so the curve is visible
+    const ox = -dy / dist * 12 / this.zoom;
+    const oy =  dx / dist * 12 / this.zoom;
+
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(mx, p1.y);
-    ctx.lineTo(mx, p2.y);
-    ctx.lineTo(p2.x, p2.y);
+    ctx.quadraticCurveTo(mx + ox, my + oy, p2.x, p2.y);
     ctx.stroke();
 
     // Junction dots
     ctx.fillStyle = color;
     ctx.shadowBlur = 0;
-    ctx.beginPath(); ctx.arc(p1.x, p1.y, 3/this.zoom, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(p2.x, p2.y, 3/this.zoom, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p1.x, p1.y, 3 / this.zoom, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p2.x, p2.y, 3 / this.zoom, 0, Math.PI * 2); ctx.fill();
 
     ctx.restore();
   }
@@ -543,6 +560,18 @@ class CircuitCanvas {
         return;
       }
 
+      // ── wire‑drag: move the curve's control point ─────────────────────
+      if (this.mode !== 'wiring' && this.mode !== 'panning') {
+        for (const wire of this.wires) {
+          if (this._isNearWire(world.x, world.y, wire)) {
+            this.mode = 'wiredrag';
+            this.draggingWire = { wireId: wire.id };
+            this._wireOffsets[wire.id] = { ox: 0, oy: 0 };
+            break;
+          }
+        }
+      }
+
       // Check component click
       const compHit = this._hitTestComp(world.x, world.y);
       if (compHit) {
@@ -604,6 +633,24 @@ class CircuitCanvas {
       this.dragging.moved = true;
       this._lastMouse = { x: e.clientX, y: e.clientY };
       this._hidePinTooltip();
+      return;
+    }
+
+    if (this.mode === 'wiredrag' && this.draggingWire) {
+      const wire = this.wires.find(w => w.id === this.draggingWire.wireId);
+      if (wire) {
+        const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
+        const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
+        if (p1 && p2) {
+          const mx = (p1.x + p2.x) / 2;
+          const my = (p1.y + p2.y) / 2;
+          this._wireOffsets[wire.id] = {
+            ox: world.x - mx,
+            oy: world.y - my,
+          };
+        }
+      }
+      this._render();
       return;
     }
 
@@ -865,6 +912,27 @@ class CircuitCanvas {
       if (Math.min(d1, d2, d3) <= threshold) return wire;
     }
     return null;
+  }
+
+  /** Return true if (wx,wy) is within *threshold* world pixels of the wire's
+   *  straight line between its two pin world positions. */
+  _isNearWire(wx, wy, wire, thresh = 10 / this.zoom) {
+    const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
+    const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
+    if (!p1 || !p2) return false;
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const len2 = dx*dx + dy*dy;
+    if (len2 === 0) {
+      const d = Math.hypot(wx - p1.x, wy - p1.y);
+      return d < thresh;
+    }
+    const t = ((wx - p1.x)*dx + (wy - p1.y)*dy) / len2;
+    const tClamped = Math.min(Math.max(t, 0), 1);
+    const closestX = p1.x + tClamped * dx;
+    const closestY = p1.y + tClamped * dy;
+    const d = Math.hypot(wx - closestX, wy - closestY);
+    return d < thresh;
   }
 
   _distToSegment(px, py, x1, y1, x2, y2) {
