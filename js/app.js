@@ -11,12 +11,14 @@ class App {
     this._propsComp = null;
     this._projectName = 'Untitled Project';
     this._autoSaveDebounced = null;
+    this._activeView = null;
   }
 
   init() {
     try {
       this._initErrorHandlers();
       this._bindUi();
+      this._initResizers();
       this._loadTheme();
       this._initCanvas();
       this._initSerial();
@@ -143,6 +145,12 @@ class App {
     showEditorBtn?.addEventListener('click', () => this._togglePanel('panel-editor', toggleEditorBtn, 'Collapse Editor', 'Expand Editor'));
     showComponentsBtn?.addEventListener('click', () => this._togglePanel('panel-components', toggleComponentsBtn, 'Collapse Panel', 'Expand Panel'));
     toggleBottomBtn?.addEventListener('click', () => this._toggleBottomPanel(toggleBottomBtn));
+    const viewCodeBtn = get('btn-view-code');
+    const viewCircuitBtn = get('btn-view-circuit');
+    const viewSerialBtn = get('btn-view-serial');
+    viewCodeBtn?.addEventListener('click', () => this._setView('code'));
+    viewCircuitBtn?.addEventListener('click', () => this._setView('circuit'));
+    viewSerialBtn?.addEventListener('click', () => this._setView('serial'));
     zoomInBtn?.addEventListener('click', () => this.canvas?.zoomIn());
     zoomOutBtn?.addEventListener('click', () => this.canvas?.zoomOut());
     fitViewBtn?.addEventListener('click', () => this.canvas?.fitView());
@@ -790,6 +798,70 @@ class App {
     if (!target) return;
     document.querySelectorAll('.btm-tab').forEach(tab => tab.classList.toggle('active', tab === button));
     document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.toggle('active', pane.id === `pane-${target}`));
+  }
+
+  /* ══════════════════════ VIEW FOCUS MODES ══════════════════════ */
+  _setView(view) {
+    if (this._activeView === view) {
+      // Clicking the active view restores the default layout
+      this._activeView = null;
+      document.body.classList.remove('view-code', 'view-circuit', 'view-serial');
+    } else {
+      this._activeView = view;
+      document.body.classList.remove('view-code', 'view-circuit', 'view-serial');
+      document.body.classList.add(`view-${view}`);
+      if (view === 'serial') {
+        const tab = document.getElementById('tab-serial');
+        if (tab) this._switchBottomTab(tab);
+      }
+    }
+    this._updateViewButtons();
+  }
+
+  _updateViewButtons() {
+    ['code', 'circuit', 'serial'].forEach(v => {
+      const btn = document.getElementById(`btn-view-${v}`);
+      if (btn) btn.classList.toggle('active', this._activeView === v);
+    });
+  }
+
+  /* ══════════════════════ PANEL RESIZERS ══════════════════════ */
+  _initResizers() {
+    const bindResizer = (resizerId, panelId, dir) => {
+      const resizer = document.getElementById(resizerId);
+      const panel = document.getElementById(panelId);
+      if (!resizer || !panel) return;
+      resizer.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (document.body.classList.contains('view-code') ||
+            document.body.classList.contains('view-circuit') ||
+            document.body.classList.contains('view-serial')) return;
+        const startX = e.clientX;
+        const startW = panel.getBoundingClientRect().width;
+        const minW = 120;
+        const maxW = Math.max(minW + 100, window.innerWidth - 360);
+        const onMove = (ev) => {
+          let w = dir === 'left' ? startW + (ev.clientX - startX) : startW - (ev.clientX - startX);
+          w = Math.max(minW, Math.min(maxW, w));
+          panel.style.width = `${w}px`;
+          panel.style.flex = '0 0 auto';
+        };
+        const onUp = () => {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          resizer.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        };
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    };
+    bindResizer('resizer-left', 'panel-editor', 'left');
+    bindResizer('resizer-right', 'panel-components', 'right');
   }
 
   _toggleOscPause(button) {
