@@ -1206,15 +1206,19 @@ class CircuitCanvas {
           }
           break;
         }
-        case 'push_button': {
-          const pressed = inst.runtimeState.pressed;
-          const p1 = this._getConnectedPinNum(inst.id, 'p1');
-          const p3 = this._getConnectedPinNum(inst.id, 'p3');
-          if (p1 !== null && pressed && window.ArduinoSim && window.ArduinoSim.pinStates) {
-            window.ArduinoSim.pinStates[`pin_${p1}`] = 1;
-          }
-          break;
-        }
+case 'push_button': {
+  const pressed = inst.runtimeState.pressed;
+  const p1 = this._getConnectedPinNum(inst.id, 'p1');
+  const p3 = this._getConnectedPinNum(inst.id, 'p3');
+  if (p1 !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+    if (pressed) {
+      window.ArduinoSim.pinStates[`pin_${p1}`] = 0; // pressed → connects to GND → LOW
+    } else {
+      window.ArduinoSim.pinStates[`pin_${p1}`] = 1; // not pressed → INPUT_PULLUP → HIGH
+    }
+  }
+  break;
+}
         case 'servo': {
           const sigNet = this._tracePinNet(inst.id, 'signal');
           const source = sigNet.sources[0];
