@@ -115,6 +115,9 @@ class App {
     const searchBox  = get('component-search');
     const speedSel   = get('sim-speed');
     const propsApply = get('btn-props-apply');
+    const oscCh1     = get('osc-ch1');
+    const oscCh2     = get('osc-ch2');
+    const oscTimebase = get('osc-timebase');
     const modalOverlay = get('modal-overlay');
     const bottomTabButtons = document.querySelectorAll('.btm-tab');
     const projectNameEl = get('project-name');
@@ -144,6 +147,9 @@ class App {
     themeBtn?.addEventListener('click', () => this._toggleTheme(themeIconDark, themeIconLight));
     searchBox?.addEventListener('input', (e) => this._filterComponents(e.target.value));
     speedSel?.addEventListener('change', (e) => this.sim.setSpeed(e.target.value));
+    oscCh1?.addEventListener('change', (e) => this.osc?.setChannel(1, e.target.value));
+    oscCh2?.addEventListener('change', (e) => this.osc?.setChannel(2, e.target.value));
+    oscTimebase?.addEventListener('change', (e) => this.osc?.setTimebase(e.target.value));
     propsApply?.addEventListener('click', () => this._applyPropsModal());
 
     // Modal close

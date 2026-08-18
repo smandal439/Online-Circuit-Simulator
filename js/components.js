@@ -57,70 +57,86 @@ function defComp(def) {
 /* ─── ARDUINO UNO ─── */
 defComp({
   id: 'arduino_uno',
-  name: 'Arduino Uno',
+  name: 'Arduino Uno R3',
   category: 'Boards',
   icon: '🎛️',
   desc: 'ATmega328P microcontroller board',
-  width: 200,
-  height: 140,
+  width: 230,
+  height: 150,
   defaultProps: { label: 'UNO' },
   pins: [
-    // Digital pins top row (D0–D13, from right)
-    { id:'D0',  label:'D0',  type:PIN_TYPE.DIGITAL, x:186, y: 14, side:'top' },
-    { id:'D1',  label:'D1',  type:PIN_TYPE.DIGITAL, x:172, y: 14, side:'top' },
-    { id:'D2',  label:'D2',  type:PIN_TYPE.DIGITAL, x:158, y: 14, side:'top' },
-    { id:'D3',  label:'D3~', type:PIN_TYPE.PWM,     x:144, y: 14, side:'top' },
-    { id:'D4',  label:'D4',  type:PIN_TYPE.DIGITAL, x:130, y: 14, side:'top' },
-    { id:'D5',  label:'D5~', type:PIN_TYPE.PWM,     x:116, y: 14, side:'top' },
-    { id:'D6',  label:'D6~', type:PIN_TYPE.PWM,     x:102, y: 14, side:'top' },
-    { id:'D7',  label:'D7',  type:PIN_TYPE.DIGITAL, x: 88, y: 14, side:'top' },
-    { id:'D8',  label:'D8',  type:PIN_TYPE.DIGITAL, x: 74, y: 14, side:'top' },
-    { id:'D9',  label:'D9~', type:PIN_TYPE.PWM,     x: 60, y: 14, side:'top' },
-    { id:'D10', label:'D10~',type:PIN_TYPE.PWM,     x: 46, y: 14, side:'top' },
-    { id:'D11', label:'D11~',type:PIN_TYPE.PWM,     x: 32, y: 14, side:'top' },
-    { id:'D12', label:'D12', type:PIN_TYPE.DIGITAL, x: 18, y: 14, side:'top' },
-    { id:'D13', label:'D13', type:PIN_TYPE.DIGITAL, x:  4, y: 14, side:'top' },
+    // Digital pins top row (D0–D13, from left), then GND + AREF
+    { id:'D0',   label:'D0',   type:PIN_TYPE.DIGITAL, x: 10, y: 12, side:'top' },
+    { id:'D1',   label:'D1',   type:PIN_TYPE.DIGITAL, x: 24, y: 12, side:'top' },
+    { id:'D2',   label:'D2',   type:PIN_TYPE.DIGITAL, x: 38, y: 12, side:'top' },
+    { id:'D3',   label:'D3~',  type:PIN_TYPE.PWM,     x: 52, y: 12, side:'top' },
+    { id:'D4',   label:'D4',   type:PIN_TYPE.DIGITAL, x: 66, y: 12, side:'top' },
+    { id:'D5',   label:'D5~',  type:PIN_TYPE.PWM,     x: 80, y: 12, side:'top' },
+    { id:'D6',   label:'D6~',  type:PIN_TYPE.PWM,     x: 94, y: 12, side:'top' },
+    { id:'D7',   label:'D7',   type:PIN_TYPE.DIGITAL, x:108, y: 12, side:'top' },
+    { id:'D8',   label:'D8',   type:PIN_TYPE.DIGITAL, x:122, y: 12, side:'top' },
+    { id:'D9',   label:'D9~',  type:PIN_TYPE.PWM,     x:136, y: 12, side:'top' },
+    { id:'D10',  label:'D10~', type:PIN_TYPE.PWM,     x:150, y: 12, side:'top' },
+    { id:'D11',  label:'D11~', type:PIN_TYPE.PWM,     x:164, y: 12, side:'top' },
+    { id:'D12',  label:'D12',  type:PIN_TYPE.DIGITAL, x:178, y: 12, side:'top' },
+    { id:'D13',  label:'D13',  type:PIN_TYPE.DIGITAL, x:192, y: 12, side:'top' },
     // Power top
-    { id:'GND_D',label:'GND',type:PIN_TYPE.GND,    x:200, y: 14, side:'top' },
-    { id:'AREF', label:'AREF',type:PIN_TYPE.SIGNAL, x:214, y: 14, side:'top' },
-    // Analog pins bottom row
-    { id:'A0', label:'A0', type:PIN_TYPE.ANALOG, x: 14, y:126, side:'bottom' },
-    { id:'A1', label:'A1', type:PIN_TYPE.ANALOG, x: 28, y:126, side:'bottom' },
-    { id:'A2', label:'A2', type:PIN_TYPE.ANALOG, x: 42, y:126, side:'bottom' },
-    { id:'A3', label:'A3', type:PIN_TYPE.ANALOG, x: 56, y:126, side:'bottom' },
-    { id:'A4', label:'A4', type:PIN_TYPE.ANALOG, x: 70, y:126, side:'bottom' },
-    { id:'A5', label:'A5', type:PIN_TYPE.ANALOG, x: 84, y:126, side:'bottom' },
-    // Power bottom
-    { id:'VIN',  label:'VIN', type:PIN_TYPE.POWER, x:104, y:126, side:'bottom' },
-    { id:'GND1', label:'GND', type:PIN_TYPE.GND,   x:118, y:126, side:'bottom' },
-    { id:'GND2', label:'GND', type:PIN_TYPE.GND,   x:132, y:126, side:'bottom' },
-    { id:'5V',   label:'5V',  type:PIN_TYPE.POWER, x:146, y:126, side:'bottom' },
-    { id:'3V3',  label:'3.3V',type:PIN_TYPE.POWER, x:160, y:126, side:'bottom' },
-    { id:'RST',  label:'RST', type:PIN_TYPE.SIGNAL,x:174, y:126, side:'bottom' },
+    { id:'GND_D', label:'GND',  type:PIN_TYPE.GND,    x:206, y: 12, side:'top' },
+    { id:'AREF',  label:'AREF', type:PIN_TYPE.SIGNAL, x:220, y: 12, side:'top' },
+    // Analog pins bottom row (left)
+    { id:'A0', label:'A0', type:PIN_TYPE.ANALOG, x: 14, y:134, side:'bottom' },
+    { id:'A1', label:'A1', type:PIN_TYPE.ANALOG, x: 28, y:134, side:'bottom' },
+    { id:'A2', label:'A2', type:PIN_TYPE.ANALOG, x: 42, y:134, side:'bottom' },
+    { id:'A3', label:'A3', type:PIN_TYPE.ANALOG, x: 56, y:134, side:'bottom' },
+    { id:'A4', label:'A4', type:PIN_TYPE.ANALOG, x: 70, y:134, side:'bottom' },
+    { id:'A5', label:'A5', type:PIN_TYPE.ANALOG, x: 84, y:134, side:'bottom' },
+    // Power bottom (right)
+    { id:'VIN',  label:'VIN',  type:PIN_TYPE.POWER, x:104, y:134, side:'bottom' },
+    { id:'GND1', label:'GND',  type:PIN_TYPE.GND,   x:118, y:134, side:'bottom' },
+    { id:'GND2', label:'GND',  type:PIN_TYPE.GND,   x:132, y:134, side:'bottom' },
+    { id:'5V',   label:'5V',   type:PIN_TYPE.POWER, x:146, y:134, side:'bottom' },
+    { id:'3V3',  label:'3.3V', type:PIN_TYPE.POWER, x:160, y:134, side:'bottom' },
+    { id:'RST',  label:'RST',  type:PIN_TYPE.SIGNAL,x:174, y:134, side:'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y, width: W, height: H } = inst;
 
-    // Board body
+    // ── PCB body ──
     ctx.save();
     ctx.translate(x, y);
 
-    // PCB background
     const grad = ctx.createLinearGradient(0, 0, W, H);
     grad.addColorStop(0, '#1e6d33');
-    grad.addColorStop(1, '#12461f');
+    grad.addColorStop(0.45, '#187a30');
+    grad.addColorStop(1, '#0f4d1d');
     ctx.fillStyle = grad;
-    roundRect(ctx, 0, 0, W, H, 10);
+    roundRect(ctx, 0, 0, W, H, 8);
     ctx.fill();
     ctx.strokeStyle = '#194c24';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Silkscreen outline
-    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    // ── Silkscreen frame ──
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1;
-    roundRect(ctx, 6, 6, W - 12, H - 12, 8);
+    roundRect(ctx, 5, 5, W - 10, H - 10, 6);
     ctx.stroke();
+
+    // ── Subtle copper traces ──
+    ctx.strokeStyle = 'rgba(170,220,150,0.10)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 12; i++) {
+      ctx.beginPath();
+      ctx.moveTo(14, 22 + i * 9);
+      ctx.lineTo(46, 22 + i * 9);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 9; i++) {
+      ctx.beginPath();
+      ctx.moveTo(196, 22 + i * 11);
+      ctx.lineTo(218, 22 + i * 11);
+      ctx.stroke();
+    }
 
     // USB Type-B connector
     ctx.fillStyle = '#a0a0a0';
