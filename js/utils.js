@@ -45,17 +45,21 @@ function escapeHtml(str) {
 
 /* ── Format bytes ── */
 function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  const b = Number(bytes);
+  if (!Number.isFinite(b)) return '0 B';
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 /* ── Format duration ── */
 function formatDuration(ms) {
-  if (ms < 1000) return `${ms.toFixed(0)}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(2)}s`;
-  const m = Math.floor(ms / 60000);
-  const s = ((ms % 60000) / 1000).toFixed(1);
+  const v = Number(ms);
+  if (!Number.isFinite(v)) return '0ms';
+  if (v < 1000) return `${v.toFixed(0)}ms`;
+  if (v < 60000) return `${(v / 1000).toFixed(2)}s`;
+  const m = Math.floor(v / 60000);
+  const s = ((v % 60000) / 1000).toFixed(1);
   return `${m}m ${s}s`;
 }
 

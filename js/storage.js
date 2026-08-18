@@ -34,13 +34,13 @@ const StorageManager = {
 
   /* ── Version migration ── */
   _migrateProject(project) {
-    if (!project) return null;
+    if (!project || typeof project !== 'object') return null;
     // v1.0 → v1.1: ensure circuit has components and wires arrays
-    if (!project.circuit) project.circuit = { components: [], wires: [] };
+    if (!project.circuit || typeof project.circuit !== 'object') project.circuit = { components: [], wires: [] };
     if (!Array.isArray(project.circuit.components)) project.circuit.components = [];
     if (!Array.isArray(project.circuit.wires)) project.circuit.wires = [];
-    if (!project.code) project.code = '';
-    if (!project.name) project.name = 'Untitled Project';
+    if (typeof project.code !== 'string') project.code = '';
+    if (typeof project.name !== 'string' || !project.name.trim()) project.name = 'Untitled Project';
     project.version = this.VERSION;
     return project;
   },

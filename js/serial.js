@@ -45,7 +45,12 @@ class SerialMonitor {
   }
 
   receive(text, type = 'data') {
+    if (typeof text !== 'string' || !text) return;
     this.buffer += text;
+    // Never let an unflushed buffer grow without bound
+    if (this.buffer.length > 131072) {
+      this.buffer = this.buffer.slice(-131072);
+    }
     // Buffer and flush on newline or after short delay
     if (!this._pendingFlush) {
       this._pendingFlush = setTimeout(() => {

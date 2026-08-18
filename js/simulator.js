@@ -33,6 +33,7 @@ class ArduinoSimulator {
     this._fpsFrames  = 0;
     this._fpsLast    = 0;
     this._loopCount  = 0;
+    this._fpsInterval = null;
     // Infinite-loop guard: max iterations per real-second without a delay
     this._iterSinceDelay = 0;
     this._MAX_TIGHT_ITERS = 50000;
@@ -42,6 +43,7 @@ class ArduinoSimulator {
 
   /* ══════════════ TRANSPILER ══════════════ */
   transpile(code) {
+    if (typeof code !== 'string') code = '';
     let js = code;
 
     // Remove comments temporarily for processing, then restore
@@ -58,8 +60,11 @@ class ArduinoSimulator {
     js = js.replace(/^[ \t]*#[^\n]*/gm, '');
 
     // 3. Apply #define substitutions (simple word replacement)
+    //    Skip function-like macros and escape any `$` so the replacement is literal.
     for (const [name, value] of Object.entries(defines)) {
-      js = js.replace(new RegExp(`\\b${name}\\b`, 'g'), value);
+      if (!/^[A-Za-z_]\w*$/.test(name)) continue;
+      if (/\(/.test(value)) continue; // function-like macro — leave untouched
+      js = js.replace(new RegExp(`\\b${name}\\b`, 'g'), () => value);
     }
 
     // 4. Replace function declarations (return type + name + params + brace)
@@ -80,15 +85,26 @@ class ArduinoSimulator {
     js = js.replace(/\bconst\s+let\b/g, 'let');
     js = js.replace(/\bconst\s+async\b/g, 'async');
 
+    // Object-style library declarations:
+    // Servo myServo;  →  let myServo = new Servo();
+    // LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  →  let lcd = new LiquidCrystal(12, 11, 5, 4, 3, 2);
+    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
+
     // 6. Handle arrays: int arr[10] → let arr = new Array(10).fill(0)
     js = js.replace(/let\s+(\w+)\s*\[(\d+)\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$3]');
     js = js.replace(/let\s+(\w+)\s*\[\s*\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$2]');
     js = js.replace(/let\s+(\w+)\s*\[(\d+)\](?!\s*=)/g, 'let $1 = new Array($2).fill(0)');
     js = js.replace(/let\s+(\w+)\s*\[\s*\](?!\s*=)/g, 'let $1 = []');
+    // C-style char arrays with string literals: char str[20] = "hi"; / char msg[] = "hi";
+    js = js.replace(/let\s+(\w+)\s*\[\s*\d*\s*\]\s*=\s*("[^"]*"|'[^']*')/g, 'let $1 = $2');
 
     // 7. Boolean literals
     js = js.replace(/\btrue\b/g,  'true');
     js = js.replace(/\bfalse\b/g, 'false');
+
+    // Strip leftover C storage/qualifier keywords that are invalid JS
+    js = js.replace(/\b(?:static|volatile|extern|register|const)\s+let\b/g, 'let');
+    js = js.replace(/\b(?:static|volatile|extern|register|const)\s+async\b/g, 'async');
 
     // 8. Arduino constants
     js = js.replace(/\bHIGH\b/g, '1');
@@ -249,30 +265,35 @@ class ArduinoSimulator {
         },
         analogWrite(pin, val) {
           const key = `pin_${pin}`;
-          const v = Math.max(0, Math.min(255, Math.round(val)));
+          const v = Math.max(0, Math.min(255, Math.round(Number(val) || 0)));
           self.pinStates[key] = v;
           self._emitPinChange(key, v);
         },
         analogRead(pin) {
           const key = `pin_${pin}`;
-          return self.pinStates[key] !== undefined ? self.pinStates[key] : 0;
+          const v = self.pinStates[key];
+          return v !== undefined && v !== null && !Number.isNaN(v) ? v : 0;
         },
 
         /* Timing */
         async delay(ms) {
+          ms = Number(ms);
+          if (!Number.isFinite(ms) || ms < 0) ms = 0;
           const realMs = ms / self.speed;
           self.simTime += ms;
+          self._iterSinceDelay = 0;
           await new Promise((resolve, reject) => {
-            const id = setTimeout(() => {
-              resolve();
-            }, realMs);
+            const id = setTimeout(resolve, realMs);
             self._delays.push({ id, resolve, reject });
           });
         },
         async delayMicroseconds(us) {
+          us = Number(us);
+          if (!Number.isFinite(us) || us < 0) us = 0;
           const ms = us / 1000;
           const realMs = ms / self.speed;
           self.simTime += ms;
+          self._iterSinceDelay = 0;
           await new Promise((resolve, reject) => {
             const id = setTimeout(resolve, Math.max(0, realMs));
             self._delays.push({ id, resolve, reject });
@@ -320,12 +341,20 @@ class ArduinoSimulator {
 
         /* Math helpers */
         map(val, inMin, inMax, outMin, outMax) {
+          if (inMax === inMin) return outMin;
           return (val - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
         },
         constrain(val, lo, hi) { return Math.max(lo, Math.min(hi, val)); },
         random(minOrMax, max) {
-          if (max === undefined) return Math.floor(Math.random() * minOrMax);
-          return Math.floor(Math.random() * (max - minOrMax)) + minOrMax;
+          if (max === undefined) {
+            const hi = Math.floor(Number(minOrMax) || 0);
+            if (hi <= 0) return 0;
+            return Math.floor(Math.random() * hi);
+          }
+          const lo = Math.floor(Number(minOrMax) || 0);
+          const hi = Math.floor(Number(max) || 0);
+          if (hi <= lo) return lo;
+          return Math.floor(Math.random() * (hi - lo)) + lo;
         },
         randomSeed(seed) { /* Can't set Math.random seed in JS easily */ },
         min(a, b) { return Math.min(a, b); },
@@ -372,8 +401,10 @@ class ArduinoSimulator {
         /* Tone */
         tone(pin, freq, duration) {
           const key = `pin_${pin}`;
+          freq = Number(freq);
+          if (!Number.isFinite(freq) || freq <= 0) freq = 440;
           self._startTone(key, freq);
-          if (duration) setTimeout(() => self._stopTone(key), duration / self.speed);
+          if (duration) setTimeout(() => self._stopTone(key), (Number(duration) || 0) / self.speed);
         },
         noTone(pin) { self._stopTone(`pin_${pin}`); },
 
@@ -457,20 +488,26 @@ class ArduinoSimulator {
       const keys = filtered.map(entry => entry.key);
       const vals = filtered.map(entry => entry.val);
 
+      // Wrap the sketch in a block so user `let`/`const` names may shadow the
+      // injected context params (e.g. a sketch declaring its own HIGH/A0).
+      // The `return` lives inside the same block, so setup/loop stay in scope.
+      const body = `{\n${js}\n\nif(typeof setup === "undefined") throw new Error("Missing setup() function. Every Arduino sketch needs a setup() function."); if(typeof loop === "undefined") throw new Error("Missing loop() function. Every Arduino sketch needs a loop() function."); return { setup, loop };\n}`;
+
       // Try to build the function — will throw on syntax errors
-      const fn = new Function(...keys, js + '\n\nif(typeof setup === "undefined") throw new Error("Missing setup() function. Every Arduino sketch needs a setup() function."); if(typeof loop === "undefined") throw new Error("Missing loop() function. Every Arduino sketch needs a loop() function."); return { setup, loop };');
+      const fn = new Function(...keys, body);
       this._compiledFn = fn;
       this._compiledCtx = { keys, vals, fn };
       this._compiledJs = js;
       return { ok: true, compiledJs: js };
     } catch (err) {
-      const friendly = this._friendlyError(err.message);
-      return { ok: false, error: friendly, rawError: err.message };
+      const friendly = this._friendlyError(err && err.message ? err.message : String(err), err);
+      return { ok: false, error: friendly, rawError: err && err.message ? err.message : String(err) };
     }
   }
 
   async run(code) {
     if (this.isRunning) this.stop();
+    if (typeof code !== 'string') code = '';
     this.simTime  = 0;
     this.pinStates = {};
     this.pinModes  = {};
@@ -501,6 +538,8 @@ class ArduinoSimulator {
     // Start FPS ticker
     this._fpsInterval = setInterval(() => this._tickFps(), 500);
 
+    let hadError = false;
+
     try {
       const { setup, loop } = fn(...vals);
 
@@ -525,19 +564,28 @@ class ArduinoSimulator {
       }
     } catch (err) {
       if (err && err.message !== 'SIMULATION_STOPPED') {
-        const friendly = this._friendlyError(err.message || String(err));
+        hadError = true;
+        const friendly = this._friendlyError(err.message ? err.message : String(err), err instanceof Error ? err : undefined);
         this._emitError(friendly);
         this._serialLog(`[Error] ${friendly}\n`, 'error');
       }
     } finally {
-      clearInterval(this._fpsInterval);
-      this._fpsInterval = null;
+      if (this._fpsInterval) {
+        clearInterval(this._fpsInterval);
+        this._fpsInterval = null;
+      }
+      // Release any pending pause
+      if (this._resumeResolve) {
+        const r = this._resumeResolve;
+        this._resumeResolve = null;
+        r();
+      }
     }
 
     this.isRunning = false;
     this._serialLog('[ArduSim] Simulation stopped\n', 'system');
     if (this.onStop) this.onStop();
-    return true;
+    return !hadError;
   }
 
   stop() {
@@ -549,7 +597,12 @@ class ArduinoSimulator {
       if (d.reject) d.reject(new Error('SIMULATION_STOPPED'));
     }
     this._delays = [];
-    if (this._resumeResolve) this._resumeResolve();
+    if (this._resumeResolve) {
+      const r = this._resumeResolve;
+      this._resumeResolve = null;
+      r();
+    }
+    this._stopAllTones();
   }
 
   pause() {
@@ -565,7 +618,8 @@ class ArduinoSimulator {
   }
 
   setSpeed(s) {
-    this.speed = parseFloat(s) || 1;
+    const v = parseFloat(s);
+    this.speed = Number.isFinite(v) ? Math.min(100, Math.max(0.01, v)) : 1;
   }
 
   /* ── FPS tracking ── */
@@ -581,27 +635,49 @@ class ArduinoSimulator {
   }
 
   /* ── Friendly error messages ── */
-  _friendlyError(msg) {
-    if (!msg) return 'An unknown error occurred';
+  _friendlyError(msg, err) {
+    if (!msg) msg = 'An unknown error occurred';
+    let line = '';
+    // Runtime errors carry the compiled-code line in their stack as the first
+    // "<anonymous>:N" frame. Syntax errors from `new Function` do not, and the
+    // first such frame would instead be the transpiler itself — so skip them.
+    if (err && err.stack && !(err instanceof SyntaxError)) {
+      const m = String(err.stack).match(/<anonymous>:(\d+)(?::\d+)?/);
+      if (m) {
+        const n = parseInt(m[1], 10) - 1; // account for the wrapper block offset
+        line = ` — line ${n > 0 ? n : 1}`;
+      }
+    }
+    if (err instanceof SyntaxError) return `Syntax error: ${msg}. Check for missing semicolons or braces.`;
+    if (err instanceof ReferenceError) {
+      const name = msg.match(/([A-Za-z_$][\w$]*)\s+is not defined/);
+      return `'${name ? name[1] : 'value'}' is not defined${line}. Did you forget to declare a variable or include a library?`;
+    }
+    if (err instanceof TypeError) return `Type error${line}: ${msg}. Check for null values or wrong argument types.`;
+    if (err instanceof RangeError) return `Range error${line}: ${msg}. Check for values out of allowed range.`;
+    if (msg.includes('Missing setup()')) return 'Missing setup() function. Every Arduino sketch needs a setup() function.';
+    if (msg.includes('Missing loop()'))  return 'Missing loop() function. Every Arduino sketch needs a loop() function.';
+    if (msg.includes('Maximum call stack')) return 'Stack overflow: infinite recursion detected. Check your function calls.';
     if (msg.includes('is not defined')) {
       const m = msg.match(/'([^']+)' is not defined/);
-      if (m) return `'${m[1]}' is not defined. Did you forget to declare a variable or include a library?`;
+      if (m) return `'${m[1]}' is not defined${line}. Did you forget to declare a variable or include a library?`;
     }
-    if (msg.includes('SyntaxError')) return `Syntax error in your code: ${msg.replace('SyntaxError: ', '')}. Check for missing semicolons or braces.`;
-    if (msg.includes('TypeError')) return `Type error: ${msg.replace('TypeError: ', '')}. Check for null values or wrong argument types.`;
-    if (msg.includes('setup()')) return 'Missing setup() function. Every Arduino sketch needs a setup() function.';
-    if (msg.includes('loop()'))  return 'Missing loop() function. Every Arduino sketch needs a loop() function.';
-    if (msg.includes('Maximum call stack')) return 'Stack overflow: infinite recursion detected. Check your function calls.';
-    return msg;
+    return msg + line;
   }
 
   sendSerialInput(text) {
+    if (typeof text !== 'string') return;
     for (const ch of text) {
       this.serialInputBuffer.push(ch);
+    }
+    // Never let the input buffer grow without bound
+    if (this.serialInputBuffer.length > 4096) {
+      this.serialInputBuffer.splice(0, this.serialInputBuffer.length - 4096);
     }
   }
 
   setPinState(pinKey, value) {
+    if (typeof pinKey !== 'string') return;
     this.pinStates[pinKey] = value;
     this._emitPinChange(pinKey, value);
   }
@@ -619,16 +695,20 @@ class ArduinoSimulator {
     this._initAudio();
     if (!this._toneCtx) return;
     this._stopTone(key);
-    const osc = this._toneCtx.createOscillator();
-    const gain = this._toneCtx.createGain();
-    osc.type = 'square';
-    osc.frequency.value = freq;
-    gain.gain.value = 0.1;
-    osc.connect(gain);
-    gain.connect(this._toneCtx.destination);
-    osc.start();
-    this._toneOscillators[key] = { osc, gain };
-    this._emitEvent('buzzer_on', { key, freq });
+    try {
+      const osc = this._toneCtx.createOscillator();
+      const gain = this._toneCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.1;
+      osc.connect(gain);
+      gain.connect(this._toneCtx.destination);
+      osc.start();
+      this._toneOscillators[key] = { osc, gain };
+      this._emitEvent('buzzer_on', { key, freq });
+    } catch (e) {
+      console.error('[ArduSim] Audio error:', e);
+    }
   }
 
   _stopTone(key) {
@@ -637,6 +717,14 @@ class ArduinoSimulator {
       delete this._toneOscillators[key];
     }
     this._emitEvent('buzzer_off', { key });
+  }
+
+  _stopAllTones() {
+    for (const key of Object.keys(this._toneOscillators)) {
+      try { this._toneOscillators[key].osc.stop(); } catch(e) {}
+      delete this._toneOscillators[key];
+    }
+    this._toneOscillators = {};
   }
 
   /* ══════════════ INTERNALS ══════════════ */

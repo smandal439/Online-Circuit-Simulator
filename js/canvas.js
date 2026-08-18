@@ -66,6 +66,12 @@ class CircuitCanvas {
   _render() {
     const { ctx, canvas, zoom, panX, panY } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Refresh active simulation states for live glowing & component updates
+    if (window.ArduinoSim && window.ArduinoSim.isRunning && window.ArduinoSim.pinStates) {
+      this.updateSimState(window.ArduinoSim.pinStates);
+    }
+
     ctx.save();
     ctx.translate(panX, panY);
     ctx.scale(zoom, zoom);
@@ -305,12 +311,14 @@ class CircuitCanvas {
   addComponent(type, worldX, worldY) {
     const def = window.ArduinoComponents.COMPONENT_DEFS[type];
     if (!def) return null;
+    const wx = Number.isFinite(Number(worldX)) ? Number(worldX) : 0;
+    const wy = Number.isFinite(Number(worldY)) ? Number(worldY) : 0;
 
     const inst = {
       id:           `comp_${Date.now()}_${Math.random().toString(36).substr(2,5)}`,
       type,
-      x:            this._snap(worldX - def.width / 2),
-      y:            this._snap(worldY - def.height / 2),
+      x:            this._snap(wx - def.width / 2),
+      y:            this._snap(wy - def.height / 2),
       width:        def.width,
       height:       def.height,
       props:        { ...(def.defaultProps || {}) },
@@ -334,6 +342,9 @@ class CircuitCanvas {
   }
 
   addWire(fromInstId, fromPinId, toInstId, toPinId) {
+    // Never allow a pin to be wired to itself
+    if (fromInstId === toInstId && fromPinId === toPinId) return null;
+
     // Avoid duplicate wires
     const exists = this.wires.some(w =>
       (w.from.instId === fromInstId && w.from.pinId === fromPinId && w.to.instId === toInstId && w.to.pinId === toPinId) ||
@@ -383,6 +394,61 @@ class CircuitCanvas {
   selectAll() {
     this.components.forEach(c => c.selected = true);
     this.selected = this.components[this.components.length - 1] || null;
+  }
+
+  duplicateSelected() {
+    if (!this.selected) return null;
+    const orig = this.selected;
+    const def = window.ArduinoComponents.COMPONENT_DEFS[orig.type];
+    const offset = this.GRID * 2;
+    const copy = {
+      id: `${orig.type}_${Date.now()}`,
+      type: orig.type,
+      x: orig.x + offset,
+      y: orig.y + offset,
+      props: JSON.parse(JSON.stringify(orig.props || (def ? def.defaultProps : {}))),
+      runtimeState: {},
+      selected: true,
+      rotation: orig.rotation || 0,
+    };
+    this._pushHistory();
+    this._selectAll(false);
+    this.components.push(copy);
+    this.selected = copy;
+    this.selectedWire = null;
+    this._onChanged();
+    return copy;
+  }
+
+  copySelected() {
+    if (this.selected) {
+      this._clipboard = JSON.parse(JSON.stringify(this.selected));
+    }
+  }
+
+  paste() {
+    if (!this._clipboard) return;
+    const orig = this._clipboard;
+    const offset = this.GRID * 2;
+    const copy = {
+      id: `${orig.type}_${Date.now()}`,
+      type: orig.type,
+      x: orig.x + offset,
+      y: orig.y + offset,
+      props: JSON.parse(JSON.stringify(orig.props || {})),
+      runtimeState: {},
+      selected: true,
+      rotation: orig.rotation || 0,
+    };
+    this._pushHistory();
+    this._selectAll(false);
+    this.components.push(copy);
+    this.selected = copy;
+    this.selectedWire = null;
+    // update clipboard pos for sequential pastes
+    this._clipboard.x += offset;
+    this._clipboard.y += offset;
+    this._onChanged();
   }
 
   startPlacing(type) {
@@ -586,12 +652,26 @@ class CircuitCanvas {
     const world = this._toWorld(e.offsetX, e.offsetY);
     const comp = this._hitTestComp(world.x, world.y);
     const wire = this._hitTestWire(world.x, world.y);
-    if (this.onContextMenu) this.onContextMenu(e, comp, wire, world);
+    if (comp) {
+      this._selectAll(false);
+      comp.selected = true;
+      this.selected = comp;
+      this.selectedWire = null;
+    } else if (wire) {
+      this._selectAll(false);
+      this.selectedWire = wire;
+      this.selected = null;
+    }
+    if (this.onContextMenu) {
+      this.onContextMenu(comp || (wire ? { type: 'wire', id: wire.id, wire } : null), e.clientX, e.clientY);
+    }
   }
 
   _onKeyDown(e) {
     // Only handle when canvas is in focus (not in editor)
-    if (e.target.closest('#editor-container') || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    const t = e.target;
+    if (t && typeof t.closest === 'function' && t.closest('#editor-container')) return;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
 
     if (e.key === 'Delete' || e.key === 'Backspace') { this.deleteSelected(); }
     if (e.key === 'r' || e.key === 'R') { this.rotateSelected(); }
@@ -603,6 +683,9 @@ class CircuitCanvas {
       this.selectedWire = null;
     }
     if (e.key === 'f' || e.key === 'F') { this.fitView(); }
+    if (e.ctrlKey && e.key.toLowerCase() === 'c') { this.copySelected(); }
+    if (e.ctrlKey && e.key.toLowerCase() === 'v') { this.paste(); }
+    if (e.ctrlKey && e.key.toLowerCase() === 'd') { e.preventDefault(); this.duplicateSelected(); }
     if (e.ctrlKey && e.key === 'z') { e.preventDefault(); this.undo(); }
     if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); this.redo(); }
     if (e.ctrlKey && e.key === 'a') { e.preventDefault(); this.selectAll(); }
@@ -775,9 +858,11 @@ class CircuitCanvas {
 
     const w = this.canvas.width, h = this.canvas.height;
     const cw = maxX - minX, ch = maxY - minY;
-    this.zoom = Math.min(4, Math.max(0.2, Math.min(w / cw, h / ch) * 0.9));
-    this.panX = (w - cw * this.zoom) / 2 - minX * this.zoom;
-    this.panY = (h - ch * this.zoom) / 2 - minY * this.zoom;
+    const safeCw = cw > 0 && Number.isFinite(cw) ? cw : 1;
+    const safeCh = ch > 0 && Number.isFinite(ch) ? ch : 1;
+    this.zoom = Math.min(4, Math.max(0.2, Math.min(w / safeCw, h / safeCh) * 0.9));
+    this.panX = (w - safeCw * this.zoom) / 2 - minX * this.zoom;
+    this.panY = (h - safeCh * this.zoom) / 2 - minY * this.zoom;
     this._updateZoomDisplay();
   }
 
@@ -822,28 +907,89 @@ class CircuitCanvas {
   }
 
   deserialize(data) {
-    if (!data) return;
-    this.components = data.components || [];
-    this.wires      = data.wires || [];
-    this.selected   = null;
+    if (!data || typeof data !== 'object') return;
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS
+      ? window.ArduinoComponents.COMPONENT_DEFS : {};
+
+    // Sanitize components: keep only known types with valid ids/positions
+    const seenIds = new Set();
+    const components = (Array.isArray(data.components) ? data.components : [])
+      .filter(c => c && typeof c === 'object' && c.type && defs[c.type] && c.id)
+      .map(c => {
+        const def = defs[c.type];
+        const x = Number(c.x);
+        const y = Number(c.y);
+        const rot = Number(c.rotation);
+        return {
+          id: String(c.id),
+          type: c.type,
+          x: Number.isFinite(x) ? Math.round(x / this.GRID) * this.GRID : 0,
+          y: Number.isFinite(y) ? Math.round(y / this.GRID) * this.GRID : 0,
+          width: def.width,
+          height: def.height,
+          props: Object.assign({}, def.defaultProps || {},
+            (c.props && typeof c.props === 'object') ? c.props : {}),
+          runtimeState: {},
+          selected: false,
+          rotation: Number.isFinite(rot) ? ((Math.round(rot) % 4) + 4) % 4 : 0,
+        };
+      })
+      .filter(c => {
+        if (seenIds.has(c.id)) return false;
+        seenIds.add(c.id);
+        return true;
+      });
+
+    const idSet = new Set(components.map(c => c.id));
+    const seenWires = new Set();
+    const wires = (Array.isArray(data.wires) ? data.wires : [])
+      .filter(w => w && w.from && w.to && idSet.has(w.from.instId) && idSet.has(w.to.instId))
+      .map(w => ({
+        id: String(w.id || `wire_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
+        from: { instId: String(w.from.instId), pinId: String(w.from.pinId) },
+        to:   { instId: String(w.to.instId),   pinId: String(w.to.pinId) },
+      }))
+      .filter(w => {
+        if (w.from.instId === w.to.instId && w.from.pinId === w.to.pinId) return false;
+        const a = `${w.from.instId}:${w.from.pinId}:${w.to.instId}:${w.to.pinId}`;
+        const b = `${w.to.instId}:${w.to.pinId}:${w.from.instId}:${w.from.pinId}`;
+        if (seenWires.has(a) || seenWires.has(b)) return false;
+        seenWires.add(a);
+        seenWires.add(b);
+        return true;
+      });
+
+    this.components = components;
+    this.wires = wires;
+    this.selected = null;
     this.selectedWire = null;
+
+    // Reset history so undo can't roll back into a blank/empty state
+    this.history = [JSON.stringify({ components: this.components, wires: this.wires })];
+    this.historyIdx = 0;
+
     this._onChanged();
     setTimeout(() => this.fitView(), 100);
   }
 
   exportPNG() {
-    // Render to a temp canvas with white background
-    const tmp = document.createElement('canvas');
-    tmp.width  = this.canvas.width;
-    tmp.height = this.canvas.height;
-    const tc = tmp.getContext('2d');
-    tc.fillStyle = '#0d1117';
-    tc.fillRect(0, 0, tmp.width, tmp.height);
-    tc.drawImage(this.canvas, 0, 0);
-    const a = document.createElement('a');
-    a.href = tmp.toDataURL('image/png');
-    a.download = 'circuit.png';
-    a.click();
+    try {
+      // Render to a temp canvas with white background
+      const tmp = document.createElement('canvas');
+      tmp.width  = this.canvas.width;
+      tmp.height = this.canvas.height;
+      const tc = tmp.getContext('2d');
+      tc.fillStyle = '#0d1117';
+      tc.fillRect(0, 0, tmp.width, tmp.height);
+      tc.drawImage(this.canvas, 0, 0);
+      const a = document.createElement('a');
+      a.href = tmp.toDataURL('image/png');
+      a.download = 'circuit.png';
+      a.click();
+    } catch (e) {
+      console.error('[ArduSim] Export PNG failed:', e);
+      if (window.App && window.App.showToast) window.App.showToast('Could not export image', 'error');
+    }
   }
 
   /* ══════════════ SIM HELPERS ══════════════ */
@@ -852,63 +998,233 @@ class CircuitCanvas {
     return this.components.find(c => c.type === 'arduino_uno') || null;
   }
 
-  // Update component display based on simulation state
+  // Update component display based on simulation state and circuit electrical paths
   updateSimState(pinStates) {
     for (const inst of this.components) {
       switch (inst.type) {
         case 'led': {
-          const aPin = this._getConnectedPinNum(inst.id, 'anode');
-          if (aPin !== null) {
-            inst.runtimeState.lit = (pinStates[`pin_${aPin}`] || 0) > 0;
+          // 1. Trace Anode (+) to voltage sources & series resistance
+          const anodeNet = this._tracePinNet(inst.id, 'anode');
+          // 2. Trace Cathode (-) to Ground paths & series resistance
+          const cathodeNet = this._tracePinNet(inst.id, 'cathode');
+
+          const hasGround = cathodeNet.grounds.length > 0;
+          const bestSource = anodeNet.sources.sort((a, b) => b.voltage - a.voltage)[0] || null;
+
+          if (!hasGround || !bestSource || bestSource.voltage <= 0) {
+            // No complete circuit: missing ground or missing voltage source -> OFF
+            inst.runtimeState.val = 0;
+            inst.runtimeState.lit = false;
+            inst.runtimeState.brightness = 0;
+            inst.runtimeState.current_mA = 0;
+          } else {
+            // Complete circuit! Calculate total resistance (anode path + cathode path + Arduino pin resistance)
+            const bestGround = cathodeNet.grounds.sort((a, b) => a.resistance - b.resistance)[0];
+            const rTotal = Math.max(10, (bestSource.resistance || 0) + (bestGround.resistance || 0) + 25);
+            const vSource = bestSource.voltage; // e.g. 5.0V or PWM duty cycle
+            const vf = 2.0; // typical LED forward voltage drop (V)
+
+            if (vSource < vf) {
+              inst.runtimeState.val = 0;
+              inst.runtimeState.lit = false;
+              inst.runtimeState.brightness = 0;
+              inst.runtimeState.current_mA = 0;
+            } else {
+              // Current in mA: I = (V_source - Vf) / R_total * 1000
+              const i_mA = ((vSource - vf) / rTotal) * 1000;
+              inst.runtimeState.current_mA = i_mA;
+
+              // LED nominal full brightness is ~15mA (standard 220 ohm resistor gives ~12.2mA -> ~0.93)
+              // Human perceptual brightness response: (I / 14mA)^0.55
+              const normBrightness = Math.max(0, Math.min(1.0, Math.pow(i_mA / 14.0, 0.55)));
+
+              inst.runtimeState.val = bestSource.rawVal;
+              inst.runtimeState.lit = normBrightness > 0.02;
+              inst.runtimeState.brightness = normBrightness;
+            }
+          }
+          break;
+        }
+        case 'rgb_led': {
+          // Cathode must be connected to GND
+          const cathodeNet = this._tracePinNet(inst.id, 'gnd');
+          const hasGround = cathodeNet.grounds.length > 0;
+
+          if (!hasGround) {
+            inst.runtimeState.red = 0;
+            inst.runtimeState.green = 0;
+            inst.runtimeState.blue = 0;
+            inst.runtimeState.r = 0;
+            inst.runtimeState.g = 0;
+            inst.runtimeState.b = 0;
+          } else {
+            const bestGround = cathodeNet.grounds.sort((a, b) => a.resistance - b.resistance)[0];
+            const gndR = bestGround.resistance || 0;
+
+            const traceChannel = (pinId, vf) => {
+              const net = this._tracePinNet(inst.id, pinId);
+              const source = net.sources.sort((a, b) => b.voltage - a.voltage)[0] || null;
+              if (!source || source.voltage < vf) return 0;
+              const rTotal = Math.max(10, (source.resistance || 0) + gndR + 25);
+              const i_mA = ((source.voltage - vf) / rTotal) * 1000;
+              const norm = Math.max(0, Math.min(1.0, Math.pow(i_mA / 14.0, 0.55)));
+              return Math.round(norm * 255);
+            };
+
+            inst.runtimeState.r = traceChannel('red', 1.8);
+            inst.runtimeState.g = traceChannel('green', 2.2);
+            inst.runtimeState.b = traceChannel('blue', 2.8);
+            inst.runtimeState.red = inst.runtimeState.r;
+            inst.runtimeState.green = inst.runtimeState.g;
+            inst.runtimeState.blue = inst.runtimeState.b;
           }
           break;
         }
         case 'buzzer': {
-          const vPin = this._getConnectedPinNum(inst.id, 'vcc');
-          if (vPin !== null) {
-            inst.runtimeState.active = (pinStates[`pin_${vPin}`] || 0) > 0;
-          }
+          const vccNet = this._tracePinNet(inst.id, 'vcc');
+          const gndNet = this._tracePinNet(inst.id, 'gnd');
+          const hasVcc = vccNet.sources.length > 0 && vccNet.sources[0].voltage > 1.5;
+          const hasGnd = gndNet.grounds.length > 0;
+          inst.runtimeState.active = hasVcc && hasGnd;
           break;
         }
         case 'potentiometer': {
-          // Potentiometer pushes value to connected analog pin
           const wiperPin = this._getConnectedPinNum(inst.id, 'wiper');
           if (wiperPin !== null) {
             const val = inst.runtimeState.value !== undefined ? inst.runtimeState.value : (inst.props.value || 512);
-            window.ArduinoSim.pinStates[`pin_${wiperPin}`] = val;
+            if (window.ArduinoSim && window.ArduinoSim.pinStates) {
+              window.ArduinoSim.pinStates[`pin_${wiperPin}`] = val;
+            }
           }
           break;
         }
         case 'push_button': {
-          // Button: if pressed, connect p1 to p3 (short them)
           const pressed = inst.runtimeState.pressed;
           const p1 = this._getConnectedPinNum(inst.id, 'p1');
           const p3 = this._getConnectedPinNum(inst.id, 'p3');
-          if (p1 !== null && pressed) {
+          if (p1 !== null && pressed && window.ArduinoSim && window.ArduinoSim.pinStates) {
             window.ArduinoSim.pinStates[`pin_${p1}`] = 1;
-          } else if (p1 !== null && !pressed) {
-            // Don't override unless pullup
           }
           break;
         }
         case 'servo': {
-          const sigPin = this._getConnectedPinNum(inst.id, 'signal');
-          if (sigPin !== null) {
-            const pwm = pinStates[`pin_${sigPin}`] || 0;
+          const sigNet = this._tracePinNet(inst.id, 'signal');
+          const source = sigNet.sources[0];
+          if (source) {
+            const pwm = source.rawVal || 0;
             inst.runtimeState.angle = Math.round((pwm / 255) * 180);
           }
-          break;
-        }
-        case 'lcd1602': {
-          // LCD state managed via events
           break;
         }
       }
     }
   }
 
+  // Electrical graph network tracer: traverses wires and series components to discover sources & ground nodes
+  _tracePinNet(startInstId, startPinId) {
+    const queue = [{ instId: startInstId, pinId: startPinId, resistance: 0 }];
+    const visited = new Set();
+    const sources = [];
+    const grounds = [];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const nodeKey = `${current.instId}:${current.pinId}`;
+      if (visited.has(nodeKey)) continue;
+      visited.add(nodeKey);
+
+      const inst = this.components.find(c => c.id === current.instId);
+      if (!inst) continue;
+
+      // 1. Arduino Uno Pins
+      if (inst.type === 'arduino_uno') {
+        const pinId = current.pinId;
+        if (pinId === 'GND1' || pinId === 'GND2' || pinId === 'GND_D' || pinId === 'GND') {
+          grounds.push({ type: 'gnd', instId: inst.id, pinId, resistance: current.resistance });
+        } else if (pinId === '5V' || pinId === 'VIN') {
+          sources.push({ type: '5v', voltage: 5.0, rawVal: 255, resistance: current.resistance });
+        } else if (pinId === '3V3') {
+          sources.push({ type: '3v3', voltage: 3.3, rawVal: 168, resistance: current.resistance });
+        } else {
+          // Digital or Analog pin (D0–D13, A0–A5)
+          const pinNum = this._pinToNumber(pinId);
+          const pinKey = `pin_${pinNum}`;
+          const sim = window.ArduinoSim;
+          const rawVal = sim && sim.pinStates ? (sim.pinStates[pinKey] || 0) : 0;
+
+          if (rawVal > 0) {
+            const voltage = 5.0 * (rawVal > 1 ? (rawVal / 255) : 1.0);
+            sources.push({ type: 'digital', pinNum, pinKey, voltage, rawVal, resistance: current.resistance });
+          } else {
+            // Pin is LOW (0V) -> can act as current sink (GND)
+            grounds.push({ type: 'digital_low', pinNum, pinKey, resistance: current.resistance });
+          }
+        }
+        continue;
+      }
+
+      // 2. Power and Ground components
+      if (inst.type === 'power_5v') {
+        sources.push({ type: '5v', voltage: 5.0, rawVal: 255, resistance: current.resistance });
+        continue;
+      }
+      if (inst.type === 'power_gnd') {
+        grounds.push({ type: 'gnd', instId: inst.id, pinId: 'gnd', resistance: current.resistance });
+        continue;
+      }
+
+      // 3. Resistor internal pass-through (p1 <-> p2)
+      if (inst.type === 'resistor') {
+        const rVal = Number(inst.props.value) || 220;
+        const otherPin = current.pinId === 'p1' ? 'p2' : 'p1';
+        queue.push({
+          instId: inst.id,
+          pinId: otherPin,
+          resistance: current.resistance + rVal,
+        });
+      }
+
+      // 4. Push Button internal pass-through
+      if (inst.type === 'push_button') {
+        const isPressed = inst.runtimeState && inst.runtimeState.pressed;
+        if (current.pinId === 'p1') queue.push({ instId: inst.id, pinId: 'p2', resistance: current.resistance });
+        if (current.pinId === 'p2') queue.push({ instId: inst.id, pinId: 'p1', resistance: current.resistance });
+        if (current.pinId === 'p3') queue.push({ instId: inst.id, pinId: 'p4', resistance: current.resistance });
+        if (current.pinId === 'p4') queue.push({ instId: inst.id, pinId: 'p3', resistance: current.resistance });
+
+        if (isPressed) {
+          if (current.pinId === 'p1' || current.pinId === 'p2') {
+            queue.push({ instId: inst.id, pinId: 'p3', resistance: current.resistance });
+            queue.push({ instId: inst.id, pinId: 'p4', resistance: current.resistance });
+          } else {
+            queue.push({ instId: inst.id, pinId: 'p1', resistance: current.resistance });
+            queue.push({ instId: inst.id, pinId: 'p2', resistance: current.resistance });
+          }
+        }
+      }
+
+      // 5. Traverse connected wires
+      for (const wire of this.wires) {
+        if (wire.from.instId === current.instId && wire.from.pinId === current.pinId) {
+          queue.push({
+            instId: wire.to.instId,
+            pinId: wire.to.pinId,
+            resistance: current.resistance,
+          });
+        } else if (wire.to.instId === current.instId && wire.to.pinId === current.pinId) {
+          queue.push({
+            instId: wire.from.instId,
+            pinId: wire.from.pinId,
+            resistance: current.resistance,
+          });
+        }
+      }
+    }
+
+    return { sources, grounds };
+  }
+
   _getConnectedPinNum(instId, pinId) {
-    // Find wire connected to this pin, get the other end's pin number
     for (const wire of this.wires) {
       let otherInstId, otherPinId;
       if (wire.from.instId === instId && wire.from.pinId === pinId) {
@@ -919,15 +1235,11 @@ class CircuitCanvas {
         otherPinId  = wire.from.pinId;
       } else continue;
 
-      // Get pin number
-      const def = window.ArduinoComponents.COMPONENT_DEFS;
       const otherInst = this.components.find(c => c.id === otherInstId);
       if (!otherInst) continue;
-      const otherDef = def[otherInst.type];
-      if (!otherDef) continue;
-      const otherPin = otherDef.pins.find(p => p.id === otherPinId);
-      if (!otherPin) continue;
-      return this._pinToNumber(otherPinId);
+      if (otherInst.type === 'arduino_uno') {
+        return this._pinToNumber(otherPinId);
+      }
     }
     return null;
   }

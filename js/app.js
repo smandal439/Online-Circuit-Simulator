@@ -15,6 +15,7 @@ class App {
 
   init() {
     try {
+      this._initErrorHandlers();
       this._bindUi();
       this._loadTheme();
       this._initCanvas();
@@ -46,10 +47,33 @@ class App {
         <div class="loading-error">
           <svg width="48" height="48" viewBox="0 0 16 16" fill="#da3633"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1m0 3a.905.905 0 0 1 .9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
           <h3>Failed to initialize ArduSim</h3>
-          <p>${msg}</p>
+          <p>${String(msg).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}</p>
           <button onclick="location.reload()">Reload</button>
         </div>`;
     }
+  }
+
+  /* ══════════════════════ GLOBAL ERROR HANDLING ══════════════════════ */
+  _initErrorHandlers() {
+    window.addEventListener('error', (e) => {
+      console.error('[ArduSim] Uncaught error:', e.error || e.message);
+      this._reportGlobalError((e.error && e.error.message) || e.message || 'unknown error');
+    });
+
+    window.addEventListener('unhandledrejection', (e) => {
+      const reason = e && e.reason;
+      const msg = reason && reason.message ? reason.message : String(reason || 'unknown error');
+      console.error('[ArduSim] Unhandled promise rejection:', reason);
+      this._reportGlobalError(msg);
+    });
+  }
+
+  _reportGlobalError(msg) {
+    // Throttle so a flood of errors can't spam the toast stack
+    if (this._errorCooldown) return;
+    this._errorCooldown = true;
+    setTimeout(() => { this._errorCooldown = false; }, 4000);
+    this.showToast(`Unexpected error: ${msg}`, 'error');
   }
 
   onEditorReady() {
@@ -248,11 +272,36 @@ class App {
     this.sim.onEvent = (type, data) => {
       if (!this.canvas) return;
       const insts = this.canvas.components || [];
+
+      // LCD display events
       for (const inst of insts) {
-        if (inst.type === 'lcd1602' && type === 'lcd_print') {
-          inst.runtimeState.line1 = (inst.runtimeState.line1 || '').slice(0, 16);
-          inst.runtimeState.line2 = (inst.runtimeState.line2 || '').slice(0, 16);
-          break;
+        if (inst.type !== 'lcd1602') continue;
+        if (type === 'lcd_power') {
+          inst.runtimeState.powered = true;
+        } else if (type === 'lcd_clear') {
+          inst.runtimeState.line1 = '';
+          inst.runtimeState.line2 = '';
+        } else if (type === 'lcd_print') {
+          const cursor = (data && data.cursor) || { col: 0, row: 0 };
+          const lineKey = cursor.row === 1 ? 'line2' : 'line1';
+          const text = String(data && data.text !== undefined ? data.text : '');
+          const line = String(inst.runtimeState[lineKey] || '').padEnd(16, ' ').slice(0, 16).split('');
+          const col = Math.max(0, Math.min(15, cursor.col || 0));
+          for (let i = 0; i < text.length && col + i < 16; i++) {
+            line[col + i] = text[i];
+          }
+          inst.runtimeState[lineKey] = line.join('');
+        }
+      }
+
+      // Servo events
+      if (type === 'servo' && data && Number.isFinite(Number(data.angle))) {
+        const angle = Math.max(0, Math.min(180, Number(data.angle)));
+        for (const inst of insts) {
+          if (inst.type === 'servo') {
+            inst.runtimeState.angle = angle;
+            break;
+          }
         }
       }
     };
@@ -268,7 +317,17 @@ class App {
     if (this.editor) this.editor.clearErrors();
 
     this.sim.stop();
-    const result = await this.sim.run(code);
+    let result;
+    try {
+      result = await this.sim.run(code);
+    } catch (err) {
+      console.error('[ArduSim] Run error:', err);
+      this._updateCompileStatus('Compile failed');
+      this._updateStatus('Simulation failed');
+      this.showToast('Simulation failed unexpectedly', 'error');
+      this._setRunningState(false);
+      return;
+    }
     if (result) {
       this._setRunningState(true);
       this._updateCompileStatus('Running');
@@ -454,6 +513,12 @@ class App {
       this._setProjectName(shared.name || 'Shared Project');
       this._refreshCanvasSummary();
       this.showToast('Shared project loaded', 'success');
+      return;
+    }
+
+    // Default starter circuit if canvas is empty
+    if (this.canvas && this.canvas.components.length === 0) {
+      this._loadExampleCircuit('blink');
     }
   }
 
@@ -699,7 +764,16 @@ class App {
     this.serial?.log('Verifying sketch…', 'system');
     if (this.editor) this.editor.clearErrors();
 
-    const result = await this.sim.compile(code);
+    let result;
+    try {
+      result = await this.sim.compile(code);
+    } catch (err) {
+      console.error('[ArduSim] Verify error:', err);
+      this._updateCompileStatus('Verification failed');
+      this._updateStatus('Verification failed');
+      this.showToast('Verification failed unexpectedly', 'error');
+      return false;
+    }
     if (result.ok) {
       this._updateCompileStatus('Verified ✓');
       this._updateStatus('Verification succeeded');
@@ -744,17 +818,18 @@ class App {
   _loadExampleCircuit(key) {
     if (!this.canvas) return;
     const lower = String(key).toLowerCase();
-    if (lower === 'led_on_13') {
+    if (lower === 'led_on_13' || lower === 'blink') {
       this.canvas.clearCanvas();
-      const board = this.canvas.addComponent('arduino_uno', 300, 120);
-      const led   = this.canvas.addComponent('led', 300, 260);
-      const gnd   = this.canvas.addComponent('gnd', 260, 300);
-      if (board && led) {
+      const board = this.canvas.addComponent('arduino_uno', 200, 100);
+      const led   = this.canvas.addComponent('led', 120, 280);
+      const res   = this.canvas.addComponent('resistor', 120, 360);
+      if (board && led && res) {
         this.canvas.addWire(board.id, 'D13', led.id, 'anode');
-        if (gnd) this.canvas.addWire(led.id, 'cathode', gnd.id, 'GND');
+        this.canvas.addWire(led.id, 'cathode', res.id, 'p1');
+        this.canvas.addWire(res.id, 'p2', board.id, 'GND1');
       }
       this._refreshCanvasSummary();
-      this.canvas.fitView();
+      setTimeout(() => this.canvas.fitView(), 80);
     }
   }
 
@@ -827,7 +902,14 @@ class App {
     toast.className = `toast ${type}`;
 
     const icons = { success: '✓', error: '✕', warn: '⚠', info: 'ℹ' };
-    toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span class="toast-msg">${msg}</span>`;
+    const icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    icon.textContent = icons[type] || 'ℹ';
+    const text = document.createElement('span');
+    text.className = 'toast-msg';
+    text.textContent = String(msg);
+    toast.appendChild(icon);
+    toast.appendChild(text);
 
     container.appendChild(toast);
 

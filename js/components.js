@@ -275,7 +275,14 @@ defComp({
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const col = inst.props.color || '#ff3333';
-    const isOn = sim && sim.pinStates && getInstPinState(inst, 'anode', sim) > 0.1;
+    const brightness = (inst.runtimeState && inst.runtimeState.brightness !== undefined)
+      ? inst.runtimeState.brightness
+      : (getInstPinState(inst, 'anode', sim) > 1 ? getInstPinState(inst, 'anode', sim) / 255 : (getInstPinState(inst, 'anode', sim) > 0.05 ? 1 : 0));
+    const isOn = (inst.runtimeState && inst.runtimeState.lit !== undefined)
+      ? (inst.runtimeState.lit && brightness > 0.01)
+      : (brightness > 0.02);
+    const time = Date.now() / 250;
+    const pulse = isOn ? 1 + Math.sin(time) * 0.08 : 1;
 
     ctx.save();
     ctx.translate(x, y);
@@ -293,32 +300,73 @@ defComp({
     ctx.moveTo(8, 42); ctx.lineTo(22, 42);
     ctx.stroke();
 
-    // LED body
+    // 1. Ambient Volumetric Glow Halo (Breathing illumination)
+    if (isOn) {
+      const glowR = (32 + brightness * 20) * pulse;
+      const halo = ctx.createRadialGradient(15, 30, 0, 15, 30, glowR);
+      halo.addColorStop(0, hexToRgba(col, 0.55 * brightness));
+      halo.addColorStop(0.3, hexToRgba(col, 0.28 * brightness));
+      halo.addColorStop(0.7, hexToRgba(col, 0.08 * brightness));
+      halo.addColorStop(1, hexToRgba(col, 0));
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(15, 30, glowR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 2. Inner glow aura with shadow
     if (isOn) {
       ctx.shadowColor = col;
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = (18 + brightness * 14) * pulse;
     }
-    ctx.fillStyle = isOn ? col : hexToRgba(col, 0.35);
+
+    // 3. LED Bulb body
+    ctx.fillStyle = isOn ? hexToRgba(col, 0.75 + 0.25 * brightness) : hexToRgba(col, 0.3);
     ctx.beginPath();
     ctx.arc(15, 30, 13, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = isOn ? col : hexToRgba(col, 0.6);
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = isOn ? '#ffffff' : hexToRgba(col, 0.5);
+    ctx.lineWidth = isOn ? 1.5 : 1;
     ctx.stroke();
 
-    // Lens glare
+    // 4. Glowing Internal Core & Die
     if (isOn) {
-      const glare = ctx.createRadialGradient(10, 23, 0, 15, 28, 11);
-      glare.addColorStop(0, 'rgba(255,255,255,0.6)');
-      glare.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = glare;
+      const coreGrad = ctx.createRadialGradient(15, 29, 0, 15, 29, 9);
+      coreGrad.addColorStop(0, '#ffffff');
+      coreGrad.addColorStop(0.45, hexToRgba(col, 0.95));
+      coreGrad.addColorStop(1, hexToRgba(col, 0.3));
+      ctx.fillStyle = coreGrad;
       ctx.beginPath();
-      ctx.arc(15, 30, 13, 0, Math.PI*2);
+      ctx.arc(15, 29, 8, 0, Math.PI * 2);
       ctx.fill();
+
+      // Incandescent die center
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillRect(13, 27, 4, 4);
+    } else {
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
+      ctx.fillRect(13, 27, 4, 4);
     }
 
     ctx.shadowBlur = 0;
+
+    // 5. Specular 3D Glass Dome Highlight
+    const glare = ctx.createRadialGradient(11, 23, 0, 15, 28, 12);
+    glare.addColorStop(0, isOn ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)');
+    glare.addColorStop(0.5, isOn ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)');
+    glare.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glare;
+    ctx.beginPath();
+    ctx.arc(15, 30, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Top rim highlight arc
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(15, 30, 11, -Math.PI * 0.75, -Math.PI * 0.25);
+    ctx.stroke();
 
     // Polarity marks
     ctx.fillStyle = '#aaa';
@@ -816,11 +864,17 @@ defComp({
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const r = sim ? (getInstPinPWM(inst, 'red', sim) / 255 * 255) : 0;
-    const g = sim ? (getInstPinPWM(inst, 'green', sim) / 255 * 255) : 0;
-    const b = sim ? (getInstPinPWM(inst, 'blue', sim) / 255 * 255) : 0;
-    const isOn = r > 0 || g > 0 || b > 0;
-    const col = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+    const rVal = (inst.runtimeState && inst.runtimeState.red !== undefined) ? inst.runtimeState.red : getInstPinPWM(inst, 'red', sim);
+    const gVal = (inst.runtimeState && inst.runtimeState.green !== undefined) ? inst.runtimeState.green : getInstPinPWM(inst, 'green', sim);
+    const bVal = (inst.runtimeState && inst.runtimeState.blue !== undefined) ? inst.runtimeState.blue : getInstPinPWM(inst, 'blue', sim);
+    const r = Math.min(255, Math.max(0, Math.round(rVal > 1 ? rVal : (rVal ? 255 : 0))));
+    const g = Math.min(255, Math.max(0, Math.round(gVal > 1 ? gVal : (gVal ? 255 : 0))));
+    const b = Math.min(255, Math.max(0, Math.round(bVal > 1 ? bVal : (bVal ? 255 : 0))));
+    const totalLum = Math.min(1, (r * 0.299 + g * 0.587 + b * 0.114) / 255);
+    const isOn = (r + g + b) > 5;
+    const col = `rgb(${r},${g},${b})`;
+    const time = Date.now() / 250;
+    const pulse = isOn ? 1 + Math.sin(time) * 0.07 : 1;
 
     ctx.save();
     ctx.translate(x, y);
@@ -832,18 +886,58 @@ defComp({
     ctx.strokeStyle = '#4444cc'; ctx.beginPath(); ctx.moveTo(24, 0); ctx.lineTo(24, 22); ctx.stroke();
     ctx.strokeStyle = '#888'; ctx.beginPath(); ctx.moveTo(15, 48); ctx.lineTo(15, 70); ctx.stroke();
 
+    // 1. Ambient Volumetric Glow Halo
+    if (isOn) {
+      const glowR = (36 + totalLum * 22) * pulse;
+      const halo = ctx.createRadialGradient(15, 35, 0, 15, 35, glowR);
+      halo.addColorStop(0, `rgba(${r},${g},${b},${0.5 * totalLum})`);
+      halo.addColorStop(0.35, `rgba(${r},${g},${b},${0.24 * totalLum})`);
+      halo.addColorStop(0.7, `rgba(${r},${g},${b},${0.07 * totalLum})`);
+      halo.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(15, 35, glowR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 2. Glow shadow
     if (isOn) {
       ctx.shadowColor = col;
-      ctx.shadowBlur = 18;
+      ctx.shadowBlur = (20 + totalLum * 15) * pulse;
     }
-    ctx.fillStyle = isOn ? col : '#2a2a2a';
+
+    // 3. Bulb body
+    ctx.fillStyle = isOn ? `rgba(${r},${g},${b},0.85)` : '#2a2a2a';
     ctx.beginPath();
     ctx.arc(15, 35, 14, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = isOn ? col : '#555';
+    ctx.strokeStyle = isOn ? 'rgba(255,255,255,0.75)' : '#555';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    // 4. White hotspot core
+    if (isOn) {
+      const core = ctx.createRadialGradient(15, 34, 0, 15, 34, 9);
+      core.addColorStop(0, '#ffffff');
+      core.addColorStop(0.45, `rgba(${r},${g},${b},0.95)`);
+      core.addColorStop(1, `rgba(${r},${g},${b},0.3)`);
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(15, 34, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.shadowBlur = 0;
+
+    // 5. Specular dome glare
+    const glare = ctx.createRadialGradient(11, 28, 0, 15, 33, 13);
+    glare.addColorStop(0, isOn ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)');
+    glare.addColorStop(0.5, isOn ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)');
+    glare.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glare;
+    ctx.beginPath();
+    ctx.arc(15, 35, 14, 0, Math.PI * 2);
+    ctx.fill();
 
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 36, 76);
     ctx.restore();
@@ -1254,30 +1348,73 @@ function drawSelectionRect(ctx, x, y, w, h) {
 }
 
 function drawLED_on_board(ctx, cx, cy, color, r) {
+  const isLit = color !== '#555' && color !== '#333' && color !== '#444';
+  if (isLit) {
+    const pulse = 1 + Math.sin(Date.now() / 250) * 0.08;
+    // Ambient bloom
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, (r * 3.5) * pulse);
+    glow.addColorStop(0, color);
+    glow.addColorStop(0.35, color);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, (r * 3.5) * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12 * pulse;
+  }
   ctx.fillStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = color === '#555' ? 0 : 8;
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
+  if (isLit) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.shadowBlur = 0;
 }
 
 function hexToRgba(hex, alpha) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
+  if (!hex || !hex.startsWith('#')) return `rgba(255,50,50,${alpha})`;
+  let h = hex.slice(1);
+  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  const r = parseInt(h.slice(0,2),16) || 0;
+  const g = parseInt(h.slice(2,4),16) || 0;
+  const b = parseInt(h.slice(4,6),16) || 0;
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
 function getInstPinState(inst, pinId, sim) {
-  const key = `${inst.id}_${pinId}`;
-  return sim.pinStates[key] || 0;
+  if (inst && inst.runtimeState && inst.runtimeState.val !== undefined) {
+    return inst.runtimeState.val;
+  }
+  if (inst && inst.runtimeState && inst.runtimeState.lit !== undefined) {
+    return inst.runtimeState.lit ? 1 : 0;
+  }
+  if (!sim || !sim.pinStates) return 0;
+  if (window.CircuitCanvas && typeof window.CircuitCanvas._getConnectedPinNum === 'function') {
+    const pinNum = window.CircuitCanvas._getConnectedPinNum(inst.id, pinId);
+    if (pinNum !== null) return sim.pinStates[`pin_${pinNum}`] || 0;
+  }
+  return sim.pinStates[`${inst.id}_${pinId}`] || 0;
 }
 
 function getInstPinPWM(inst, pinId, sim) {
-  const key = `${inst.id}_${pinId}`;
-  return sim.pinStates[key] || 0;
+  if (inst && inst.runtimeState && inst.runtimeState[pinId] !== undefined) {
+    return inst.runtimeState[pinId];
+  }
+  if (!sim || !sim.pinStates) return 0;
+  if (window.CircuitCanvas && typeof window.CircuitCanvas._getConnectedPinNum === 'function') {
+    const pinNum = window.CircuitCanvas._getConnectedPinNum(inst.id, pinId);
+    if (pinNum !== null) return sim.pinStates[`pin_${pinNum}`] || 0;
+  }
+  return sim.pinStates[`${inst.id}_${pinId}`] || 0;
 }
 
 /* Resistor color bands */

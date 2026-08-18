@@ -63,8 +63,10 @@ class Oscilloscope {
     const pin1Num = this._pinNameToNum(this.ch1Pin);
     const pin2Num = this._pinNameToNum(this.ch2Pin);
 
-    const v1 = pin1Num !== null ? (pinStates[`pin_${pin1Num}`] || 0) : 0;
-    const v2 = pin2Num !== null ? (pinStates[`pin_${pin2Num}`] || 0) : 0;
+    const states = (pinStates && typeof pinStates === 'object') ? pinStates : {};
+
+    const v1 = pin1Num !== null ? (states[`pin_${pin1Num}`] || 0) : 0;
+    const v2 = pin2Num !== null ? (states[`pin_${pin2Num}`] || 0) : 0;
 
     this.ch1Data.push({ t: simTime, v: v1 });
     this.ch2Data.push({ t: simTime, v: v2 });
