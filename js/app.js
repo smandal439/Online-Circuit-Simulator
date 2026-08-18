@@ -104,6 +104,7 @@ class App {
     const toggleBottomBtn     = get('btn-toggle-bottom');
     const showEditorBtn       = get('btn-show-editor');
     const showComponentsBtn   = get('btn-show-components');
+    const newProjectBtn  = get('btn-new-project');
     const zoomInBtn  = get('btn-zoom-in');
     const zoomOutBtn = get('btn-zoom-out');
     const fitViewBtn = get('btn-fit-view');
@@ -436,7 +437,6 @@ class App {
     this.canvas?.clearCanvas();
     this.editor?.setCode('');
     this._setProjectName('Untitled Project');
-    this.markClean();
     // Focus the editor for immediate typing
     const codeEl = document.getElementById('editor-code');
     if (codeEl) codeEl.focus();

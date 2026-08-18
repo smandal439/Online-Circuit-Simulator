@@ -56,8 +56,8 @@
   --hdr-height:     52px;
   --statusbar-h:    26px;
   --bottom-h:       200px;
-  --panel-editor-w: 380px;
-  --panel-comp-w:   260px;
+--panel-editor-w: 460px;
+  --panel-comp-w: 260px;
 
   /* Effects */
   --shadow-sm:      0 1px 3px rgba(0,0,0,0.4);
@@ -313,6 +313,15 @@ kbd {
 }
 .hdr-btn-icon:hover { background: var(--bg-hover); color: var(--text-primary); }
 
+/* View mode (Code / Circuit / Serial) buttons */
+.view-mode-group { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.view-mode-btn { padding: 5px 10px; font-size: 11px; color: var(--text-secondary); }
+.view-mode-btn.active {
+  background: var(--bg-active);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .hdr-select {
@@ -397,6 +406,33 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .panel-editor    { width: var(--panel-editor-w); flex-shrink: 0; border-right: 1px solid var(--border); }
 .panel-canvas    { flex: 1; min-width: 300px; }
 .panel-components { width: var(--panel-comp-w); flex-shrink: 0; border-left: 1px solid var(--border); }
+
+/* ═══════════════ VIEW FOCUS MODES ═══════════════ */
+body.view-code .panel-canvas,
+body.view-code .panel-components,
+body.view-code .bottom-panel,
+body.view-code #resizer-left,
+body.view-code #resizer-right { display: none; }
+body.view-code .panel-editor { flex: 1; width: auto; }
+
+body.view-circuit .panel-editor,
+body.view-circuit .panel-components,
+body.view-circuit .bottom-panel,
+body.view-circuit #resizer-left,
+body.view-circuit #resizer-right { display: none; }
+body.view-circuit .panel-canvas { flex: 1; width: auto; }
+
+body.view-serial .panel-editor,
+body.view-serial .panel-canvas,
+body.view-serial .panel-components,
+body.view-serial #resizer-left,
+body.view-serial #resizer-right { display: none; }
+body.view-serial .main-layout { bottom: 0; }
+body.view-serial .bottom-panel {
+  top: calc(var(--hdr-height) + var(--statusbar-h));
+  height: auto;
+  bottom: 0;
+}
 
 .panel-resizer {
   width: 4px;
@@ -1363,7 +1399,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 /* ═══════════════ RESPONSIVE ═══════════════ */
 @media (max-width: 900px) {
   :root {
-    --panel-editor-w: 320px;
+    --panel-editor-w: 380px;
     --panel-comp-w: 220px;
   }
   .logo-tag, .speed-label, .autosave-status { display: none; }
