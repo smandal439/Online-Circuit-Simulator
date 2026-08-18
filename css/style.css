@@ -914,6 +914,37 @@ body.view-serial .bottom-panel {
 .serial-input:focus { border-color: var(--border-focus); }
 .serial-input::placeholder { color: var(--text-muted); }
 
+/* ═══════════════ OUTPUT / DEBUG ═══════════════ */
+.output-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: auto;
+}
+.output-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--serial-bg);
+  color: var(--serial-text);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.output-log::-webkit-scrollbar { width: 4px; }
+.output-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.output-line { display: block; }
+.output-ts { color: var(--text-muted); margin-right: 8px; }
+.output-line.info    { color: var(--serial-info); }
+.output-line.success { color: var(--run-color); }
+.output-line.error   { color: var(--serial-error); }
+.output-line.warn    { color: #e3b341; }
+.output-line.system  { color: var(--text-muted); font-style: italic; }
+
 /* ═══════════════ OSCILLOSCOPE ═══════════════ */
 .osc-toolbar {
   display: flex;

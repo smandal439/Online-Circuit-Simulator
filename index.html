@@ -299,6 +299,10 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 4.5A1.5 1.5 0 0 1 1.5 3h13A1.5 1.5 0 0 1 16 4.5V6a.5.5 0 0 1-.5.5 1.5 1.5 0 0 0 0 3 .5.5 0 0 1 .5.5v1.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 11.5V10a.5.5 0 0 1 .5-.5 1.5 1.5 1 0 0 0-3A.5.5 0 0 1 0 6z"/></svg>
         Serial Monitor
       </button>
+      <button class="btm-tab" id="tab-output" data-tab="output">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 2A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2zM4.646 4.646a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 1 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708M11 10.5a.5.5 0 0 1 0 1H8a.5.5 0 0 1 0-1z"/></svg>
+        Output
+      </button>
       <button class="btm-tab" id="tab-oscilloscope" data-tab="oscilloscope">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5"/></svg>
         Oscilloscope
@@ -356,6 +360,16 @@
           <input type="text" class="serial-input" id="serial-input" placeholder="Send message to Arduino…" aria-label="Serial input" />
           <button class="serial-btn serial-btn-send" id="btn-serial-send">Send</button>
         </div>
+      </div>
+
+      <!-- Output / Debug -->
+      <div class="tab-pane" id="pane-output">
+        <div class="serial-toolbar">
+          <span class="output-title">Compile &amp; Debug Output</span>
+          <span class="serial-line-count" id="output-line-count">0 lines</span>
+          <button class="serial-btn" id="btn-clear-output">Clear</button>
+        </div>
+        <div class="output-log" id="output-log" role="log" aria-live="polite"></div>
       </div>
 
       <!-- Oscilloscope -->
@@ -555,14 +569,15 @@
     window.require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
-  <script src="js/utils.js?v=20260818-7"></script>
-  <script src="js/components.js?v=20260818-7"></script>
-  <script src="js/simulator.js?v=20260818-7"></script>
-  <script src="js/canvas.js?v=20260818-7"></script>
-  <script src="js/serial.js?v=20260818-7"></script>
-  <script src="js/oscilloscope.js?v=20260818-7"></script>
-  <script src="js/storage.js?v=20260818-7"></script>
-  <script src="js/editor.js?v=20260818-7"></script>
-  <script src="js/app.js?v=20260818-7"></script>
+  <script src="js/utils.js?v=20260818-8"></script>
+  <script src="js/components.js?v=20260818-8"></script>
+  <script src="js/simulator.js?v=20260818-8"></script>
+  <script src="js/canvas.js?v=20260818-8"></script>
+  <script src="js/serial.js?v=20260818-8"></script>
+  <script src="js/output.js?v=20260818-8"></script>
+  <script src="js/oscilloscope.js?v=20260818-8"></script>
+  <script src="js/storage.js?v=20260818-8"></script>
+  <script src="js/editor.js?v=20260818-8"></script>
+  <script src="js/app.js?v=20260818-8"></script>
 </body>
 </html>

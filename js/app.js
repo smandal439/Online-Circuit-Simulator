@@ -6,6 +6,7 @@ class App {
     this.editor = window.EditorManager;
     this.canvas = null;
     this.serial = null;
+    this.output = null;
     this.osc = null;
     this.isRunning = false;
     this._propsComp = null;
@@ -22,6 +23,7 @@ class App {
       this._loadTheme();
       this._initCanvas();
       this._initSerial();
+      this._initOutput();
       this._initOscilloscope();
       this._attachSimulatorEvents();
       this._renderComponentLibrary();
@@ -271,6 +273,15 @@ class App {
     }
   }
 
+  /* ══════════════════════ OUTPUT / DEBUG INIT ══════════════════════ */
+  _initOutput() {
+    if (window.OutputPanelClass) {
+      this.output = new window.OutputPanelClass();
+      window.OutputPanel = this.output;
+      this.output.log('ArduSim ready. Code errors and debug messages will appear here.', 'system');
+    }
+  }
+
   /* ══════════════════════ SIMULATOR EVENTS ══════════════════════ */
   _attachSimulatorEvents() {
     this.sim.onSerial = (text, type) => {
@@ -293,6 +304,7 @@ class App {
     this.sim.onError = (err) => {
       this._updateCompileStatus(`Error: ${err}`);
       this.showToast(err, 'error');
+      this.output?.log(`Error: ${err}`, 'error');
       this._setRunningState(false);
       // Try to extract line number from error and show squiggle
       const lineMatch = err.match(/line[:\s]+(\d+)/i);
@@ -353,6 +365,7 @@ class App {
     this._updateCompileStatus('Compiling…');
     this._updateStatus('Compiling sketch');
     this.serial?.log('Compiling sketch…', 'system');
+    this.output?.log('Compiling sketch…', 'system');
     if (this.editor) this.editor.clearErrors();
 
     this.sim.stop();
@@ -363,6 +376,7 @@ class App {
       console.error('[ArduSim] Run error:', err);
       this._updateCompileStatus('Compile failed');
       this._updateStatus('Simulation failed');
+      this.output?.log(`Simulation failed unexpectedly: ${err && err.message ? err.message : err}`, 'error');
       this.showToast('Simulation failed unexpectedly', 'error');
       this._setRunningState(false);
       return;
@@ -371,9 +385,11 @@ class App {
       this._setRunningState(true);
       this._updateCompileStatus('Running');
       this._updateStatus('Simulation running');
+      this.output?.log('Compile OK — running simulation', 'success');
     } else {
       this._setRunningState(false);
       this._updateCompileStatus('Compile failed');
+      this.output?.log('Compile failed — see the error message below', 'error');
     }
   }
 
@@ -381,6 +397,7 @@ class App {
     this.sim.stop();
     this._setRunningState(false);
     this._updateStatus('Stopped');
+    this.output?.log('Simulation stopped', 'system');
     const fpsEl = document.getElementById('sim-fps');
     if (fpsEl) fpsEl.textContent = '0 FPS';
   }
@@ -391,12 +408,14 @@ class App {
     if (this.sim.isPaused) {
       this.sim.resume();
       this._updateStatus('Simulation resumed');
+      this.output?.log('Simulation resumed', 'success');
       if (pauseBtn) {
         pauseBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/></svg> Pause`;
       }
     } else {
       this.sim.pause();
       this._updateStatus('Simulation paused');
+      this.output?.log('Simulation paused', 'warn');
       if (pauseBtn) {
         pauseBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M10.804 8 5 4.633v6.734zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696z"/></svg> Resume`;
       }
@@ -521,11 +540,12 @@ class App {
     this._renderSavedProjects();
   }
 
-  _newProject() {
+_newProject() {
     // Reset the canvas and editor to a fresh state
     this.canvas?.clearCanvas();
-    this.editor?.setCode('void setup() { \n // setup code\n\n} \n void loop() {  \n// loop code\n \n }');
+    this.editor?.setCode('');
     this._setProjectName('Untitled Project');
+    this.output?.log('New project created', 'system');
     // Focus the editor for immediate typing
     const codeEl = document.getElementById('editor-code');
     if (codeEl) codeEl.focus();
@@ -959,6 +979,7 @@ class App {
     this._updateCompileStatus('Verifying…');
     this._updateStatus('Verifying sketch');
     this.serial?.log('Verifying sketch…', 'system');
+    this.output?.log('Verifying sketch…', 'system');
     if (this.editor) this.editor.clearErrors();
 
     let result;
@@ -968,18 +989,21 @@ class App {
       console.error('[ArduSim] Verify error:', err);
       this._updateCompileStatus('Verification failed');
       this._updateStatus('Verification failed');
+      this.output?.log(`Verification failed unexpectedly: ${err && err.message ? err.message : err}`, 'error');
       this.showToast('Verification failed unexpectedly', 'error');
       return false;
     }
     if (result.ok) {
       this._updateCompileStatus('Verified ✓');
       this._updateStatus('Verification succeeded');
+      this.output?.log('✓ Sketch verified — no errors found', 'success');
       this.showToast('✓ Sketch verified — no errors found!', 'success');
       return true;
     }
 
     this._updateCompileStatus(`Error: ${result.error}`);
     this._updateStatus('Verification failed');
+    this.output?.log(`Error: ${result.error}`, 'error');
     this.showToast(result.error || 'Verification failed', 'error');
     if (this.editor) this.editor.showError(1, result.error);
     return false;
