@@ -394,6 +394,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   overflow: hidden;
 }
 
+/* When the bottom panel is collapsed, let the workspace fill the freed space */
+body.bottom-collapsed .main-layout { bottom: 32px; }
+
 /* ═══════════════ PANELS ═══════════════ */
 .panel {
   display: flex;

@@ -866,6 +866,7 @@ class App {
     const bottom = document.getElementById('bottom-panel');
     if (!bottom) return;
     const collapsed = bottom.classList.toggle('collapsed');
+    document.body.classList.toggle('bottom-collapsed', collapsed);
     if (button) {
       const icon = document.getElementById('bottom-toggle-icon');
       if (icon) icon.style.transform = collapsed ? 'rotate(180deg)' : 'rotate(0deg)';
