@@ -372,7 +372,7 @@ defComp({
   height: 60,
   defaultProps: { color: '#ff3333', colorName: 'Red' },
   pins: [
-    { id: 'anode',   label: '+', type: PIN_TYPE.DIGITAL, x: 15, y:  0, side: 'top' },
+    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
     { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {

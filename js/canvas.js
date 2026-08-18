@@ -1200,8 +1200,21 @@ class CircuitCanvas {
             const rTotal = Math.max(10, (bestSource.resistance || 0) + (bestGround.resistance || 0) + 25);
             const vSource = bestSource.voltage; // e.g. 5.0V or PWM duty cycle
             const vf = 2.0; // typical LED forward voltage drop (V)
+            const rawVal = bestSource.rawVal;
 
-            if (vSource < vf) {
+            // PWM (analogWrite, value 2–254 on a digital pin): brightness follows the
+            // duty cycle directly so fades are clearly visible, even below Vf.
+            const isPWM = bestSource.type === 'digital' && rawVal > 1 && rawVal < 255;
+
+            if (isPWM) {
+              const frac = rawVal / 255;
+              // Slight perceptual ease so the eye sees a smooth ramp
+              const normBrightness = Math.max(0, Math.min(1.0, Math.pow(frac, 0.8)));
+              inst.runtimeState.val = rawVal;
+              inst.runtimeState.lit = normBrightness > 0.02;
+              inst.runtimeState.brightness = normBrightness;
+              inst.runtimeState.current_mA = vSource >= vf ? ((vSource - vf) / rTotal) * 1000 : 0;
+            } else if (vSource < vf) {
               inst.runtimeState.val = 0;
               inst.runtimeState.lit = false;
               inst.runtimeState.brightness = 0;
@@ -1215,7 +1228,7 @@ class CircuitCanvas {
               // Human perceptual brightness response: (I / 14mA)^0.55
               const normBrightness = Math.max(0, Math.min(1.0, Math.pow(i_mA / 14.0, 0.55)));
 
-              inst.runtimeState.val = bestSource.rawVal;
+              inst.runtimeState.val = rawVal;
               inst.runtimeState.lit = normBrightness > 0.02;
               inst.runtimeState.brightness = normBrightness;
             }
