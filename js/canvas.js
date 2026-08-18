@@ -550,11 +550,20 @@ class CircuitCanvas {
         compHit.selected = true;
         this.selected = compHit;
         this.selectedWire = null;
+
+        // --- New: toggle push_button pressed state on click ---
+        if (compHit.type === 'push_button') {
+          const inst = compHit;
+          inst.runtimeState = inst.runtimeState || {};
+          inst.runtimeState.pressed = !inst.runtimeState.pressed;
+        }
+        // ------------------------------------------------
+
         this.mode = 'dragging';
         this.dragging = {
           inst: compHit,
           offsetX: world.x - compHit.x,
-          offsetY: world.y - compHit.y,
+          offsetY: compHit.y,
           startX: compHit.x,
           startY: compHit.y,
           moved: false,
