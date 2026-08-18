@@ -184,9 +184,9 @@
           <button class="panel-icon-btn" id="btn-verify" title="Verify / Compile (Ctrl+R)">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425z"/></svg>
           </button>
-          <button class="panel-icon-btn" id="btn-toggle-editor" title="Collapse Editor">
+          <!-- <button class="panel-icon-btn" id="btn-toggle-editor" title="Collapse Editor">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/></svg>
-          </button>
+          </button> -->
         </div>
       </div>
       <div class="editor-container" id="editor-container"></div>
@@ -220,9 +220,9 @@
           <button class="panel-icon-btn panel-toggle-btn" id="btn-show-editor" title="Collapse Editor">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/></svg>
           </button>
-          <button class="panel-icon-btn panel-toggle-btn" id="btn-show-components" title="Collapse Panel">
+          <!-- <button class="panel-icon-btn panel-toggle-btn" id="btn-show-components" title="Collapse Panel">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/></svg>
-          </button>
+          </button> -->
           <div class="hdr-divider-sm"></div>
           <button class="panel-icon-btn" id="btn-undo-canvas" title="Undo (Ctrl+Z)">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/></svg>
@@ -276,11 +276,11 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5z"/></svg>
           Components
         </div>
-        <div class="panel-actions">
+        <!-- <div class="panel-actions">
           <button class="panel-icon-btn" id="btn-toggle-components" title="Collapse Panel">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/></svg>
           </button>
-        </div>
+        </div> -->
       </div>
       <div class="component-search-box">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="search-icon"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
@@ -555,14 +555,14 @@
     window.require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
-  <script src="js/utils.js?v=20260818-6"></script>
-  <script src="js/components.js?v=20260818-6"></script>
-  <script src="js/simulator.js?v=20260818-6"></script>
-  <script src="js/canvas.js?v=20260818-6"></script>
-  <script src="js/serial.js?v=20260818-6"></script>
-  <script src="js/oscilloscope.js?v=20260818-6"></script>
-  <script src="js/storage.js?v=20260818-6"></script>
-  <script src="js/editor.js?v=20260818-6"></script>
-  <script src="js/app.js?v=20260818-6"></script>
+  <script src="js/utils.js?v=20260818-7"></script>
+  <script src="js/components.js?v=20260818-7"></script>
+  <script src="js/simulator.js?v=20260818-7"></script>
+  <script src="js/canvas.js?v=20260818-7"></script>
+  <script src="js/serial.js?v=20260818-7"></script>
+  <script src="js/oscilloscope.js?v=20260818-7"></script>
+  <script src="js/storage.js?v=20260818-7"></script>
+  <script src="js/editor.js?v=20260818-7"></script>
+  <script src="js/app.js?v=20260818-7"></script>
 </body>
 </html>

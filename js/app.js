@@ -524,7 +524,7 @@ class App {
   _newProject() {
     // Reset the canvas and editor to a fresh state
     this.canvas?.clearCanvas();
-    this.editor?.setCode('');
+    this.editor?.setCode('void setup() { \n // setup code\n\n} \n void loop() {  \n// loop code\n \n }');
     this._setProjectName('Untitled Project');
     // Focus the editor for immediate typing
     const codeEl = document.getElementById('editor-code');

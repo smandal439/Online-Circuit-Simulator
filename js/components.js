@@ -314,13 +314,28 @@ defComp({
 
     // ── Silkscreen labels ──
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.font = 'bold 10px sans-serif';
-    ctx.fillText('ARDUINO', 36, 27);
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ARDUINO', 196, 48);
     ctx.font = 'bold 6px sans-serif';
-    ctx.fillText('UNO', 36, 37);
-    ctx.font = '4.5px sans-serif';
-    ctx.fillText('ANALOG IN', 48, 124);
-    ctx.fillText('POWER', 141, 124);
+    ctx.fillText('UNO', 196, 57);
+
+    // ── Pin labels (silkscreen, always readable) ──
+    ctx.font = 'bold 5px JetBrains Mono, monospace';
+    const paintPinLabel = (cx, baseline, text) => {
+      const w = ctx.measureText(text).width + 5;
+      ctx.fillStyle = 'rgba(8,44,18,0.9)';
+      roundRect(ctx, cx - w / 2, baseline - 4.5, w, 7, 2);
+      ctx.fill();
+      ctx.fillStyle = '#eef9ec';
+      ctx.fillText(text, cx, baseline + 1);
+    };
+    const topLabels   = ['D0','D1','D2','D3~','D4','D5~','D6~','D7','D8','D9~','D10~','D11~','D12','D13','GND','AREF'];
+    const analogLabels = ['A0','A1','A2','A3','A4','A5'];
+    const powerLabels  = ['VIN','GND','GND','5V','3.3V','RST'];
+    for (let i = 0; i < 16; i++) paintPinLabel(topHoles[i], 25, topLabels[i]);
+    for (let i = 0; i < 6; i++)  paintPinLabel(analogHoles[i], 120, analogLabels[i]);
+    for (let i = 0; i < 6; i++)  paintPinLabel(powerHoles[i], 120, powerLabels[i]);
 
     // Vertical "MADE IN ITALY" on the right edge
     ctx.save();

@@ -222,8 +222,9 @@ class CircuitCanvas {
         ctx.stroke();
       }
 
-      // Pin label (only when zoomed in enough)
-      if (this.zoom >= 1) {
+      // Pin label (only when zoomed in enough) — Arduino board has baked-in labels
+      const isArduinoBoard = inst.type === 'arduino_uno';
+      if (this.zoom >= 1 && !isArduinoBoard) {
         ctx.fillStyle = '#888';
         ctx.font = `${8 / this.zoom}px Inter, sans-serif`;
         ctx.textAlign = pin.side === 'top' ? 'center' : 'center';
