@@ -182,6 +182,36 @@ class App {
     document.querySelectorAll('[data-modal]').forEach(btn => btn.addEventListener('click', () => this._closeModal()));
     modalOverlay?.addEventListener('click', (e) => { if (e.target === modalOverlay) this._closeModal(); });
 
+    // Header dropdown menus
+    document.querySelectorAll('.hdr-dropdown').forEach(dd => {
+      const trigger = dd.querySelector('.hdr-dropdown-trigger');
+      trigger?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const wasOpen = dd.classList.contains('open');
+        this._closeHeaderDropdowns();
+        if (!wasOpen) {
+          const menu = dd.querySelector('.hdr-dropdown-menu');
+          const rect = trigger.getBoundingClientRect();
+          if (menu) {
+            menu.style.top = `${rect.bottom + 6}px`;
+            if (dd.classList.contains('hdr-dropdown-right')) {
+              menu.style.left = 'auto';
+              menu.style.right = `${Math.max(6, window.innerWidth - rect.right)}px`;
+            } else {
+              menu.style.right = 'auto';
+              menu.style.left = `${Math.max(6, rect.left)}px`;
+            }
+          }
+          dd.classList.add('open');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
+      });
+      dd.querySelectorAll('.hdr-dropdown-item').forEach(item => {
+        item.addEventListener('click', () => this._closeHeaderDropdowns());
+      });
+    });
+    document.addEventListener('click', () => this._closeHeaderDropdowns());
+
     // Bottom tabs
     bottomTabButtons.forEach(btn => btn.addEventListener('click', (e) => this._switchBottomTab(e.currentTarget)));
 
@@ -226,6 +256,7 @@ class App {
       if (e.key === 'Escape') {
         this._closeModal();
         this._closeContextMenu();
+        this._closeHeaderDropdowns();
         return;
       }
       if (inInput) return; // don't intercept remaining shortcuts while typing
@@ -991,6 +1022,21 @@ _newProject() {
   _closeContextMenu() {
     const menu = document.getElementById('canvas-context-menu');
     if (menu) { menu.classList.add('hidden'); menu.classList.remove('active'); }
+  }
+
+  /* ══════════════════════ HEADER DROPDOWNS ══════════════════════ */
+  _closeHeaderDropdowns() {
+    document.querySelectorAll('.hdr-dropdown.open').forEach(dd => {
+      dd.classList.remove('open');
+      const t = dd.querySelector('.hdr-dropdown-trigger');
+      if (t) t.setAttribute('aria-expanded', 'false');
+      const menu = dd.querySelector('.hdr-dropdown-menu');
+      if (menu) {
+        menu.style.top = '';
+        menu.style.left = '';
+        menu.style.right = '';
+      }
+    });
   }
 
   /* ══════════════════════ PANEL TOGGLES ══════════════════════ */

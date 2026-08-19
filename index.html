@@ -93,41 +93,65 @@
                     <path
                         d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5" />
                 </svg> Pause </button>
-            <div class="hdr-divider"></div> <!-- New project --> <button class="hdr-btn hdr-btn-ghost"
-                id="btn-new-project" title="New Project (Ctrl+N)"> <svg width="14" height="14" viewBox="0 0 16 16"
-                    fill="currentColor">
-                    <path d="M12 5v12M5 12h12M12 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                </svg> New </button> <!-- File operations --> <button class="hdr-btn hdr-btn-ghost" id="btn-save"
-                title="Save Project to Saved Projects (Ctrl+S)"> <svg width="14" height="14" viewBox="0 0 16 16"
-                    fill="currentColor">
-                    <path
-                        d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 1 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z" />
-                </svg> Save </button> <button class="hdr-btn hdr-btn-ghost" id="btn-download"
-                title="Download Project as JSON (Ctrl+Shift+S)"> <svg width="14" height="14" viewBox="0 0 16 16"
-                    fill="currentColor">
-                    <path
-                        d="M8 1a.5.5 0 0 1 .5.5v8.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 10.293V1.5A.5.5 0 0 1 8 1" />
-                    <path d="M.5 13.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1H1a.5.5 0 0 1-.5-.5" />
-                </svg> Download </button> <button class="hdr-btn hdr-btn-ghost" id="btn-load"
-                title="Load Project from file"> <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                    <path
-                        d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 1 1 1-.708-.708z" />
-                </svg> Load </button> <button class="hdr-btn hdr-btn-ghost" id="btn-saved-projects"
-                title="Saved Projects"> <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                    <path
-                        d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.879a1.5 1.5 0 0 1 1.06.44l.707.707h5.354A1.5 1.5 0 0 1 14 4.647V11.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 1 11.5z" />
-                    <path d="M1 5.5h14v1H1z" />
-                </svg> Saved </button> <button class="hdr-btn hdr-btn-ghost" id="btn-share" title="Share via URL"> <svg
-                    width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                    <path
-                        d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 1 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5" />
-                </svg> Share </button>
-            <div class="hdr-divider"></div> <!-- View modes: focus one area -->
-            <div class="view-mode-group"> <button class="hdr-btn hdr-btn-ghost view-mode-btn" id="btn-view-code"
-                    title="Focus Code Editor">Code</button> <button class="hdr-btn hdr-btn-ghost view-mode-btn"
-                    id="btn-view-circuit" title="Focus Circuit Canvas">Circuit</button> <button
-                    class="hdr-btn hdr-btn-ghost view-mode-btn" id="btn-view-serial"
-                    title="Focus Serial Monitor">Serial</button> </div>
+            <div class="hdr-divider"></div>
+            <!-- File menu (collapses New / Save / Download / Load / Saved / Share) -->
+            <div class="hdr-dropdown" id="dd-file">
+                <button class="hdr-btn hdr-btn-ghost hdr-dropdown-trigger" id="btn-file-menu" title="Project File menu"
+                    aria-haspopup="true" aria-expanded="false"> <svg width="14" height="14" viewBox="0 0 16 16"
+                        fill="currentColor">
+                        <path
+                            d="M2 1a1 1 0 0 1 1-1h7.586A1 1 0 0 1 11.293.293l2.414 2.414A1 1 0 0 1 14 3.414V15a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1zM8 2v3.5A1.5 1.5 0 0 0 9.5 7H13V3.414L11.586 2H11v2a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V1H3z" />
+                    </svg> File <svg class="hdr-caret" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 11 1.5 4.5l.707-.707L8 9.586l5.793-5.793.707.707z" />
+                    </svg> </button>
+                <div class="hdr-dropdown-menu" id="file-menu" role="menu"> <button class="hdr-dropdown-item"
+                        id="btn-new-project" role="menuitem" title="New Project (Ctrl+N)"> <svg width="13" height="13"
+                            viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M12 5v12M5 12h12M12 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+                        </svg> New </button> <button class="hdr-dropdown-item" id="btn-save" role="menuitem"
+                        title="Save Project to Saved Projects (Ctrl+S)"> <svg width="13" height="13" viewBox="0 0 16 16"
+                            fill="currentColor">
+                            <path
+                                d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 1 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z" />
+                        </svg> Save </button> <button class="hdr-dropdown-item" id="btn-download" role="menuitem"
+                        title="Download Project as JSON (Ctrl+Shift+S)"> <svg width="13" height="13" viewBox="0 0 16 16"
+                            fill="currentColor">
+                            <path
+                                d="M8 1a.5.5 0 0 1 .5.5v8.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 1 1 1 .708-.708L7.5 10.293V1.5A.5.5 0 0 1 8 1" />
+                            <path d="M.5 13.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1H1a.5.5 0 0 1-.5-.5" />
+                        </svg> Download </button> <button class="hdr-dropdown-item" id="btn-load" role="menuitem"
+                        title="Load Project from file"> <svg width="13" height="13" viewBox="0 0 16 16"
+                            fill="currentColor">
+                            <path
+                                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 1 1 1-.708-.708z" />
+                        </svg> Load </button> <button class="hdr-dropdown-item" id="btn-saved-projects" role="menuitem"
+                        title="Saved Projects"> <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.879a1.5 1.5 0 0 1 1.06.44l.707.707h5.354A1.5 1.5 0 0 1 14 4.647V11.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 1 11.5z" />
+                            <path d="M1 5.5h14v1H1z" />
+                        </svg> Saved </button> <button class="hdr-dropdown-item" id="btn-share" role="menuitem"
+                        title="Share via URL"> <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 1 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5" />
+                        </svg> Share </button> </div>
+            </div>
+            <div class="hdr-divider"></div>
+            <!-- View menu (focus Code / Circuit / Serial) -->
+            <div class="hdr-dropdown hdr-dropdown-right" id="dd-view">
+                <button class="hdr-btn hdr-btn-ghost hdr-dropdown-trigger" id="btn-view-menu" title="Focus a panel"
+                    aria-haspopup="true" aria-expanded="false"> <svg width="14" height="14" viewBox="0 0 16 16"
+                        fill="currentColor">
+                        <path
+                            d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm4.5 2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1zM7 5.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m-2.5 2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1zM7 8.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m-2.5 2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1zM7 11.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5" />
+                    </svg> View <svg class="hdr-caret" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 11 1.5 4.5l.707-.707L8 9.586l5.793-5.793.707.707z" />
+                    </svg> </button>
+                <div class="hdr-dropdown-menu" id="view-menu" role="menu"> <button class="hdr-dropdown-item"
+                        id="btn-view-code" role="menuitem" title="Focus Code Editor">Code</button> <button
+                        class="hdr-dropdown-item" id="btn-view-circuit" role="menuitem"
+                        title="Focus Circuit Canvas">Circuit</button> <button class="hdr-dropdown-item"
+                        id="btn-view-serial" role="menuitem" title="Focus Serial Monitor">Serial</button> </div>
+            </div>
             <div class="hdr-divider"></div> <!-- Auto-save status --> <span class="autosave-status" id="autosave-status"
                 title="Auto-save status"></span>
             <div class="hdr-divider"></div> <!-- Theme toggle --> <button class="hdr-btn hdr-btn-icon" id="btn-theme"
@@ -172,7 +196,10 @@
                             <path
                                 d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425z" />
                         </svg> </button>
-                    <!-- <button class="panel-icon-btn" id="btn-toggle-editor" title="Collapse Editor">            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/></svg>          </button> -->
+                    <button class="panel-icon-btn" id="btn-toggle-editor" title="Collapse Editor"> <svg width="13"
+                            height="13" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8" />
+                        </svg> </button>
                 </div>
             </div>
             <div class="editor-container" id="editor-container"></div>
@@ -203,7 +230,11 @@
                             <path
                                 d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0" />
                         </svg> </button>
-                    <!-- <button class="panel-icon-btn panel-toggle-btn" id="btn-show-components" title="Collapse Panel">            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/></svg>          </button> -->
+                    <button class="panel-icon-btn panel-toggle-btn" id="btn-show-components" title="Collapse Panel">
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708" />
+                        </svg> </button>
                     <div class="hdr-divider-sm"></div> <button class="panel-icon-btn" id="btn-undo-canvas"
                         title="Undo (Ctrl+Z)"> <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z" />
@@ -255,7 +286,10 @@
                         <path
                             d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5z" />
                     </svg> Components </div>
-                <!-- <div class="panel-actions">          <button class="panel-icon-btn" id="btn-toggle-components" title="Collapse Panel">            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/></svg>          </button>        </div> -->
+                <div class="panel-actions"> <button class="panel-icon-btn" id="btn-toggle-components"
+                        title="Collapse Panel"> <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8" />
+                        </svg> </button> </div>
             </div>
             <div class="component-search-box"> <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"
                     class="search-icon">
@@ -505,7 +539,8 @@
         <p>Loading ArduSim…</p> <span class="loading-sub">Initializing Monaco Editor &amp; Components</span>
     </div> <!-- ════════════════════ SCRIPTS ════════════════════ -->
     <script>window.require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };</script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
     <script src="js/utils.js?v=20260825-1"></script>
     <script src="js/components.js?v=20260825-1"></script>
     <script src="js/simulator.js?v=20260825-1"></script>

@@ -1,12 +1,12 @@
-# ArduSim — Commercial-Grade Online Arduino Simulator
+# ArduSim — Online Arduino Circuit Simulator
 
 <div align="center">
-  <h3>⚡ Real-time Arduino C++ execution, interactive component drag-and-drop, serial monitor & oscilloscope in the browser. No installation needed.</h3>
+  <h3>⚡ Real-time Arduino C++ execution, interactive component drag-and-drop, serial monitor & oscilloscope — all in the browser. No installation needed.</h3>
 </div>
 
 ---
 
-## 🌟 Key Features
+## ✨ Key Features
 
 ### 🖥️ Professional Code Editor
 - **Monaco Editor Integration**: Full VS Code-grade editing experience.
@@ -44,6 +44,7 @@
   - HEX inspection and microsecond timestamps.
   - One-click clipboard copy and text export.
 - **Digital Oscilloscope**: Real-time multi-channel waveform capture for PWM and analog signals with configurable timebase and edge triggering.
+- **Serial Plotter**: Graphs numeric `Serial.print` / `Serial.println` values in real time.
 - **Pin Monitor**: Live color-coded status board of all 20 Arduino pins (D0–D13, A0–A5) with level indicators, direction modes, and PWM bars.
 
 ### 💾 Project & State Management
@@ -53,6 +54,31 @@
 - **Portable JSON File Export/Import**: Full schema migration and backward compatibility.
 - **Instant URL Sharing**: Unicode-safe base64 project encoding for sharing circuits via a single link.
 - **Progressive Web App (PWA)**: Installable as a standalone desktop or mobile web application.
+
+---
+
+## 🧭 Interface Guide
+
+### Top Navigation Bar
+A clean, compact toolbar keeps everything within reach without cluttering the workspace:
+
+| Control | Purpose |
+|---|---|
+| **Examples** | Open the built-in example project gallery. |
+| **Speed** | Adjust simulation speed from 0.25× to 10×. |
+| **Board** | Switch between Arduino Uno and ESP32 DevKit V1 targets. |
+| **Run / Stop / Pause** | Control the simulation lifecycle. |
+| **File ▾** (dropdown) | **New**, **Save**, **Download**, **Load**, **Saved Projects**, and **Share**. |
+| **View ▾** (dropdown) | Focus the **Code** editor, **Circuit** canvas, or **Serial** monitor. |
+| **Theme & Shortcuts** | Toggle dark/light theme and view the keyboard reference. |
+
+> The **File** and **View** menus are dropdowns that collapse secondary actions, keeping the header short and the canvas maximized. Menus close on outside click or <kbd>ESC</kbd>.
+
+### Main Workspace
+- **Left** — Code Editor with line numbers, cursor position, and live compile diagnostics.
+- **Center** — Circuit Canvas with zoom controls, undo/redo, clear, and PNG export.
+- **Right** — Searchable Component Library.
+- **Bottom** — Tabbed instruments: Serial Monitor, Output, Oscilloscope, Plotter, and Pin Monitor.
 
 ---
 
@@ -76,7 +102,7 @@
 | <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Undo canvas action | Canvas |
 | <kbd>Ctrl</kbd> + <kbd>Y</kbd> | Redo canvas action | Canvas |
 | <kbd>F</kbd> | Fit circuit to view | Canvas |
-| <kbd>ESC</kbd> | Cancel wiring / placing / deselect | Canvas |
+| <kbd>ESC</kbd> | Cancel wiring / placing / deselect / close menus | Global |
 
 ---
 
@@ -98,6 +124,30 @@ No build step or Node.js environment is required. You can host this static web a
    git clone https://github.com/smandal439/Online-Circuit-Simulator.git
    ```
 2. Open `index.html` in any modern web browser (Chrome, Edge, Firefox, Safari).
+
+---
+
+## 🗂️ Project Structure
+
+```
+├── index.html          # Application shell & layout
+├── css/style.css       # Styling, themes, and responsive rules
+├── js/
+│   ├── app.js          # Core app logic, UI bindings, dropdowns
+│   ├── canvas.js       # Circuit canvas, wiring, pan/zoom
+│   ├── components.js   # Component library definitions
+│   ├── simulator.js    # Arduino code transpilation & execution
+│   ├── editor.js       # Monaco editor integration
+│   ├── serial.js       # Serial monitor
+│   ├── oscilloscope.js # Oscilloscope rendering
+│   ├── plotter.js      # Serial plotter
+│   ├── output.js       # Compile & debug output
+│   ├── storage.js      # localStorage persistence & file IO
+│   ├── sharing.js      # URL-based project sharing
+│   ├── safetyChecker.js# Infinite-loop protection
+│   └── utils.js        # Shared helpers
+└── manifest.json       # PWA manifest
+```
 
 ---
 
