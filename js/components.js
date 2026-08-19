@@ -384,6 +384,8 @@ defComp({
     const isOn = (inst.runtimeState && inst.runtimeState.lit !== undefined)
       ? (inst.runtimeState.lit && brightness > 0.01)
       : (brightness > 0.02);
+    const blown = !!(inst.runtimeState && inst.runtimeState.blown);
+    const overloaded = !!(inst.runtimeState && inst.runtimeState.overload) && !blown;
     const time = Date.now() / 250;
     const pulse = isOn ? 1 + Math.sin(time) * 0.08 : 1;
 
@@ -424,12 +426,12 @@ defComp({
     }
 
     // 3. LED Bulb body
-    ctx.fillStyle = isOn ? hexToRgba(col, 0.75 + 0.25 * brightness) : hexToRgba(col, 0.3);
+    ctx.fillStyle = isOn ? hexToRgba(col, 0.75 + 0.25 * brightness) : (blown ? 'rgba(52,52,58,0.95)' : hexToRgba(col, 0.3));
     ctx.beginPath();
     ctx.arc(15, 30, 13, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = isOn ? '#ffffff' : hexToRgba(col, 0.5);
+    ctx.strokeStyle = isOn ? '#ffffff' : (blown ? 'rgba(30,30,34,0.9)' : hexToRgba(col, 0.5));
     ctx.lineWidth = isOn ? 1.5 : 1;
     ctx.stroke();
 
@@ -477,6 +479,33 @@ defComp({
     ctx.textAlign = 'center';
     ctx.fillText('+', 7, 18);
     ctx.fillText('−', 24, 46);
+
+    // Burned-out cracks inside the dome
+    if (blown) {
+      ctx.strokeStyle = 'rgba(20,20,24,0.85)';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.moveTo(9, 23); ctx.lineTo(13, 27); ctx.lineTo(10, 32); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(21, 21); ctx.lineTo(17, 27); ctx.lineTo(20, 33); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(13, 38); ctx.lineTo(16, 33); ctx.lineTo(12, 29); ctx.stroke();
+    }
+
+    // Warning badge (overload or blown) — amber triangle with "!"
+    if (blown || overloaded) {
+      ctx.fillStyle = blown ? '#ff4444' : '#ffcc00';
+      ctx.strokeStyle = blown ? '#7a0000' : '#554400';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(15, -1);
+      ctx.lineTo(10, 6);
+      ctx.lineTo(20, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 5px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('!', 15, 5.6);
+    }
 
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 36, 66);
     ctx.restore();
@@ -635,6 +664,9 @@ defComp({
   width: 50,
   height: 60,
   defaultProps: { value: 512, maxValue: 1023, resistance: 10000 },
+  interactive: [
+    { field: 'value', label: 'Wiper', min: 0, max: 1023, step: 1 },
+  ],
   pins: [
     { id: 'vcc',    label: 'VCC', type: PIN_TYPE.POWER,  x:  8, y: 60, side: 'bottom' },
     { id: 'wiper',  label: 'OUT', type: PIN_TYPE.ANALOG, x: 25, y: 60, side: 'bottom' },
@@ -1131,6 +1163,10 @@ defComp({
   width: 30,
   height: 50,
   defaultProps: { temperature: 25, humidity: 60 },
+  interactive: [
+    { field: 'temperature', label: 'Temp', min: 0, max: 50, step: 1, unit: '°C' },
+    { field: 'humidity',    label: 'Hum',  min: 0, max: 100, step: 1, unit: '%' },
+  ],
   pins: [
     { id:'vcc',  label:'VCC', type:PIN_TYPE.POWER,  x: 6, y: 0, side:'top' },
     { id:'data', label:'DAT', type:PIN_TYPE.DIGITAL, x:15, y: 0, side:'top' },
@@ -1190,6 +1226,9 @@ defComp({
   width: 70,
   height: 40,
   defaultProps: { distance: 20 },
+  interactive: [
+    { field: 'distance', label: 'Dist', min: 2, max: 400, step: 1, unit: 'cm' },
+  ],
   pins: [
     { id:'vcc',   label:'VCC',   type:PIN_TYPE.POWER,  x:  8, y: 0, side:'top' },
     { id:'trig',  label:'TRIG',  type:PIN_TYPE.DIGITAL, x:24, y: 0, side:'top' },

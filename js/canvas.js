@@ -84,6 +84,7 @@ class CircuitCanvas {
     this._drawGrid(ctx);
     this._drawWires(ctx);
     this._drawComponents(ctx);
+    this._drawInteractives(ctx);
     this._drawOverlays(ctx);
 
     ctx.restore();
@@ -310,6 +311,116 @@ class CircuitCanvas {
     ctx.beginPath(); ctx.arc(p2.x, p2.y, 3 / this.zoom, 0, Math.PI * 2); ctx.fill();
 
     ctx.restore();
+  }
+
+  // ─── Interactive on-canvas controls (sliders for sensors / potentiometer) ───
+  _drawInteractives(ctx) {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    if (!defs || this.zoom < 0.4) return;
+    for (const inst of this.components) {
+      const def = defs[inst.type];
+      if (!def || !Array.isArray(def.interactive) || def.interactive.length === 0) continue;
+      const rects = this._getInteractiveRects(inst);
+      for (let i = 0; i < rects.length; i++) {
+        this._drawSlider(ctx, inst, def.interactive[i], rects[i]);
+      }
+    }
+  }
+
+  _getInteractiveRects(inst) {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    const def = defs && defs[inst.type];
+    if (!def || !Array.isArray(def.interactive)) return [];
+    const w = Math.max(40, def.width || 40);
+    const h = def.height || 40;
+    return def.interactive.map((ctrl, i) => ({
+      x: inst.x,
+      y: inst.y + h + 14 + i * 15,
+      width: w,
+      height: 9,
+    }));
+  }
+
+  _getInteractiveValue(inst, ctrl) {
+    const rs = inst.runtimeState || {};
+    if (rs[ctrl.field] !== undefined) return rs[ctrl.field];
+    const props = inst.props || {};
+    if (props[ctrl.field] !== undefined) return props[ctrl.field];
+    return ctrl.min;
+  }
+
+  _formatSliderValue(value, ctrl) {
+    const v = Number(value);
+    if (Number.isInteger(ctrl.step)) return String(Math.round(v));
+    return String(Math.round(v * 10) / 10);
+  }
+
+  _drawSlider(ctx, inst, ctrl, rect) {
+    const value = this._getInteractiveValue(inst, ctrl);
+    const range = ctrl.max - ctrl.min || 1;
+    const pct = Math.max(0, Math.min(1, (value - ctrl.min) / range));
+    const active = !!(window.ArduinoSim && window.ArduinoSim.isRunning);
+    const invZ = 1 / this.zoom;
+
+    ctx.save();
+    // Label
+    ctx.fillStyle = active ? 'rgba(220,240,255,0.95)' : 'rgba(160,165,175,0.8)';
+    ctx.font = `${8 * invZ}px Inter, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`${ctrl.label}: ${this._formatSliderValue(value, ctrl)}${ctrl.unit || ''}`, rect.x, rect.y - 2 * invZ);
+
+    // Track
+    ctx.fillStyle = 'rgba(20,20,26,0.85)';
+    ctx.strokeStyle = active ? 'rgba(0,151,156,0.6)' : 'rgba(120,120,130,0.5)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, rect.x, rect.y, rect.width, rect.height, rect.height / 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Fill
+    if (pct > 0.01) {
+      ctx.fillStyle = active ? 'rgba(0,151,156,0.8)' : 'rgba(110,110,125,0.55)';
+      roundRect(ctx, rect.x, rect.y, Math.max(rect.height, pct * rect.width), rect.height, rect.height / 2);
+      ctx.fill();
+    }
+
+    // Thumb
+    const tx = rect.x + pct * rect.width;
+    ctx.fillStyle = active ? '#0ee0e6' : '#c8c8d0';
+    ctx.beginPath();
+    ctx.arc(tx, rect.y + rect.height / 2, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  _hitTestSlider(wx, wy) {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    if (!defs) return null;
+    for (const inst of this.components) {
+      const def = defs[inst.type];
+      if (!def || !Array.isArray(def.interactive) || def.interactive.length === 0) continue;
+      const rects = this._getInteractiveRects(inst);
+      for (let i = 0; i < rects.length; i++) {
+        const r = rects[i];
+        if (wx >= r.x - 6 && wx <= r.x + r.width + 6 && wy >= r.y - 12 && wy <= r.y + r.height + 6) {
+          return { inst, ctrl: def.interactive[i], rect: r };
+        }
+      }
+    }
+    return null;
+  }
+
+  _updateSliderValue(drag, wx) {
+    const { inst, ctrl, rect } = drag;
+    const pct = Math.max(0, Math.min(1, (wx - rect.x) / rect.width));
+    let value = ctrl.min + pct * (ctrl.max - ctrl.min);
+    if (ctrl.step) value = Math.round(value / ctrl.step) * ctrl.step;
+    value = Math.max(ctrl.min, Math.min(ctrl.max, value));
+    inst.runtimeState = inst.runtimeState || {};
+    inst.runtimeState[ctrl.field] = value;
   }
 
   _drawOverlays(ctx) {
@@ -552,6 +663,18 @@ class CircuitCanvas {
         return;
       }
 
+      // Interactive on-canvas slider (potentiometer / sensor value)
+      const sliderHit = this._hitTestSlider(world.x, world.y);
+      if (sliderHit) {
+        this._selectAll(false);
+        this.selected = null;
+        this.selectedWire = null;
+        this.mode = 'sliderdrag';
+        this.sliderDrag = sliderHit;
+        this._updateSliderValue(sliderHit, world.x);
+        return;
+      }
+
       // Check wire click
       const wireHit = this._hitTestWire(world.x, world.y);
       if (wireHit) {
@@ -637,6 +760,11 @@ class CircuitCanvas {
       return;
     }
 
+    if (this.mode === 'sliderdrag' && this.sliderDrag) {
+      this._updateSliderValue(this.sliderDrag, world.x);
+      return;
+    }
+
     if (this.mode === 'wiredrag' && this.draggingWire) {
       const wire = this.wires.find(w => w.id === this.draggingWire.wireId);
       if (wire) {
@@ -692,6 +820,10 @@ class CircuitCanvas {
     if (this.mode === 'panning') {
       this.mode = 'idle';
       this.canvas.style.cursor = '';
+    }
+    if (this.mode === 'sliderdrag') {
+      this.mode = 'idle';
+      this.sliderDrag = null;
     }
   }
 
@@ -1194,6 +1326,9 @@ class CircuitCanvas {
             inst.runtimeState.lit = false;
             inst.runtimeState.brightness = 0;
             inst.runtimeState.current_mA = 0;
+            inst.runtimeState.overload = false;
+            inst.runtimeState.blown = false;
+            inst.runtimeState._warnedBlown = false;
           } else {
             // Complete circuit! Calculate total resistance (anode path + cathode path + Arduino pin resistance)
             const bestGround = cathodeNet.grounds.sort((a, b) => a.resistance - b.resistance)[0];
@@ -1231,6 +1366,30 @@ class CircuitCanvas {
               inst.runtimeState.val = rawVal;
               inst.runtimeState.lit = normBrightness > 0.02;
               inst.runtimeState.brightness = normBrightness;
+            }
+
+            // ── Overload / failure detection ──
+            // A standard LED is rated for ~20 mA. Above 20 mA it's stressed (warning),
+            // above 40 mA (e.g. connected straight to 5V without a resistor) it "blows".
+            const iLed = inst.runtimeState.current_mA || 0;
+            inst.runtimeState.overload = iLed > 20;
+            inst.runtimeState.blown = iLed > 40;
+
+            if (inst.runtimeState.blown) {
+              inst.runtimeState.lit = false;
+              inst.runtimeState.brightness = 0;
+              inst.runtimeState.val = 0;
+              if (!inst.runtimeState._warnedBlown) {
+                inst.runtimeState._warnedBlown = true;
+                if (window.OutputPanel) {
+                  window.OutputPanel.log(
+                    `LED (${inst.id}) is over-current (~${Math.round(iLed)} mA) without a current-limiting resistor and has blown! Add a 220Ω resistor in series.`,
+                    'warn'
+                  );
+                }
+              }
+            } else {
+              inst.runtimeState._warnedBlown = false;
             }
           }
           break;

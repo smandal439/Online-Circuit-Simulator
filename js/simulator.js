@@ -68,9 +68,11 @@ class ArduinoSimulator {
     }
 
     // 4. Replace function declarations (return type + name + params + brace)
+    const userFnNames = new Set();
     js = js.replace(
       /\b(?:void|int|float|double|long|unsigned\s+long|unsigned\s+int|byte|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+(\w+)\s*\(([^)]*)\)\s*\{/g,
       (match, name, params) => {
+        userFnNames.add(name);
         const cleanParams = params.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+/g, '');
         return `async function ${name}(${cleanParams}) {`;
       }
@@ -166,6 +168,7 @@ class ArduinoSimulator {
       ['bit',              '_a.bit'],
       ['lowByte',          '_a.lowByte'],
       ['highByte',         '_a.highByte'],
+      ['sensorValue',      '_a.sensorValue'],
     ];
 
     for (const [orig, mapped] of API) {
@@ -222,6 +225,15 @@ class ArduinoSimulator {
     js = js.replace(/_a\.delay\s*\(/g, 'await _a.delay(');
     js = js.replace(/_a\.delayMicroseconds\s*\(/g, 'await _a.delayMicroseconds(');
     js = js.replace(/_a\.pulseIn\s*\(/g, 'await _a.pulseIn(');
+
+    // Auto-await calls to user-defined functions (they were transpiled to `async`,
+    // so an unawaited call would assign a Promise instead of the returned value).
+    for (const name of userFnNames) {
+      js = js.replace(
+        new RegExp(`(?<!function\\s)(?<!await\\s)\\b${name}\\s*\\(`, 'g'),
+        `await ${name}(`
+      );
+    }
 
     // Remove C++ type casts like (int), (float), etc.
     js = js.replace(/\((?:int|float|double|long|byte|char|uint8_t|uint16_t)\)\s*/g, '');
@@ -372,6 +384,23 @@ class ArduinoSimulator {
         /* Shift in/out */
         shiftIn(dataPin, clockPin, bitOrder) { return 0; }, // stub
         shiftOut(dataPin, clockPin, bitOrder, val) {}, // stub
+
+        /* Interactive sensor widgets (sliders on the canvas).
+           Reads a value from a placed sensor component by instance id or type.
+           Returns -999 if no matching component/field is found.
+           Example: sensorValue('dht11', 'temperature') or sensorValue('pot1', 'value') */
+        sensorValue(instIdOrType, field) {
+          const canvas = window.CircuitCanvas;
+          if (!canvas || !Array.isArray(canvas.components)) return -999;
+          const comps = canvas.components;
+          let inst = comps.find(c => c.id === instIdOrType);
+          if (!inst) inst = comps.find(c => c.type === instIdOrType);
+          if (!inst) return -999;
+          const rs = inst.runtimeState || {};
+          if (rs[field] !== undefined) return rs[field];
+          const props = inst.props || {};
+          return props[field] !== undefined ? props[field] : -999;
+        },
 
         /* Wire (I2C) stubs */
         wireBegin()                 { self._serialLog('[Wire] I2C begin\n', 'system'); },
@@ -877,6 +906,23 @@ const EXAMPLE_CIRCUITS = {
       { id: 'w3', from: { instId: 'dht1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
+  ultrasonic: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'son1', type: 'hcsr04',     x: 120, y: 300 },
+      { id: 'led1', type: 'led',         x: 340, y: 260 },
+      { id: 'r1',   type: 'resistor',    x: 340, y: 340 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1',   pinId: '5V' },  to: { instId: 'son1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'b1',   pinId: 'D7' },  to: { instId: 'son1', pinId: 'trig' } },
+      { id: 'w3', from: { instId: 'b1',   pinId: 'D8' },  to: { instId: 'son1', pinId: 'echo' } },
+      { id: 'w4', from: { instId: 'son1', pinId: 'gnd' }, to: { instId: 'b1',   pinId: 'GND1' } },
+      { id: 'w5', from: { instId: 'b1',   pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w6', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w7', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1',   pinId: 'GND1' } },
+    ],
+  },
 };
 
 const EXAMPLE_SKETCHES = [
@@ -1260,11 +1306,12 @@ void loop() {
     id: 'temperature',
     name: 'Temperature Sensor',
     icon: '🌡️',
-    desc: 'Read DHT11 temperature and humidity (simulated)',
+    desc: 'Read DHT11 temperature and humidity — drag the Temp/Hum sliders on the sensor',
     tags: ['intermediate', 'sensor', 'DHT11'],
     circuit: EXAMPLE_CIRCUITS.temperature,
     code: `/*
  * DHT11 Temperature & Humidity (simulated)
+ * Drag the Temp / Hum sliders under the sensor to change the readings.
  */
 
 int dataPin = 2;
@@ -1273,12 +1320,16 @@ float humidity = 0;
 int count = 0;
 
 float readTemperature() {
-  // Simulate varying temperature 20-30°C
+  // Reads the Temp slider on the DHT11 component (0-50°C).
+  // If no DHT11 is placed, falls back to a simulated 20-30°C wobble.
+  float v = sensorValue('dht11', 'temperature');
+  if (v >= 0) return v;
   return 25.0 + 5.0 * sin(count * 0.1);
 }
 
 float readHumidity() {
-  // Simulate varying humidity 40-70%
+  float v = sensorValue('dht11', 'humidity');
+  if (v >= 0) return v;
   return 55.0 + 15.0 * cos(count * 0.1);
 }
 
@@ -1298,6 +1349,54 @@ void loop() {
   Serial.println(humidity, 1);
 
   delay(2000);
+}`
+  },
+  {
+    id: 'ultrasonic',
+    name: 'Ultrasonic Distance',
+    icon: '📡',
+    desc: 'HC-SR04 distance sensor driving an LED (drag the Dist slider)',
+    tags: ['intermediate', 'sensor', 'ultrasonic'],
+    circuit: EXAMPLE_CIRCUITS.ultrasonic,
+    code: `/*
+ * HC-SR04 Ultrasonic Distance Sensor (simulated)
+ * Drag the "Dist" slider under the sensor to change the distance.
+ */
+
+const int trigPin = 7;
+const int echoPin = 8;
+const int ledPin = 13;
+
+float readDistance() {
+  // Reads the Dist slider on the HC-SR04 component (2-400 cm).
+  // If no HC-SR04 is placed, falls back to a fixed 25 cm.
+  float d = sensorValue('hcsr04', 'distance');
+  if (d >= 0) return d;
+  return 25.0;
+}
+
+void setup() {
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("HC-SR04 ultrasonic started");
+}
+
+void loop() {
+  float distance = readDistance();
+
+  // Alert LED when an obstacle gets close (< 20 cm)
+  if (distance < 20) {
+    digitalWrite(ledPin, HIGH);
+  } else {
+    digitalWrite(ledPin, LOW);
+  }
+
+  Serial.print("Distance: ");
+  Serial.print(distance, 1);
+  Serial.println(" cm");
+  delay(500);
 }`
   },
 ];
