@@ -60,6 +60,12 @@ void loop() {
   _registerArduinoLanguage() {
     monaco.languages.register({ id: 'arduino' });
 
+    // Add to arduino_constants inside _registerArduinoLanguage()
+    'LED_BUILTIN', 'D2', 'D4', 'D12', 'D13', 'D14', 'D15', 'D18', 'D19', 'D21', 'D22', 'D23', 'D25', 'D26', 'D27', 'D32', 'D33'
+
+    // Add to arduino_functions
+    'ledcSetup', 'ledcAttachPin', 'ledcWrite', 'hallRead', 'touchRead', 'analogReadMilliVolts'
+
     monaco.languages.setMonarchTokensProvider('arduino', {
       keywords: [
         'void', 'int', 'long', 'float', 'double', 'byte', 'boolean', 'bool',
@@ -72,7 +78,6 @@ void loop() {
       arduino_constants: [
         'HIGH', 'LOW', 'INPUT', 'OUTPUT', 'INPUT_PULLUP', 'LED_BUILTIN',
         'A0', 'A1', 'A2', 'A3', 'A4', 'A5',
-        'D2', 'D4', 'D12', 'D13', 'D14', 'D15', 'D18', 'D19', 'D21', 'D22', 'D23', 'D25', 'D26', 'D27', 'D32', 'D33',
         'PI', 'TWO_PI', 'HALF_PI', 'DEG_TO_RAD', 'RAD_TO_DEG',
         'RISING', 'FALLING', 'CHANGE',
         'HEX', 'DEC', 'OCT', 'BIN',
@@ -85,7 +90,6 @@ void loop() {
         'attachInterrupt', 'detachInterrupt',
         'map', 'constrain', 'random', 'randomSeed',
         'abs', 'min', 'max', 'sqrt', 'pow', 'sin', 'cos', 'tan',
-        'ledcSetup', 'ledcAttachPin', 'ledcWrite', 'hallRead', 'touchRead', 'analogReadMilliVolts',
         'Serial', 'Servo', 'LiquidCrystal', 'Wire',
       ],
       tokenizer: {
@@ -98,9 +102,9 @@ void loop() {
           [/\b\d+\.?\d*[fF]?\b/, 'number'],
           [/\b0x[0-9a-fA-F]+\b/, 'number.hex'],
           [/\b0b[01]+\b/, 'number.binary'],
-          [/\b(HIGH|LOW|INPUT|OUTPUT|INPUT_PULLUP|LED_BUILTIN|A[0-5]|D\d+|HEX|DEC|OCT|BIN|RISING|FALLING|CHANGE|PI|TWO_PI|HALF_PI)\b/, 'constant'],
+          [/\b(HIGH|LOW|INPUT|OUTPUT|INPUT_PULLUP|LED_BUILTIN|A[0-5]|HEX|DEC|OCT|BIN|RISING|FALLING|CHANGE|PI|TWO_PI|HALF_PI)\b/, 'constant'],
           [/\b(void|int|long|float|double|byte|boolean|bool|char|String|unsigned|const|return|if|else|for|while|do|switch|case|break|continue|true|false|static|volatile|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\b/, 'keyword'],
-          [/\b(setup|loop|pinMode|digitalWrite|digitalRead|analogWrite|analogRead|delay|delayMicroseconds|millis|micros|tone|noTone|pulseIn|map|constrain|random|randomSeed|ledcSetup|ledcAttachPin|ledcWrite|hallRead|touchRead|analogReadMilliVolts|Serial|Servo|LiquidCrystal|Wire)\b/, 'arduino-api'],
+          [/\b(setup|loop|pinMode|digitalWrite|digitalRead|analogWrite|analogRead|delay|delayMicroseconds|millis|micros|tone|noTone|pulseIn|map|constrain|random|randomSeed|Serial|Servo|LiquidCrystal|Wire)\b/, 'arduino-api'],
           [/[a-zA-Z_]\w*/, 'identifier'],
         ],
         block_comment: [
@@ -153,24 +157,23 @@ void loop() {
             label: 'if', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
             insertText: 'if (${1:condition}) {\n\t${2}\n}'
           },
-          { label: 'Serial.begin', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'Serial.begin(${1:9600});' },
-          { label: 'Serial.println', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'Serial.println(${1:value});' },
-          { label: 'pinMode', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'pinMode(${1:pin}, ${2:OUTPUT});' },
-          { label: 'digitalWrite', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'digitalWrite(${1:pin}, ${2:HIGH});' },
-          { label: 'digitalRead', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'digitalRead(${1:pin})' },
-          { label: 'analogWrite', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'analogWrite(${1:pin}, ${2:value});' },
-          { label: 'analogRead', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'analogRead(${1:pin})' },
-          { label: 'delay', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'delay(${1:1000});' },
-          { label: 'ledcSetup', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'ledcSetup(${1:channel}, ${2:freq}, ${3:resolution});' },
-          { label: 'ledcAttachPin', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'ledcAttachPin(${1:pin}, ${2:channel});' },
-          { label: 'ledcWrite', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'ledcWrite(${1:channel}, ${2:duty});' },
+          { label: 'Serial.begin', kind: 4, insertTextRules: 4, insertText: 'Serial.begin(${1:9600});' },
+          { label: 'Serial.println', kind: 4, insertTextRules: 4, insertText: 'Serial.println(${1:value});' },
+          { label: 'pinMode', kind: 4, insertTextRules: 4, insertText: 'pinMode(${1:pin}, ${2:OUTPUT});' },
+          { label: 'digitalWrite', kind: 4, insertTextRules: 4, insertText: 'digitalWrite(${1:pin}, ${2:HIGH});' },
+          { label: 'digitalRead', kind: 4, insertTextRules: 4, insertText: 'digitalRead(${1:pin})' },
+          { label: 'analogWrite', kind: 4, insertTextRules: 4, insertText: 'analogWrite(${1:pin}, ${2:value});' },
+          { label: 'analogRead', kind: 4, insertTextRules: 4, insertText: 'analogRead(${1:pin})' },
+          { label: 'delay', kind: 4, insertTextRules: 4, insertText: 'delay(${1:1000});' },
         ];
 
         return { suggestions: snippets.map(s => ({ ...s, range })) };
       }
     });
 
-    // Dark Theme
+
+
+    // Dark & Light Themes
     monaco.editor.defineTheme('arduino-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -195,26 +198,6 @@ void loop() {
     });
   },
 
-  // _createEditor() {
-  //   const container = document.getElementById('editor-container');
-  //   if (!container) return;
-
-  //   this.editor = monaco.editor.create(container, {
-  //     value: this.DEFAULT_CODE,
-  //     language: 'arduino',
-  //     theme: 'arduino-dark',
-  //     fontSize: 18,
-  //     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-  //     fontLigatures: true,
-  //     lineNumbers: 'on',
-  //     minimap: { enabled: true, scale: 0.8 },
-  //     scrollBeyondLastLine: false,
-  //     automaticLayout: true,
-  //     folding: true,
-  //     tabSize: 2,
-  //     insertSpaces: true,
-  //   });
-
   _createEditor() {
     const container = document.getElementById('editor-container');
     if (!container) return;
@@ -223,7 +206,7 @@ void loop() {
       value: this.DEFAULT_CODE,
       language: 'arduino',
       theme: 'arduino-dark',
-      fontSize: 13,
+      fontSize: 18,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
       fontLigatures: true,
       lineNumbers: 'on',
@@ -233,18 +216,7 @@ void loop() {
       folding: true,
       tabSize: 2,
       insertSpaces: true,
-      mouseWheelZoom: true, // <--- Add this line
     });
-
-    container.addEventListener('wheel', (e) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-        const currentSize = this.editor.getOption(monaco.editor.EditorOption.fontSize);
-        const newSize = e.deltaY < 0 ? currentSize + 1 : currentSize - 1;
-        const clampedSize = Math.max(8, Math.min(32, newSize)); // Min: 8px, Max: 32px
-        this.editor.updateOptions({ fontSize: clampedSize });
-      }
-    }, { passive: false });
 
     // Cursor position display
     this.editor.onDidChangeCursorPosition(e => {
