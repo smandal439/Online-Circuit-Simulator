@@ -28,6 +28,7 @@ class App {
       this._attachSimulatorEvents();
       this._renderComponentLibrary();
       this._renderExamples();
+      this._initBoardSelector();
       this._restoreProject();
       this._setupBeforeUnloadGuard();
 
@@ -167,6 +168,8 @@ class App {
     themeBtn?.addEventListener('click', () => this._toggleTheme(themeIconDark, themeIconLight));
     searchBox?.addEventListener('input', (e) => this._filterComponents(e.target.value));
     speedSel?.addEventListener('change', (e) => this.sim.setSpeed(e.target.value));
+    const boardSel = get('board-select');
+    boardSel?.addEventListener('change', (e) => this._setBoard(e.target.value));
     oscCh1?.addEventListener('change', (e) => this.osc?.setChannel(1, e.target.value));
     oscCh2?.addEventListener('change', (e) => this.osc?.setChannel(2, e.target.value));
     oscTimebase?.addEventListener('change', (e) => this.osc?.setTimebase(e.target.value));
@@ -261,6 +264,42 @@ class App {
       };
       this.canvas.onContextMenu = (inst, x, y) => this._showContextMenu(inst, x, y);
       this._refreshCanvasSummary();
+    }
+  }
+
+  /* ══════════════════════ BOARD SELECTOR ══════════════════════ */
+  _initBoardSelector() {
+    const settings = window.StorageManager?.loadSettings?.() || {};
+    const board = (settings.board === 'esp32_devkit_v1') ? 'esp32_devkit_v1' : 'arduino_uno';
+    this.sim.setBoard(board);
+    const sel = document.getElementById('board-select');
+    if (sel) sel.value = board;
+  }
+
+  // Returns the board type driving the simulation: the board actually placed
+  // on the canvas wins; otherwise fall back to the selected board.
+  _getActiveBoardType() {
+    const boardInst = this.canvas?.getBoardInst?.();
+    if (boardInst) return boardInst.type;
+    return this.sim.board || 'arduino_uno';
+  }
+
+  _setBoard(board) {
+    const b = (board === 'esp32_devkit_v1') ? 'esp32_devkit_v1' : 'arduino_uno';
+    this.sim.setBoard(b);
+    window.StorageManager?.saveSettings?.({ ...(window.StorageManager.loadSettings() || {}), board: b });
+
+    // Rebuild the pin monitor for the new pin set
+    this._pinMonitorBoard = null;
+
+    // If the canvas only holds the default starter circuit, reload it for the new board
+    const comps = this.canvas?.components || [];
+    const hasOnlyStarterBoard = comps.length === 1 && (comps[0].type === 'arduino_uno' || comps[0].type === 'esp32_devkit_v1');
+    if (hasOnlyStarterBoard || comps.length === 0) {
+      this._loadExampleCircuit('blink');
+      this.showToast(`${b === 'esp32_devkit_v1' ? 'ESP32 DevKit V1' : 'Arduino Uno'} starter circuit loaded`, 'success');
+    } else {
+      this.showToast(`Board set to ${b === 'esp32_devkit_v1' ? 'ESP32 DevKit V1' : 'Arduino Uno'} — existing wiring assumes the previous board`, 'info');
     }
   }
 
@@ -675,9 +714,11 @@ _newProject() {
     const grid = document.getElementById('pin-monitor-grid');
     if (!grid || !this.sim) return;
 
-    // Rebuild only if not running or empty
-    if (grid.childElementCount === 0) {
-      this._buildPinMonitor(grid);
+    // Rebuild when the active board (or pin set) changes
+    const boardType = this._getActiveBoardType();
+    if (this._pinMonitorBoard !== boardType) {
+      this._pinMonitorBoard = boardType;
+      this._buildPinMonitor(grid, boardType);
     }
 
     // Update values
@@ -712,9 +753,24 @@ _newProject() {
     });
   }
 
-  _buildPinMonitor(grid) {
+  _buildPinMonitor(grid, boardType) {
     grid.innerHTML = '';
-    const pins = [
+    const esp32 = boardType === 'esp32_devkit_v1';
+    const pins = esp32 ? [
+      { key: 'pin_2',  label: 'D2 · L' },  { key: 'pin_4',  label: 'D4' },
+      { key: 'pin_5',  label: 'D5' },      { key: 'pin_12', label: 'D12' },
+      { key: 'pin_13', label: 'D13' },     { key: 'pin_14', label: 'D14' },
+      { key: 'pin_15', label: 'D15' },     { key: 'pin_16', label: 'D16' },
+      { key: 'pin_17', label: 'D17' },     { key: 'pin_18', label: 'D18' },
+      { key: 'pin_19', label: 'D19' },     { key: 'pin_21', label: 'D21' },
+      { key: 'pin_22', label: 'D22' },     { key: 'pin_23', label: 'D23' },
+      { key: 'pin_25', label: 'D25' },     { key: 'pin_26', label: 'D26' },
+      { key: 'pin_27', label: 'D27' },     { key: 'pin_32', label: 'D32' },
+      { key: 'pin_33', label: 'D33' },     { key: 'pin_34', label: 'D34' },
+      { key: 'pin_35', label: 'D35' },     { key: 'pin_36', label: 'VP · 36' },
+      { key: 'pin_39', label: 'VN · 39' }, { key: 'pin_1',  label: 'TX0' },
+      { key: 'pin_3',  label: 'RX0' },
+    ] : [
       { key: 'pin_0',  label: 'D0' },  { key: 'pin_1',  label: 'D1' },
       { key: 'pin_2',  label: 'D2' },  { key: 'pin_3',  label: 'D3~' },
       { key: 'pin_4',  label: 'D4' },  { key: 'pin_5',  label: 'D5~' },
@@ -900,6 +956,7 @@ _newProject() {
     if (!target) return;
     document.querySelectorAll('.btm-tab').forEach(tab => tab.classList.toggle('active', tab === button));
     document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.toggle('active', pane.id === `pane-${target}`));
+    if (target === 'pins') this._updatePinMonitor();
   }
 
   /* ══════════════════════ VIEW FOCUS MODES ══════════════════════ */
@@ -1050,7 +1107,8 @@ _newProject() {
     const lower = String(key || '').toLowerCase();
     if (lower === 'led_on_13' || lower === 'blink') {
       this.canvas.clearCanvas();
-      const board = this.canvas.addComponent('arduino_uno', 200, 100);
+      const boardType = this.sim.board === 'esp32_devkit_v1' ? 'esp32_devkit_v1' : 'arduino_uno';
+      const board = this.canvas.addComponent(boardType, 200, 100);
       const led   = this.canvas.addComponent('led', 120, 280);
       const res   = this.canvas.addComponent('resistor', 120, 360);
       if (board && led && res) {

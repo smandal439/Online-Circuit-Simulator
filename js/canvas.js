@@ -223,9 +223,9 @@ class CircuitCanvas {
         ctx.stroke();
       }
 
-      // Pin label (only when zoomed in enough) — Arduino board has baked-in labels
-      const isArduinoBoard = inst.type === 'arduino_uno';
-      if (this.zoom >= 1 && !isArduinoBoard) {
+      // Pin label (only when zoomed in enough) — boards have baked-in labels
+      const isBoard = inst.type === 'arduino_uno' || inst.type === 'esp32_devkit_v1';
+      if (this.zoom >= 1 && !isBoard) {
         ctx.fillStyle = '#888';
         ctx.font = `${8 / this.zoom}px Inter, sans-serif`;
         ctx.textAlign = pin.side === 'top' ? 'center' : 'center';
@@ -988,7 +988,12 @@ class CircuitCanvas {
       };
 
       addRow('Type', typeLabel);
-      if (inst.type === 'arduino_uno' && /^[AD]\d+$/.test(pin.id)) {
+      if (inst.type === 'esp32_devkit_v1') {
+        const espAliases = { VP:36, VN:39, TX0:1, RX0:3, EN:0 };
+        if (pin.id in espAliases || /^D\d+$/.test(pin.id)) {
+          addRow('GPIO', pinNum);
+        }
+      } else if (inst.type === 'arduino_uno' && /^[AD]\d+$/.test(pin.id)) {
         addRow('Arduino Pin', pinNum);
       }
       if (running) {
@@ -1115,6 +1120,9 @@ class CircuitCanvas {
   _pinToNumber(pinId) {
     const analogMap = { A0:14, A1:15, A2:16, A3:17, A4:18, A5:19 };
     if (pinId in analogMap) return analogMap[pinId];
+    // ESP32 DevKit V1 pin aliases
+    const esp32Map = { VP:36, VN:39, TX0:1, RX0:3, EN:0 };
+    if (pinId in esp32Map) return esp32Map[pinId];
     const n = parseInt(pinId.replace(/[^0-9]/g,''));
     return isNaN(n) ? 0 : n;
   }
@@ -1305,6 +1313,11 @@ class CircuitCanvas {
   // Get Arduino Uno instance (first one found)
   getArduinoInst() {
     return this.components.find(c => c.type === 'arduino_uno') || null;
+  }
+
+  // Get whichever microcontroller board instance is placed (first one found)
+  getBoardInst() {
+    return this.components.find(c => c.type === 'arduino_uno' || c.type === 'esp32_devkit_v1') || null;
   }
 
   // Update component display based on simulation state and circuit electrical paths
@@ -1516,6 +1529,34 @@ case 'push_button': {
         continue;
       }
 
+      // 1b. ESP32 DevKit V1 Pins
+      if (inst.type === 'esp32_devkit_v1') {
+        const pinId = current.pinId;
+        if (pinId === 'GND1' || pinId === 'GND2' || pinId === 'GND') {
+          grounds.push({ type: 'gnd', instId: inst.id, pinId, resistance: current.resistance });
+        } else if (pinId === 'VIN') {
+          sources.push({ type: '5v', voltage: 5.0, rawVal: 255, resistance: current.resistance });
+        } else if (pinId === '3V3') {
+          sources.push({ type: '3v3', voltage: 3.3, rawVal: 168, resistance: current.resistance });
+        } else if (pinId === 'EN') {
+          // Reset line — not a usable GPIO
+        } else {
+          // GPIO (D0–D35), analog ADC pins (VP/VN/D32–D35), UART (TX0/RX0)
+          const pinNum = this._pinToNumber(pinId);
+          const pinKey = `pin_${pinNum}`;
+          const sim = window.ArduinoSim;
+          const rawVal = sim && sim.pinStates ? (sim.pinStates[pinKey] || 0) : 0;
+
+          if (rawVal > 0) {
+            const voltage = 3.3 * (rawVal > 1 ? (rawVal / 255) : 1.0);
+            sources.push({ type: 'digital', pinNum, pinKey, voltage, rawVal, resistance: current.resistance });
+          } else {
+            grounds.push({ type: 'digital_low', pinNum, pinKey, resistance: current.resistance });
+          }
+        }
+        continue;
+      }
+
       // 2. Power and Ground components
       if (inst.type === 'power_5v') {
         sources.push({ type: '5v', voltage: 5.0, rawVal: 255, resistance: current.resistance });
@@ -1590,7 +1631,7 @@ case 'push_button': {
 
       const otherInst = this.components.find(c => c.id === otherInstId);
       if (!otherInst) continue;
-      if (otherInst.type === 'arduino_uno') {
+      if (otherInst.type === 'arduino_uno' || otherInst.type === 'esp32_devkit_v1') {
         return this._pinToNumber(otherPinId);
       }
     }

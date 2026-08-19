@@ -10,6 +10,7 @@ class ArduinoSimulator {
     this.isPaused = false;
     this.simTime = 0; // ms
     this.speed = 1;
+    this.board = 'arduino_uno'; // arduino_uno | esp32_devkit_v1
     this.pinStates = {}; // pinKey → value (0-255, or 0/1)
     this.pinModes = {}; // pinKey → INPUT/OUTPUT/INPUT_PULLUP
     this.serialBaud = 9600;
@@ -39,6 +40,8 @@ class ArduinoSimulator {
     this._MAX_TIGHT_ITERS = 50000;
     // EEPROM simulation (512 bytes)
     this._eeprom = new Uint8Array(512);
+    // ESP32 LEDC PWM channel registry: channel → { pin, freq, resolution, maxDuty }
+    this._ledcChannels = {};
   }
 
   /* ══════════════ TRANSPILER ══════════════ */
@@ -114,13 +117,25 @@ class ArduinoSimulator {
     js = js.replace(/\bINPUT_PULLUP\b/g, '"INPUT_PULLUP"');
     js = js.replace(/\bINPUT\b/g, '"INPUT"');
     js = js.replace(/\bOUTPUT\b/g, '"OUTPUT"');
-    js = js.replace(/\bLED_BUILTIN\b/g, '13');
-    js = js.replace(/\bA0\b/g, '14');
-    js = js.replace(/\bA1\b/g, '15');
-    js = js.replace(/\bA2\b/g, '16');
-    js = js.replace(/\bA3\b/g, '17');
-    js = js.replace(/\bA4\b/g, '18');
-    js = js.replace(/\bA5\b/g, '19');
+    if (this.board === 'esp32_devkit_v1') {
+      // ESP32 DevKit V1: built-in LED is on GPIO2; the common analog
+      // pins map to the board's ADC-capable GPIOs.
+      js = js.replace(/\bLED_BUILTIN\b/g, '2');
+      js = js.replace(/\bA0\b/g, '36');
+      js = js.replace(/\bA1\b/g, '39');
+      js = js.replace(/\bA2\b/g, '34');
+      js = js.replace(/\bA3\b/g, '35');
+      js = js.replace(/\bA4\b/g, '32');
+      js = js.replace(/\bA5\b/g, '33');
+    } else {
+      js = js.replace(/\bLED_BUILTIN\b/g, '13');
+      js = js.replace(/\bA0\b/g, '14');
+      js = js.replace(/\bA1\b/g, '15');
+      js = js.replace(/\bA2\b/g, '16');
+      js = js.replace(/\bA3\b/g, '17');
+      js = js.replace(/\bA4\b/g, '18');
+      js = js.replace(/\bA5\b/g, '19');
+    }
     js = js.replace(/\bDEC\b/g, '10');
     js = js.replace(/\bHEX\b/g, '16');
     js = js.replace(/\bOCT\b/g, '8');
@@ -169,6 +184,20 @@ class ArduinoSimulator {
       ['lowByte', '_a.lowByte'],
       ['highByte', '_a.highByte'],
       ['sensorValue', '_a.sensorValue'],
+      // ESP32 APIs
+      ['ledcSetup', '_a.ledcSetup'],
+      ['ledcSetupChannel', '_a.ledcSetupChannel'],
+      ['ledcAttachPin', '_a.ledcAttachPin'],
+      ['ledcAttach', '_a.ledcAttach'],
+      ['ledcWrite', '_a.ledcWrite'],
+      ['ledcRead', '_a.ledcRead'],
+      ['dacWrite', '_a.dacWrite'],
+      ['analogReadMilliVolts', '_a.analogReadMilliVolts'],
+      ['analogReadMicroVolts', '_a.analogReadMicroVolts'],
+      ['touchRead', '_a.touchRead'],
+      ['hallRead', '_a.hallRead'],
+      ['temperatureRead', '_a.temperatureRead'],
+      ['digitalPinToInterrupt', '_a.digitalPinToInterrupt'],
     ];
 
     for (const [orig, mapped] of API) {
@@ -187,6 +216,15 @@ class ArduinoSimulator {
     js = js.replace(/\bSerial\.parseFloat\s*\(/g, '_a.serialParseFloat(');
     js = js.replace(/\bSerial\.peek\s*\(/g, '_a.serialPeek(');
     js = js.replace(/\bSerial\.readString\s*\(/g, '_a.serialReadString(');
+
+    // ESP32 Wi-Fi — map before the generic Servo/LCD `.begin` rule below
+    js = js.replace(/\bWiFi\.begin\s*\(/g, '_a.wifiBegin(');
+    js = js.replace(/\bWiFi\.localIP\s*\(/g, '_a.wifiLocalIP(');
+    js = js.replace(/\bWiFi\.softAPIP\s*\(/g, '_a.wifiSoftAPIP(');
+    js = js.replace(/\bWiFi\.status\s*\(/g, '_a.wifiStatus(');
+    js = js.replace(/\bWiFi\.disconnect\s*\(/g, '_a.wifiDisconnect(');
+    js = js.replace(/\bWiFi\.mode\s*\(/g, '_a.wifiMode(');
+    js = js.replace(/\bWiFi\.softAP\s*\(/g, '_a.wifiSoftAP(');
 
     // Wire (I2C) — stub
     js = js.replace(/\bWire\.begin\s*\(/g, '_a.wireBegin(');
@@ -470,18 +508,116 @@ class ArduinoSimulator {
         /* Interrupts */
         attachInterrupt(num, fn, mode) { },
         detachInterrupt(num) { },
+
+        /* ══════════ ESP32 — LEDC PWM ══════════ */
+        ledcSetup(channel, freq, resolution) {
+          const res = Number(resolution) || 8;
+          self._ledcChannels[channel] = {
+            freq: Number(freq) || 5000,
+            resolution: res,
+            maxDuty: Math.pow(2, res) - 1,
+          };
+          self._serialLog(`[ESP32] LEDC channel ${channel} → ${self._ledcChannels[channel].freq}Hz (${res}-bit)\n`, 'system');
+          return self._ledcChannels[channel].maxDuty;
+        },
+        ledcSetupChannel(channel, freq, resolution) {
+          return this.ledcSetup(channel, freq, resolution);
+        },
+        ledcAttachPin(pin, channel) {
+          const cfg = self._ledcChannels[channel] || (self._ledcChannels[channel] = { freq: 5000, resolution: 8, maxDuty: 255 });
+          cfg.pin = Number(pin);
+          self._serialLog(`[ESP32] LEDC: attached GPIO ${cfg.pin} to channel ${channel}\n`, 'system');
+          return 0;
+        },
+        ledcAttach(pin, freq, resolution) {
+          // Modern (v3+) ESP32 core API: ledcAttach(pin, freq, resolution)
+          const res = Number(resolution) || 8;
+          self._ledcChannels[Number(pin)] = {
+            pin: Number(pin),
+            freq: Number(freq) || 5000,
+            resolution: res,
+            maxDuty: Math.pow(2, res) - 1,
+          };
+          self._serialLog(`[ESP32] LEDC: attached GPIO ${Number(pin)} → ${Number(freq) || 5000}Hz (${res}-bit)\n`, 'system');
+          return true;
+        },
+        ledcWrite(channelOrPin, duty) {
+          let pin;
+          const cfg = self._ledcChannels[channelOrPin];
+          if (cfg && cfg.pin !== undefined) {
+            pin = cfg.pin;
+          } else {
+            // Also accept a bare GPIO pin (ledcWrite(pin, duty)) or a channel
+            // that was attached by GPIO number (new API style).
+            pin = Number(channelOrPin);
+          }
+          if (!Number.isFinite(pin)) return;
+          const maxDuty = (cfg && cfg.maxDuty) || 255;
+          const v = Math.max(0, Math.min(255, Math.round((Number(duty) || 0) / maxDuty * 255)));
+          self.pinStates[`pin_${pin}`] = v;
+          self._emitPinChange(`pin_${pin}`, v);
+        },
+        ledcRead(channelOrPin) {
+          const cfg = self._ledcChannels[channelOrPin];
+          const pin = cfg && cfg.pin !== undefined ? cfg.pin : Number(channelOrPin);
+          if (!Number.isFinite(pin)) return 0;
+          return self.pinStates[`pin_${pin}`] || 0;
+        },
+
+        /* ══════════ ESP32 — analog / DAC / sensors ══════════ */
+        dacWrite(pin, value) {
+          const key = `pin_${pin}`;
+          const v = Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+          self.pinStates[key] = v;
+          self._emitPinChange(key, v);
+        },
+        analogReadMilliVolts(pin) {
+          const v = self.pinStates[`pin_${pin}`];
+          if (v === undefined || v === null) return 0;
+          // Simulation stores analog values in the 0–1023 range (10-bit)
+          return Math.round((Number(v) || 0) * 3300 / 1023);
+        },
+        analogReadMicroVolts(pin) { return this.analogReadMilliVolts(pin) * 1000; },
+        touchRead(pin) { return 0; },
+        hallRead() { return 0; },
+        temperatureRead() { return 25.0; },
+        digitalPinToInterrupt(pin) { return Number(pin); },
+
+        /* ══════════ ESP32 — Wi-Fi (simulated) ══════════ */
+        wifiBegin(ssid, pass) {
+          self._serialLog(`[ESP32 Wi-Fi] Connecting to "${ssid}"...\n`, 'system');
+          setTimeout(() => {
+            self._serialLog('[ESP32 Wi-Fi] Connected! IP: 192.168.1.105\n', 'system');
+          }, Math.max(50, 800 / self.speed));
+        },
+        wifiLocalIP() { return '192.168.1.105'; },
+        wifiSoftAPIP() { return '192.168.4.1'; },
+        wifiStatus() { return 3; }, // WL_CONNECTED
+        wifiDisconnect() { self._serialLog('[ESP32 Wi-Fi] Disconnected\n', 'system'); },
+        wifiMode() { },
+        wifiSoftAP(ssid, pass) {
+          self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system');
+        },
       },
 
       /* Global constants */
       HIGH: 1, LOW: 0,
       INPUT: 'INPUT', OUTPUT: 'OUTPUT', INPUT_PULLUP: 'INPUT_PULLUP',
       RISING: 'RISING', FALLING: 'FALLING', CHANGE: 'CHANGE',
-      A0: 14, A1: 15, A2: 16, A3: 17, A4: 18, A5: 19,
-      LED_BUILTIN: 13,
+      A0: this.board === 'esp32_devkit_v1' ? 36 : 14,
+      A1: this.board === 'esp32_devkit_v1' ? 39 : 15,
+      A2: this.board === 'esp32_devkit_v1' ? 34 : 16,
+      A3: this.board === 'esp32_devkit_v1' ? 35 : 17,
+      A4: this.board === 'esp32_devkit_v1' ? 32 : 18,
+      A5: this.board === 'esp32_devkit_v1' ? 33 : 19,
+      LED_BUILTIN: this.board === 'esp32_devkit_v1' ? 2 : 13,
       PI: Math.PI, TWO_PI: Math.PI * 2, HALF_PI: Math.PI / 2,
       DEG_TO_RAD: Math.PI / 180, RAD_TO_DEG: 180 / Math.PI,
       MSBFIRST: 1, LSBFIRST: 0,
       BYTE: 0, WORD: 1,
+      // ESP32 Wi-Fi constants
+      WIFI_STA: 1, WIFI_AP: 2, WIFI_AP_STA: 3,
+      WL_CONNECTED: 3, WL_DISCONNECTED: 6,
 
       /* Servo/LCD class stubs */
       Servo: function () { return {}; },
@@ -490,6 +626,17 @@ class ArduinoSimulator {
       /* Library stubs (instances) */
       Wire: { begin() { }, requestFrom() { return 0; }, beginTransmission() { }, endTransmission() { return 0; }, write() { return 1; }, read() { return 0; }, available() { return 0; } },
       SPI: { begin() { }, transfer() { return 0; }, end() { }, setClockDivider() { }, setBitOrder() { }, setDataMode() { } },
+      /* ESP32 Wi-Fi object stub */
+      WiFi: {
+        begin(ssid, pass) { self._serialLog(`[ESP32 Wi-Fi] Connecting to "${ssid}"...\n`, 'system'); setTimeout(() => self._serialLog('[ESP32 Wi-Fi] Connected! IP: 192.168.1.105\n', 'system'), Math.max(50, 800 / self.speed)); },
+        localIP() { return '192.168.1.105'; },
+        softAPIP() { return '192.168.4.1'; },
+        status() { return 3; },
+        disconnect() { },
+        mode() { },
+        softAP(ssid) { self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system'); },
+        setAutoConnect() { },
+      },
     };
   }
 
@@ -649,6 +796,10 @@ class ArduinoSimulator {
   setSpeed(s) {
     const v = parseFloat(s);
     this.speed = Number.isFinite(v) ? Math.min(100, Math.max(0.01, v)) : 1;
+  }
+
+  setBoard(board) {
+    this.board = (board === 'esp32_devkit_v1') ? 'esp32_devkit_v1' : 'arduino_uno';
   }
 
   /* ── FPS tracking ── */
@@ -921,6 +1072,18 @@ const EXAMPLE_CIRCUITS = {
       { id: 'w5', from: { instId: 'b1', pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
       { id: 'w6', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
       { id: 'w7', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  esp32_fade: {
+    components: [
+      { id: 'b1', type: 'esp32_devkit_v1', x: 300, y: 60 },
+      { id: 'led1', type: 'led', x: 160, y: 280 },
+      { id: 'r1', type: 'resistor', x: 160, y: 360 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w2', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w3', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
 };
@@ -1397,6 +1560,47 @@ void loop() {
   Serial.print(distance, 1);
   Serial.println(" cm");
   delay(500);
+}`
+  },
+  {
+    id: 'esp32_fade',
+    name: 'ESP32 LEDC Fade',
+    icon: '🔌',
+    desc: 'ESP32 DevKit V1 — fade an LED using the LEDC PWM peripheral on GPIO13',
+    tags: ['esp32', 'PWM', 'LED', 'ledc'],
+    circuit: EXAMPLE_CIRCUITS.esp32_fade,
+    code: `/*
+ * ESP32 LEDC Fade — fade an LED using the ESP32 LEDC PWM peripheral.
+ * Place the ESP32 DevKit V1, an LED and a 220Ω resistor and wire
+ * D13 → LED anode, LED cathode → resistor → GND1.
+ */
+
+const int ledPin = 13;   // GPIO13
+const int ch    = 0;     // LEDC channel
+const int freq  = 5000;  // 5 kHz
+const int res   = 8;     // 8-bit resolution (0–255)
+
+int duty = 0;
+int step = 5;
+
+void setup() {
+  ledcSetup(ch, freq, res);
+  ledcAttachPin(ledPin, ch);
+  Serial.begin(115200);
+  Serial.println("ESP32 LEDC fade started");
+  Serial.print("Wi-Fi test: ");
+  WiFi.begin("HomeNet", "password");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  ledcWrite(ch, duty);
+  Serial.print("Duty: ");
+  Serial.println(duty);
+
+  duty += step;
+  if (duty <= 0 || duty >= 255) step = -step;
+  delay(20);
 }`
   },
 ];

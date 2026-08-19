@@ -361,6 +361,179 @@ defComp({
   }
 });
 
+/* ─── ESP32 DEVKIT V1 ─── */
+defComp({
+  id: 'esp32_devkit_v1',
+  name: 'ESP32 DevKit V1',
+  category: 'Boards',
+  icon: '🔌',
+  desc: 'Espressif ESP-WROOM-32 dual-core 3.3V development board',
+  width: 170,
+  height: 272,
+  defaultProps: { label: 'ESP32' },
+  pins: [
+    // Left header (from top)
+    { id: 'EN',   label: 'EN',   type: PIN_TYPE.SIGNAL,  x: 16, y:  40, side: 'left',  gpio: 0 },
+    { id: 'VP',   label: 'VP',   type: PIN_TYPE.ANALOG,  x: 16, y:  55, side: 'left',  gpio: 36 },
+    { id: 'VN',   label: 'VN',   type: PIN_TYPE.ANALOG,  x: 16, y:  70, side: 'left',  gpio: 39 },
+    { id: 'D34',  label: 'D34',  type: PIN_TYPE.ANALOG,  x: 16, y:  85, side: 'left',  gpio: 34 },
+    { id: 'D35',  label: 'D35',  type: PIN_TYPE.ANALOG,  x: 16, y: 100, side: 'left',  gpio: 35 },
+    { id: 'D32',  label: 'D32',  type: PIN_TYPE.ANALOG,  x: 16, y: 115, side: 'left',  gpio: 32 },
+    { id: 'D33',  label: 'D33',  type: PIN_TYPE.ANALOG,  x: 16, y: 130, side: 'left',  gpio: 33 },
+    { id: 'D25',  label: 'D25',  type: PIN_TYPE.ANALOG,  x: 16, y: 145, side: 'left',  gpio: 25 },
+    { id: 'D26',  label: 'D26',  type: PIN_TYPE.ANALOG,  x: 16, y: 160, side: 'left',  gpio: 26 },
+    { id: 'D27',  label: 'D27',  type: PIN_TYPE.PWM,     x: 16, y: 175, side: 'left',  gpio: 27 },
+    { id: 'D14',  label: 'D14',  type: PIN_TYPE.PWM,     x: 16, y: 190, side: 'left',  gpio: 14 },
+    { id: 'D12',  label: 'D12',  type: PIN_TYPE.PWM,     x: 16, y: 205, side: 'left',  gpio: 12 },
+    { id: 'D13',  label: 'D13',  type: PIN_TYPE.PWM,     x: 16, y: 220, side: 'left',  gpio: 13 },
+    { id: 'GND1', label: 'GND',  type: PIN_TYPE.GND,     x: 16, y: 235, side: 'left' },
+    { id: 'VIN',  label: 'VIN',  type: PIN_TYPE.POWER,   x: 16, y: 250, side: 'left' },
+    // Right header (from top)
+    { id: 'D23',  label: 'D23',  type: PIN_TYPE.PWM,     x: 154, y:  40, side: 'right', gpio: 23 },
+    { id: 'D22',  label: 'D22',  type: PIN_TYPE.PWM,     x: 154, y:  55, side: 'right', gpio: 22 },
+    { id: 'TX0',  label: 'TX0',  type: PIN_TYPE.SIGNAL,  x: 154, y:  70, side: 'right', gpio: 1 },
+    { id: 'RX0',  label: 'RX0',  type: PIN_TYPE.SIGNAL,  x: 154, y:  85, side: 'right', gpio: 3 },
+    { id: 'D21',  label: 'D21',  type: PIN_TYPE.PWM,     x: 154, y: 100, side: 'right', gpio: 21 },
+    { id: 'D19',  label: 'D19',  type: PIN_TYPE.PWM,     x: 154, y: 115, side: 'right', gpio: 19 },
+    { id: 'D18',  label: 'D18',  type: PIN_TYPE.PWM,     x: 154, y: 130, side: 'right', gpio: 18 },
+    { id: 'D5',   label: 'D5',   type: PIN_TYPE.PWM,     x: 154, y: 145, side: 'right', gpio: 5 },
+    { id: 'D17',  label: 'D17',  type: PIN_TYPE.PWM,     x: 154, y: 160, side: 'right', gpio: 17 },
+    { id: 'D16',  label: 'D16',  type: PIN_TYPE.PWM,     x: 154, y: 175, side: 'right', gpio: 16 },
+    { id: 'D4',   label: 'D4',   type: PIN_TYPE.PWM,     x: 154, y: 190, side: 'right', gpio: 4 },
+    { id: 'D2',   label: 'D2',   type: PIN_TYPE.PWM,     x: 154, y: 205, side: 'right', gpio: 2 },
+    { id: 'D15',  label: 'D15',  type: PIN_TYPE.PWM,     x: 154, y: 220, side: 'right', gpio: 15 },
+    { id: 'GND2', label: 'GND',  type: PIN_TYPE.GND,     x: 154, y: 235, side: 'right' },
+    { id: '3V3',  label: '3V3',  type: PIN_TYPE.POWER,   x: 154, y: 250, side: 'right' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y, width: W, height: H } = inst;
+    const WROOM_W = 92, WROOM_H = 118, WROOM_X = 39, WROOM_Y = 18;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // ── PCB body ──
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, '#18222b');
+    grad.addColorStop(0.5, '#202d38');
+    grad.addColorStop(1, '#11171d');
+    ctx.fillStyle = grad;
+    roundRect(ctx, 0, 0, W, H, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#0c1116';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Silkscreen frame
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, 3, 3, W - 6, H - 6, 5);
+    ctx.stroke();
+
+    // ── ESP-WROOM-32 metal shield ──
+    ctx.fillStyle = '#c8cfd6';
+    roundRect(ctx, WROOM_X, WROOM_Y, WROOM_W, WROOM_H, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#8b949e';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Trace pattern on shield
+    ctx.strokeStyle = 'rgba(60,70,80,0.5)';
+    ctx.lineWidth = 0.6;
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(WROOM_X + 6, WROOM_Y + 16 + i * 9);
+      ctx.lineTo(WROOM_X + WROOM_W - 6, WROOM_Y + 16 + i * 9);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#3a434b';
+    ctx.font = 'bold 8px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ESP-WROOM-32', WROOM_X + WROOM_W / 2, WROOM_Y + WROOM_H / 2 + 10);
+    ctx.font = '5px sans-serif';
+    ctx.fillText('FLASH 4MB · DUAL CORE', WROOM_X + WROOM_W / 2, WROOM_Y + WROOM_H / 2 + 22);
+
+    // ── 32.768kHz crystal + flash chip hints ──
+    ctx.fillStyle = '#0d0d0d';
+    roundRect(ctx, 8, 34, 16, 12, 2);
+    ctx.fill();
+    ctx.fillStyle = '#3d464e';
+    roundRect(ctx, 146, 34, 16, 12, 2);
+    ctx.fill();
+
+    // ── USB connector (bottom center) ──
+    ctx.fillStyle = '#6b7280';
+    roundRect(ctx, W / 2 - 11, H - 26, 22, 26, 3);
+    ctx.fill();
+    ctx.fillStyle = '#2a2f36';
+    roundRect(ctx, W / 2 - 7, H - 20, 14, 8, 1);
+    ctx.fill();
+
+    // ── Header strips ──
+    const leftYs  = this.pins.filter(p => p.side === 'left').map(p => p.y);
+    const rightYs = this.pins.filter(p => p.side === 'right').map(p => p.y);
+    const drawVertHeader = (hx, holeXs, holeYs, holeX) => {
+      ctx.fillStyle = '#15181c';
+      roundRect(ctx, hx, 32, 16, H - 62, 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      for (const hy of holeYs) {
+        ctx.fillStyle = '#c8b06a';
+        ctx.beginPath(); ctx.arc(holeX, hy, 4.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0b0b0d';
+        ctx.beginPath(); ctx.arc(holeX, hy, 2, 0, Math.PI * 2); ctx.fill();
+      }
+    };
+    drawVertHeader(8,  leftYs, leftYs, 16);
+    drawVertHeader(146, rightYs, rightYs, 154);
+
+    // ── Pin labels (silkscreen, baked in) ──
+    ctx.font = 'bold 5px JetBrains Mono, monospace';
+    for (const pin of this.pins) {
+      const pw = ctx.measureText(pin.label).width + 3;
+      let bx;
+      if (pin.side === 'left')  bx = pin.x - 3 - pw;
+      else                      bx = pin.x + 3;
+      ctx.fillStyle = 'rgba(6,12,18,0.85)';
+      roundRect(ctx, bx, pin.y - 3.5, pw, 7, 1.5);
+      ctx.fill();
+      ctx.fillStyle = '#dbe4ea';
+      ctx.textAlign = pin.side === 'left' ? 'right' : 'left';
+      ctx.fillText(pin.label, bx + (pin.side === 'left' ? pw - 2 : 2), pin.y + 1.5);
+    }
+
+    // ── Built-in LED (GPIO2) ──
+    const ledPin = this.pins.find(p => p.id === 'D2');
+    const lit = sim && sim.pinStates && (sim.pinStates.pin_2 || 0) > 0;
+    drawLED_on_board(ctx, ledPin.x + 24, ledPin.y, lit ? '#ffee33' : '#444', 3);
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '5px sans-serif';
+    ctx.fillText('L', ledPin.x + 24, ledPin.y + 9);
+
+    // ── Board name ──
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ESP32', W / 2, H - 6);
+    ctx.font = '5px sans-serif';
+    ctx.fillText('DEVKIT V1', W / 2, H - 1);
+
+    // ── Selection outline ──
+    if (inst.selected) {
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      roundRect(ctx, -3, -3, W + 6, H + 6, 8);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+  }
+});
+
 /* ─── LED ─── */
 defComp({
   id: 'led',
@@ -1678,7 +1851,7 @@ defComp({
 
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
-  { category: 'Boards',    ids: ['arduino_uno'] },
+  { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
   { category: 'Output',    ids: ['led', 'rgb_led', 'buzzer', 'seg7', 'lcd1602'] },
   { category: 'Input',     ids: ['push_button', 'potentiometer'] },
   { category: 'Actuators', ids: ['servo'] },
