@@ -498,10 +498,18 @@ class ArduinoSimulator {
           self._emitEvent('lcd_power', { on: true });
         },
         lcdSetCursor(varName, col, row) {
-          self._lcdCursor = { col, row };
+          self._lcdCursor = { col: Number(col) || 0, row: Number(row) || 0 };
         },
         lcdPrint(varName, val) {
-          self._emitEvent('lcd_print', { text: String(val), cursor: self._lcdCursor || { col: 0, row: 0 } });
+          const text = String(val);
+          const cursor = self._lcdCursor || { col: 0, row: 0 };
+          self._emitEvent('lcd_print', { text, cursor: { col: cursor.col, row: cursor.row } });
+          // Real LCDs advance the cursor after each character (wrap to row 2)
+          let col = cursor.col + text.length;
+          let row = cursor.row;
+          if (col >= 16 && row === 0) { col -= 16; row = 1; }
+          if (col >= 16) col = 15;
+          self._lcdCursor = { col, row };
         },
         lcdClear(varName) {
           self._emitEvent('lcd_clear', {});
@@ -624,8 +632,23 @@ class ArduinoSimulator {
 
       /* Servo/LCD class stubs */
       Servo: function () { return {}; },
-      LiquidCrystal: function () { return {}; },
-      LiquidCrystal_I2C: function () { return {}; },
+      LiquidCrystal: function () {
+        // Methods that aren't transpiled to _a.lcd* calls must exist on the object
+        const powerOn = () => self._emitEvent('lcd_power', { on: true });
+        return {
+          init: powerOn, begin: powerOn, backlight: powerOn, noBacklight() { },
+          setBacklight() { }, display() { }, noDisplay() { }, blink() { },
+          noBlink() { }, cursor() { }, noCursor() { }, createChar() { },
+        };
+      },
+      LiquidCrystal_I2C: function () {
+        const powerOn = () => self._emitEvent('lcd_power', { on: true });
+        return {
+          init: powerOn, begin: powerOn, backlight: powerOn, noBacklight() { },
+          setBacklight() { }, display() { }, noDisplay() { }, blink() { },
+          noBlink() { }, cursor() { }, noCursor() { }, createChar() { },
+        };
+      },
       /* Library stubs (instances) */
       Wire: { begin() { }, requestFrom() { return 0; }, beginTransmission() { }, endTransmission() { return 0; }, write() { return 1; }, read() { return 0; }, available() { return 0; } },
       SPI: { begin() { }, transfer() { return 0; }, end() { }, setClockDivider() { }, setBitOrder() { }, setDataMode() { } },
@@ -1251,6 +1274,18 @@ const EXAMPLE_CIRCUITS = {
       { id: 'w6', from: { instId: 'pot1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
+  lcd_i2c: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'lcd1', type: 'lcd1602_i2c', x: 110, y: 320 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'lcd1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'b1', pinId: 'GND1' }, to: { instId: 'lcd1', pinId: 'gnd' } },
+      { id: 'w3', from: { instId: 'b1', pinId: 'A4' }, to: { instId: 'lcd1', pinId: 'sda' } },
+      { id: 'w4', from: { instId: 'b1', pinId: 'A5' }, to: { instId: 'lcd1', pinId: 'scl' } },
+    ],
+  },
 };
 
 const EXAMPLE_SKETCHES = [
@@ -1863,6 +1898,43 @@ void loop() {
   }
 
   delay(1000);
+}`
+  },
+  {
+    id: 'lcd_i2c',
+    name: 'LCD I2C Display',
+    icon: '🖥️',
+    desc: 'Print text and a counter on a 16×2 LCD with a PCF8574 I2C backpack (SDA → A4, SCL → A5)',
+    tags: ['beginner', 'lcd', 'i2c', 'display'],
+    circuit: EXAMPLE_CIRCUITS.lcd_i2c,
+    code: `/*
+ * LCD I2C — display text on a 16x2 LCD with a PCF8574 I2C backpack.
+ * Wiring: LCD VCC → 5V, GND → GND, SDA → A4, SCL → A5.
+ */
+
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int counter = 0;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("Hello, ArduSim!");
+  lcd.setCursor(0, 1);
+  lcd.print("LCD I2C : 0x27");
+}
+
+void loop() {
+  delay(500);
+  counter++;
+  lcd.setCursor(0, 1);
+  lcd.print("Count: ");
+  lcd.print(counter);
+  lcd.print("        ");
 }`
   },
 ];

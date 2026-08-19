@@ -1852,7 +1852,7 @@ defComp({
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
   { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
-  { category: 'Output',    ids: ['led', 'rgb_led', 'buzzer', 'seg7', 'lcd1602'] },
+  { category: 'Output',    ids: ['led', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c'] },
   { category: 'Input',     ids: ['push_button', 'potentiometer'] },
   { category: 'Actuators', ids: ['servo'] },
   { category: 'Sensors',   ids: ['dht11', 'hcsr04'] },

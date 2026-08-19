@@ -363,9 +363,9 @@ class App {
       if (!this.canvas) return;
       const insts = this.canvas.components || [];
 
-      // LCD display events
+      // LCD display events (16×2 parallel and I2C/PCF8574 versions)
       for (const inst of insts) {
-        if (inst.type !== 'lcd1602') continue;
+        if (inst.type !== 'lcd1602' && inst.type !== 'lcd1602_i2c') continue;
         if (type === 'lcd_power') {
           inst.runtimeState.powered = true;
         } else if (type === 'lcd_clear') {
