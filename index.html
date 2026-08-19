@@ -279,7 +279,11 @@
                     width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
                     <path
                         d="M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5" />
-                </svg> Oscilloscope </button> <button class="btm-tab" id="tab-pins" data-tab="pins"> <svg width="13"
+                </svg> Oscilloscope </button> <button class="btm-tab" id="tab-plotter" data-tab="plotter"> <svg
+                    width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                    <path
+                        d="M1.5 1.5A.5.5 0 0 0 0 2v12a.5.5 0 0 0 1 0V2a.5.5 0 0 0-.5-.5m14 0a.5.5 0 0 0-1 0v12a.5.5 0 0 0 1 0zM3 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5zm5-5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5zM14 5.5a.5.5 0 0 0-.5-.5h-2a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5z" />
+                </svg> Plotter </button> <button class="btm-tab" id="tab-pins" data-tab="pins"> <svg width="13"
                     height="13" viewBox="0 0 16 16" fill="currentColor">
                     <path
                         d="M8.235.055a.498.498 0 0 0-.47 0l-7.5 4A.5.5 0 0 0 0 4.5v7a.5.5 0 0 0 .265.445l7.5 4a.498.498 0 0 0 .47 0l7.5-4A.5.5 0 0 0 16 11.5v-7a.5.5 0 0 0-.265-.445z" />
@@ -374,6 +378,12 @@
                         </select> </label> <button class="serial-btn" id="btn-osc-clear">Clear</button> <button
                         class="serial-btn" id="btn-osc-pause">Pause</button> </div> <canvas
                     id="oscilloscope-canvas"></canvas>
+            </div> <!-- Serial Plotter -->
+            <div class="tab-pane" id="pane-plotter">
+                <div class="osc-toolbar"> <span class="output-title">Serial Plotter — graphs numeric
+                        Serial.print/println values</span> <button class="serial-btn"
+                        id="btn-plotter-clear">Clear</button> <button class="serial-btn"
+                        id="btn-plotter-pause">Pause</button> </div> <canvas id="plotter-canvas"></canvas>
             </div> <!-- Pin Monitor -->
             <div class="tab-pane" id="pane-pins">
                 <div class="pin-monitor-grid" id="pin-monitor-grid"> <!-- Rendered by JS --> </div>
@@ -503,6 +513,7 @@
     <script src="js/serial.js?v=20260824-1"></script>
     <script src="js/output.js?v=20260824-1"></script>
     <script src="js/oscilloscope.js?v=20260824-1"></script>
+    <script src="js/plotter.js?v=20260824-1"></script>
     <script src="js/storage.js?v=20260824-1"></script>
     <script src="js/editor.js?v=20260824-1"></script>
     <script src="js/app.js?v=20260824-1"></script>

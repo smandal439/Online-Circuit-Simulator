@@ -971,6 +971,13 @@ body.view-serial .bottom-panel {
   background: #0a0e14;
 }
 
+#plotter-canvas {
+  flex: 1;
+  display: block;
+  width: 100%;
+  background: #0a0e14;
+}
+
 /* ═══════════════ PIN MONITOR ═══════════════ */
 .pin-monitor-grid {
   display: grid;

@@ -8,6 +8,7 @@ class App {
     this.serial = null;
     this.output = null;
     this.osc = null;
+    this.plotter = null;
     this.isRunning = false;
     this._propsComp = null;
     this._projectName = 'Untitled Project';
@@ -25,6 +26,7 @@ class App {
       this._initSerial();
       this._initOutput();
       this._initOscilloscope();
+      this._initPlotter();
       this._attachSimulatorEvents();
       this._renderComponentLibrary();
       this._renderExamples();
@@ -325,6 +327,7 @@ class App {
   _attachSimulatorEvents() {
     this.sim.onSerial = (text, type) => {
       this.serial?.receive(text, type);
+      this.plotter?.addSerial(text);
     };
 
     this.sim.onPinChange = (pinKey, value) => {
