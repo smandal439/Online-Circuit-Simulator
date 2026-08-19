@@ -1741,6 +1741,101 @@ defComp({
   }
 });
 
+/* ─── OLED 128x64 (SSD1306, I2C) ─── */
+defComp({
+  id: 'oled_ssd1306',
+  name: 'OLED 128×64 (I2C)',
+  category: 'Output',
+  icon: '🖥️',
+  desc: '128×64 monochrome OLED display with SSD1306 controller (I2C)',
+  width: 132,
+  height: 76,
+  defaultProps: { address: '0x3C' },
+  interactive: [
+    { field: 'address', label: 'I2C Addr', type: 'text' },
+  ],
+  pins: [
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 36, y: 76, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 52, y: 76, side: 'bottom' },
+    { id: 'scl', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 68, y: 76, side: 'bottom' },
+    { id: 'sda', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 84, y: 76, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const o = inst.runtimeState && inst.runtimeState.oled;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB
+    ctx.fillStyle = '#0e1a2a';
+    roundRect(ctx, 0, 0, 132, 70, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#2a4a6a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Screen (128×64 internal, rendered 1:1)
+    ctx.fillStyle = o && o.power ? '#06121c' : '#0a1620';
+    roundRect(ctx, 2, 2, 128, 64, 2);
+    ctx.fill();
+
+    if (o && o.pixels) {
+      const lit = o.invert ? '#0a1620' : '#7fd4ff';
+      const dim = o.invert ? '#7fd4ff' : '#0a1620';
+      if (o.invert) {
+        // Inverted display: full screen lit, "on" pixels carved out in dark
+        ctx.fillStyle = dim;
+        ctx.fillRect(2, 2, 128, 64);
+      }
+      ctx.fillStyle = lit;
+      const px = o.pixels;
+      for (let i = 0; i < px.length; i++) {
+        if (!px[i]) continue;
+        ctx.fillRect(i % 128, (i / 128) | 0, 1, 1);
+      }
+    }
+
+    // Text layer (Adafruit_GFX setCursor(x, y) is the top-left of the text;
+    // canvas fillText y is the baseline, so offset by the line height)
+    if (o && o.texts) {
+      ctx.textAlign = 'left';
+      for (const t of o.texts) {
+        ctx.font = `${t.size * 8}px JetBrains Mono, monospace`;
+        ctx.fillStyle = (o.invert ? t.color === 0 : t.color === 1) ? '#7fd4ff' : '#06121c';
+        ctx.fillText(t.text, t.x, t.y + t.size * 8);
+      }
+    }
+
+    if (!o || !o.power) {
+      // Idle splash so the component reads as an OLED even before running
+      ctx.fillStyle = 'rgba(127,212,255,0.25)';
+      ctx.font = '8px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('ArduSim', 66, 38);
+    }
+
+    // Label
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '7px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`OLED ${inst.props.address || '0x3C'}`, 66, 68);
+
+    // 4 I2C Pin Leads (GND, VCC, SCL, SDA)
+    ctx.strokeStyle = '#aaaaaa';
+    ctx.lineWidth = 1.5;
+    [36, 52, 68, 84].forEach(px => {
+      ctx.beginPath();
+      ctx.moveTo(px, 70);
+      ctx.lineTo(px, 76);
+      ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 138, 82);
+    ctx.restore();
+  }
+});
+
 /* ─── Power Supply ─── */
 defComp({
   id: 'power_5v',
@@ -1852,7 +1947,7 @@ defComp({
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
   { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
-  { category: 'Output',    ids: ['led', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c'] },
+  { category: 'Output',    ids: ['led', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306'] },
   { category: 'Input',     ids: ['push_button', 'potentiometer'] },
   { category: 'Actuators', ids: ['servo'] },
   { category: 'Sensors',   ids: ['dht11', 'hcsr04'] },

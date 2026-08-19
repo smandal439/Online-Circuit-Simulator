@@ -96,7 +96,13 @@ class ArduinoSimulator {
     // LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  →  let lcd = new LiquidCrystal(12, 11, 5, 4, 3, 2);
     // WiFiClient espClient;  →  let espClient = new WiFiClient();
     // PubSubClient client(espClient);  →  let client = new PubSubClient(espClient);
-    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
+    // WebServer server(80);  →  let server = new WebServer(80);
+    // Adafruit_SSD1306 display(128, 64, &Wire, -1);  →  let display = new Adafruit_SSD1306(128, 64, Wire, -1);
+    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
+
+    // C++ passes I2C objects by reference: `&Wire` is invalid JS. Strip the `&`
+    // only inside Adafruit_SSD1306 constructors to avoid breaking `a & b`.
+    js = js.replace(/new\s+Adafruit_SSD1306\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_SSD1306(${args.replace(/&\s*/g, '')})`);
 
     // 6. Handle arrays: int arr[10] → let arr = new Array(10).fill(0)
     js = js.replace(/let\s+(\w+)\s*\[(\d+)\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$3]');
@@ -254,6 +260,13 @@ class ArduinoSimulator {
     js = js.replace(/\b(\w+)\.write\s*\(/g, '_a.servoWrite($1, ');
     js = js.replace(/\b(\w+)\.writeMicroseconds\s*\(/g, '_a.servoWriteMs($1, ');
     js = js.replace(/\b(\w+)\.read\s*\(/g, '_a.servoRead($1');
+
+    // WebServer (ESP32) — map before the generic `.begin` rule below so
+    // server.on/send/arg/handleClient get routed to the WebServer stub.
+    js = js.replace(/\b(\w+)\.on\s*\(/g, '_a.serverOn($1, ');
+    js = js.replace(/\b(\w+)\.send\s*\(/g, '_a.serverSend($1, ');
+    js = js.replace(/\b(\w+)\.arg\s*\(/g, '_a.serverArg($1, ');
+    js = js.replace(/\b(\w+)\.handleClient\s*\(/g, '_a.serverHandleClient($1, ');
 
     // LiquidCrystal
     js = js.replace(/\b(\w+)\.begin\s*\(/g, '_a.lcdBegin($1, ');
@@ -493,8 +506,18 @@ class ArduinoSimulator {
         servoWriteMs(varName, us) { /* advanced */ },
         servoRead(varName) { return 90; },
 
-        /* LCD */
+        /* LCD (and OLED / WebServer share the generic `.begin` transpile) */
         lcdBegin(varName, cols, rows) {
+          if (varName && varName.__webserver) {
+            const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
+            cfg.port = Number(cols) || cfg.port || 80;
+            self._serialLog(`[WebServer] HTTP server started on port ${cfg.port} → http://192.168.1.105/\n`, 'system');
+            return;
+          }
+          if (varName && varName.__oled) {
+            self._emitEvent('oled_power', { on: true });
+            return;
+          }
           self._emitEvent('lcd_power', { on: true });
         },
         lcdSetCursor(varName, col, row) {
@@ -503,6 +526,19 @@ class ArduinoSimulator {
         lcdPrint(varName, val) {
           const text = String(val);
           const cursor = self._lcdCursor || { col: 0, row: 0 };
+          // OLED (Adafruit_SSD1306): cursor is in pixels, sized by setTextSize()
+          if (varName && varName.__oled) {
+            const size = self._oledTextSize || 1;
+            self._emitEvent('oled_draw', {
+              op: 'print',
+              text,
+              cursor: { col: cursor.col, row: cursor.row },
+              size,
+              color: self._oledTextColor === 0 ? 0 : 1,
+            });
+            self._lcdCursor = { col: cursor.col + text.length * 6 * size, row: cursor.row };
+            return;
+          }
           self._emitEvent('lcd_print', { text, cursor: { col: cursor.col, row: cursor.row } });
           // Real LCDs advance the cursor after each character (wrap to row 2)
           let col = cursor.col + text.length;
@@ -512,9 +548,58 @@ class ArduinoSimulator {
           self._lcdCursor = { col, row };
         },
         lcdClear(varName) {
+          if (varName && varName.__oled) {
+            self._emitEvent('oled_draw', { op: 'clear' });
+            return;
+          }
           self._emitEvent('lcd_clear', {});
         },
         lcdHome(varName) { self._lcdCursor = { col: 0, row: 0 }; },
+
+        /* ══════════ ESP32 — WebServer (simulated HTTP) ══════════ */
+        serverOn(server, path, m3, m4) {
+          const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
+          const handler = typeof m3 === 'function' ? m3 : m4;
+          const method = typeof m3 === 'function' ? 'GET' : String(m3 || 'GET').replace('HTTP_', '');
+          if (typeof handler === 'function') {
+            cfg.routes.push({ path: String(path), method, handler });
+            self._serialLog(`[WebServer] Route registered: ${method} ${path}\n`, 'system');
+          } else {
+            self._serialLog(`[WebServer] on("${path}"): handler is not a function — route ignored\n`, 'system');
+          }
+        },
+        serverSend(server, code, type, content) {
+          self._webResp = {
+            code: Number(code) || 200,
+            type: String(type || ''),
+            content: String(content || ''),
+          };
+        },
+        serverArg(server, name) { return ''; },
+        serverHandleClient(server) {
+          const cfg = self._web;
+          if (!cfg || !cfg.routes.length) return;
+          const now = Date.now();
+          if (now - (cfg.lastHit || 0) < 1500) return; // one simulated request per 1.5s
+          cfg.lastHit = now;
+          const route = cfg.routes[cfg.reqIdx = ((cfg.reqIdx || 0) % cfg.routes.length)];
+          cfg.reqIdx++;
+          self._webResp = null;
+          // Handlers are transpiled to async functions — log when they resolve.
+          Promise.resolve()
+            .then(() => route.handler())
+            .then(() => {
+              const resp = self._webResp || { code: 200, type: 'text/html', content: '' };
+              self._serialLog(`[WebServer] ${route.method} ${route.path} → ${resp.code} (${resp.type})\n`, 'system');
+              const snippet = String(resp.content).replace(/\s*\n\s*/g, ' ').trim();
+              if (snippet) {
+                self._serialLog(`[WebServer] Response: ${snippet.length > 320 ? snippet.slice(0, 320) + '…' : snippet}\n`, 'system');
+              }
+            })
+            .catch((e) => {
+              self._serialLog(`[WebServer] ${route.method} ${route.path} handler error: ${e && e.message ? e.message : e}\n`, 'system');
+            });
+        },
 
         /* Interrupts */
         attachInterrupt(num, fn, mode) { },
@@ -629,6 +714,13 @@ class ArduinoSimulator {
       // ESP32 Wi-Fi constants
       WIFI_STA: 1, WIFI_AP: 2, WIFI_AP_STA: 3,
       WL_CONNECTED: 3, WL_DISCONNECTED: 6,
+      // ESP32 WebServer HTTP method constants
+      HTTP_GET: 'GET', HTTP_POST: 'POST', HTTP_PUT: 'PUT', HTTP_DELETE: 'DELETE',
+      HTTP_HEAD: 'HEAD', HTTP_OPTIONS: 'OPTIONS', HTTP_PATCH: 'PATCH', HTTP_ANY: 'ANY',
+      // Adafruit_SSD1306 constants
+      SSD1306_SWITCHCAPVCC: 0x01, SSD1306_EXTERNALVCC: 0x02,
+      SSD1306_I2C_ADDRESS: 0x3C, SSD1306_WHITE: 1, SSD1306_BLACK: 0,
+      SSD1306_SETCONTRAST: 0x81, SSD1306_SETVCOMDETECT: 0xDB,
 
       /* Servo/LCD class stubs */
       Servo: function () { return {}; },
@@ -647,6 +739,37 @@ class ArduinoSimulator {
           init: powerOn, begin: powerOn, backlight: powerOn, noBacklight() { },
           setBacklight() { }, display() { }, noDisplay() { }, blink() { },
           noBlink() { }, cursor() { }, noCursor() { }, createChar() { },
+        };
+      },
+      /* OLED 128×64 (SSD1306, I2C) — Adafruit_SSD1306 library stub.
+         Text/setCursor calls are transpiled to _a.lcd* and dispatched here via
+         the __oled tag; the remaining GFX drawing calls emit oled_draw events. */
+      Adafruit_SSD1306: function () {
+        const num = (v) => Math.round(Number(v) || 0);
+        const draw = (op, extra) => self._emitEvent('oled_draw', Object.assign({ op }, extra));
+        return {
+          __oled: true,
+          begin() { self._emitEvent('oled_power', { on: true }); },
+          init() { self._emitEvent('oled_power', { on: true }); },
+          clearDisplay() { draw('clear'); },
+          display() { /* live rendering — nothing to do */ },
+          setCursor(col, row) { self._lcdCursor = { col: num(col), row: num(row) }; },
+          setTextSize(s) { self._oledTextSize = Math.max(1, Math.round(Number(s) || 1)); },
+          setTextColor(c) { self._oledTextColor = c ? 1 : 0; },
+          setTextWrap(w) { },
+          setRotation(r) { },
+          invertDisplay(i) { draw('invert', { invert: !!i }); },
+          setContrast(c) { },
+          drawPixel(x, y) { draw('pixel', { x: num(x), y: num(y) }); },
+          drawLine(x0, y0, x1, y1) { draw('line', { x0: num(x0), y0: num(y0), x1: num(x1), y1: num(y1) }); },
+          drawRect(x, y, w, h) { draw('rect', { x: num(x), y: num(y), w: num(w), h: num(h) }); },
+          fillRect(x, y, w, h) { draw('fillRect', { x: num(x), y: num(y), w: num(w), h: num(h) }); },
+          drawCircle(x, y, r) { draw('circle', { x: num(x), y: num(y), r: num(r) }); },
+          fillCircle(x, y, r) { draw('fillCircle', { x: num(x), y: num(y), r: num(r) }); },
+          fillScreen(color) { draw('fillScreen', { color: color ? 1 : 0 }); },
+          drawBitmap() { },
+          ssd1306_command() { },
+          ssd1306_command1() { },
         };
       },
       /* Library stubs (instances) */
@@ -670,6 +793,23 @@ class ArduinoSimulator {
          If no real broker can be reached, a local in-page broker is used as a
          fallback so the pub/sub demo still works offline. */
       WiFiClient: function () { return {}; },
+      /* ESP32 WebServer stub — routes are registered via _a.serverOn() and
+         served by _a.serverHandleClient(), which generates a simulated HTTP
+         request to each route every ~1.5s so you can watch requests/responses
+         in the Serial Monitor. */
+      WebServer: function (port) {
+        const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
+        cfg.port = Number(port) || cfg.port || 80;
+        return {
+          __webserver: true,
+          begin() { },
+          send() { },
+          on() { },
+          arg() { return ''; },
+          sendHeader() { },
+          handleClient() { },
+        };
+      },
       PubSubClient: function () {
         const broker = (self._mqtt = self._mqtt || { subs: new Map(), connected: false });
         // Unique per-session suffix so a shared public broker doesn't clash
@@ -1284,6 +1424,45 @@ const EXAMPLE_CIRCUITS = {
       { id: 'w2', from: { instId: 'b1', pinId: 'GND1' }, to: { instId: 'lcd1', pinId: 'gnd' } },
       { id: 'w3', from: { instId: 'b1', pinId: 'A4' }, to: { instId: 'lcd1', pinId: 'sda' } },
       { id: 'w4', from: { instId: 'b1', pinId: 'A5' }, to: { instId: 'lcd1', pinId: 'scl' } },
+    ],
+  },
+  oled_ssd1306: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'oled1', type: 'oled_ssd1306', x: 110, y: 320 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'oled1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'b1', pinId: 'GND1' }, to: { instId: 'oled1', pinId: 'gnd' } },
+      { id: 'w3', from: { instId: 'b1', pinId: 'A4' }, to: { instId: 'oled1', pinId: 'sda' } },
+      { id: 'w4', from: { instId: 'b1', pinId: 'A5' }, to: { instId: 'oled1', pinId: 'scl' } },
+    ],
+  },
+  esp32_server: {
+    components: [
+      { id: 'b1', type: 'esp32_devkit_v1', x: 300, y: 60 },
+      { id: 'led1', type: 'led', x: 120, y: 300 },
+      { id: 'r1', type: 'resistor', x: 120, y: 380 },
+      { id: 'pot1', type: 'potentiometer', x: 520, y: 300 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w2', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w3', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w4', from: { instId: 'b1', pinId: '3V3' }, to: { instId: 'pot1', pinId: 'vcc' } },
+      { id: 'w5', from: { instId: 'pot1', pinId: 'wiper' }, to: { instId: 'b1', pinId: 'VP' } },
+      { id: 'w6', from: { instId: 'pot1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  serial_plotter: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'pot1', type: 'potentiometer', x: 120, y: 300 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'pot1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'pot1', pinId: 'wiper' }, to: { instId: 'b1', pinId: 'A0' } },
+      { id: 'w3', from: { instId: 'pot1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
 };
@@ -1935,6 +2114,160 @@ void loop() {
   lcd.print("Count: ");
   lcd.print(counter);
   lcd.print("        ");
+}`
+  },
+  {
+    id: 'oled_ssd1306',
+    name: 'OLED SSD1306 (I2C)',
+    icon: '🖥️',
+    desc: 'Drive a 128×64 monochrome OLED with an SSD1306 controller over I2C (SDA → A4, SCL → A5)',
+    tags: ['intermediate', 'oled', 'i2c', 'display', 'graphics'],
+    circuit: EXAMPLE_CIRCUITS.oled_ssd1306,
+    code: `/*
+ * OLED SSD1306 — draw text and graphics on a 128x64 monochrome OLED.
+ * Wiring: OLED VCC → 5V, GND → GND, SDA → A4, SCL → A5.
+ */
+
+#include <Wire.h>
+#include <Adafruit_SSD1306.h>
+
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
+
+int counter = 0;
+
+void setup() {
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(24, 20);
+  display.print("ArduSim");
+  display.display();
+  delay(1500);
+}
+
+void loop() {
+  counter++;
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.print("OLED I2C 0x3C");
+  display.setCursor(0, 16);
+  display.print("Count: ");
+  display.print(counter);
+
+  // Draw a frame and a progress bar
+  display.drawRect(0, 30, 127, 33, SSD1306_WHITE);
+  display.fillRect(0, 48, (counter % 120) + 4, 4, SSD1306_WHITE);
+
+  display.display();
+  delay(200);
+}`
+  },
+  {
+    id: 'esp32_server',
+    name: 'ESP32 Web Server',
+    icon: '🌐',
+    desc: 'ESP32 DevKit V1 — run a WebServer that serves an HTML page and toggles the LED via /on and /off routes',
+    tags: ['esp32', 'wifi', 'webserver', 'http', 'iot'],
+    circuit: EXAMPLE_CIRCUITS.esp32_server,
+    code: `/*
+ * ESP32 Web Server — serve an HTML dashboard and control the LED.
+ * The simulator generates a fake HTTP request to each route every ~1.5s,
+ * so watch the Serial Monitor to see requests and responses, and the LED
+ * on D13 toggling as /on and /off are requested.
+ */
+
+#include <WiFi.h>
+#include <WebServer.h>
+
+const int ledPin  = 13;
+const int sensorPin = 36;   // GPIO36 (VP) — potentiometer wiper
+WebServer server(80);
+
+int tempC = 25;
+
+String buildPage() {
+  String html = "";
+  html += "<!DOCTYPE html><html><head><title>ArduSim Web</title></head><body>";
+  html += "<h1>ESP32 Web Server</h1>";
+  html += "<p>Temperature: <b>" + String(tempC) + " &deg;C</b></p>";
+  html += "<p><a href=\\"/on\\">Turn LED ON</a></p>";
+  html += "<p><a href=\\"/off\\">Turn LED OFF</a></p>";
+  html += "</body></html>";
+  return html;
+}
+
+void handleRoot() {
+  server.send(200, "text/html", buildPage());
+}
+
+void handleOn() {
+  digitalWrite(ledPin, HIGH);
+  server.send(200, "text/plain", "LED is now ON");
+}
+
+void handleOff() {
+  digitalWrite(ledPin, LOW);
+  server.send(200, "text/plain", "LED is now OFF");
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
+  Serial.println("Connecting to Wi-Fi...");
+  WiFi.begin("ArduSimNet", "simulator");
+  delay(800);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  server.on("/", handleRoot);
+  server.on("/on", handleOn);
+  server.on("/off", handleOff);
+  server.begin();
+  Serial.println("HTTP server started at http://192.168.1.105/");
+}
+
+void loop() {
+  tempC = round(map(analogRead(sensorPin), 0, 1023, 15, 35));
+  server.handleClient();
+  delay(500);
+}`
+  },
+  {
+    id: 'serial_plotter',
+    name: 'Serial Plotter Demo',
+    icon: '📈',
+    desc: 'Print two numeric values every 50ms and watch them graph in the Plotter tab (potentiometer + sine wave)',
+    tags: ['beginner', 'plotter', 'analog', 'serial'],
+    circuit: EXAMPLE_CIRCUITS.serial_plotter,
+    code: `/*
+ * Serial Plotter — send "pot:value sine:value" lines so the Plotter tab
+ * can graph them live. Turn the potentiometer on A0 and watch the two
+ * waveforms scroll across the plotter.
+ */
+
+int potPin = A0;
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Serial Plotter demo started");
+}
+
+void loop() {
+  int potValue = analogRead(potPin);
+  float t = (float)millis() / 1000.0;
+  int sine = (int)((sin(t) + 1.0) * 512.0);
+
+  Serial.print("pot:");
+  Serial.print(potValue);
+  Serial.print(" sine:");
+  Serial.println(sine);
+
+  delay(50);
 }`
   },
 ];

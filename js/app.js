@@ -387,6 +387,87 @@ class App {
         }
       }
 
+      // OLED (SSD1306 I2C) display events — maintains a 128×64 framebuffer
+      for (const inst of insts) {
+        if (inst.type !== 'oled_ssd1306') continue;
+        const o = inst.runtimeState.oled || (inst.runtimeState.oled = {
+          power: false,
+          invert: false,
+          pixels: new Uint8Array(128 * 64),
+          texts: [],
+        });
+        const setPx = (px, py, v) => {
+          if (px >= 0 && px < 128 && py >= 0 && py < 64) o.pixels[py * 128 + px] = v ? 1 : 0;
+        };
+        const drawLinePx = (x0, y0, x1, y1) => {
+          let dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+          const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+          let err = dx + dy;
+          for (;;) {
+            setPx(x0, y0, 1);
+            if (x0 === x1 && y0 === y1) break;
+            const e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x0 += sx; }
+            if (e2 <= dx) { err += dx; y0 += sy; }
+          }
+        };
+
+        if (type === 'oled_power') {
+          o.power = true;
+        } else if (type === 'oled_draw' && data) {
+          const op = data.op;
+          if (op === 'clear') {
+            o.pixels.fill(0);
+            o.texts = [];
+          } else if (op === 'invert') {
+            o.invert = !!data.invert;
+          } else if (op === 'print') {
+            o.texts.push({
+              x: data.cursor ? data.cursor.col : 0,
+              y: data.cursor ? data.cursor.row : 0,
+              text: String(data.text !== undefined ? data.text : ''),
+              size: data.size || 1,
+              color: data.color === 0 ? 0 : 1,
+            });
+          } else if (op === 'pixel') {
+            setPx(data.x, data.y, 1);
+          } else if (op === 'line') {
+            drawLinePx(data.x0, data.y0, data.x1, data.y1);
+          } else if (op === 'rect') {
+            const x = data.x, y = data.y, w = data.w, h = data.h;
+            drawLinePx(x, y, x + w, y);
+            drawLinePx(x, y + h, x + w, y + h);
+            drawLinePx(x, y, x, y + h);
+            drawLinePx(x + w, y, x + w, y + h);
+          } else if (op === 'fillRect') {
+            for (let py = data.y; py < data.y + data.h; py++) {
+              for (let px = data.x; px < data.x + data.w; px++) setPx(px, py, 1);
+            }
+          } else if (op === 'circle') {
+            const cx = data.x, cy = data.y, r = data.r;
+            let xx = r, yy = 0, err = 1 - r;
+            while (xx >= yy) {
+              setPx(cx + xx, cy + yy, 1); setPx(cx - xx, cy + yy, 1);
+              setPx(cx + xx, cy - yy, 1); setPx(cx - xx, cy - yy, 1);
+              setPx(cx + yy, cy + xx, 1); setPx(cx - yy, cy + xx, 1);
+              setPx(cx + yy, cy - xx, 1); setPx(cx - yy, cy - xx, 1);
+              yy++;
+              if (err < 0) err += 2 * yy + 1;
+              else { xx--; err += 2 * (yy - xx) + 1; }
+            }
+          } else if (op === 'fillCircle') {
+            const cx = data.x, cy = data.y, r = data.r;
+            for (let yy = -r; yy <= r; yy++) {
+              for (let xx = -r; xx <= r; xx++) {
+                if (xx * xx + yy * yy <= r * r) setPx(cx + xx, cy + yy, 1);
+              }
+            }
+          } else if (op === 'fillScreen') {
+            o.pixels.fill(data.color ? 1 : 0);
+          }
+        }
+      }
+
       // Servo events
       if (type === 'servo' && data && Number.isFinite(Number(data.angle))) {
         const angle = Math.max(0, Math.min(180, Number(data.angle)));
@@ -1074,6 +1155,21 @@ _newProject() {
     const oscCanvas = document.getElementById('oscilloscope-canvas');
     if (!oscCanvas || !window.OscilloscopeClass) return;
     this.osc = new window.OscilloscopeClass(oscCanvas);
+  }
+
+  /* ══════════════════════ SERIAL PLOTTER ══════════════════════ */
+  _initPlotter() {
+    const plotterCanvas = document.getElementById('plotter-canvas');
+    if (!plotterCanvas || !window.SerialPlotterClass) return;
+    this.plotter = new window.SerialPlotterClass(plotterCanvas);
+
+    const clearBtn = document.getElementById('btn-plotter-clear');
+    const pauseBtn = document.getElementById('btn-plotter-pause');
+    clearBtn?.addEventListener('click', () => this.plotter?.clear());
+    pauseBtn?.addEventListener('click', () => {
+      const paused = this.plotter?.togglePause();
+      if (pauseBtn) pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+    });
   }
 
   /* ══════════════════════ EXAMPLES ══════════════════════ */
