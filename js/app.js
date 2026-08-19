@@ -543,7 +543,7 @@ class App {
 _newProject() {
     // Reset the canvas and editor to a fresh state
     this.canvas?.clearCanvas();
-    this.editor?.setCode('');
+    this.editor?.setCode('void setup() {\n  // setup code\n}\nvoid loop() {\n  // loop code\n}');
     this._setProjectName('Untitled Project');
     this.output?.log('New project created', 'system');
     // Focus the editor for immediate typing

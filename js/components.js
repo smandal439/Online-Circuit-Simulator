@@ -480,33 +480,6 @@ defComp({
     ctx.fillText('+', 7, 18);
     ctx.fillText('−', 24, 46);
 
-    // Burned-out cracks inside the dome
-    if (blown) {
-      ctx.strokeStyle = 'rgba(20,20,24,0.85)';
-      ctx.lineWidth = 0.9;
-      ctx.beginPath(); ctx.moveTo(9, 23); ctx.lineTo(13, 27); ctx.lineTo(10, 32); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(21, 21); ctx.lineTo(17, 27); ctx.lineTo(20, 33); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(13, 38); ctx.lineTo(16, 33); ctx.lineTo(12, 29); ctx.stroke();
-    }
-
-    // Warning badge (overload or blown) — amber triangle with "!"
-    if (blown || overloaded) {
-      ctx.fillStyle = blown ? '#ff4444' : '#ffcc00';
-      ctx.strokeStyle = blown ? '#7a0000' : '#554400';
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      ctx.moveTo(15, -1);
-      ctx.lineTo(10, 6);
-      ctx.lineTo(20, 6);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 5px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('!', 15, 5.6);
-    }
-
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 36, 66);
     ctx.restore();
   }
@@ -904,6 +877,113 @@ defComp({
   }
 });
 
+/* ─── Multi-Color LED Array ─── */
+defComp({
+  id: 'multi_led_array',
+  name: 'Multi-Color LED Array',
+  category: 'Output',
+  icon: '🚥',
+  desc: 'Array of 4 individual colored LEDs (Red, Yellow, Green, Blue) with shared ground',
+  width: 90,
+  height: 60,
+  defaultProps: {},
+  pins: [
+    { id: 'led_r', label: 'R', type: PIN_TYPE.DIGITAL, x: 15, y: 60, side: 'bottom' },
+    { id: 'led_y', label: 'Y', type: PIN_TYPE.DIGITAL, x: 30, y: 60, side: 'bottom' },
+    { id: 'led_g', label: 'G', type: PIN_TYPE.DIGITAL, x: 45, y: 60, side: 'bottom' },
+    { id: 'led_b', label: 'B', type: PIN_TYPE.DIGITAL, x: 60, y: 60, side: 'bottom' },
+    { id: 'gnd',   label: '−', type: PIN_TYPE.GND,     x: 75, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+
+    // Configuration for each LED in the module
+    const leds = [
+      { id: 'led_r', color: '#ff3333', label: 'R', x: 15 },
+      { id: 'led_y', color: '#ffcc00', label: 'Y', x: 30 },
+      { id: 'led_g', color: '#33cc33', label: 'G', x: 45 },
+      { id: 'led_b', color: '#3388ff', label: 'B', x: 60 },
+    ];
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Module Housing Base
+    ctx.fillStyle = '#1e1e24';
+    roundRect(ctx, 4, 10, 82, 30, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#3a3a42';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Bottom Lead Pins
+    const pinXs = [15, 30, 45, 60, 75];
+    ctx.strokeStyle = '#888888';
+    ctx.lineWidth = 1.5;
+    pinXs.forEach(px => {
+      ctx.beginPath();
+      ctx.moveTo(px, 40);
+      ctx.lineTo(px, 60);
+      ctx.stroke();
+    });
+
+    // Common Cathode (GND) Mark
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('−', 75, 53);
+
+    // Render Individual LEDs
+    leds.forEach(led => {
+      const val = getInstPinState(inst, led.id, sim) || 0;
+      const brightness = val > 1 ? Math.min(val / 255, 1) : Math.max(val, 0);
+      const isOn = brightness > 0.02;
+      const col = led.color;
+      const lx = led.x;
+      const ly = 25;
+
+      // Pin Text Labels
+      ctx.fillStyle = '#aaaaaa';
+      ctx.font = 'bold 7px sans-serif';
+      ctx.fillText(led.label, lx, 53);
+
+      // 1. Ambient Volumetric Glow Halo (When Lit)
+      if (isOn) {
+        const glowRadius = 18 * brightness;
+        const halo = ctx.createRadialGradient(lx, ly, 0, lx, ly, glowRadius);
+        halo.addColorStop(0, hexToRgba(col, 0.65 * brightness));
+        halo.addColorStop(0.5, hexToRgba(col, 0.25 * brightness));
+        halo.addColorStop(1, hexToRgba(col, 0));
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(lx, ly, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 2. LED Bulb Lens Body
+      ctx.fillStyle = isOn ? hexToRgba(col, 0.9) : hexToRgba(col, 0.3);
+      ctx.beginPath();
+      ctx.arc(lx, ly, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = isOn ? '#ffffff' : hexToRgba(col, 0.6);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // 3. Bright Specular Highlight Core
+      if (isOn) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(lx - 2, ly - 2, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, 5, 94, 60);
+    ctx.restore();
+  }
+});
+
 /* ─── BREADBOARD ─── */
 defComp({
   id: 'breadboard',
@@ -1153,6 +1233,69 @@ defComp({
   }
 });
 
+// /* ─── DHT11 Temperature Sensor ─── */
+// defComp({
+//   id: 'dht11',
+//   name: 'DHT11 Sensor',
+//   category: 'Sensors',
+//   icon: '🌡️',
+//   desc: 'Temperature & humidity sensor',
+//   width: 30,
+//   height: 50,
+//   defaultProps: { temperature: 25, humidity: 60 },
+//   interactive: [
+//     { field: 'temperature', label: 'Temp', min: 0, max: 50, step: 1, unit: '°C' },
+//     { field: 'humidity',    label: 'Hum',  min: 0, max: 100, step: 1, unit: '%' },
+//   ],
+//   pins: [
+//     { id:'vcc',  label:'VCC', type:PIN_TYPE.POWER,  x: 6, y: 0, side:'top' },
+//     { id:'data', label:'DAT', type:PIN_TYPE.DIGITAL, x:15, y: 0, side:'top' },
+//     { id:'nc',   label:'NC',  type:PIN_TYPE.SIGNAL,  x:24, y: 0, side:'top' },
+//     { id:'gnd',  label:'GND', type:PIN_TYPE.GND,     x:15, y:50, side:'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const temp = inst.props.temperature || 25;
+//     const hum  = inst.props.humidity || 60;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // Body
+//     ctx.fillStyle = '#1a55cc';
+//     roundRect(ctx, 2, 8, 26, 36, 3);
+//     ctx.fill();
+//     ctx.strokeStyle = '#2266ee';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Grille
+//     ctx.fillStyle = '#0a2a88';
+//     for (let row = 0; row < 3; row++) {
+//       for (let col = 0; col < 4; col++) {
+//         roundRect(ctx, 5 + col*5, 12 + row*8, 4, 6, 1);
+//         ctx.fill();
+//       }
+//     }
+
+//     // Label
+//     ctx.fillStyle = '#fff';
+//     ctx.font = 'bold 6px sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('DHT11', 15, 48);
+
+//     // Leads
+//     ctx.strokeStyle = '#888';
+//     ctx.lineWidth = 1.5;
+//     ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, 8); ctx.stroke();
+//     ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(15, 8); ctx.stroke();
+//     ctx.beginPath(); ctx.moveTo(24, 0); ctx.lineTo(24, 8); ctx.stroke();
+
+//     if (inst.selected) drawSelectionRect(ctx, -1, 5, 32, 53);
+//     ctx.restore();
+//   }
+// });
+
 /* ─── DHT11 Temperature Sensor ─── */
 defComp({
   id: 'dht11',
@@ -1168,50 +1311,55 @@ defComp({
     { field: 'humidity',    label: 'Hum',  min: 0, max: 100, step: 1, unit: '%' },
   ],
   pins: [
-    { id:'vcc',  label:'VCC', type:PIN_TYPE.POWER,  x: 6, y: 0, side:'top' },
-    { id:'data', label:'DAT', type:PIN_TYPE.DIGITAL, x:15, y: 0, side:'top' },
-    { id:'nc',   label:'NC',  type:PIN_TYPE.SIGNAL,  x:24, y: 0, side:'top' },
-    { id:'gnd',  label:'GND', type:PIN_TYPE.GND,     x:15, y:50, side:'bottom' },
+    { id: 'vcc',  label: 'VCC',  type: PIN_TYPE.POWER,   x: 6,  y: 50, side: 'bottom' },
+    { id: 'data', label: 'DAT',  type: PIN_TYPE.DIGITAL, x: 12, y: 50, side: 'bottom' },
+    { id: 'nc',   label: 'NC',   type: PIN_TYPE.SIGNAL,  x: 18, y: 50, side: 'bottom' },
+    { id: 'gnd',  label: 'GND',  type: PIN_TYPE.GND,     x: 24, y: 50, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const temp = inst.props.temperature || 25;
-    const hum  = inst.props.humidity || 60;
+    const temp = inst.props.temperature ?? 25;
+    const hum  = inst.props.humidity ?? 60;
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Body
+    // Main Plastic Body
     ctx.fillStyle = '#1a55cc';
-    roundRect(ctx, 2, 8, 26, 36, 3);
+    roundRect(ctx, 2, 2, 26, 38, 3);
     ctx.fill();
     ctx.strokeStyle = '#2266ee';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Grille
+    // Vent Grille
     ctx.fillStyle = '#0a2a88';
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 4; col++) {
-        roundRect(ctx, 5 + col*5, 12 + row*8, 4, 6, 1);
+        roundRect(ctx, 5 + col * 5, 5 + row * 6, 4, 4, 1);
         ctx.fill();
       }
     }
 
-    // Label
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 6px sans-serif';
+    // Dynamic Sensor Readout Display
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 5px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('DHT11', 15, 48);
+    ctx.fillText(`${temp}°C`, 15, 27);
+    ctx.fillText(`${hum}%`, 15, 34);
 
-    // Leads
-    ctx.strokeStyle = '#888';
+    // Pin Leads (Bottom)
+    const pinXs = [6, 12, 18, 24];
+    ctx.strokeStyle = '#a0a0a0';
     ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, 8); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(15, 8); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(24, 0); ctx.lineTo(24, 8); ctx.stroke();
+    for (const px of pinXs) {
+      ctx.beginPath();
+      ctx.moveTo(px, 40);
+      ctx.lineTo(px, 50);
+      ctx.stroke();
+    }
 
-    if (inst.selected) drawSelectionRect(ctx, -1, 5, 32, 53);
+    if (inst.selected) drawSelectionRect(ctx, 0, 0, 30, 50);
     ctx.restore();
   }
 });
@@ -1337,6 +1485,85 @@ defComp({
     });
 
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 126, 66);
+    ctx.restore();
+  }
+});
+
+/* ─── LCD 16x2 (I2C) ─── */
+defComp({
+  id: 'lcd1602_i2c',
+  name: 'LCD 16×2 (I2C)',
+  category: 'Output',
+  icon: '🖥️',
+  desc: '16×2 character LCD display with PCF8574 I2C adapter module',
+  width: 120,
+  height: 65,
+  defaultProps: { address: '0x27', line1: 'Hello, I2C!    ', line2: 'Addr: 0x27      ' },
+  interactive: [
+    { field: 'address', label: 'I2C Addr', type: 'text' },
+  ],
+  pins: [
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 35, y: 65, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 50, y: 65, side: 'bottom' },
+    { id: 'sda', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 65, y: 65, side: 'bottom' },
+    { id: 'scl', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 80, y: 65, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const line1 = (inst.runtimeState && inst.runtimeState.line1) || inst.props.line1 || '                ';
+    const line2 = (inst.runtimeState && inst.runtimeState.line2) || inst.props.line2 || '                ';
+    const powered = inst.runtimeState && inst.runtimeState.powered;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Main Green PCB Frame
+    ctx.fillStyle = '#1a4a1a';
+    roundRect(ctx, 0, 0, 120, 52, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#2d8c2d';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // LCD Screen Area
+    ctx.fillStyle = powered ? '#4a7a2a' : '#2a4a1a';
+    roundRect(ctx, 6, 5, 108, 42, 3);
+    ctx.fill();
+
+    // Display Text
+    const txColor = powered ? '#88ff88' : '#556655';
+    ctx.fillStyle = txColor;
+    ctx.font = 'bold 8px JetBrains Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(line1.substring(0, 16).padEnd(16), 9, 20);
+    ctx.fillText(line2.substring(0, 16).padEnd(16), 9, 38);
+
+    // I2C Backpack Board Overlay
+    ctx.fillStyle = '#102244';
+    roundRect(ctx, 25, 52, 70, 8, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#2255aa';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // PCF8574 Chip & Contrast Trimpot Detail
+    ctx.fillStyle = '#222222';
+    ctx.fillRect(30, 54, 12, 4);
+    ctx.fillStyle = '#ccaa00';
+    ctx.fillRect(82, 54, 4, 4);
+
+    // 4 I2C Pin Leads (GND, VCC, SDA, SCL)
+    const pinXs = [35, 50, 65, 80];
+    ctx.strokeStyle = '#aaaaaa';
+    ctx.lineWidth = 1.5;
+    pinXs.forEach(px => {
+      ctx.beginPath();
+      ctx.moveTo(px, 58);
+      ctx.lineTo(px, 65);
+      ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 126, 71);
     ctx.restore();
   }
 });
