@@ -39,7 +39,9 @@ void loop() {
 }`,
 
   init() {
-    if (typeof require === 'undefined') {
+    // The pre-set `window.require = { paths }` config object or a blocked CDN leaves
+    // `require` as an object — only the real AMD loader function can load Monaco.
+    if (typeof require !== 'function' || typeof require.config !== 'function') {
       console.error('Monaco loader not available');
       this._initFallback();
       return;
