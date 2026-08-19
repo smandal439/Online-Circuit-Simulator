@@ -36,6 +36,7 @@ class ArduinoSimulator {
     this._fpsLast = 0;
     this._loopCount = 0;
     this._fpsInterval = null;
+    this._runSeq = 0;
     // Infinite-loop guard: max iterations per real-second without a delay
     this._iterSinceDelay = 0;
     this._MAX_TIGHT_ITERS = 50000;
@@ -1012,6 +1013,7 @@ class ArduinoSimulator {
 
     this.isRunning = true;
     this.isPaused = false;
+    const runId = ++this._runSeq;
 
     const { keys, vals, fn } = this._compiledCtx;
 
@@ -1029,7 +1031,7 @@ class ArduinoSimulator {
       await setup();
 
       // Run loop repeatedly
-      while (this.isRunning) {
+      while (this.isRunning && runId === this._runSeq) {
         if (this.isPaused) {
           await new Promise(resolve => { this._resumeResolve = resolve; });
         }
@@ -1052,27 +1054,32 @@ class ArduinoSimulator {
         this._serialLog(`[Error] ${friendly}\n`, 'error');
       }
     } finally {
-      if (this._fpsInterval) {
-        clearInterval(this._fpsInterval);
-        this._fpsInterval = null;
-      }
-      // Release any pending pause
-      if (this._resumeResolve) {
-        const r = this._resumeResolve;
-        this._resumeResolve = null;
-        r();
+      if (runId === this._runSeq) {
+        if (this._fpsInterval) {
+          clearInterval(this._fpsInterval);
+          this._fpsInterval = null;
+        }
+        // Release any pending pause
+        if (this._resumeResolve) {
+          const r = this._resumeResolve;
+          this._resumeResolve = null;
+          r();
+        }
       }
     }
 
-    this.isRunning = false;
-    this._serialLog('[ArduSim] Simulation stopped\n', 'system');
-    if (this.onStop) this.onStop();
+    if (runId === this._runSeq) {
+      this.isRunning = false;
+      this._serialLog('[ArduSim] Simulation stopped\n', 'system');
+      if (this.onStop) this.onStop();
+    }
     return !hadError;
   }
 
   stop() {
     this.isRunning = false;
     this.isPaused = false;
+    this._runSeq++;
     // Close any live MQTT connections
     for (const c of this._mqttOpen) {
       try { c.end(true); } catch (e) { /* noop */ }
