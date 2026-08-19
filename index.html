@@ -432,7 +432,24 @@
                     data-modal="modal-examples" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
+                <div class="library-toolbar">
+                    <div class="library-search"> <svg width="14" height="14" viewBox="0 0 16 16"
+                            fill="currentColor">
+                            <path
+                                d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+                        </svg> <input type="text" id="examples-search" placeholder="Search examples…"
+                            aria-label="Search examples" /> </div>
+                    <div class="library-filters" id="examples-filters">
+                        <button class="filter-chip active" data-filter="all">All</button>
+                        <button class="filter-chip" data-filter="beginner">Beginner</button>
+                        <button class="filter-chip" data-filter="intermediate">Intermediate</button>
+                        <button class="filter-chip" data-filter="esp32">ESP32</button>
+                        <button class="filter-chip" data-filter="display">Display</button>
+                        <button class="filter-chip" data-filter="sensor">Sensors</button>
+                    </div>
+                </div>
                 <div class="examples-grid" id="examples-grid"></div>
+                <div class="library-empty hidden" id="examples-empty">No examples match your search.</div>
             </div>
         </div> <!-- Saved Projects Modal -->
         <div class="modal" id="modal-saved" role="dialog" aria-modal="true" aria-labelledby="modal-saved-title">
@@ -441,6 +458,14 @@
                     aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
+                <div class="library-toolbar">
+                    <div class="library-search"> <svg width="14" height="14" viewBox="0 0 16 16"
+                            fill="currentColor">
+                            <path
+                                d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+                        </svg> <input type="text" id="saved-search" placeholder="Search saved projects…"
+                            aria-label="Search saved projects" /> </div>
+                </div>
                 <div class="saved-projects-list" id="saved-projects-list"> <!-- Rendered by JS --> </div>
             </div>
         </div> <!-- Keyboard Shortcuts -->
@@ -551,6 +576,7 @@
     <script src="js/plotter.js?v=20260825-1"></script>
     <script src="js/storage.js?v=20260825-1"></script>
     <script src="js/editor.js?v=20260825-1"></script>
+    <script src="js/thumbnails.js?v=20260825-1"></script>
     <script src="js/app.js?v=20260825-1"></script>
 </body>
 

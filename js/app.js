@@ -14,6 +14,9 @@ class App {
     this._projectName = 'Untitled Project';
     this._autoSaveDebounced = null;
     this._activeView = null;
+    this._examplesQuery = '';
+    this._examplesFilter = 'all';
+    this._savedQuery = '';
   }
 
   init() {
@@ -147,7 +150,10 @@ class App {
     exportBtn?.addEventListener('click', () => this.exportImage());
     formatBtn?.addEventListener('click', () => this.formatCode());
     verifyBtn?.addEventListener('click', () => this.verify());
-    examplesBtn?.addEventListener('click', () => this._showModal('modal-examples'));
+    examplesBtn?.addEventListener('click', () => {
+      this._renderExamples();
+      this._showModal('modal-examples');
+    });
     shortcutsBtn?.addEventListener('click', () => this._showModal('modal-shortcuts'));
     toggleEditorBtn?.addEventListener('click', () => this._togglePanel('panel-editor', toggleEditorBtn, 'Collapse Editor', 'Expand Editor'));
     toggleComponentsBtn?.addEventListener('click', () => this._togglePanel('panel-components', toggleComponentsBtn, 'Collapse Panel', 'Expand Panel'));
@@ -223,6 +229,28 @@ class App {
       if (btn.classList.contains('saved-load')) this._loadSavedProject(btn.dataset.id);
       else if (btn.classList.contains('saved-download')) this._downloadSavedProject(btn.dataset.id);
       else if (btn.classList.contains('saved-delete')) this._deleteSavedProject(btn.dataset.id);
+    });
+
+    // Examples library search + filters
+    const examplesSearch = get('examples-search');
+    examplesSearch?.addEventListener('input', (e) => {
+      this._examplesQuery = e.target.value.toLowerCase().trim();
+      this._renderExamples();
+    });
+    const examplesFilters = get('examples-filters');
+    examplesFilters?.addEventListener('click', (e) => {
+      const chip = e.target.closest('.filter-chip');
+      if (!chip) return;
+      this._examplesFilter = chip.dataset.filter || 'all';
+      examplesFilters.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c === chip));
+      this._renderExamples();
+    });
+
+    // Saved projects search
+    const savedSearch = get('saved-search');
+    savedSearch?.addEventListener('input', (e) => {
+      this._savedQuery = e.target.value.toLowerCase().trim();
+      this._renderSavedProjects();
     });
 
     // Editable project name
@@ -648,28 +676,49 @@ class App {
     const list = document.getElementById('saved-projects-list');
     if (!list) return;
     const projects = window.StorageManager?.getSavedProjects() || [];
+    const esc = (s) => String(s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
     if (!projects.length) {
       list.innerHTML = `<div class="saved-empty">No saved projects yet.<br>Click <b>Save</b> in the toolbar to save the current project here.</div>`;
       return;
     }
-    list.innerHTML = projects.map(p => {
+
+    const q = (this._savedQuery || '').toLowerCase();
+    const filtered = q
+      ? projects.filter(p => (p.name || '').toLowerCase().includes(q))
+      : projects;
+
+    if (!filtered.length) {
+      list.innerHTML = `<div class="saved-empty">No saved projects match “${esc(this._savedQuery)}”.</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(p => {
       const date = new Date(p.savedAt).toLocaleString();
       const compCount = Array.isArray(p.circuit?.components) ? p.circuit.components.length : 0;
       const wireCount = Array.isArray(p.circuit?.wires) ? p.circuit.wires.length : 0;
-      const name = String(p.name || 'Untitled Project').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+      const name = esc(p.name || 'Untitled Project');
       return `
         <div class="saved-project-item">
+          <div class="saved-project-thumb"><img alt="" loading="lazy"></div>
           <div class="saved-project-info">
             <strong class="saved-project-name">${name}</strong>
-            <span class="saved-project-meta">${compCount} components · ${wireCount} wires · ${date}</span>
-          </div>
-          <div class="saved-project-actions">
-            <button class="hdr-btn hdr-btn-ghost saved-load" data-id="${p.id}">Open</button>
-            <button class="hdr-btn hdr-btn-ghost saved-download" data-id="${p.id}" title="Download as JSON file">Download</button>
-            <button class="hdr-btn hdr-btn-ghost saved-delete" data-id="${p.id}" title="Delete from Saved Projects">Delete</button>
+            <span class="saved-project-meta">${compCount} components · ${wireCount} wires · ${esc(date)}</span>
+            <span class="saved-project-actions">
+              <button class="hdr-btn hdr-btn-ghost saved-load" data-id="${esc(p.id)}">Open</button>
+              <button class="hdr-btn hdr-btn-ghost saved-download" data-id="${esc(p.id)}" title="Download as JSON file">Download</button>
+              <button class="hdr-btn hdr-btn-ghost saved-delete" data-id="${esc(p.id)}" title="Delete from Saved Projects">Delete</button>
+            </span>
           </div>
         </div>`;
     }).join('');
+
+    // Render thumbnails (after DOM insertion so images exist)
+    list.querySelectorAll('.saved-project-item').forEach((el, i) => {
+      const p = filtered[i];
+      const img = el.querySelector('.saved-project-thumb img');
+      if (img) window.CircuitThumbnail?.applyTo(img, p.circuit, 200, 120);
+    });
   }
 
   _loadSavedProject(id) {
@@ -1222,11 +1271,33 @@ _newProject() {
   _renderExamples() {
     const container = document.getElementById('examples-grid');
     if (!container || !window.EXAMPLE_SKETCHES) return;
+
+    const q = (this._examplesQuery || '').toLowerCase();
+    const filter = this._examplesFilter || 'all';
+    const filtered = window.EXAMPLE_SKETCHES.filter(ex => {
+      if (q && !(`${ex.name} ${ex.desc} ${(ex.tags || []).join(' ')}`).toLowerCase().includes(q)) return false;
+      if (filter === 'all') return true;
+      if (filter === 'display') return (ex.tags || []).some(t => t.includes('lcd') || t.includes('oled') || t === 'display');
+      if (filter === 'sensor') return (ex.tags || []).some(t => ['sensor', 'dht11', 'ultrasonic', 'analog'].includes(t));
+      return (ex.tags || []).includes(filter);
+    });
+
+    const empty = document.getElementById('examples-empty');
+    if (empty) empty.classList.toggle('hidden', filtered.length > 0);
+
     container.innerHTML = '';
-    for (const example of window.EXAMPLE_SKETCHES) {
+    for (const example of filtered) {
       const item = document.createElement('button');
       item.className = 'example-item';
-      item.innerHTML = `<div class="example-icon">${example.icon || '📄'}</div><div class="example-info"><strong>${example.name}</strong><span>${example.desc}</span><div class="example-tags">${(example.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>`;
+      item.type = 'button';
+      const thumb = window.CircuitThumbnail?.render(example.circuit, 260, 150);
+      item.innerHTML = `
+        <div class="example-thumb">${thumb ? `<img src="${thumb}" alt="" loading="lazy">` : `<span class="example-thumb-icon">${example.icon || '📄'}</span>`}</div>
+        <div class="example-info">
+          <strong>${this._escHtml(example.name)}</strong>
+          <span class="example-desc">${this._escHtml(example.desc)}</span>
+          <div class="example-tags">${(example.tags || []).map(t => `<span class="tag">${this._escHtml(t)}</span>`).join('')}</div>
+        </div>`;
       item.addEventListener('click', () => {
         if (this.editor) this.editor.setCode(example.code || '');
         if (example.circuit && this.canvas) this._loadExampleCircuit(example.circuit);
@@ -1236,6 +1307,10 @@ _newProject() {
       });
       container.appendChild(item);
     }
+  }
+
+  _escHtml(s) {
+    return String(s == null ? '' : s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
   }
 
   _loadExampleCircuit(key) {

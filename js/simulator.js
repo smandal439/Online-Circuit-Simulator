@@ -1472,6 +1472,32 @@ const EXAMPLE_CIRCUITS = {
       { id: 'w3', from: { instId: 'pot1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
+  buzzer_melody: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'bz1', type: 'buzzer', x: 120, y: 300 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: 'D8' }, to: { instId: 'bz1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'bz1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  seg7_counter: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 's7', type: 'seg7', x: 120, y: 320 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: 'D2' }, to: { instId: 's7', pinId: 'segA' } },
+      { id: 'w2', from: { instId: 'b1', pinId: 'D3' }, to: { instId: 's7', pinId: 'segB' } },
+      { id: 'w3', from: { instId: 'b1', pinId: 'D4' }, to: { instId: 's7', pinId: 'segC' } },
+      { id: 'w4', from: { instId: 'b1', pinId: 'D5' }, to: { instId: 's7', pinId: 'segD' } },
+      { id: 'w5', from: { instId: 'b1', pinId: 'D6' }, to: { instId: 's7', pinId: 'segE' } },
+      { id: 'w6', from: { instId: 'b1', pinId: 'D7' }, to: { instId: 's7', pinId: 'segF' } },
+      { id: 'w7', from: { instId: 'b1', pinId: 'D8' }, to: { instId: 's7', pinId: 'segG' } },
+      { id: 'w8', from: { instId: 's7', pinId: 'com' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
 };
 
 const EXAMPLE_SKETCHES = [
@@ -2275,6 +2301,99 @@ void loop() {
   Serial.println(sine);
 
   delay(50);
+}`
+  },
+  {
+    id: 'buzzer_melody',
+    name: 'Buzzer Melody',
+    icon: '🔔',
+    desc: 'Play a simple melody using tone() on a buzzer (pin 8)',
+    tags: ['beginner', 'sound', 'tone', 'buzzer'],
+    circuit: EXAMPLE_CIRCUITS.buzzer_melody,
+    code: `/*
+ * Buzzer Melody — Play a tune with tone()
+ * Buzzer signal on D8, power and ground from the board
+ */
+
+int buzzerPin = 8;
+
+// Note frequencies (Hz) — C major scale
+#define NOTE_C4  262
+#define NOTE_D4  294
+#define NOTE_E4  330
+#define NOTE_F4  349
+#define NOTE_G4  392
+#define NOTE_A4  440
+#define NOTE_B4  494
+#define NOTE_C5  523
+
+int melody[] = { NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_A4, NOTE_B4, NOTE_C5 };
+int noteDuration = 250;
+
+void setup() {
+  pinMode(buzzerPin, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Buzzer melody started");
+}
+
+void loop() {
+  for (int i = 0; i < 8; i++) {
+    tone(buzzerPin, melody[i], noteDuration);
+    Serial.print("Playing note: ");
+    Serial.println(melody[i]);
+    delay(noteDuration + 30);
+  }
+  noTone(buzzerPin);
+  delay(500);
+}`
+  },
+  {
+    id: 'seg7_counter',
+    name: '7-Segment Counter',
+    icon: '🔢',
+    desc: 'Count 0–9 on a single 7-segment display (common cathode, D2–D8)',
+    tags: ['intermediate', 'display', 'seg7', 'counter'],
+    circuit: EXAMPLE_CIRCUITS.seg7_counter,
+    code: `/*
+ * 7-Segment Counter — display digits 0..9
+ * Segments a–g on D2..D8, common cathode to GND
+ */
+
+int segPins[7] = {2, 3, 4, 5, 6, 7, 8};
+
+// Segment masks for digits 0..9 (a=MSB ... g=LSB)
+byte digits[10] = {
+  0b1111110, // 0
+  0b0110000, // 1
+  0b1101101, // 2
+  0b1111001, // 3
+  0b0110011, // 4
+  0b1011011, // 5
+  0b1011111, // 6
+  0b1110000, // 7
+  0b1111111, // 8
+  0b1111011  // 9
+};
+
+void setup() {
+  for (int i = 0; i < 7; i++) pinMode(segPins[i], OUTPUT);
+  Serial.begin(9600);
+  Serial.println("7-segment counter started");
+}
+
+void showDigit(int d) {
+  for (int i = 0; i < 7; i++) {
+    digitalWrite(segPins[i], (digits[d] >> (6 - i)) & 1 ? HIGH : LOW);
+  }
+}
+
+void loop() {
+  for (int d = 0; d <= 9; d++) {
+    showDigit(d);
+    Serial.print("Count: ");
+    Serial.println(d);
+    delay(500);
+  }
 }`
   },
 ];

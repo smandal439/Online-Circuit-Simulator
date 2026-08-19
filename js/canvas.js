@@ -1450,6 +1450,21 @@ class CircuitCanvas {
           inst.runtimeState.active = hasVcc && hasGnd;
           break;
         }
+        case 'seg7': {
+          const segPins = ['segA','segB','segC','segD','segE','segF','segG','dp'];
+          const segKeys = ['A','B','C','D','E','F','G','DP'];
+          const segments = {};
+          segPins.forEach((pinId, i) => {
+            const pinNum = this._getConnectedPinNum(inst.id, pinId);
+            let on = false;
+            if (pinNum !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+              on = !!window.ArduinoSim.pinStates[`pin_${pinNum}`];
+            }
+            segments[segKeys[i]] = on;
+          });
+          inst.runtimeState.segments = segments;
+          break;
+        }
         case 'potentiometer': {
           const wiperPin = this._getConnectedPinNum(inst.id, 'wiper');
           if (wiperPin !== null) {
