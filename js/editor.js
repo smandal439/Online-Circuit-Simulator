@@ -54,6 +54,11 @@ void loop() {
       const hashLoaded = this.loadFromUrlHash();
 
       if (window.App) window.App.onEditorReady(hashLoaded);
+    }, (err) => {
+      // Monaco failed to load (CDN blocked, offline, or config issue) — fall back to a
+      // plain textarea so the editor always has content and examples still load code.
+      console.error('Monaco failed to load, falling back to plain text editor:', err);
+      this._initFallback();
     });
   },
 
