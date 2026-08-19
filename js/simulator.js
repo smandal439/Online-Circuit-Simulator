@@ -76,7 +76,7 @@ class ArduinoSimulator {
       /\b(?:void|int|float|double|long|unsigned\s+long|unsigned\s+int|byte|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+(\w+)\s*\(([^)]*)\)\s*\{/g,
       (match, name, params) => {
         userFnNames.add(name);
-        const cleanParams = params.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+/g, '');
+        const cleanParams = params.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte\s*\*?|float|double|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+/g, '');
         return `async function ${name}(${cleanParams}) {`;
       }
     );
@@ -93,7 +93,9 @@ class ArduinoSimulator {
     // Object-style library declarations:
     // Servo myServo;  →  let myServo = new Servo();
     // LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  →  let lcd = new LiquidCrystal(12, 11, 5, 4, 3, 2);
-    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
+    // WiFiClient espClient;  →  let espClient = new WiFiClient();
+    // PubSubClient client(espClient);  →  let client = new PubSubClient(espClient);
+    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
 
     // 6. Handle arrays: int arr[10] → let arr = new Array(10).fill(0)
     js = js.replace(/let\s+(\w+)\s*\[(\d+)\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$3]');
@@ -268,7 +270,7 @@ class ArduinoSimulator {
     // so an unawaited call would assign a Promise instead of the returned value).
     for (const name of userFnNames) {
       js = js.replace(
-        new RegExp(`(?<!function\\s)(?<!await\\s)\\b${name}\\s*\\(`, 'g'),
+        new RegExp(`(?<!function\\s)(?<!await\\s)(?<![\\w.])\\b${name}\\s*\\(`, 'g'),
         `await ${name}(`
       );
     }
@@ -637,6 +639,64 @@ class ArduinoSimulator {
         softAP(ssid) { self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system'); },
         setAutoConnect() { },
       },
+      /* ESP32 Wi-Fi client + MQTT (PubSubClient) with a simulated local broker.
+         Messages published to a topic are delivered to every client subscribed
+         to that topic (including ourselves), so pub/sub flows can be demoed
+         without any real network connection. */
+      WiFiClient: function () { return {}; },
+      PubSubClient: function () {
+        const broker = (self._mqtt = self._mqtt || { subs: new Map(), connected: false });
+        let connected = false;
+        let cb = null;
+        const deliver = (topic, payload) => {
+          if (!cb) return;
+          try {
+            cb(topic, payload, payload.length);
+          } catch (e) {
+            self._serialLog(`[MQTT] callback error: ${e && e.message ? e.message : e}\n`, 'system');
+          }
+        };
+        return {
+          setServer(host, port) {
+            self._serialLog(`[MQTT] Broker ${host}:${port}\n`, 'system');
+          },
+          setCallback(callback) { cb = callback; },
+          connect(id) {
+            connected = true;
+            broker.connected = true;
+            self._serialLog(`[MQTT] Connected as "${id}"\n`, 'system');
+            return true;
+          },
+          disconnect() {
+            connected = false;
+            self._serialLog('[MQTT] Disconnected\n', 'system');
+          },
+          connected() { return connected; },
+          subscribe(topic) {
+            const t = String(topic);
+            if (!broker.subs.has(t)) broker.subs.set(t, new Set());
+            broker.subs.get(t).add(deliver);
+            self._serialLog(`[MQTT] Subscribed "${t}"\n`, 'system');
+            return true;
+          },
+          unsubscribe(topic) {
+            const t = String(topic);
+            if (broker.subs.has(t)) broker.subs.get(t).delete(deliver);
+            return true;
+          },
+          publish(topic, payload) {
+            const t = String(topic);
+            const msg = String(payload);
+            self._serialLog(`[MQTT] Publish "${t}" → ${msg}\n`, 'system');
+            const listeners = broker.subs.get(t);
+            if (listeners) {
+              for (const l of [...listeners]) l(t, msg);
+            }
+            return true;
+          },
+          loop() { return true; },
+        };
+      },
     };
   }
 
@@ -690,6 +750,7 @@ class ArduinoSimulator {
     this._delays = [];
     this._lcdLines = ['', ''];
     this._lcdCursor = { col: 0, row: 0 };
+    this._mqtt = { subs: new Map(), connected: false };
     this._startRealTime = Date.now();
     this._fpsFrames = 0;
     this._fpsLast = Date.now();
@@ -1084,6 +1145,22 @@ const EXAMPLE_CIRCUITS = {
       { id: 'w1', from: { instId: 'b1', pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
       { id: 'w2', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
       { id: 'w3', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  mqtt_esp32: {
+    components: [
+      { id: 'b1', type: 'esp32_devkit_v1', x: 300, y: 60 },
+      { id: 'led1', type: 'led', x: 120, y: 300 },
+      { id: 'r1', type: 'resistor', x: 120, y: 380 },
+      { id: 'pot1', type: 'potentiometer', x: 520, y: 300 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w2', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w3', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w4', from: { instId: 'b1', pinId: '3V3' }, to: { instId: 'pot1', pinId: 'vcc' } },
+      { id: 'w5', from: { instId: 'pot1', pinId: 'wiper' }, to: { instId: 'b1', pinId: 'VP' } },
+      { id: 'w6', from: { instId: 'pot1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
 };
@@ -1601,6 +1678,103 @@ void loop() {
   duty += step;
   if (duty <= 0 || duty >= 255) step = -step;
   delay(20);
+}`
+  },
+  {
+    id: 'mqtt_esp32',
+    name: 'ESP32 MQTT Pub/Sub',
+    icon: '📡',
+    desc: 'ESP32 DevKit V1 — join Wi-Fi, publish the potentiometer reading, and toggle the LED on/off via MQTT messages',
+    tags: ['esp32', 'wifi', 'mqtt', 'iot'],
+    circuit: EXAMPLE_CIRCUITS.mqtt_esp32,
+    code: `/*
+ * ESP32 MQTT Pub/Sub — connect to Wi-Fi and a simulated MQTT broker,
+ * publish a temperature reading (potentiometer on VP / GPIO36), and
+ * toggle the LED on D13 by publishing "on"/"off" to the ardusim/led topic.
+ */
+
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+const int ledPin    = 13;   // GPIO13 — LED
+const int sensorPin = 36;   // GPIO36 (VP) — potentiometer wiper
+
+String wifiSSID    = "ArduSimNet";
+String wifiPass    = "simulator";
+String mqttServer  = "broker.hivemq.com";
+int    mqttPort    = 1883;
+String clientId    = "ArduSim_ESP32";
+
+String topicCmd  = "ardusim/led";
+String topicData = "ardusim/temp";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  String msg = "";
+  for (int i = 0; i < length; i++) msg += payload[i];
+
+  Serial.print("MQTT msg [");
+  Serial.print(topic);
+  Serial.print("]: ");
+  Serial.println(msg);
+
+  if (msg == "on") {
+    digitalWrite(ledPin, HIGH);
+    Serial.println("LED ON via MQTT");
+  } else if (msg == "off") {
+    digitalWrite(ledPin, LOW);
+    Serial.println("LED OFF via MQTT");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
+  Serial.println("Connecting to Wi-Fi...");
+  WiFi.begin(wifiSSID, wifiPass);
+  delay(800);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  client.setServer(mqttServer, mqttPort);
+  client.setCallback(callback);
+
+  if (client.connect(clientId)) {
+    client.subscribe(topicCmd);
+    Serial.println("Connected to MQTT broker and subscribed");
+  }
+}
+
+unsigned long lastCmd = 0;
+int cmdState = 0;
+
+void loop() {
+  client.loop();
+
+  if (!client.connected()) {
+    Serial.println("Reconnecting to MQTT broker...");
+    client.connect(clientId);
+    client.subscribe(topicCmd);
+    delay(1000);
+  }
+
+  // Publish a simulated temperature reading every second
+  int tempC = map(analogRead(sensorPin), 0, 1023, 15, 35);
+  client.publish(topicData, String(tempC));
+
+  // Every 4 seconds publish an on/off command. The broker delivers it back
+  // to our own subscription, so the LED toggles through MQTT.
+  if (millis() - lastCmd >= 4000) {
+    lastCmd = millis();
+    cmdState = 1 - cmdState;
+    client.publish(topicCmd, cmdState == 1 ? "on" : "off");
+  }
+
+  delay(1000);
 }`
   },
 ];
