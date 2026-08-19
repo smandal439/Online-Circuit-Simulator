@@ -1335,6 +1335,8 @@ body.view-serial .bottom-panel {
 .saved-project-thumb {
   width: 140px;
   min-width: 140px;
+  height: 80px;
+  min-height: 80px;
   border-radius: var(--radius-sm);
   background: #0b0f14;
   overflow: hidden;
