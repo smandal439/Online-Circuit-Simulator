@@ -6,33 +6,33 @@
 
 class ArduinoSimulator {
   constructor() {
-    this.isRunning   = false;
-    this.isPaused    = false;
-    this.simTime     = 0; // ms
-    this.speed       = 1;
-    this.pinStates   = {}; // pinKey → value (0-255, or 0/1)
-    this.pinModes    = {}; // pinKey → INPUT/OUTPUT/INPUT_PULLUP
-    this.serialBaud  = 9600;
+    this.isRunning = false;
+    this.isPaused = false;
+    this.simTime = 0; // ms
+    this.speed = 1;
+    this.pinStates = {}; // pinKey → value (0-255, or 0/1)
+    this.pinModes = {}; // pinKey → INPUT/OUTPUT/INPUT_PULLUP
+    this.serialBaud = 9600;
     this.serialInputBuffer = [];
     this._loopAbortController = null;
     this._loopPromise = null;
-    this.onSerial    = null;  // callback(text, type)
+    this.onSerial = null;  // callback(text, type)
     this.onPinChange = null;  // callback(pinKey, value)
-    this.onError     = null;  // callback(err)
-    this.onStatus    = null;  // callback(msg)
-    this.onStop      = null;  // callback()
-    this.onTick      = null;  // callback(simTime, fps, loopCount)
+    this.onError = null;  // callback(err)
+    this.onStatus = null;  // callback(msg)
+    this.onStop = null;  // callback()
+    this.onTick = null;  // callback(simTime, fps, loopCount)
     this._toneActive = {};
-    this._toneCtx    = null;
+    this._toneCtx = null;
     this._toneOscillators = {};
     this._startRealTime = 0;
-    this._delays     = [];
+    this._delays = [];
     this._customDelay = null;
     // FPS / loop tracking
-    this._fps        = 0;
-    this._fpsFrames  = 0;
-    this._fpsLast    = 0;
-    this._loopCount  = 0;
+    this._fps = 0;
+    this._fpsFrames = 0;
+    this._fpsLast = 0;
+    this._loopCount = 0;
     this._fpsInterval = null;
     // Infinite-loop guard: max iterations per real-second without a delay
     this._iterSinceDelay = 0;
@@ -101,7 +101,7 @@ class ArduinoSimulator {
     js = js.replace(/let\s+(\w+)\s*\[\s*\d*\s*\]\s*=\s*("[^"]*"|'[^']*')/g, 'let $1 = $2');
 
     // 7. Boolean literals
-    js = js.replace(/\btrue\b/g,  'true');
+    js = js.replace(/\btrue\b/g, 'true');
     js = js.replace(/\bfalse\b/g, 'false');
 
     // Strip leftover C storage/qualifier keywords that are invalid JS
@@ -110,9 +110,9 @@ class ArduinoSimulator {
 
     // 8. Arduino constants
     js = js.replace(/\bHIGH\b/g, '1');
-    js = js.replace(/\bLOW\b/g,  '0');
+    js = js.replace(/\bLOW\b/g, '0');
     js = js.replace(/\bINPUT_PULLUP\b/g, '"INPUT_PULLUP"');
-    js = js.replace(/\bINPUT\b/g,  '"INPUT"');
+    js = js.replace(/\bINPUT\b/g, '"INPUT"');
     js = js.replace(/\bOUTPUT\b/g, '"OUTPUT"');
     js = js.replace(/\bLED_BUILTIN\b/g, '13');
     js = js.replace(/\bA0\b/g, '14');
@@ -123,52 +123,52 @@ class ArduinoSimulator {
     js = js.replace(/\bA5\b/g, '19');
     js = js.replace(/\bDEC\b/g, '10');
     js = js.replace(/\bHEX\b/g, '16');
-    js = js.replace(/\bOCT\b/g,  '8');
-    js = js.replace(/\bBIN\b/g,  '2');
+    js = js.replace(/\bOCT\b/g, '8');
+    js = js.replace(/\bBIN\b/g, '2');
     js = js.replace(/\bMSBFIRST\b/g, '1');
     js = js.replace(/\bLSBFIRST\b/g, '0');
 
     // 9. Map Arduino API calls
     const API = [
-      ['delay',            '_a.delay'],
-      ['delayMicroseconds','_a.delayMicroseconds'],
-      ['pinMode',          '_a.pinMode'],
-      ['digitalWrite',     '_a.digitalWrite'],
-      ['digitalRead',      '_a.digitalRead'],
-      ['analogWrite',      '_a.analogWrite'],
-      ['analogRead',       '_a.analogRead'],
-      ['millis',           '_a.millis'],
-      ['micros',           '_a.micros'],
-      ['tone',             '_a.tone'],
-      ['noTone',           '_a.noTone'],
-      ['pulseIn',          '_a.pulseIn'],
-      ['attachInterrupt',  '_a.attachInterrupt'],
-      ['detachInterrupt',  '_a.detachInterrupt'],
-      ['randomSeed',       '_a.randomSeed'],
-      ['random',           '_a.random'],
-      ['map',              '_a.map'],
-      ['constrain',        '_a.constrain'],
-      ['abs',              'Math.abs'],
-      ['min',              '_a.min'],
-      ['max',              '_a.max'],
-      ['sqrt',             'Math.sqrt'],
-      ['pow',              'Math.pow'],
-      ['sin',              'Math.sin'],
-      ['cos',              'Math.cos'],
-      ['tan',              'Math.tan'],
-      ['floor',            'Math.floor'],
-      ['ceil',             'Math.ceil'],
-      ['round',            'Math.round'],
-      ['shiftIn',          '_a.shiftIn'],
-      ['shiftOut',         '_a.shiftOut'],
-      ['bitRead',          '_a.bitRead'],
-      ['bitWrite',         '_a.bitWrite'],
-      ['bitSet',           '_a.bitSet'],
-      ['bitClear',         '_a.bitClear'],
-      ['bit',              '_a.bit'],
-      ['lowByte',          '_a.lowByte'],
-      ['highByte',         '_a.highByte'],
-      ['sensorValue',      '_a.sensorValue'],
+      ['delay', '_a.delay'],
+      ['delayMicroseconds', '_a.delayMicroseconds'],
+      ['pinMode', '_a.pinMode'],
+      ['digitalWrite', '_a.digitalWrite'],
+      ['digitalRead', '_a.digitalRead'],
+      ['analogWrite', '_a.analogWrite'],
+      ['analogRead', '_a.analogRead'],
+      ['millis', '_a.millis'],
+      ['micros', '_a.micros'],
+      ['tone', '_a.tone'],
+      ['noTone', '_a.noTone'],
+      ['pulseIn', '_a.pulseIn'],
+      ['attachInterrupt', '_a.attachInterrupt'],
+      ['detachInterrupt', '_a.detachInterrupt'],
+      ['randomSeed', '_a.randomSeed'],
+      ['random', '_a.random'],
+      ['map', '_a.map'],
+      ['constrain', '_a.constrain'],
+      ['abs', 'Math.abs'],
+      ['min', '_a.min'],
+      ['max', '_a.max'],
+      ['sqrt', 'Math.sqrt'],
+      ['pow', 'Math.pow'],
+      ['sin', 'Math.sin'],
+      ['cos', 'Math.cos'],
+      ['tan', 'Math.tan'],
+      ['floor', 'Math.floor'],
+      ['ceil', 'Math.ceil'],
+      ['round', 'Math.round'],
+      ['shiftIn', '_a.shiftIn'],
+      ['shiftOut', '_a.shiftOut'],
+      ['bitRead', '_a.bitRead'],
+      ['bitWrite', '_a.bitWrite'],
+      ['bitSet', '_a.bitSet'],
+      ['bitClear', '_a.bitClear'],
+      ['bit', '_a.bit'],
+      ['lowByte', '_a.lowByte'],
+      ['highByte', '_a.highByte'],
+      ['sensorValue', '_a.sensorValue'],
     ];
 
     for (const [orig, mapped] of API) {
@@ -176,50 +176,50 @@ class ArduinoSimulator {
     }
 
     // Serial.*
-    js = js.replace(/\bSerial\.begin\s*\(/g,    '_a.serialBegin(');
-    js = js.replace(/\bSerial\.print\s*\(/g,    '_a.serialPrint(');
-    js = js.replace(/\bSerial\.println\s*\(/g,  '_a.serialPrintln(');
-    js = js.replace(/\bSerial\.read\s*\(/g,     '_a.serialRead(');
-    js = js.replace(/\bSerial\.available\s*\(/g,'_a.serialAvailable(');
-    js = js.replace(/\bSerial\.write\s*\(/g,    '_a.serialWrite(');
-    js = js.replace(/\bSerial\.flush\s*\(/g,    '_a.serialFlush(');
-    js = js.replace(/\bSerial\.parseInt\s*\(/g,  '_a.serialParseInt(');
-    js = js.replace(/\bSerial\.parseFloat\s*\(/g,'_a.serialParseFloat(');
-    js = js.replace(/\bSerial\.peek\s*\(/g,      '_a.serialPeek(');
-    js = js.replace(/\bSerial\.readString\s*\(/g,'_a.serialReadString(');
+    js = js.replace(/\bSerial\.begin\s*\(/g, '_a.serialBegin(');
+    js = js.replace(/\bSerial\.print\s*\(/g, '_a.serialPrint(');
+    js = js.replace(/\bSerial\.println\s*\(/g, '_a.serialPrintln(');
+    js = js.replace(/\bSerial\.read\s*\(/g, '_a.serialRead(');
+    js = js.replace(/\bSerial\.available\s*\(/g, '_a.serialAvailable(');
+    js = js.replace(/\bSerial\.write\s*\(/g, '_a.serialWrite(');
+    js = js.replace(/\bSerial\.flush\s*\(/g, '_a.serialFlush(');
+    js = js.replace(/\bSerial\.parseInt\s*\(/g, '_a.serialParseInt(');
+    js = js.replace(/\bSerial\.parseFloat\s*\(/g, '_a.serialParseFloat(');
+    js = js.replace(/\bSerial\.peek\s*\(/g, '_a.serialPeek(');
+    js = js.replace(/\bSerial\.readString\s*\(/g, '_a.serialReadString(');
 
     // Wire (I2C) — stub
-    js = js.replace(/\bWire\.begin\s*\(/g,         '_a.wireBegin(');
-    js = js.replace(/\bWire\.requestFrom\s*\(/g,   '_a.wireRequestFrom(');
-    js = js.replace(/\bWire\.beginTransmission\s*\(/g,'_a.wireBeginTransmission(');
-    js = js.replace(/\bWire\.endTransmission\s*\(/g,  '_a.wireEndTransmission(');
-    js = js.replace(/\bWire\.write\s*\(/g,         '_a.wireWrite(');
-    js = js.replace(/\bWire\.read\s*\(/g,          '_a.wireRead(');
-    js = js.replace(/\bWire\.available\s*\(/g,     '_a.wireAvailable(');
+    js = js.replace(/\bWire\.begin\s*\(/g, '_a.wireBegin(');
+    js = js.replace(/\bWire\.requestFrom\s*\(/g, '_a.wireRequestFrom(');
+    js = js.replace(/\bWire\.beginTransmission\s*\(/g, '_a.wireBeginTransmission(');
+    js = js.replace(/\bWire\.endTransmission\s*\(/g, '_a.wireEndTransmission(');
+    js = js.replace(/\bWire\.write\s*\(/g, '_a.wireWrite(');
+    js = js.replace(/\bWire\.read\s*\(/g, '_a.wireRead(');
+    js = js.replace(/\bWire\.available\s*\(/g, '_a.wireAvailable(');
 
     // SPI — stub
-    js = js.replace(/\bSPI\.begin\s*\(/g,          '_a.spiBegin(');
-    js = js.replace(/\bSPI\.transfer\s*\(/g,       '_a.spiTransfer(');
-    js = js.replace(/\bSPI\.end\s*\(/g,            '_a.spiEnd(');
+    js = js.replace(/\bSPI\.begin\s*\(/g, '_a.spiBegin(');
+    js = js.replace(/\bSPI\.transfer\s*\(/g, '_a.spiTransfer(');
+    js = js.replace(/\bSPI\.end\s*\(/g, '_a.spiEnd(');
 
     // EEPROM
-    js = js.replace(/\bEEPROM\.read\s*\(/g,        '_a.eepromRead(');
-    js = js.replace(/\bEEPROM\.write\s*\(/g,       '_a.eepromWrite(');
-    js = js.replace(/\bEEPROM\.update\s*\(/g,      '_a.eepromUpdate(');
-    js = js.replace(/\bEEPROM\.length\b/g,         '512');
+    js = js.replace(/\bEEPROM\.read\s*\(/g, '_a.eepromRead(');
+    js = js.replace(/\bEEPROM\.write\s*\(/g, '_a.eepromWrite(');
+    js = js.replace(/\bEEPROM\.update\s*\(/g, '_a.eepromUpdate(');
+    js = js.replace(/\bEEPROM\.length\b/g, '512');
 
     // Servo library
-    js = js.replace(/\b(\w+)\.attach\s*\(/g,   '_a.servoAttach($1, ');
-    js = js.replace(/\b(\w+)\.write\s*\(/g,    '_a.servoWrite($1, ');
+    js = js.replace(/\b(\w+)\.attach\s*\(/g, '_a.servoAttach($1, ');
+    js = js.replace(/\b(\w+)\.write\s*\(/g, '_a.servoWrite($1, ');
     js = js.replace(/\b(\w+)\.writeMicroseconds\s*\(/g, '_a.servoWriteMs($1, ');
-    js = js.replace(/\b(\w+)\.read\s*\(/g,     '_a.servoRead($1');
+    js = js.replace(/\b(\w+)\.read\s*\(/g, '_a.servoRead($1');
 
     // LiquidCrystal
-    js = js.replace(/\b(\w+)\.begin\s*\(/g,    '_a.lcdBegin($1, ');
-    js = js.replace(/\b(\w+)\.setCursor\s*\(/g,'_a.lcdSetCursor($1, ');
-    js = js.replace(/\b(\w+)\.print\s*\(/g,    '_a.lcdPrint($1, ');
-    js = js.replace(/\b(\w+)\.clear\s*\(/g,    '_a.lcdClear($1');
-    js = js.replace(/\b(\w+)\.home\s*\(/g,     '_a.lcdHome($1');
+    js = js.replace(/\b(\w+)\.begin\s*\(/g, '_a.lcdBegin($1, ');
+    js = js.replace(/\b(\w+)\.setCursor\s*\(/g, '_a.lcdSetCursor($1, ');
+    js = js.replace(/\b(\w+)\.print\s*\(/g, '_a.lcdPrint($1, ');
+    js = js.replace(/\b(\w+)\.clear\s*\(/g, '_a.lcdClear($1');
+    js = js.replace(/\b(\w+)\.home\s*\(/g, '_a.lcdHome($1');
 
     // Make delay async
     js = js.replace(/_a\.delay\s*\(/g, 'await _a.delay(');
@@ -322,8 +322,8 @@ class ArduinoSimulator {
         serialPrint(val, fmt) {
           let str;
           if (fmt === 16) str = parseInt(val).toString(16).toUpperCase();
-          else if (fmt === 2)  str = parseInt(val).toString(2);
-          else if (fmt === 8)  str = parseInt(val).toString(8);
+          else if (fmt === 2) str = parseInt(val).toString(2);
+          else if (fmt === 8) str = parseInt(val).toString(8);
           else if (typeof val === 'number' && !Number.isInteger(val)) {
             const dec = fmt !== undefined ? fmt : 2;
             str = val.toFixed(dec);
@@ -334,8 +334,8 @@ class ArduinoSimulator {
           let str;
           if (val === undefined) str = '';
           else if (fmt === 16) str = parseInt(val).toString(16).toUpperCase();
-          else if (fmt === 2)  str = parseInt(val).toString(2);
-          else if (fmt === 8)  str = parseInt(val).toString(8);
+          else if (fmt === 2) str = parseInt(val).toString(2);
+          else if (fmt === 8) str = parseInt(val).toString(8);
           else if (typeof val === 'number' && !Number.isInteger(val)) {
             const dec = fmt !== undefined ? fmt : 2;
             str = val.toFixed(dec);
@@ -348,8 +348,8 @@ class ArduinoSimulator {
             : -1;
         },
         serialAvailable() { return self.serialInputBuffer.length; },
-        serialWrite(val)  { self._serialLog(String.fromCharCode(val), 'data'); },
-        serialFlush()     {},
+        serialWrite(val) { self._serialLog(String.fromCharCode(val), 'data'); },
+        serialFlush() { },
 
         /* Math helpers */
         map(val, inMin, inMax, outMin, outMax) {
@@ -373,17 +373,17 @@ class ArduinoSimulator {
         max(a, b) { return Math.max(a, b); },
 
         /* Bit operations */
-        bitRead(val, bit)  { return (val >> bit) & 1; },
+        bitRead(val, bit) { return (val >> bit) & 1; },
         bitWrite(val, bit, bv) { return bv ? val | (1 << bit) : val & ~(1 << bit); },
-        bitSet(val, bit)   { return val | (1 << bit); },
+        bitSet(val, bit) { return val | (1 << bit); },
         bitClear(val, bit) { return val & ~(1 << bit); },
-        bit(b)             { return 1 << b; },
-        lowByte(val)       { return val & 0xFF; },
-        highByte(val)      { return (val >> 8) & 0xFF; },
+        bit(b) { return 1 << b; },
+        lowByte(val) { return val & 0xFF; },
+        highByte(val) { return (val >> 8) & 0xFF; },
 
         /* Shift in/out */
         shiftIn(dataPin, clockPin, bitOrder) { return 0; }, // stub
-        shiftOut(dataPin, clockPin, bitOrder, val) {}, // stub
+        shiftOut(dataPin, clockPin, bitOrder, val) { }, // stub
 
         /* Interactive sensor widgets (sliders on the canvas).
            Reads a value from a placed sensor component by instance id or type.
@@ -403,28 +403,28 @@ class ArduinoSimulator {
         },
 
         /* Wire (I2C) stubs */
-        wireBegin()                 { self._serialLog('[Wire] I2C begin\n', 'system'); },
-        wireRequestFrom(addr, qty)  { return qty; },
-        wireBeginTransmission(addr) {},
-        wireEndTransmission()       { return 0; },
-        wireWrite(val)              { return 1; },
-        wireRead()                  { return 0; },
-        wireAvailable()             { return 0; },
+        wireBegin() { self._serialLog('[Wire] I2C begin\n', 'system'); },
+        wireRequestFrom(addr, qty) { return qty; },
+        wireBeginTransmission(addr) { },
+        wireEndTransmission() { return 0; },
+        wireWrite(val) { return 1; },
+        wireRead() { return 0; },
+        wireAvailable() { return 0; },
 
         /* SPI stubs */
-        spiBegin()                  { self._serialLog('[SPI] begin\n', 'system'); },
-        spiTransfer(val)            { return 0; },
-        spiEnd()                    {},
+        spiBegin() { self._serialLog('[SPI] begin\n', 'system'); },
+        spiTransfer(val) { return 0; },
+        spiEnd() { },
 
         /* EEPROM */
-        eepromRead(addr)            { return self._eeprom[addr & 511] || 0; },
-        eepromWrite(addr, val)      { self._eeprom[addr & 511] = val & 0xFF; },
-        eepromUpdate(addr, val)     { self._eeprom[addr & 511] = val & 0xFF; },
+        eepromRead(addr) { return self._eeprom[addr & 511] || 0; },
+        eepromWrite(addr, val) { self._eeprom[addr & 511] = val & 0xFF; },
+        eepromUpdate(addr, val) { self._eeprom[addr & 511] = val & 0xFF; },
 
         /* Serial extras */
-        serialParseInt()   { return 0; },
+        serialParseInt() { return 0; },
         serialParseFloat() { return 0.0; },
-        serialPeek()       { return self.serialInputBuffer.length > 0 ? self.serialInputBuffer[0].charCodeAt(0) : -1; },
+        serialPeek() { return self.serialInputBuffer.length > 0 ? self.serialInputBuffer[0].charCodeAt(0) : -1; },
         serialReadString() { const s = self.serialInputBuffer.join(''); self.serialInputBuffer = []; return s; },
 
         /* Tone */
@@ -460,16 +460,16 @@ class ArduinoSimulator {
           self._lcdCursor = { col, row };
         },
         lcdPrint(varName, val) {
-          self._emitEvent('lcd_print', { text: String(val), cursor: self._lcdCursor || { col:0, row:0 } });
+          self._emitEvent('lcd_print', { text: String(val), cursor: self._lcdCursor || { col: 0, row: 0 } });
         },
         lcdClear(varName) {
           self._emitEvent('lcd_clear', {});
         },
-        lcdHome(varName) { self._lcdCursor = { col:0, row:0 }; },
+        lcdHome(varName) { self._lcdCursor = { col: 0, row: 0 }; },
 
         /* Interrupts */
-        attachInterrupt(num, fn, mode) {},
-        detachInterrupt(num) {},
+        attachInterrupt(num, fn, mode) { },
+        detachInterrupt(num) { },
       },
 
       /* Global constants */
@@ -484,12 +484,12 @@ class ArduinoSimulator {
       BYTE: 0, WORD: 1,
 
       /* Servo/LCD class stubs */
-      Servo: function() { return {}; },
-      LiquidCrystal: function() { return {}; },
-      LiquidCrystal_I2C: function() { return {}; },
+      Servo: function () { return {}; },
+      LiquidCrystal: function () { return {}; },
+      LiquidCrystal_I2C: function () { return {}; },
       /* Library stubs (instances) */
-      Wire: { begin(){}, requestFrom(){return 0;}, beginTransmission(){}, endTransmission(){return 0;}, write(){return 1;}, read(){return 0;}, available(){return 0;} },
-      SPI:  { begin(){}, transfer(){return 0;}, end(){}, setClockDivider(){}, setBitOrder(){}, setDataMode(){} },
+      Wire: { begin() { }, requestFrom() { return 0; }, beginTransmission() { }, endTransmission() { return 0; }, write() { return 1; }, read() { return 0; }, available() { return 0; } },
+      SPI: { begin() { }, transfer() { return 0; }, end() { }, setClockDivider() { }, setBitOrder() { }, setDataMode() { } },
     };
   }
 
@@ -502,9 +502,9 @@ class ArduinoSimulator {
       const rawVals = Object.values(ctx);
       const filtered = [];
       const reserved = new Set([
-        'await','break','case','catch','class','const','continue','debugger','default','delete','do','else',
-        'enum','export','extends','false','finally','for','function','if','import','in','instanceof','new',
-        'null','return','super','switch','this','throw','true','try','typeof','var','void','while','with','yield'
+        'await', 'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'else',
+        'enum', 'export', 'extends', 'false', 'finally', 'for', 'function', 'if', 'import', 'in', 'instanceof', 'new',
+        'null', 'return', 'super', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void', 'while', 'with', 'yield'
       ]);
 
       for (let i = 0; i < rawKeys.length; i += 1) {
@@ -537,16 +537,16 @@ class ArduinoSimulator {
   async run(code) {
     if (this.isRunning) this.stop();
     if (typeof code !== 'string') code = '';
-    this.simTime  = 0;
+    this.simTime = 0;
     this.pinStates = {};
-    this.pinModes  = {};
-    this._delays   = [];
+    this.pinModes = {};
+    this._delays = [];
     this._lcdLines = ['', ''];
     this._lcdCursor = { col: 0, row: 0 };
     this._startRealTime = Date.now();
     this._fpsFrames = 0;
-    this._fpsLast   = Date.now();
-    this._fps       = 0;
+    this._fpsLast = Date.now();
+    this._fps = 0;
     this._loopCount = 0;
     this._iterSinceDelay = 0;
 
@@ -558,7 +558,7 @@ class ArduinoSimulator {
     }
 
     this.isRunning = true;
-    this.isPaused  = false;
+    this.isPaused = false;
 
     const { keys, vals, fn } = this._compiledCtx;
 
@@ -619,7 +619,7 @@ class ArduinoSimulator {
 
   stop() {
     this.isRunning = false;
-    this.isPaused  = false;
+    this.isPaused = false;
     // Cancel all pending delays
     for (const d of this._delays) {
       clearTimeout(d.id);
@@ -685,7 +685,7 @@ class ArduinoSimulator {
     if (err instanceof TypeError) return `Type error${line}: ${msg}. Check for null values or wrong argument types.`;
     if (err instanceof RangeError) return `Range error${line}: ${msg}. Check for values out of allowed range.`;
     if (msg.includes('Missing setup()')) return 'Missing setup() function. Every Arduino sketch needs a setup() function.';
-    if (msg.includes('Missing loop()'))  return 'Missing loop() function. Every Arduino sketch needs a loop() function.';
+    if (msg.includes('Missing loop()')) return 'Missing loop() function. Every Arduino sketch needs a loop() function.';
     if (msg.includes('Maximum call stack')) return 'Stack overflow: infinite recursion detected. Check your function calls.';
     if (msg.includes('is not defined')) {
       const m = msg.match(/'([^']+)' is not defined/);
@@ -716,7 +716,7 @@ class ArduinoSimulator {
     if (!this._toneCtx) {
       try {
         this._toneCtx = new (window.AudioContext || window.webkitAudioContext)();
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -742,7 +742,7 @@ class ArduinoSimulator {
 
   _stopTone(key) {
     if (this._toneOscillators[key]) {
-      try { this._toneOscillators[key].osc.stop(); } catch(e) {}
+      try { this._toneOscillators[key].osc.stop(); } catch (e) { }
       delete this._toneOscillators[key];
     }
     this._emitEvent('buzzer_off', { key });
@@ -750,7 +750,7 @@ class ArduinoSimulator {
 
   _stopAllTones() {
     for (const key of Object.keys(this._toneOscillators)) {
-      try { this._toneOscillators[key].osc.stop(); } catch(e) {}
+      try { this._toneOscillators[key].osc.stop(); } catch (e) { }
       delete this._toneOscillators[key];
     }
     this._toneOscillators = {};
@@ -778,7 +778,7 @@ class ArduinoSimulator {
   /* Get human-readable pin name */
   static pinLabel(key) {
     if (!key.startsWith('pin_')) return key;
-    const n = parseInt(key.replace('pin_',''));
+    const n = parseInt(key.replace('pin_', ''));
     if (n === 14) return 'A0';
     if (n === 15) return 'A1';
     if (n === 16) return 'A2';
@@ -797,63 +797,63 @@ class ArduinoSimulator {
 const EXAMPLE_CIRCUITS = {
   led_on_13: {
     components: [
-      { id: 'b1',   type: 'arduino_uno', x: 200, y: 100 },
-      { id: 'led1', type: 'led',         x: 120, y: 280 },
-      { id: 'r1',   type: 'resistor',    x: 120, y: 360 },
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'led1', type: 'led', x: 120, y: 280 },
+      { id: 'r1', type: 'resistor', x: 120, y: 360 },
     ],
     wires: [
-      { id: 'w1', from: { instId: 'b1',   pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w1', from: { instId: 'b1', pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
       { id: 'w2', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
-      { id: 'w3', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w3', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
   fade: {
     components: [
-      { id: 'b1',   type: 'arduino_uno', x: 200, y: 100 },
-      { id: 'led1', type: 'led',         x: 120, y: 280 },
-      { id: 'r1',   type: 'resistor',    x: 120, y: 360 },
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'led1', type: 'led', x: 120, y: 280 },
+      { id: 'r1', type: 'resistor', x: 120, y: 360 },
     ],
     wires: [
-      { id: 'w1', from: { instId: 'b1',   pinId: 'D9' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w1', from: { instId: 'b1', pinId: 'D9' }, to: { instId: 'led1', pinId: 'anode' } },
       { id: 'w2', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
-      { id: 'w3', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w3', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
   button: {
     components: [
-      { id: 'b1',   type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
       { id: 'btn1', type: 'push_button', x: 120, y: 300 },
-      { id: 'led1', type: 'led',         x: 340, y: 260 },
-      { id: 'r1',   type: 'resistor',    x: 340, y: 340 },
+      { id: 'led1', type: 'led', x: 340, y: 260 },
+      { id: 'r1', type: 'resistor', x: 340, y: 340 },
     ],
     wires: [
-      { id: 'w1', from: { instId: 'b1',   pinId: 'D2' }, to: { instId: 'btn1', pinId: 'p1' } },
-      { id: 'w2', from: { instId: 'btn1', pinId: 'p3' }, to: { instId: 'b1',   pinId: 'GND1' } },
-      { id: 'w3', from: { instId: 'b1',   pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w1', from: { instId: 'b1', pinId: 'D2' }, to: { instId: 'btn1', pinId: 'p1' } },
+      { id: 'w2', from: { instId: 'btn1', pinId: 'p3' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w3', from: { instId: 'b1', pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
       { id: 'w4', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
-      { id: 'w5', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w5', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
   potentiometer: {
     components: [
-      { id: 'b1',   type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
       { id: 'pot1', type: 'potentiometer', x: 120, y: 300 },
-      { id: 'led1', type: 'led',         x: 340, y: 260 },
-      { id: 'r1',   type: 'resistor',    x: 340, y: 340 },
+      { id: 'led1', type: 'led', x: 340, y: 260 },
+      { id: 'r1', type: 'resistor', x: 340, y: 340 },
     ],
     wires: [
-      { id: 'w1', from: { instId: 'b1',   pinId: '5V' }, to: { instId: 'pot1', pinId: 'vcc' } },
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'pot1', pinId: 'vcc' } },
       { id: 'w2', from: { instId: 'pot1', pinId: 'wiper' }, to: { instId: 'b1', pinId: 'A0' } },
       { id: 'w3', from: { instId: 'pot1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
-      { id: 'w4', from: { instId: 'b1',   pinId: 'D9' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w4', from: { instId: 'b1', pinId: 'D9' }, to: { instId: 'led1', pinId: 'anode' } },
       { id: 'w5', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
-      { id: 'w6', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w6', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
   servo_sweep: {
     components: [
       { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
-      { id: 'sv1', type: 'servo',      x: 120, y: 320 },
+      { id: 'sv1', type: 'servo', x: 120, y: 320 },
     ],
     wires: [
       { id: 'w1', from: { instId: 'b1', pinId: 'D9' }, to: { instId: 'sv1', pinId: 'signal' } },
@@ -864,63 +864,63 @@ const EXAMPLE_CIRCUITS = {
   traffic_light: {
     components: [
       { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
-      { id: 'red',  type: 'led', x: 340, y: 240 },
-      { id: 'yel',  type: 'led', x: 340, y: 340 },
-      { id: 'grn',  type: 'led', x: 340, y: 440 },
-      { id: 'rr',   type: 'resistor', x: 340, y: 320 },
-      { id: 'ry',   type: 'resistor', x: 340, y: 420 },
-      { id: 'rg',   type: 'resistor', x: 340, y: 520 },
+      { id: 'red', type: 'led', x: 340, y: 240 },
+      { id: 'yel', type: 'led', x: 340, y: 340 },
+      { id: 'grn', type: 'led', x: 340, y: 440 },
+      { id: 'rr', type: 'resistor', x: 340, y: 320 },
+      { id: 'ry', type: 'resistor', x: 340, y: 420 },
+      { id: 'rg', type: 'resistor', x: 340, y: 520 },
     ],
     wires: [
       { id: 'w1', from: { instId: 'b1', pinId: 'D12' }, to: { instId: 'red', pinId: 'anode' } },
       { id: 'w2', from: { instId: 'red', pinId: 'cathode' }, to: { instId: 'rr', pinId: 'p1' } },
-      { id: 'w3', from: { instId: 'rr',  pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w3', from: { instId: 'rr', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
       { id: 'w4', from: { instId: 'b1', pinId: 'D11' }, to: { instId: 'yel', pinId: 'anode' } },
       { id: 'w5', from: { instId: 'yel', pinId: 'cathode' }, to: { instId: 'ry', pinId: 'p1' } },
-      { id: 'w6', from: { instId: 'ry',  pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w6', from: { instId: 'ry', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
       { id: 'w7', from: { instId: 'b1', pinId: 'D10' }, to: { instId: 'grn', pinId: 'anode' } },
       { id: 'w8', from: { instId: 'grn', pinId: 'cathode' }, to: { instId: 'rg', pinId: 'p1' } },
-      { id: 'w9', from: { instId: 'rg',  pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w9', from: { instId: 'rg', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
   rainbow_rgb: {
     components: [
       { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
-      { id: 'rgb1', type: 'rgb_led',   x: 120, y: 300 },
+      { id: 'rgb1', type: 'rgb_led', x: 120, y: 300 },
     ],
     wires: [
-      { id: 'w1', from: { instId: 'b1',   pinId: 'D9' }, to: { instId: 'rgb1', pinId: 'red' } },
-      { id: 'w2', from: { instId: 'b1',   pinId: 'D10' }, to: { instId: 'rgb1', pinId: 'green' } },
-      { id: 'w3', from: { instId: 'b1',   pinId: 'D11' }, to: { instId: 'rgb1', pinId: 'blue' } },
+      { id: 'w1', from: { instId: 'b1', pinId: 'D9' }, to: { instId: 'rgb1', pinId: 'red' } },
+      { id: 'w2', from: { instId: 'b1', pinId: 'D10' }, to: { instId: 'rgb1', pinId: 'green' } },
+      { id: 'w3', from: { instId: 'b1', pinId: 'D11' }, to: { instId: 'rgb1', pinId: 'blue' } },
       { id: 'w4', from: { instId: 'rgb1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
   temperature: {
     components: [
       { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
-      { id: 'dht1', type: 'dht11',     x: 120, y: 300 },
+      { id: 'dht1', type: 'dht11', x: 120, y: 300 },
     ],
     wires: [
-      { id: 'w1', from: { instId: 'b1',   pinId: '5V' }, to: { instId: 'dht1', pinId: 'vcc' } },
-      { id: 'w2', from: { instId: 'b1',   pinId: 'D2' }, to: { instId: 'dht1', pinId: 'data' } },
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'dht1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'b1', pinId: 'D2' }, to: { instId: 'dht1', pinId: 'data' } },
       { id: 'w3', from: { instId: 'dht1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
   ultrasonic: {
     components: [
       { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
-      { id: 'son1', type: 'hcsr04',     x: 120, y: 300 },
-      { id: 'led1', type: 'led',         x: 340, y: 260 },
-      { id: 'r1',   type: 'resistor',    x: 340, y: 340 },
+      { id: 'son1', type: 'hcsr04', x: 120, y: 300 },
+      { id: 'led1', type: 'led', x: 340, y: 260 },
+      { id: 'r1', type: 'resistor', x: 340, y: 340 },
     ],
     wires: [
-      { id: 'w1', from: { instId: 'b1',   pinId: '5V' },  to: { instId: 'son1', pinId: 'vcc' } },
-      { id: 'w2', from: { instId: 'b1',   pinId: 'D7' },  to: { instId: 'son1', pinId: 'trig' } },
-      { id: 'w3', from: { instId: 'b1',   pinId: 'D8' },  to: { instId: 'son1', pinId: 'echo' } },
-      { id: 'w4', from: { instId: 'son1', pinId: 'gnd' }, to: { instId: 'b1',   pinId: 'GND1' } },
-      { id: 'w5', from: { instId: 'b1',   pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'son1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'b1', pinId: 'D7' }, to: { instId: 'son1', pinId: 'trig' } },
+      { id: 'w3', from: { instId: 'b1', pinId: 'D8' }, to: { instId: 'son1', pinId: 'echo' } },
+      { id: 'w4', from: { instId: 'son1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w5', from: { instId: 'b1', pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
       { id: 'w6', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
-      { id: 'w7', from: { instId: 'r1',   pinId: 'p2' }, to: { instId: 'b1',   pinId: 'GND1' } },
+      { id: 'w7', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
 };
