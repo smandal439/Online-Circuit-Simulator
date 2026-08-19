@@ -28,6 +28,7 @@ class ArduinoSimulator {
     this._toneOscillators = {};
     this._startRealTime = 0;
     this._delays = [];
+    this._mqttOpen = []; // live MQTT.js connections to close on stop/run
     this._customDelay = null;
     // FPS / loop tracking
     this._fps = 0;
@@ -639,36 +640,104 @@ class ArduinoSimulator {
         softAP(ssid) { self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system'); },
         setAutoConnect() { },
       },
-      /* ESP32 Wi-Fi client + MQTT (PubSubClient) with a simulated local broker.
-         Messages published to a topic are delivered to every client subscribed
-         to that topic (including ourselves), so pub/sub flows can be demoed
-         without any real network connection. */
+      /* ESP32 Wi-Fi client + MQTT (PubSubClient).
+         When the MQTT.js library is loaded (index.html), this also publishes
+         to a real public broker over WebSockets (HiveMQ public broker by
+         default), so you can watch the messages in MQTTX / any MQTT client.
+         If no real broker can be reached, a local in-page broker is used as a
+         fallback so the pub/sub demo still works offline. */
       WiFiClient: function () { return {}; },
       PubSubClient: function () {
         const broker = (self._mqtt = self._mqtt || { subs: new Map(), connected: false });
+        // Unique per-session suffix so a shared public broker doesn't clash
+        // with other users running the same example.
+        const session = Math.random().toString(36).slice(2, 7);
+        const ns = (topic) => `${topic}/${session}`;
+        const bare = (topic) => (String(topic).endsWith(`/${session}`)
+          ? String(topic).slice(0, -(session.length + 1))
+          : String(topic));
+
         let connected = false;
         let cb = null;
+        let real = null;       // real MQTT.js client
+        let realReady = false; // real broker connected
+        const pendingSubs = new Set();
+
         const deliver = (topic, payload) => {
           if (!cb) return;
           try {
-            cb(topic, payload, payload.length);
+            cb(topic, payload, String(payload).length);
           } catch (e) {
             self._serialLog(`[MQTT] callback error: ${e && e.message ? e.message : e}\n`, 'system');
           }
         };
+
+        const tryRealConnect = (clientId) => {
+          if (typeof window.mqtt !== 'function' || !window.WebSocket) {
+            self._serialLog('[MQTT] MQTT.js not loaded — using local broker only\n', 'system');
+            return;
+          }
+          const cfg = window.ArduSimMQTT || {};
+          const url = cfg.url || 'wss://broker.hivemq.com:8884/mqtt';
+          try {
+            real = window.mqtt.connect(url, {
+              clientId,
+              clean: true,
+              connectTimeout: cfg.timeout || 10000,
+              reconnectPeriod: 3000, // keep retrying so the live broker comes up if it was briefly unreachable
+              keepalive: 30,
+            });
+            self._mqttOpen.push(real);
+            real.on('connect', () => {
+              realReady = true;
+              self._serialLog(`[MQTT] Live broker connected (${url}) as "${clientId}"\n`, 'system');
+              self._serialLog(`[MQTT] Watch it in MQTTX → subscribe to: ${ns('ardusim/temp')} (and ${ns('ardusim/led')})\n`, 'system');
+              for (const t of pendingSubs) real.subscribe(t);
+              pendingSubs.clear();
+            });
+            real.on('message', (topic, payload) => {
+              deliver(bare(topic), payload.toString());
+            });
+            real.on('error', (e) => {
+              self._serialLog(`[MQTT] Live broker error: ${e && e.message ? e.message : e}\n`, 'system');
+            });
+            real.on('close', () => {
+              if (realReady) self._serialLog('[MQTT] Live broker connection closed — retrying...\n', 'system');
+              realReady = false;
+            });
+            // If the public broker can't be reached at all, say so once so the
+            // user knows the demo is running in local-only mode.
+            setTimeout(() => {
+              if (!realReady) {
+                self._serialLog('[MQTT] Public broker unreachable (check internet access) — running local broker only\n', 'system');
+              }
+            }, 12000);
+          } catch (e) {
+            self._serialLog(`[MQTT] Live broker unavailable — using local broker only (${e && e.message ? e.message : e})\n`, 'system');
+          }
+        };
+
         return {
           setServer(host, port) {
             self._serialLog(`[MQTT] Broker ${host}:${port}\n`, 'system');
           },
           setCallback(callback) { cb = callback; },
           connect(id) {
+            const clientId = id || `ArduSim_${Math.random().toString(36).slice(2, 8)}`;
             connected = true;
             broker.connected = true;
-            self._serialLog(`[MQTT] Connected as "${id}"\n`, 'system');
+            self._serialLog(`[MQTT] Connecting as "${clientId}"...\n`, 'system');
+            tryRealConnect(clientId);
             return true;
           },
           disconnect() {
             connected = false;
+            broker.connected = false;
+            if (real) {
+              try { real.end(true); } catch (e) { /* noop */ }
+              real = null;
+            }
+            realReady = false;
             self._serialLog('[MQTT] Disconnected\n', 'system');
           },
           connected() { return connected; },
@@ -677,20 +746,33 @@ class ArduinoSimulator {
             if (!broker.subs.has(t)) broker.subs.set(t, new Set());
             broker.subs.get(t).add(deliver);
             self._serialLog(`[MQTT] Subscribed "${t}"\n`, 'system');
+            if (real) {
+              if (realReady) real.subscribe(ns(t));
+              else pendingSubs.add(ns(t));
+            }
             return true;
           },
           unsubscribe(topic) {
             const t = String(topic);
             if (broker.subs.has(t)) broker.subs.get(t).delete(deliver);
+            if (real && realReady) real.unsubscribe(ns(t));
             return true;
           },
           publish(topic, payload) {
             const t = String(topic);
             const msg = String(payload);
             self._serialLog(`[MQTT] Publish "${t}" → ${msg}\n`, 'system');
-            const listeners = broker.subs.get(t);
-            if (listeners) {
-              for (const l of [...listeners]) l(t, msg);
+            if (real) {
+              try {
+                real.publish(ns(t), msg, { qos: 0, retain: false });
+              } catch (e) { /* noop */ }
+            }
+            // Local delivery: while the live broker is connected the message also
+            // returns through its own subscription, so only deliver locally when
+            // there is no real broker to avoid double-delivering to the callback.
+            if (!realReady) {
+              const listeners = broker.subs.get(t);
+              if (listeners) for (const l of [...listeners]) l(t, msg);
             }
             return true;
           },
@@ -828,6 +910,12 @@ class ArduinoSimulator {
   stop() {
     this.isRunning = false;
     this.isPaused = false;
+    // Close any live MQTT connections
+    for (const c of this._mqttOpen) {
+      try { c.end(true); } catch (e) { /* noop */ }
+    }
+    this._mqttOpen = [];
+    this._mqtt = { subs: new Map(), connected: false };
     // Cancel all pending delays
     for (const d of this._delays) {
       clearTimeout(d.id);
@@ -1763,7 +1851,7 @@ void loop() {
   }
 
   // Publish a simulated temperature reading every second
-  int tempC = map(analogRead(sensorPin), 0, 1023, 15, 35);
+  int tempC = round(map(analogRead(sensorPin), 0, 1023, 15, 35));
   client.publish(topicData, String(tempC));
 
   // Every 4 seconds publish an on/off command. The broker delivers it back
