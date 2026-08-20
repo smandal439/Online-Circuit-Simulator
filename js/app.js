@@ -347,6 +347,19 @@ class App {
     return this.sim.board || 'arduino_uno';
   }
 
+  // Sync sim.board (and the board selector UI) with the board actually placed
+  // on the canvas, so LED_BUILTIN / A0–A5 map to the right pins.
+  _syncBoardFromCanvas() {
+    const active = this._getActiveBoardType();
+    if (this.sim.board !== active) {
+      this.sim.setBoard(active);
+      window.StorageManager?.saveSettings?.({ ...(window.StorageManager.loadSettings() || {}), board: active });
+      this._pinMonitorBoard = null;
+    }
+    const sel = document.getElementById('board-select');
+    if (sel && sel.value !== active) sel.value = active;
+  }
+
   _setBoard(board) {
     const b = (board === 'esp32_devkit_v1') ? 'esp32_devkit_v1' : 'arduino_uno';
     this.sim.setBoard(b);
@@ -555,6 +568,7 @@ class App {
   async run() {
     if (!this.editor) return;
     const code = this.editor.getCode();
+    this._syncBoardFromCanvas();
     this._updateCompileStatus('Compiling…');
     this._updateStatus('Compiling sketch');
     this.serial?.log('Compiling sketch…', 'system');
@@ -669,6 +683,7 @@ class App {
     window.StorageManager?.loadFromFile((project) => {
       if (this.editor) this.editor.setCode(project.code || '');
       if (this.canvas) this.canvas.deserialize(project.circuit || { components: [], wires: [] });
+      this._syncBoardFromCanvas();
       this._setProjectName(project.name || 'Untitled Project');
       this._refreshCanvasSummary();
     });
@@ -753,6 +768,7 @@ class App {
     if (!p) { this.showToast('Saved project not found', 'error'); return; }
     if (this.editor) this.editor.setCode(p.code || '');
     if (this.canvas) this.canvas.deserialize(p.circuit || { components: [], wires: [] });
+    this._syncBoardFromCanvas();
     this._setProjectName(p.name || 'Untitled Project');
     this._refreshCanvasSummary();
     this._closeModal();
@@ -860,6 +876,7 @@ _newProject() {
     if (project) {
       if (this.editor) this.editor.setCode(project.code || '');
       if (this.canvas) this.canvas.deserialize(project.circuit || { components: [], wires: [] });
+      this._syncBoardFromCanvas();
       this._setProjectName(project.name || 'Untitled Project');
       this._refreshCanvasSummary();
       this.showToast('Previous project restored', 'success');
@@ -871,6 +888,7 @@ _newProject() {
     if (shared) {
       if (this.editor) this.editor.setCode(shared.code || '');
       if (this.canvas) this.canvas.deserialize(shared.circuit || { components: [], wires: [] });
+      this._syncBoardFromCanvas();
       this._setProjectName(shared.name || 'Shared Project');
       this._refreshCanvasSummary();
       this.showToast('Shared project loaded', 'success');
@@ -1362,6 +1380,7 @@ _newProject() {
   async verify() {
     if (!this.editor) return;
     const code = this.editor.getCode();
+    this._syncBoardFromCanvas();
     this._updateCompileStatus('Verifying…');
     this._updateStatus('Verifying sketch');
     this.serial?.log('Verifying sketch…', 'system');
@@ -1469,6 +1488,7 @@ _newProject() {
     // Data-driven circuit (serialized project data) — most examples use this
     if (key && typeof key === 'object' && Array.isArray(key.components)) {
       this.canvas.deserialize(key);
+      this._syncBoardFromCanvas();
       this._refreshCanvasSummary();
       return;
     }
@@ -1486,6 +1506,7 @@ _newProject() {
         this.canvas.addWire(led.id, 'cathode', res.id, 'p1');
         this.canvas.addWire(res.id, 'p2', board.id, 'GND1');
       }
+      this._syncBoardFromCanvas();
       this._refreshCanvasSummary();
       setTimeout(() => this.canvas.fitView(), 80);
     }
