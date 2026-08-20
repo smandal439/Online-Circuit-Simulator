@@ -12,6 +12,7 @@ class App {
     this.isRunning = false;
     this._runEpoch = 0;
     this._pendingRunEpoch = 0;
+    this._bottomHeight = 200;
     this._propsComp = null;
     this._projectName = 'Untitled Project';
     this._autoSaveDebounced = null;
@@ -587,11 +588,12 @@ class App {
   }
 
   stop() {
+    const wasRunning = this.isRunning;
     this._runEpoch++;
     this.sim.stop();
     this._setRunningState(false);
     this._updateStatus('Stopped');
-    this.output?.log('Simulation stopped', 'system');
+    if (wasRunning) this.output?.log('Simulation stopped', 'system');
     const fpsEl = document.getElementById('sim-fps');
     if (fpsEl) fpsEl.textContent = '0 FPS';
   }
@@ -1154,8 +1156,18 @@ _newProject() {
   _toggleBottomPanel(button) {
     const bottom = document.getElementById('bottom-panel');
     if (!bottom) return;
+    const mainLayout = document.querySelector('.main-layout');
     const collapsed = bottom.classList.toggle('collapsed');
     document.body.classList.toggle('bottom-collapsed', collapsed);
+    if (collapsed) {
+      // Clear inline sizes so the CSS collapsed rules can take effect
+      bottom.style.height = '';
+      if (mainLayout) mainLayout.style.bottom = '';
+    } else {
+      const h = this._bottomHeight || 200;
+      bottom.style.height = `${h}px`;
+      if (mainLayout) mainLayout.style.bottom = `${h}px`;
+    }
     if (button) {
       const icon = document.getElementById('bottom-toggle-icon');
       if (icon) icon.style.transform = collapsed ? 'rotate(180deg)' : 'rotate(0deg)';
@@ -1178,16 +1190,45 @@ _newProject() {
       // Clicking the active view restores the default layout
       this._activeView = null;
       document.body.classList.remove('view-code', 'view-circuit', 'view-serial');
+      this._restoreResizedLayout();
     } else {
       this._activeView = view;
       document.body.classList.remove('view-code', 'view-circuit', 'view-serial');
       document.body.classList.add(`view-${view}`);
+      // Clear inline sizes so the view-specific CSS rules take over
+      const bottom = document.getElementById('bottom-panel');
+      const mainLayout = document.querySelector('.main-layout');
+      const editorPanel = document.getElementById('panel-editor');
+      const compPanel = document.getElementById('panel-components');
+      if (bottom) bottom.style.height = '';
+      if (mainLayout) mainLayout.style.bottom = '';
+      if (editorPanel) { editorPanel.style.width = ''; editorPanel.style.flex = ''; }
+      if (compPanel)   { compPanel.style.width = ''; compPanel.style.flex = ''; }
       if (view === 'serial') {
         const tab = document.getElementById('tab-serial');
         if (tab) this._switchBottomTab(tab);
       }
     }
     this._updateViewButtons();
+  }
+
+  _restoreResizedLayout() {
+    const bottom = document.getElementById('bottom-panel');
+    const mainLayout = document.querySelector('.main-layout');
+    const editorPanel = document.getElementById('panel-editor');
+    const compPanel = document.getElementById('panel-components');
+    if (!bottom || document.body.classList.contains('bottom-collapsed')) return;
+    if (editorPanel && this._panelWidths && this._panelWidths.editor) {
+      editorPanel.style.width = `${this._panelWidths.editor}px`;
+      editorPanel.style.flex = '0 0 auto';
+    }
+    if (compPanel && this._panelWidths && this._panelWidths.components) {
+      compPanel.style.width = `${this._panelWidths.components}px`;
+      compPanel.style.flex = '0 0 auto';
+    }
+    const h = this._bottomHeight || 200;
+    bottom.style.height = `${h}px`;
+    if (mainLayout) mainLayout.style.bottom = `${h}px`;
   }
 
   _updateViewButtons() {
@@ -1199,6 +1240,27 @@ _newProject() {
 
   /* ══════════════════════ PANEL RESIZERS ══════════════════════ */
   _initResizers() {
+    const LS_KEY = 'ardusim-layout';
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch (e) { saved = {}; }
+    const save = () => {
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify({
+          editorW: this._panelWidths ? this._panelWidths.editor : undefined,
+          compW: this._panelWidths ? this._panelWidths.components : undefined,
+          bottomH: this._bottomHeight,
+        }));
+      } catch (e) { /* noop */ }
+    };
+    this._panelWidths = { editor: saved.editorW || 320, components: saved.compW || 260 };
+    if (saved.bottomH) this._bottomHeight = saved.bottomH;
+
+    // Restore saved sizes
+    const editorPanel = document.getElementById('panel-editor');
+    const compPanel = document.getElementById('panel-components');
+    if (editorPanel) { editorPanel.style.width = `${this._panelWidths.editor}px`; editorPanel.style.flex = '0 0 auto'; }
+    if (compPanel)   { compPanel.style.width = `${this._panelWidths.components}px`; compPanel.style.flex = '0 0 auto'; }
+
     const bindResizer = (resizerId, panelId, dir) => {
       const resizer = document.getElementById(resizerId);
       const panel = document.getElementById(panelId);
@@ -1217,6 +1279,8 @@ _newProject() {
           w = Math.max(minW, Math.min(maxW, w));
           panel.style.width = `${w}px`;
           panel.style.flex = '0 0 auto';
+          if (dir === 'left') this._panelWidths.editor = w;
+          else this._panelWidths.components = w;
         };
         const onUp = () => {
           document.removeEventListener('pointermove', onMove);
@@ -1224,6 +1288,7 @@ _newProject() {
           resizer.classList.remove('dragging');
           document.body.style.cursor = '';
           document.body.style.userSelect = '';
+          save();
         };
         resizer.classList.add('dragging');
         document.body.style.cursor = 'col-resize';
@@ -1257,6 +1322,7 @@ _newProject() {
         const onMove = (ev) => {
           let h = startH + (startY - ev.clientY);
           h = Math.max(minH, Math.min(maxH, h));
+          this._bottomHeight = h;
           bottomPanel.style.height = `${h}px`;
           if (mainLayout) mainLayout.style.bottom = `${h}px`;
         };
@@ -1267,6 +1333,7 @@ _newProject() {
           bottomPanel.style.transition = '';
           document.body.style.cursor = '';
           document.body.style.userSelect = '';
+          save();
         };
         bottomResizer.classList.add('dragging');
         document.body.style.cursor = 'row-resize';
@@ -1274,6 +1341,14 @@ _newProject() {
         document.addEventListener('pointermove', onMove);
         document.addEventListener('pointerup', onUp);
       });
+    }
+
+    // Apply restored bottom height (unless collapsed)
+    const restoredBottom = document.getElementById('bottom-panel');
+    if (restoredBottom && !document.body.classList.contains('bottom-collapsed')) {
+      restoredBottom.style.height = `${this._bottomHeight}px`;
+      const mainLayout = document.querySelector('.main-layout');
+      if (mainLayout) mainLayout.style.bottom = `${this._bottomHeight}px`;
     }
   }
 

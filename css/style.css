@@ -1708,7 +1708,6 @@ body.view-serial #resizer-bottom { display: none; }
 @keyframes slideInRight { from { opacity: 0; transform: translateX(40px) } to { opacity: 1; transform: translateX(0) } }
 @keyframes spin      { to { transform: rotate(360deg) } }
 @keyframes blink-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-@keyframes pulse-run { 0%,100% { box-shadow: 0 0 0 0 rgba(35,165,89,0.4); } 50% { box-shadow: 0 0 0 8px rgba(35,165,89,0); } }
 @keyframes led-glow-pulse {
   0%, 100% { box-shadow: 0 0 8px rgba(35, 165, 89, 0.8), 0 0 16px rgba(35, 165, 89, 0.4); opacity: 1; }
   50%      { box-shadow: 0 0 12px rgba(35, 165, 89, 1), 0 0 24px rgba(35, 165, 89, 0.6); opacity: 0.85; }
