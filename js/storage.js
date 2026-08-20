@@ -66,6 +66,7 @@ const StorageManager = {
       this._lastSavedAt = Date.now();
       this.markClean();
       this.showToast(`"${projectName}" saved to Saved Projects`, 'success');
+      this._pushToServer(project); // fire-and-forget: sync to the Node backend
       return project;
     } catch (e) {
       this.showToast('Save failed: ' + e.message, 'error');
@@ -83,12 +84,65 @@ const StorageManager = {
     try {
       localStorage.setItem(this.LS_SAVED_KEY, JSON.stringify(projects));
       this.showToast('Project deleted', 'success');
+      this._deleteOnServer(id); // fire-and-forget
       return true;
     } catch (e) { return false; }
   },
 
   _genId() {
     return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  },
+
+  /* ── Backend sync (Node server) ── */
+  async _serverAvailable() {
+    try {
+      return !!(window.ArduSimApi && await window.ArduSimApi.isAvailable());
+    } catch (e) { return false; }
+  },
+
+  async _pushToServer(project) {
+    try {
+      if (await this._serverAvailable()) await window.ArduSimApi.saveProject(project);
+    } catch (e) { /* offline / server down — local copy is kept */ }
+  },
+
+  async _deleteOnServer(id) {
+    try {
+      if (await this._serverAvailable()) await window.ArduSimApi.deleteProject(id);
+    } catch (e) { /* ignore */ }
+  },
+
+  /* Pull server projects into localStorage, then push any local-only ones up.
+     Returns { merged, pushed } so the caller can show a status toast. */
+  async syncFromServer() {
+    try {
+      if (!(await this._serverAvailable())) return { merged: 0, pushed: 0 };
+      const data = await window.ArduSimApi.listProjects();
+      const serverProjects = Array.isArray(data) ? data : (data.projects || []);
+      const local = this.getSavedProjects();
+      const serverIds = new Set();
+
+      for (const sp of serverProjects) {
+        const mig = this._migrateProject(sp);
+        if (!mig || !mig.id) continue;
+        serverIds.add(mig.id);
+        const idx = local.findIndex(l => l.id === mig.id);
+        if (idx >= 0) local[idx] = mig;
+        else local.unshift(mig);
+      }
+
+      localStorage.setItem(this.LS_SAVED_KEY, JSON.stringify(local));
+
+      let pushed = 0;
+      for (const lp of local) {
+        if (!serverIds.has(lp.id)) {
+          try { await window.ArduSimApi.saveProject(lp); pushed++; } catch (e) { /* ignore */ }
+        }
+      }
+      return { merged: serverProjects.length, pushed };
+    } catch (e) {
+      return { merged: 0, pushed: 0 };
+    }
   },
 
   /* ── Download project as JSON file ── */

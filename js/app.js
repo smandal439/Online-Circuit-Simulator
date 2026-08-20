@@ -36,6 +36,7 @@ class App {
       this._initBoardSelector();
       this._restoreProject();
       this._setupBeforeUnloadGuard();
+      this._syncProjectsFromServer();
 
       if (this.editor) {
         this.editor.init();
@@ -667,6 +668,19 @@ class App {
   }
 
   /* ══════════════════════ SAVED PROJECTS ══════════════════════ */
+  async _syncProjectsFromServer() {
+    try {
+      const result = await window.StorageManager?.syncFromServer?.();
+      if (!result) return;
+      const total = (result.merged || 0) + (result.pushed || 0);
+      if (total > 0) {
+        this.showToast(`Synced ${result.merged} project(s) from server`, 'info');
+      }
+    } catch (e) {
+      // Backend offline — the app simply continues with local storage
+    }
+  }
+
   _openSavedProjects() {
     this._renderSavedProjects();
     this._showModal('modal-saved');
