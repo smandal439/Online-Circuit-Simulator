@@ -10,6 +10,8 @@ class App {
     this.osc = null;
     this.plotter = null;
     this.isRunning = false;
+    this._runEpoch = 0;
+    this._pendingRunEpoch = 0;
     this._propsComp = null;
     this._projectName = 'Untitled Project';
     this._autoSaveDebounced = null;
@@ -99,7 +101,6 @@ class App {
     const get = id => document.getElementById(id);
 
     const runBtn    = get('btn-run');
-    const stopBtn   = get('btn-stop');
     const pauseBtn  = get('btn-pause');
     const saveBtn   = get('btn-save');
     const downloadBtn = get('btn-download');
@@ -138,8 +139,7 @@ class App {
     const bottomTabButtons = document.querySelectorAll('.btm-tab');
     const projectNameEl = get('project-name');
 
-    runBtn?.addEventListener('click', () => this.run());
-    stopBtn?.addEventListener('click', () => this.stop());
+    runBtn?.addEventListener('click', () => this.isRunning ? this.stop() : this.run());
     pauseBtn?.addEventListener('click', () => this.pauseResume());
     saveBtn?.addEventListener('click', () => this.saveProject());
     downloadBtn?.addEventListener('click', () => this.downloadProject());
@@ -391,6 +391,14 @@ class App {
       if (!suppressed) this.plotter?.addSerial(text);
     };
 
+    this.sim.onStart = () => {
+      if (this._pendingRunEpoch !== this._runEpoch) return; // stop requested while starting
+      this._setRunningState(true);
+      this._updateCompileStatus('Running');
+      this._updateStatus('Simulation running');
+      this.output?.log('Compile OK — running simulation', 'success');
+    };
+
     this.sim.onPinChange = (pinKey, value) => {
       if (this.canvas) this.canvas.updateSimState(this.sim.pinStates);
       if (this.osc)    this.osc.sample(this.sim.simTime, this.sim.pinStates);
@@ -553,6 +561,7 @@ class App {
     if (this.editor) this.editor.clearErrors();
 
     this.sim.stop();
+    this._pendingRunEpoch = this._runEpoch;
     let result;
     try {
       result = await this.sim.run(code);
@@ -565,12 +574,12 @@ class App {
       this._setRunningState(false);
       return;
     }
-    if (result) {
-      this._setRunningState(true);
-      this._updateCompileStatus('Running');
-      this._updateStatus('Simulation running');
-      this.output?.log('Compile OK — running simulation', 'success');
-    } else {
+    if (this._pendingRunEpoch !== this._runEpoch) {
+      // Stop was requested while this run was in flight — leave the stopped state as-is
+      this._updateCompileStatus('Stopped');
+      return;
+    }
+    if (!result) {
       this._setRunningState(false);
       this._updateCompileStatus('Compile failed');
       this.output?.log('Compile failed — see the error message below', 'error');
@@ -578,6 +587,7 @@ class App {
   }
 
   stop() {
+    this._runEpoch++;
     this.sim.stop();
     this._setRunningState(false);
     this._updateStatus('Stopped');
@@ -875,11 +885,20 @@ _newProject() {
   _setRunningState(running) {
     this.isRunning = running;
     const runBtn   = document.getElementById('btn-run');
-    const stopBtn  = document.getElementById('btn-stop');
+    const runLabel = document.getElementById('btn-run-label');
+    const runIcon  = document.getElementById('btn-run-icon');
     const pauseBtn = document.getElementById('btn-pause');
     const simDot   = document.getElementById('sim-dot');
-    if (runBtn)  runBtn.classList.toggle('hidden', running);
-    if (stopBtn) stopBtn.classList.toggle('hidden', !running);
+    if (runBtn) {
+      runBtn.classList.toggle('running', running);
+      runBtn.title = running ? 'Stop Simulation (F6)' : 'Compile & Run (F5)';
+    }
+    if (runLabel) runLabel.textContent = running ? 'Stop' : 'Run';
+    if (runIcon) {
+      runIcon.innerHTML = running
+        ? '<path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5" />'
+        : '<path d="M10.804 8 5 4.633v6.734zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696z" />';
+    }
     if (pauseBtn) pauseBtn.disabled = !running;
     if (simDot) simDot.classList.toggle('running', running);
     if (!running) {

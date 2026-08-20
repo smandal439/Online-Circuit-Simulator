@@ -18,6 +18,7 @@ class ArduinoSimulator {
     this._loopAbortController = null;
     this._loopPromise = null;
     this.onSerial = null;  // callback(text, type)
+    this.onStart = null;  // callback() — fired when the simulation loop actually starts
     this.onPinChange = null;  // callback(pinKey, value)
     this.onError = null;  // callback(err)
     this.onStatus = null;  // callback(msg)
@@ -349,10 +350,7 @@ class ArduinoSimulator {
           const realMs = ms / self.speed;
           self.simTime += ms;
           self._iterSinceDelay = 0;
-          await new Promise((resolve, reject) => {
-            const id = setTimeout(resolve, realMs);
-            self._delays.push({ id, resolve, reject });
-          });
+          await self._delayPromise(realMs);
         },
         async delayMicroseconds(us) {
           us = Number(us);
@@ -361,10 +359,7 @@ class ArduinoSimulator {
           const realMs = ms / self.speed;
           self.simTime += ms;
           self._iterSinceDelay = 0;
-          await new Promise((resolve, reject) => {
-            const id = setTimeout(resolve, Math.max(0, realMs));
-            self._delays.push({ id, resolve, reject });
-          });
+          await self._delayPromise(realMs);
         },
         millis() { return self.simTime; },
         micros() { return self.simTime * 1000; },
@@ -1018,6 +1013,7 @@ class ArduinoSimulator {
     const { keys, vals, fn } = this._compiledCtx;
 
     this._serialLog('[ArduSim] Simulation started\n', 'system');
+    if (this.onStart) this.onStart();
 
     // Start FPS ticker
     this._fpsInterval = setInterval(() => this._tickFps(), 500);
@@ -1100,15 +1096,62 @@ class ArduinoSimulator {
     this._stopAllTones();
   }
 
+  /* Pausable sketch delay — records start/duration so pause() can freeze it */
+  _delayPromise(realMs) {
+    const entry = {
+      duration: Math.max(0, realMs),
+      start: Date.now(),
+      id: null,
+      frozen: false,
+      resolve: null,
+      reject: null,
+    };
+    const startTimer = () => {
+      entry.id = setTimeout(() => {
+        const idx = this._delays.indexOf(entry);
+        if (idx !== -1) this._delays.splice(idx, 1);
+        if (entry.resolve) entry.resolve();
+      }, Math.max(0, entry.duration));
+    };
+    return new Promise((resolve, reject) => {
+      entry.resolve = resolve;
+      entry.reject = reject;
+      startTimer();
+      this._delays.push(entry);
+    });
+  }
+
   pause() {
     this.isPaused = true;
+    // Freeze any in-flight sketch delay so pause takes effect immediately
+    const now = Date.now();
+    for (const d of this._delays) {
+      if (d.frozen) continue;
+      const remaining = Math.max(0, d.duration - (now - d.start));
+      clearTimeout(d.id);
+      d.frozen = true;
+      d.duration = remaining;
+    }
   }
 
   resume() {
     this.isPaused = false;
+    // Restart any frozen delays with their remaining time
+    const now = Date.now();
+    for (const d of this._delays) {
+      if (!d.frozen) continue;
+      d.frozen = false;
+      d.start = now;
+      d.id = setTimeout(() => {
+        const idx = this._delays.indexOf(d);
+        if (idx !== -1) this._delays.splice(idx, 1);
+        if (d.resolve) d.resolve();
+      }, Math.max(0, d.duration));
+    }
     if (this._resumeResolve) {
-      this._resumeResolve();
+      const r = this._resumeResolve;
       this._resumeResolve = null;
+      r();
     }
   }
 
