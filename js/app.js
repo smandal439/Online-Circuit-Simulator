@@ -386,8 +386,9 @@ class App {
   /* ══════════════════════ SIMULATOR EVENTS ══════════════════════ */
   _attachSimulatorEvents() {
     this.sim.onSerial = (text, type) => {
+      const suppressed = type === 'data' && this.serial?.isBaudMismatched();
       this.serial?.receive(text, type);
-      this.plotter?.addSerial(text);
+      if (!suppressed) this.plotter?.addSerial(text);
     };
 
     this.sim.onPinChange = (pinKey, value) => {

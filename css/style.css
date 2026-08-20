@@ -951,6 +951,7 @@ body.view-serial .bottom-panel {
 .serial-line.error { color: var(--serial-error); }
 .serial-line.info  { color: var(--serial-info); }
 .serial-line.system { color: var(--text-muted); font-style: italic; }
+.serial-line.warning { color: #e3b341; }
 .serial-timestamp { color: var(--text-muted); margin-right: 8px; }
 .serial-hex { color: #d2a8ff; font-weight: 500; }
 

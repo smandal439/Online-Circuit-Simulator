@@ -26,6 +26,7 @@ class SerialMonitor {
     this._pendingFlush = null;
     this._searchTerm = '';
     this._allLines = []; // store { text, type } for filtering
+    this._baudWarned = false;
 
     this._bind();
   }
@@ -42,10 +43,31 @@ class SerialMonitor {
       this._searchTerm = (e.target.value || '').toLowerCase();
       this._applyFilter();
     });
+    this.baudSel && this.baudSel.addEventListener('change', () => {
+      this._baudWarned = false;
+    });
+  }
+
+  isBaudMismatched() {
+    if (!this.baudSel || !window.ArduinoSim) return false;
+    const monitorBaud = parseInt(this.baudSel.value, 10);
+    const codeBaud = window.ArduinoSim.serialBaud;
+    return Number.isFinite(monitorBaud) && Number.isFinite(codeBaud) && monitorBaud !== codeBaud;
+  }
+
+  _warnBaudMismatch() {
+    if (this._baudWarned) return;
+    this._baudWarned = true;
+    const codeBaud = window.ArduinoSim ? window.ArduinoSim.serialBaud : '?';
+    this._appendLine(`⚠ Baud rate mismatch — code uses ${codeBaud} baud, monitor is set to ${this.baudSel.value} baud. Serial data suppressed.`, 'warning');
   }
 
   receive(text, type = 'data') {
     if (typeof text !== 'string' || !text) return;
+    if (type === 'data' && this.isBaudMismatched()) {
+      this._warnBaudMismatch();
+      return;
+    }
     this.buffer += text;
     // Never let an unflushed buffer grow without bound
     if (this.buffer.length > 131072) {
