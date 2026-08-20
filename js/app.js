@@ -1375,6 +1375,7 @@ _newProject() {
 
     body.innerHTML = '';
     rows.forEach(row => body.appendChild(row));
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     overlay.classList.remove('hidden');
     modal.classList.add('active');
   }
