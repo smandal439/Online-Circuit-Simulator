@@ -784,16 +784,16 @@ _newProject() {
   /* ══════════════════════ AUTO-SAVE ══════════════════════ */
   _triggerAutoSave() {
     if (!this._autoSaveDebounced) {
-      this._autoSaveDebounced = window.Utils?.debounce((code, circuit, name) => {
-        window.StorageManager?.autoSave(code, circuit, name);
-      }, 2000) ?? ((code, circuit, name) => {
+      this._autoSaveDebounced = window.Utils?.debounce((code, circuit) => {
+        window.StorageManager?.autoSave(code, circuit, this._projectName || 'Untitled Project');
+      }, 2000) ?? ((code, circuit) => {
         clearTimeout(this._autoSaveTimer);
-        this._autoSaveTimer = setTimeout(() => window.StorageManager?.autoSave(code, circuit, name), 2000);
+        this._autoSaveTimer = setTimeout(() => window.StorageManager?.autoSave(code, circuit, this._projectName || 'Untitled Project'), 2000);
       });
     }
     const code = this.editor?.getCode() || '';
     const circuit = this.canvas?.serialize() || { components: [], wires: [] };
-    this._autoSaveDebounced(code, circuit, this._projectName);
+    this._autoSaveDebounced(code, circuit);
   }
 
   /* ══════════════════════ COMPONENT LIBRARY ══════════════════════ */
@@ -1449,11 +1449,11 @@ _newProject() {
           <div class="example-tags">${(example.tags || []).map(t => `<span class="tag">${this._escHtml(t)}</span>`).join('')}</div>
         </div>`;
       item.addEventListener('click', () => {
+        this._setProjectName(example.name);
         if (this.editor) this.editor.setCode(example.code || '');
         if (example.circuit && this.canvas) this._loadExampleCircuit(example.circuit);
         this._closeModal();
         this.showToast(`${example.name} loaded`, 'success');
-        this._setProjectName(example.name);
       });
       container.appendChild(item);
     }
