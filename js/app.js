@@ -1215,6 +1215,47 @@ _newProject() {
     };
     bindResizer('resizer-left', 'panel-editor', 'left');
     bindResizer('resizer-right', 'panel-components', 'right');
+
+    // Bottom panel resizer (drag up/down to change height)
+    const bottomResizer = document.getElementById('resizer-bottom');
+    const bottomPanel = document.getElementById('bottom-panel');
+    if (bottomResizer && bottomPanel) {
+      const mainLayout = document.querySelector('.main-layout');
+      bottomResizer.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (document.body.classList.contains('view-code') ||
+            document.body.classList.contains('view-circuit') ||
+            document.body.classList.contains('view-serial')) return;
+        if (bottomPanel.classList.contains('collapsed')) {
+          bottomPanel.classList.remove('collapsed');
+          document.body.classList.remove('bottom-collapsed');
+        }
+        const startY = e.clientY;
+        const startH = bottomPanel.getBoundingClientRect().height;
+        const minH = 80;
+        const maxH = Math.max(minH + 50, window.innerHeight - 240);
+        bottomPanel.style.transition = 'none';
+        const onMove = (ev) => {
+          let h = startH + (startY - ev.clientY);
+          h = Math.max(minH, Math.min(maxH, h));
+          bottomPanel.style.height = `${h}px`;
+          if (mainLayout) mainLayout.style.bottom = `${h}px`;
+        };
+        const onUp = () => {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          bottomResizer.classList.remove('dragging');
+          bottomPanel.style.transition = '';
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        };
+        bottomResizer.classList.add('dragging');
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    }
   }
 
   _toggleOscPause(button) {

@@ -516,6 +516,24 @@ body.view-serial .bottom-panel {
 }
 .panel-resizer:hover, .panel-resizer.dragging { background: var(--accent); }
 
+.panel-resizer-h {
+  height: 4px;
+  background: transparent;
+  cursor: row-resize;
+  flex-shrink: 0;
+  z-index: 11;
+  position: relative;
+  transition: background var(--trans-fast);
+}
+.panel-resizer-h::after {
+  content: '';
+  position: absolute;
+  top: -3px; left: 0; right: 0; bottom: -3px;
+}
+.panel-resizer-h:hover, .panel-resizer-h.dragging { background: var(--accent); }
+.panel-resizer-h.dragging { pointer-events: none; }
+body.view-serial #resizer-bottom { display: none; }
+
 /* Panel Header */
 .panel-header {
   display: flex;
