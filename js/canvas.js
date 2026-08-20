@@ -28,7 +28,7 @@ class CircuitCanvas {
     this.wiringFrom   = null;     // { inst, pin, wx, wy }
     this.wireMouse    = null;     // { x, y } world coords
     this.placingType  = null;
-    this._wireOffsets = {};       // wireId -> {ox, oy} for custom curve position
+    this._wireOffsets = {};       // wireId -> {hx, hy} routing hint for wire reshape
     this.placingMouse = null;
 
     /* History */
@@ -236,6 +236,138 @@ class CircuitCanvas {
     }
   }
 
+  // ─── Wire routing (Wokwi / Tinkercad style orthogonal traces) ───
+  // A wire exits each pin straight out from the component side, then runs
+  // horizontally/vertically with right-angle bends, avoiding component bodies.
+
+  _getPinExitDir(instId, pinId) {
+    const inst = this.components.find(c => c.id === instId);
+    if (!inst) return { x: 0, y: 1 };
+    const def = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS[inst.type];
+    if (!def) return { x: 0, y: 1 };
+    const pin = def.pins.find(p => p.id === pinId);
+    if (!pin) return { x: 0, y: 1 };
+    let side = pin.side;
+    if (!side) {
+      const w = def.width || 40, h = def.height || 40;
+      side = pin.y < h * 0.5 ? 'top' : (pin.y > h * 0.5 ? 'bottom' : (pin.x < w * 0.5 ? 'left' : 'right'));
+    }
+    const dirs = { top: {x: 0, y: -1}, bottom: {x: 0, y: 1}, left: {x: -1, y: 0}, right: {x: 1, y: 0} };
+    let d = dirs[side] || { x: 0, y: 1 };
+    const rot = (inst.rotation || 0) % 4;
+    for (let i = 0; i < rot; i++) d = { x: -d.y, y: d.x }; // rotate 90° clockwise
+    return d;
+  }
+
+  _componentRects() {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    const rects = [];
+    for (const c of this.components) {
+      const def = defs && defs[c.type];
+      if (!def) continue;
+      rects.push({ x: c.x - 6, y: c.y - 6, w: (def.width || 40) + 12, h: (def.height || 40) + 12 });
+    }
+    return rects;
+  }
+
+  // Liang–Barsky: does segment (a→b) intersect axis-aligned rect r?
+  _segHitsRect(ax, ay, bx, by, r) {
+    const l = r.x, t = r.y, ri = r.x + r.w, b = r.y + r.h;
+    if ((ax < l && bx < l) || (ax > ri && bx > ri) || (ay < t && by < t) || (ay > b && by > b)) return false;
+    let tmin = 0, tmax = 1;
+    const dx = bx - ax, dy = by - ay;
+    const p = [-dx, dx, -dy, dy];
+    const q = [ax - l, ri - ax, ay - t, b - ay];
+    for (let i = 0; i < 4; i++) {
+      if (p[i] === 0) {
+        if (q[i] < 0) return false;
+      } else {
+        const r0 = q[i] / p[i];
+        if (p[i] < 0) { if (r0 > tmax) return false; if (r0 > tmin) tmin = r0; }
+        else          { if (r0 < tmin) return false; if (r0 < tmax) tmax = r0; }
+      }
+    }
+    return tmin <= tmax;
+  }
+
+  _scorePath(pts) {
+    const rects = this._componentRects();
+    let penalty = 0, len = 0;
+    // Score from index 1..len-1 — excludes the pin→stub end segments
+    for (let i = 1; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      len += Math.hypot(b.x - a.x, b.y - a.y);
+      for (const r of rects) {
+        if (this._segHitsRect(a.x, a.y, b.x, b.y, r)) penalty++;
+      }
+    }
+    return { penalty, bends: pts.length - 2, len };
+  }
+
+  _laneCandidates(a, b, hint) {
+    const push = (arr, v) => { if (arr.every(e => Math.abs(e - v) > 1)) arr.push(v); };
+    const xLanes = [], yLanes = [];
+    push(xLanes, (a.x + b.x) / 2); push(xLanes, a.x - 30); push(xLanes, a.x + 30);
+    push(xLanes, b.x - 30); push(xLanes, b.x + 30);
+    push(yLanes, (a.y + b.y) / 2); push(yLanes, a.y - 30); push(yLanes, a.y + 30);
+    push(yLanes, b.y - 30); push(yLanes, b.y + 30);
+    if (hint) { push(xLanes, hint.x); push(yLanes, hint.y); }
+    return { xLanes, yLanes };
+  }
+
+  // Build an orthogonal polyline from pin1 (p1, exiting along d1) to pin2 (p2, exiting d2).
+  _routePath(p1, d1, p2, d2, hint) {
+    const STUB = 24;
+    const s1 = { x: p1.x + d1.x * STUB, y: p1.y + d1.y * STUB };
+    const s2 = d2 && (d2.x || d2.y) ? { x: p2.x + d2.x * STUB, y: p2.y + d2.y * STUB } : { x: p2.x, y: p2.y };
+    const a = s1, b = s2;
+
+    const candidates = [];
+    const mk = (...pts) => candidates.push([a, ...pts, b]);
+
+    if (hint) {
+      // Dragging: force the route through the cursor (orthogonal bends around it)
+      mk({ x: hint.x, y: a.y }, { x: hint.x, y: b.y });
+      mk({ x: a.x, y: hint.y }, { x: b.x, y: hint.y });
+      mk({ x: hint.x, y: a.y }, { x: hint.x, y: hint.y }, { x: b.x, y: hint.y });
+      mk({ x: a.x, y: hint.y }, { x: hint.x, y: hint.y }, { x: hint.x, y: b.y });
+    } else {
+      // Two L shapes
+      mk({ x: b.x, y: a.y });          // horizontal then vertical
+      mk({ x: a.x, y: b.y });          // vertical then horizontal
+
+      // Z shapes through lanes
+      const { xLanes, yLanes } = this._laneCandidates(a, b, hint);
+      for (const lane of xLanes) mk({ x: lane, y: a.y }, { x: lane, y: b.y });
+      for (const lane of yLanes) mk({ x: a.x, y: lane }, { x: b.x, y: lane });
+    }
+
+    // Pick the best candidate: least body crossings, then fewest bends, then shortest
+    let best = null, bestScore = null;
+    for (const cand of candidates) {
+      const sc = this._scorePath(cand);
+      if (!bestScore ||
+          sc.penalty < bestScore.penalty ||
+          (sc.penalty === bestScore.penalty && sc.bends < bestScore.bends) ||
+          (sc.penalty === bestScore.penalty && sc.bends === bestScore.bends && sc.len < bestScore.len)) {
+        best = cand;
+        bestScore = sc;
+      }
+    }
+    return [p1, ...(best || [a, b]), p2];
+  }
+
+  _wirePath(wire) {
+    const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
+    const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
+    if (!p1 || !p2) return null;
+    const d1 = this._getPinExitDir(wire.from.instId, wire.from.pinId);
+    const d2 = this._getPinExitDir(wire.to.instId, wire.to.pinId);
+    const off = this._wireOffsets && this._wireOffsets[wire.id];
+    const hint = off && Number.isFinite(off.hx) ? { x: off.hx, y: off.hy } : null;
+    return this._routePath(p1, d1, p2, d2, hint);
+  }
+
   _drawWires(ctx) {
     const sim = window.ArduinoSim;
 
@@ -258,57 +390,41 @@ class CircuitCanvas {
       const isSelected = this.selectedWire && this.selectedWire.id === wire.id;
       if (isSelected) color = '#00e5ff';
 
-      this._drawWire(ctx, p1, p2, color, isSelected, wire.id);
+      const pts = this._wirePath(wire);
+      if (pts) this._drawWire(ctx, pts, color, isSelected);
     }
 
     // Active wire preview
     if (this.mode === 'wiring' && this.wiringFrom && this.wireMouse) {
       const p1 = { x: this.wiringFrom.wx, y: this.wiringFrom.wy };
-      const p2 = this.wireMouse;
-      this._drawWire(ctx, p1, p2, '#00e5ff', true);
+      const d1 = this._getPinExitDir(this.wiringFrom.instId, this.wiringFrom.pinId);
+      const pts = this._routePath(p1, d1, this.wireMouse, null, this.wireMouse);
+      this._drawWire(ctx, pts, '#00e5ff', true);
     }
   }
 
-  _drawWire(ctx, p1, p2, color, highlighted) {
+  _drawWire(ctx, pts, color, highlighted) {
+    if (!pts || pts.length < 2) return;
     ctx.save();
     ctx.strokeStyle = color;
     ctx.lineWidth = highlighted ? 3 / this.zoom : 2 / this.zoom;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     if (highlighted) {
       ctx.shadowColor = color;
       ctx.shadowBlur = 6;
     }
 
-    // Compute a smooth curved wire (quadratic Bézier) with a perpendicular offset
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist === 0) {
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.arc(p1.x, p1.y, 3 / this.zoom, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      return;
-    }
-
-    const mx = (p1.x + p2.x) / 2;
-    const my = (p1.y + p2.y) / 2;
-
-    // perpendicular offset (12px scaled by zoom) so the curve is visible
-    const ox = -dy / dist * 12 / this.zoom;
-    const oy =  dx / dist * 12 / this.zoom;
-
     ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.quadraticCurveTo(mx + ox, my + oy, p2.x, p2.y);
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.stroke();
 
-    // Junction dots
-    ctx.fillStyle = color;
+    // Junction dots at the pins
     ctx.shadowBlur = 0;
-    ctx.beginPath(); ctx.arc(p1.x, p1.y, 3 / this.zoom, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(p2.x, p2.y, 3 / this.zoom, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, 3 / this.zoom, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(pts[pts.length - 1].x, pts[pts.length - 1].y, 3 / this.zoom, 0, Math.PI * 2); ctx.fill();
 
     ctx.restore();
   }
@@ -684,15 +800,13 @@ class CircuitCanvas {
         return;
       }
 
-      // ── wire‑drag: move the curve's control point ─────────────────────
+      // ── wire‑drag: re-route the wire through the cursor ─────────────────
       if (this.mode !== 'wiring' && this.mode !== 'panning') {
-        for (const wire of this.wires) {
-          if (this._isNearWire(world.x, world.y, wire)) {
-            this.mode = 'wiredrag';
-            this.draggingWire = { wireId: wire.id };
-            this._wireOffsets[wire.id] = { ox: 0, oy: 0 };
-            break;
-          }
+        const wire = this._hitTestWire(world.x, world.y);
+        if (wire) {
+          this.mode = 'wiredrag';
+          this.draggingWire = { wireId: wire.id };
+          this._wireOffsets[wire.id] = { hx: world.x, hy: world.y };
         }
       }
 
@@ -768,16 +882,7 @@ class CircuitCanvas {
     if (this.mode === 'wiredrag' && this.draggingWire) {
       const wire = this.wires.find(w => w.id === this.draggingWire.wireId);
       if (wire) {
-        const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
-        const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
-        if (p1 && p2) {
-          const mx = (p1.x + p2.x) / 2;
-          const my = (p1.y + p2.y) / 2;
-          this._wireOffsets[wire.id] = {
-            ox: world.x - mx,
-            oy: world.y - my,
-          };
-        }
+        this._wireOffsets[wire.id] = { hx: world.x, hy: world.y };
       }
       this._render();
       return;
@@ -824,6 +929,12 @@ class CircuitCanvas {
     if (this.mode === 'sliderdrag') {
       this.mode = 'idle';
       this.sliderDrag = null;
+    }
+    if (this.mode === 'wiredrag' && this.draggingWire) {
+      this._pushHistory();
+      this._onChanged();
+      this.mode = 'idle';
+      this.draggingWire = null;
     }
   }
 
@@ -1039,38 +1150,14 @@ class CircuitCanvas {
   _hitTestWire(wx, wy) {
     const threshold = Math.max(5, 6 / this.zoom);
     for (const wire of [...this.wires].reverse()) {
-      const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
-      const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
-      if (!p1 || !p2) continue;
-      // Manhattan wire: check horizontal then vertical segment
-      const mx = (p1.x + p2.x) / 2;
-      const d1 = this._distToSegment(wx, wy, p1.x, p1.y, mx, p1.y);
-      const d2 = this._distToSegment(wx, wy, mx, p1.y, mx, p2.y);
-      const d3 = this._distToSegment(wx, wy, mx, p2.y, p2.x, p2.y);
-      if (Math.min(d1, d2, d3) <= threshold) return wire;
+      const pts = this._wirePath(wire);
+      if (!pts) continue;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const d = this._distToSegment(wx, wy, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
+        if (d <= threshold) return wire;
+      }
     }
     return null;
-  }
-
-  /** Return true if (wx,wy) is within *threshold* world pixels of the wire's
-   *  straight line between its two pin world positions. */
-  _isNearWire(wx, wy, wire, thresh = 10 / this.zoom) {
-    const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
-    const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
-    if (!p1 || !p2) return false;
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const len2 = dx*dx + dy*dy;
-    if (len2 === 0) {
-      const d = Math.hypot(wx - p1.x, wy - p1.y);
-      return d < thresh;
-    }
-    const t = ((wx - p1.x)*dx + (wy - p1.y)*dy) / len2;
-    const tClamped = Math.min(Math.max(t, 0), 1);
-    const closestX = p1.x + tClamped * dx;
-    const closestY = p1.y + tClamped * dy;
-    const d = Math.hypot(wx - closestX, wy - closestY);
-    return d < thresh;
   }
 
   _distToSegment(px, py, x1, y1, x2, y2) {

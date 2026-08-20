@@ -504,13 +504,15 @@ defComp({
       ctx.fillText(pin.label, bx + (pin.side === 'left' ? pw - 2 : 2), pin.y + 1.5);
     }
 
-    // ── Built-in LED (GPIO2) ──
-    const ledPin = this.pins.find(p => p.id === 'D2');
+    // ── Built-in LED (GPIO2) — on the PCB between the headers ──
+    const ledCx = 66, ledCy = 208;
     const lit = sim && sim.pinStates && (sim.pinStates.pin_2 || 0) > 0;
-    drawLED_on_board(ctx, ledPin.x + 24, ledPin.y, lit ? '#ffee33' : '#444', 3);
+    drawLED_on_board(ctx, ledCx, ledCy, lit ? '#ffee33' : '#555', 3.5);
     ctx.fillStyle = '#8b949e';
-    ctx.font = '5px sans-serif';
-    ctx.fillText('L', ledPin.x + 24, ledPin.y + 9);
+    ctx.font = 'bold 5px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('L', ledCx, ledCy + 9);
+    ctx.fillText('GPIO2', ledCx, ledCy - 6);
 
     // ── Board name ──
     ctx.fillStyle = 'rgba(255,255,255,0.75)';

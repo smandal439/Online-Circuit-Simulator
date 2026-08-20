@@ -1622,6 +1622,12 @@ const EXAMPLE_CIRCUITS = {
       { id: 'w8', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
+  esp32_blink: {
+    components: [
+      { id: 'b1', type: 'esp32_devkit_v1', x: 200, y: 100 },
+    ],
+    wires: [],
+  },
 };
 
 const EXAMPLE_SKETCHES = [
@@ -1651,6 +1657,35 @@ void loop() {
   delay(1000);
 
   digitalWrite(ledPin, LOW);
+  Serial.println("LED OFF");
+  delay(1000);
+}`
+  },
+  {
+    id: 'esp32_blink',
+    name: 'ESP32 Onboard LED',
+    icon: '🔌',
+    desc: 'ESP32 DevKit V1 — blink the built-in LED on GPIO2 (LED_BUILTIN) with no wiring needed',
+    tags: ['esp32', 'beginner', 'LED'],
+    circuit: EXAMPLE_CIRCUITS.esp32_blink,
+    code: `/*
+ * ESP32 Onboard LED Blink
+ * The DevKit V1 has a blue built-in LED on GPIO2.
+ * LED_BUILTIN is mapped to GPIO2 automatically.
+ */
+
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  Serial.begin(115200);
+  Serial.println("ESP32 onboard LED blink started");
+}
+
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  Serial.println("LED ON");
+  delay(1000);
+
+  digitalWrite(LED_BUILTIN, LOW);
   Serial.println("LED OFF");
   delay(1000);
 }`

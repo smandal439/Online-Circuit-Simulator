@@ -122,6 +122,7 @@ const CircuitThumbnail = {
     ctx.save();
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.strokeStyle = '#3a6ea8';
     for (const w of data.wires) {
       const instA = data.components.find(c => c.id === w.from.instId);
@@ -130,8 +131,12 @@ const CircuitThumbnail = {
       const p1 = this._pinWorldPos(instA, defs[instA.type], w.from.pinId);
       const p2 = this._pinWorldPos(instB, defs[instB.type], w.to.pinId);
       if (!p1 || !p2) continue;
+      // Orthogonal (right-angle) routing like the main canvas
+      const mx = (p1.x + p2.x) / 2;
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(mx, p1.y);
+      ctx.lineTo(mx, p2.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.stroke();
     }
