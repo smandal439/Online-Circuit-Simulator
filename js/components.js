@@ -1598,6 +1598,385 @@ defComp({
   }
 });
 
+/* ─── Electromagnetic Relay ─── */
+defComp({
+  id: 'relay',
+  name: 'Relay Module',
+  category: 'Actuators',
+  icon: '⚡',
+  desc: 'Electromagnetic relay — coil driven by a signal pin switches COM to NO/NC',
+  width: 90,
+  height: 50,
+  defaultProps: { label: 'RELAY' },
+  pins: [
+    { id: 'vcc',  label: 'VCC',  type: PIN_TYPE.POWER,   x: 12, y: 50, side: 'bottom' },
+    { id: 'gnd',  label: 'GND',  type: PIN_TYPE.GND,     x: 24, y: 50, side: 'bottom' },
+    { id: 'sig',  label: 'IN',   type: PIN_TYPE.DIGITAL, x: 36, y: 50, side: 'bottom' },
+    { id: 'com',  label: 'COM',  type: PIN_TYPE.SIGNAL,  x: 54, y: 50, side: 'bottom' },
+    { id: 'no',   label: 'NO',   type: PIN_TYPE.SIGNAL,  x: 66, y: 50, side: 'bottom' },
+    { id: 'nc',   label: 'NC',   type: PIN_TYPE.SIGNAL,  x: 78, y: 50, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const active = inst.runtimeState && inst.runtimeState.active;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Pin leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [12,24,36,54,66,78].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 44); ctx.lineTo(px, 50); ctx.stroke();
+    });
+
+    // Body
+    const bodyGrad = ctx.createLinearGradient(0, 4, 90, 46);
+    bodyGrad.addColorStop(0, '#3d4a5a');
+    bodyGrad.addColorStop(1, '#1c2530');
+    ctx.fillStyle = bodyGrad;
+    roundRect(ctx, 2, 4, 86, 40, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#55677a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Coil (left) — inductor loops
+    ctx.strokeStyle = '#ffd24a';
+    ctx.lineWidth = 2;
+    const coilY = 22;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const cx = 14 + i * 5;
+      ctx.moveTo(cx, coilY + 3);
+      ctx.arc(cx, coilY, 3, 0, Math.PI);
+    }
+    ctx.stroke();
+
+    // Signal LED indicator
+    ctx.fillStyle = active ? '#33ff66' : '#335533';
+    ctx.beginPath(); ctx.arc(26, 22, 3.5, 0, Math.PI * 2); ctx.fill();
+    if (active) { ctx.shadowColor = '#33ff66'; ctx.shadowBlur = 6; }
+    ctx.beginPath(); ctx.arc(26, 22, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Contacts: COM terminal at right, lever swings between NO / NC
+    ctx.fillStyle = '#999';
+    ctx.fillRect(48, 20, 4, 4);   // COM fixed contact
+    ctx.fillRect(active ? 60 : 72, 12, 4, 4);  // NO (top) or NC (bottom) contact
+    // Moving lever
+    ctx.strokeStyle = active ? '#33ff66' : '#cc3333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(50, 22);
+    ctx.lineTo(active ? 62 : 74, active ? 14 : 30);
+    ctx.stroke();
+
+    // Labels
+    ctx.fillStyle = '#aab4c0';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(active ? 'ON' : 'OFF', 72, 42);
+    ctx.fillText('RELAY', 40, 10);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 2, 96, 55);
+    ctx.restore();
+  }
+});
+
+/* ─── DC Motor ─── */
+defComp({
+  id: 'dc_motor',
+  name: 'DC Motor',
+  category: 'Actuators',
+  icon: '🌀',
+  desc: 'Brushed DC motor — speed follows the PWM value on the IN pin',
+  width: 50,
+  height: 60,
+  defaultProps: { label: 'MOTOR' },
+  pins: [
+    { id: 'in',   label: 'IN',  type: PIN_TYPE.PWM,  x: 20, y: 60, side: 'bottom' },
+    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,  x: 34, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const speed = inst.runtimeState && inst.runtimeState.speed !== undefined ? inst.runtimeState.speed : 0;
+    const rpm = inst.runtimeState && inst.runtimeState.rpm !== undefined ? inst.runtimeState.rpm : 0;
+    const t = (sim && sim.simTime) || 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [[20,60],[34,60]].forEach(([px,py]) => {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 52); ctx.stroke();
+    });
+
+    // Body
+    const bodyGrad = ctx.createLinearGradient(2, 6, 48, 54);
+    bodyGrad.addColorStop(0, '#45474b');
+    bodyGrad.addColorStop(1, '#222428');
+    ctx.fillStyle = bodyGrad;
+    roundRect(ctx, 4, 6, 42, 46, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#5a5d63';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // End cap lines
+    ctx.strokeStyle = '#3a3d42';
+    ctx.beginPath(); ctx.moveTo(18, 8); ctx.lineTo(18, 50); ctx.stroke();
+
+    // Rotating shaft + fan (spins proportional to speed)
+    ctx.save();
+    ctx.translate(32, 26);
+    ctx.rotate(t * 0.02 * speed);
+    ctx.fillStyle = '#8a8e96';
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.rotate((i * Math.PI * 2) / 3);
+      roundRect(ctx, -2, -14, 4, 12, 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = '#555';
+    ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // Speed display
+    ctx.fillStyle = speed > 0.02 ? '#33ffcc' : '#8a8e96';
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${rpm} RPM`, 25, 48);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 3, 56, 63);
+    ctx.restore();
+  }
+});
+
+/* ─── LDR Photoresistor ─── */
+defComp({
+  id: 'ldr',
+  name: 'LDR Photoresistor',
+  category: 'Sensors',
+  icon: '💡',
+  desc: 'Light-dependent resistor — light level appears on the A pin (0–1023)',
+  width: 40,
+  height: 40,
+  defaultProps: { light: 512 },
+  interactive: [
+    { field: 'light', label: 'Light', min: 0, max: 1023, step: 1, unit: ' lx' },
+  ],
+  pins: [
+    { id: 'vcc',  label: 'VCC', type: PIN_TYPE.POWER,  x:  8, y: 40, side: 'bottom' },
+    { id: 'a',    label: 'A',   type: PIN_TYPE.ANALOG, x: 20, y: 40, side: 'bottom' },
+    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,    x: 32, y: 40, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const light = inst.runtimeState && inst.runtimeState.light !== undefined ? inst.runtimeState.light : (inst.props.light || 512);
+    const pct = light / 1023;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [[8,40],[20,40],[32,40]].forEach(([px,py]) => {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 34); ctx.stroke();
+    });
+
+    // Body
+    ctx.fillStyle = '#2a2a2a';
+    roundRect(ctx, 2, 3, 36, 31, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Wavy resistive track
+    ctx.strokeStyle = '#c8b06a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(8, 18);
+    ctx.lineTo(14, 12); ctx.lineTo(18, 24); ctx.lineTo(22, 12); ctx.lineTo(26, 24); ctx.lineTo(31, 18);
+    ctx.stroke();
+
+    // Light rays (animated with brightness)
+    const rayOn = pct > 0.05;
+    ctx.strokeStyle = rayOn ? '#ffee88' : '#666';
+    ctx.lineWidth = 1;
+    if (rayOn) { ctx.shadowColor = '#ffee88'; ctx.shadowBlur = 5; }
+    [[-2,4],[14,-2],[30,4]].forEach(([rx,ry]) => {
+      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 3, ry - 5); ctx.stroke();
+    });
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('LDR', 20, 30);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 0, 46, 46);
+    ctx.restore();
+  }
+});
+
+/* ─── PIR Motion Sensor ─── */
+defComp({
+  id: 'pir',
+  name: 'PIR Motion Sensor',
+  category: 'Sensors',
+  icon: '🚶',
+  desc: 'Passive infrared sensor — OUT goes HIGH while motion is detected',
+  width: 50,
+  height: 40,
+  defaultProps: { motion: 0 },
+  interactive: [
+    { field: 'motion', label: 'Motion', min: 0, max: 1, step: 1, unit: '' },
+  ],
+  pins: [
+    { id: 'vcc',  label: 'VCC', type: PIN_TYPE.POWER,   x: 12, y: 40, side: 'bottom' },
+    { id: 'out',  label: 'OUT', type: PIN_TYPE.DIGITAL, x: 25, y: 40, side: 'bottom' },
+    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,     x: 38, y: 40, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const motion = inst.runtimeState && inst.runtimeState.motion !== undefined ? !!inst.runtimeState.motion : !!(inst.props.motion || 0);
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [[12,40],[25,40],[38,40]].forEach(([px,py]) => {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 36); ctx.stroke();
+    });
+
+    // Board
+    ctx.fillStyle = '#1a5c1a';
+    roundRect(ctx, 2, 12, 46, 24, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#2d8c2d';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Sensor dome
+    ctx.fillStyle = motion ? '#e8f4ff' : '#cfd8e0';
+    ctx.beginPath();
+    ctx.arc(25, 12, 13, Math.PI, 0);
+    ctx.fill();
+    ctx.strokeStyle = '#aab4c0';
+    ctx.stroke();
+    ctx.fillStyle = motion ? '#3399ff' : '#77828e';
+    ctx.beginPath();
+    ctx.arc(25, 12, 7, Math.PI, 0);
+    ctx.fill();
+
+    // Indicator LED
+    ctx.fillStyle = motion ? '#ff5555' : '#442222';
+    ctx.beginPath(); ctx.arc(12, 22, 2.5, 0, Math.PI * 2); ctx.fill();
+    if (motion) { ctx.shadowColor = '#ff5555'; ctx.shadowBlur = 5; }
+    ctx.beginPath(); ctx.arc(12, 22, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#c8c8c8';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(motion ? 'MOTION' : 'IDLE', 33, 28);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 56, 46);
+    ctx.restore();
+  }
+});
+
+/* ─── Joystick ─── */
+defComp({
+  id: 'joystick',
+  name: 'Joystick Module',
+  category: 'Input',
+  icon: '🕹️',
+  desc: '2-axis analog joystick with push button (X, Y, SW)',
+  width: 60,
+  height: 60,
+  defaultProps: { x: 512, y: 512, sw: 0 },
+  interactive: [
+    { field: 'x',  label: 'X',  min: 0, max: 1023, step: 1 },
+    { field: 'y',  label: 'Y',  min: 0, max: 1023, step: 1 },
+    { field: 'sw', label: 'SW', min: 0, max: 1,    step: 1 },
+  ],
+  pins: [
+    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,     x:  8, y: 60, side: 'bottom' },
+    { id: 'vcc',  label: 'VCC', type: PIN_TYPE.POWER,   x: 20, y: 60, side: 'bottom' },
+    { id: 'x',    label: 'X',   type: PIN_TYPE.ANALOG,  x: 32, y: 60, side: 'bottom' },
+    { id: 'y',    label: 'Y',   type: PIN_TYPE.ANALOG,  x: 44, y: 60, side: 'bottom' },
+    { id: 'sw',   label: 'SW',  type: PIN_TYPE.DIGITAL, x: 56, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const xv = inst.runtimeState && inst.runtimeState.x !== undefined ? inst.runtimeState.x : (inst.props.x || 512);
+    const yv = inst.runtimeState && inst.runtimeState.y !== undefined ? inst.runtimeState.y : (inst.props.y || 512);
+    const pressed = inst.runtimeState && inst.runtimeState.sw !== undefined ? !!inst.runtimeState.sw : !!(inst.props.sw || 0);
+    const stickX = (xv / 1023 - 0.5) * 12;
+    const stickY = (yv / 1023 - 0.5) * 12;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [[8,60],[20,60],[32,60],[44,60],[56,60]].forEach(([px,py]) => {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 54); ctx.stroke();
+    });
+
+    // Base
+    ctx.fillStyle = '#26303a';
+    roundRect(ctx, 2, 6, 56, 48, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#4a5a68';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Thumb pad base
+    ctx.fillStyle = '#34424e';
+    ctx.beginPath(); ctx.arc(30, 28, 18, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#55677a';
+    ctx.stroke();
+
+    // Direction guides
+    ctx.strokeStyle = '#55677a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(30, 12); ctx.lineTo(30, 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(30, 42); ctx.lineTo(30, 44); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14, 28); ctx.lineTo(16, 28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(44, 28); ctx.lineTo(46, 28); ctx.stroke();
+
+    // Stick
+    ctx.save();
+    ctx.translate(30 + stickX, 28 + stickY);
+    ctx.fillStyle = '#c8d0d8';
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#8a96a2';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#f0f4f8';
+    ctx.beginPath(); ctx.arc(-2.5, -2.5, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // SW indicator
+    ctx.fillStyle = pressed ? '#ff5555' : '#444';
+    ctx.beginPath(); ctx.arc(44, 46, 3, 0, Math.PI * 2); ctx.fill();
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 3, 66, 63);
+    ctx.restore();
+  }
+});
+
 /* ─── LCD 16x2 ─── */
 defComp({
   id: 'lcd1602',
@@ -1948,9 +2327,9 @@ defComp({
 const COMPONENT_CATALOG = [
   { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
   { category: 'Output',    ids: ['led', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306'] },
-  { category: 'Input',     ids: ['push_button', 'potentiometer'] },
-  { category: 'Actuators', ids: ['servo'] },
-  { category: 'Sensors',   ids: ['dht11', 'hcsr04'] },
+  { category: 'Input',     ids: ['push_button', 'potentiometer', 'joystick'] },
+  { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay'] },
+  { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir'] },
   { category: 'Passive',   ids: ['resistor', 'capacitor', 'breadboard'] },
   { category: 'Power',     ids: ['power_5v', 'power_gnd'] },
 ];

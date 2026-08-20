@@ -1541,6 +1541,87 @@ const EXAMPLE_CIRCUITS = {
       { id: 'w8', from: { instId: 's7', pinId: 'com' }, to: { instId: 'b1', pinId: 'GND1' } },
     ],
   },
+  relay_control: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'rly', type: 'relay', x: 120, y: 300 },
+      { id: 'led1', type: 'led', x: 340, y: 260 },
+      { id: 'r1', type: 'resistor', x: 340, y: 340 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: 'D9' }, to: { instId: 'rly', pinId: 'sig' } },
+      { id: 'w2', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'rly', pinId: 'vcc' } },
+      { id: 'w3', from: { instId: 'rly', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w4', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'rly', pinId: 'com' } },
+      { id: 'w5', from: { instId: 'rly', pinId: 'no' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w6', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w7', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  dc_motor_speed: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'pot1', type: 'potentiometer', x: 120, y: 300 },
+      { id: 'mt1', type: 'dc_motor', x: 340, y: 300 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'pot1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'pot1', pinId: 'wiper' }, to: { instId: 'b1', pinId: 'A0' } },
+      { id: 'w3', from: { instId: 'pot1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w4', from: { instId: 'b1', pinId: 'D9' }, to: { instId: 'mt1', pinId: 'in' } },
+      { id: 'w5', from: { instId: 'mt1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  ldr_lamp: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'ldr1', type: 'ldr', x: 120, y: 300 },
+      { id: 'led1', type: 'led', x: 340, y: 260 },
+      { id: 'r1', type: 'resistor', x: 340, y: 340 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'ldr1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'ldr1', pinId: 'a' }, to: { instId: 'b1', pinId: 'A0' } },
+      { id: 'w3', from: { instId: 'ldr1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w4', from: { instId: 'b1', pinId: 'D9' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w5', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w6', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  pir_alarm: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'pir1', type: 'pir', x: 120, y: 300 },
+      { id: 'led1', type: 'led', x: 340, y: 260 },
+      { id: 'r1', type: 'resistor', x: 340, y: 340 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'pir1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'pir1', pinId: 'out' }, to: { instId: 'b1', pinId: 'D2' } },
+      { id: 'w3', from: { instId: 'pir1', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w4', from: { instId: 'b1', pinId: 'D13' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w5', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w6', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
+  joystick_led: {
+    components: [
+      { id: 'b1', type: 'arduino_uno', x: 200, y: 100 },
+      { id: 'joy', type: 'joystick', x: 120, y: 300 },
+      { id: 'led1', type: 'led', x: 380, y: 260 },
+      { id: 'r1', type: 'resistor', x: 380, y: 340 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: '5V' }, to: { instId: 'joy', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'joy', pinId: 'x' }, to: { instId: 'b1', pinId: 'A0' } },
+      { id: 'w3', from: { instId: 'joy', pinId: 'y' }, to: { instId: 'b1', pinId: 'A1' } },
+      { id: 'w4', from: { instId: 'joy', pinId: 'sw' }, to: { instId: 'b1', pinId: 'D2' } },
+      { id: 'w5', from: { instId: 'joy', pinId: 'gnd' }, to: { instId: 'b1', pinId: 'GND1' } },
+      { id: 'w6', from: { instId: 'b1', pinId: 'D9' }, to: { instId: 'led1', pinId: 'anode' } },
+      { id: 'w7', from: { instId: 'led1', pinId: 'cathode' }, to: { instId: 'r1', pinId: 'p1' } },
+      { id: 'w8', from: { instId: 'r1', pinId: 'p2' }, to: { instId: 'b1', pinId: 'GND1' } },
+    ],
+  },
 };
 
 const EXAMPLE_SKETCHES = [
@@ -2437,6 +2518,189 @@ void loop() {
     Serial.println(d);
     delay(500);
   }
+}`
+  },
+  {
+    id: 'relay_control',
+    name: 'Relay Control',
+    icon: '⚡',
+    desc: 'Toggle a relay on pin 9 — the LED (on the NO contact) lights when the coil is energized',
+    tags: ['beginner', 'relay', 'output'],
+    circuit: EXAMPLE_CIRCUITS.relay_control,
+    code: `/*
+ * Relay Control — energize the coil on D9
+ * The LED connected to the relay's NO contact turns on
+ * when the relay is active.
+ */
+
+int relayPin = 9;
+
+void setup() {
+  pinMode(relayPin, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Relay example started");
+}
+
+void loop() {
+  digitalWrite(relayPin, HIGH);
+  Serial.println("Relay ON");
+  delay(1000);
+
+  digitalWrite(relayPin, LOW);
+  Serial.println("Relay OFF");
+  delay(1000);
+}`
+  },
+  {
+    id: 'dc_motor_speed',
+    name: 'DC Motor Speed',
+    icon: '🌀',
+    desc: 'Control DC motor speed with a potentiometer — analogRead A0 maps to PWM on D9',
+    tags: ['beginner', 'motor', 'PWM', 'analog'],
+    circuit: EXAMPLE_CIRCUITS.dc_motor_speed,
+    code: `/*
+ * DC Motor Speed — potentiometer controls PWM speed
+ * Turn the potentiometer slider to speed the motor up or down.
+ */
+
+int motorPin = 9;
+int potPin = A0;
+
+void setup() {
+  pinMode(motorPin, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("DC motor speed control started");
+}
+
+void loop() {
+  int pot = analogRead(potPin);            // 0..1023
+  int speed = map(pot, 0, 1023, 0, 255);   // 0..255 PWM
+  analogWrite(motorPin, speed);
+
+  Serial.print("Pot: ");
+  Serial.print(pot);
+  Serial.print("  Speed: ");
+  Serial.println(speed);
+  delay(50);
+}`
+  },
+  {
+    id: 'ldr_lamp',
+    name: 'LDR Night Lamp',
+    icon: '💡',
+    desc: 'Light-dependent resistor — darker room (lower Light slider) dims the LED on D9',
+    tags: ['beginner', 'sensor', 'analog', 'light'],
+    circuit: EXAMPLE_CIRCUITS.ldr_lamp,
+    code: `/*
+ * LDR Night Lamp — LED brightness follows ambient light
+ * Slide the LDR "Light" slider: bright light → brighter LED.
+ */
+
+int ldrPin = A0;
+int ledPin = 9;
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("LDR lamp started");
+}
+
+void loop() {
+  int light = analogRead(ldrPin);          // 0..1023
+  int brightness = map(light, 0, 1023, 0, 255);
+  analogWrite(ledPin, brightness);
+
+  Serial.print("Light: ");
+  Serial.print(light);
+  Serial.print("  Brightness: ");
+  Serial.println(brightness);
+  delay(50);
+}`
+  },
+  {
+    id: 'pir_alarm',
+    name: 'PIR Motion Alarm',
+    icon: '🚶',
+    desc: 'PIR motion sensor on D2 — when Motion is ON the LED on D13 lights and the console prints it',
+    tags: ['beginner', 'sensor', 'motion'],
+    circuit: EXAMPLE_CIRCUITS.pir_alarm,
+    code: `/*
+ * PIR Motion Alarm — detect motion on D2
+ * Flip the "Motion" slider ON to trigger the LED and alarm messages.
+ */
+
+int pirPin = 2;
+int ledPin = 13;
+
+void setup() {
+  pinMode(pirPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("PIR alarm armed");
+}
+
+void loop() {
+  int motion = digitalRead(pirPin);
+
+  if (motion == HIGH) {
+    digitalWrite(ledPin, HIGH);
+    Serial.println("MOTION DETECTED!");
+  } else {
+    digitalWrite(ledPin, LOW);
+  }
+  delay(200);
+}`
+  },
+  {
+    id: 'joystick_led',
+    name: 'Joystick LED Control',
+    icon: '🕹️',
+    desc: 'Joystick X axis (A0) controls LED brightness on D9; pressing SW (D2) blinks it',
+    tags: ['intermediate', 'input', 'analog', 'joystick'],
+    circuit: EXAMPLE_CIRCUITS.joystick_led,
+    code: `/*
+ * Joystick LED — X axis dims the LED, SW button blinks it
+ * Move the X/Y sliders and click the SW slider to test.
+ */
+
+int xPin = A0;
+int yPin = A1;
+int swPin = 2;
+int ledPin = 9;
+
+void setup() {
+  pinMode(swPin, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Joystick demo started");
+}
+
+void loop() {
+  int x = analogRead(xPin);
+  int y = analogRead(yPin);
+  int sw = digitalRead(swPin);   // LOW when pressed
+
+  if (sw == LOW) {
+    // Pressed: blink fast
+    for (int i = 0; i < 5; i++) {
+      digitalWrite(ledPin, HIGH);
+      delay(50);
+      digitalWrite(ledPin, LOW);
+      delay(50);
+    }
+  } else {
+    // Not pressed: brightness from X axis
+    int brightness = map(x, 0, 1023, 0, 255);
+    analogWrite(ledPin, brightness);
+  }
+
+  Serial.print("X: ");
+  Serial.print(x);
+  Serial.print("  Y: ");
+  Serial.print(y);
+  Serial.print("  SW: ");
+  Serial.println(sw == LOW ? "PRESSED" : "released");
+  delay(80);
 }`
   },
 ];

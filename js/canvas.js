@@ -1497,6 +1497,56 @@ case 'push_button': {
           }
           break;
         }
+        case 'relay': {
+          const sigPin = this._getConnectedPinNum(inst.id, 'sig');
+          const sigOn = sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates
+            ? !!window.ArduinoSim.pinStates[`pin_${sigPin}`] : false;
+          inst.runtimeState.active = sigOn;
+          break;
+        }
+        case 'dc_motor': {
+          const inPin = this._getConnectedPinNum(inst.id, 'in');
+          let pwm = 0;
+          if (inPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+            pwm = window.ArduinoSim.pinStates[`pin_${inPin}`] || 0;
+          }
+          const speed = Math.max(0, Math.min(1, (Number(pwm) || 0) / 255));
+          inst.runtimeState.speed = speed;
+          inst.runtimeState.rpm = Math.round(speed * 120);
+          break;
+        }
+        case 'ldr': {
+          const aPin = this._getConnectedPinNum(inst.id, 'a');
+          if (aPin !== null) {
+            const val = inst.runtimeState.light !== undefined ? inst.runtimeState.light : (inst.props.light || 512);
+            if (window.ArduinoSim && window.ArduinoSim.pinStates) {
+              window.ArduinoSim.pinStates[`pin_${aPin}`] = val;
+            }
+          }
+          break;
+        }
+        case 'pir': {
+          const outPin = this._getConnectedPinNum(inst.id, 'out');
+          if (outPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+            const motion = inst.runtimeState.motion !== undefined ? !!inst.runtimeState.motion : !!(inst.props.motion || 0);
+            window.ArduinoSim.pinStates[`pin_${outPin}`] = motion ? 1 : 0;
+          }
+          break;
+        }
+        case 'joystick': {
+          if (window.ArduinoSim && window.ArduinoSim.pinStates) {
+            const xPin = this._getConnectedPinNum(inst.id, 'x');
+            const yPin = this._getConnectedPinNum(inst.id, 'y');
+            const swPin = this._getConnectedPinNum(inst.id, 'sw');
+            const xv = inst.runtimeState.x !== undefined ? inst.runtimeState.x : (inst.props.x || 512);
+            const yv = inst.runtimeState.y !== undefined ? inst.runtimeState.y : (inst.props.y || 512);
+            const swPressed = inst.runtimeState.sw !== undefined ? !!inst.runtimeState.sw : !!(inst.props.sw || 0);
+            if (xPin !== null) window.ArduinoSim.pinStates[`pin_${xPin}`] = xv;
+            if (yPin !== null) window.ArduinoSim.pinStates[`pin_${yPin}`] = yv;
+            if (swPin !== null) window.ArduinoSim.pinStates[`pin_${swPin}`] = swPressed ? 0 : 1; // INPUT_PULLUP
+          }
+          break;
+        }
       }
     }
   }
@@ -1609,6 +1659,16 @@ case 'push_button': {
             queue.push({ instId: inst.id, pinId: 'p1', resistance: current.resistance });
             queue.push({ instId: inst.id, pinId: 'p2', resistance: current.resistance });
           }
+        }
+      }
+
+      // 4b. Relay internal pass-through (COM <-> NO when active, else COM <-> NC)
+      if (inst.type === 'relay') {
+        const relayOn = !!(inst.runtimeState && inst.runtimeState.active);
+        if (current.pinId === 'com') {
+          queue.push({ instId: inst.id, pinId: relayOn ? 'no' : 'nc', resistance: current.resistance });
+        } else if (current.pinId === 'no' || current.pinId === 'nc') {
+          queue.push({ instId: inst.id, pinId: 'com', resistance: current.resistance });
         }
       }
 
