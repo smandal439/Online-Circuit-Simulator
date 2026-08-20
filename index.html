@@ -149,6 +149,52 @@
                         title="Focus Circuit Canvas">Circuit</button> <button class="hdr-dropdown-item"
                         id="btn-view-serial" role="menuitem" title="Focus Serial Monitor">Serial</button> </div>
             </div>
+            <div class="hdr-divider"></div> <!-- Home -->
+            <button class="hdr-btn hdr-btn-ghost" id="btn-home" title="Home Page">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+                    <path
+                        d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354zM2.5 7.707 8 2.207l5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3A.5.5 0 0 0 6 10v4H2.5z" />
+                </svg>
+            </button>
+            <!-- Help dropdown (Component Reference / Tutorials / Shortcuts) -->
+            <div class="hdr-dropdown hdr-dropdown-right" id="dd-help">
+                <button class="hdr-btn hdr-btn-ghost hdr-dropdown-trigger" id="btn-help-menu" title="Help & Guides"
+                    aria-haspopup="true" aria-expanded="false">
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+                        <path
+                            d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94" />
+                    </svg>
+                    <svg class="hdr-caret" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 11 1.5 4.5l.707-.707L8 9.586l5.793-5.793.707.707z" />
+                    </svg>
+                </button>
+                <div class="hdr-dropdown-menu" id="help-menu" role="menu">
+                    <button class="hdr-dropdown-item" id="btn-help-components" role="menuitem"
+                        title="Component Reference — descriptions & pin configurations">
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5z" />
+                        </svg> Component Reference
+                    </button>
+                    <button class="hdr-dropdown-item" id="btn-help-tutorials" role="menuitem"
+                        title="How to use ArduSim with step-by-step examples">
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783M8 13.069c-1.108-.63-2.722-.95-4.413-.796-1.073.099-2.153.345-3.087.661V2.88c1.108-.413 2.419-.743 3.525-.847 1.696-.16 3.325.196 4.975.843zm4.5-10.924c1.106.104 2.417.434 3.525.847v8.034c-.934-.316-2.014-.562-3.087-.66-1.691-.155-3.305.165-4.413.796V2.84c1.65-.647 3.279-1.004 4.975-.843z" />
+                        </svg> How to Use &amp; Tutorials
+                    </button>
+                    <div class="ctx-separator"></div>
+                    <button class="hdr-dropdown-item" id="btn-help-shortcuts" role="menuitem"
+                        title="Keyboard Shortcuts">
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
+                            <path
+                                d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-6 2A.25.25 0 0 1 4.25 10h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 10.75zm2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 10.75zm2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 10.75zm2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25z" />
+                        </svg> Keyboard Shortcuts
+                    </button>
+                </div>
+            </div>
             <div class="hdr-divider"></div> <!-- Auto-save status --> <span class="autosave-status" id="autosave-status"
                 title="Auto-save status"></span>
             <div class="hdr-divider"></div> <!-- Theme toggle --> <button class="hdr-btn hdr-btn-icon" id="btn-theme"
@@ -514,6 +560,29 @@
             <div class="modal-footer"> <button class="hdr-btn hdr-btn-run" id="btn-props-apply">Apply</button> <button
                     class="hdr-btn hdr-btn-ghost" data-modal="modal-props">Cancel</button> </div>
         </div>
+    </div> <!-- ════════════════ GUIDE OVERLAY (Home / Components / Tutorials) ════════════════ -->
+    <div class="guide-overlay hidden" id="guide-overlay" role="dialog" aria-modal="true" aria-label="Help & Guide">
+        <div class="guide-shell">
+            <header class="guide-header">
+                <div class="guide-brand"> <span class="guide-brand-icon">🎛️</span>
+                    <div class="guide-brand-text"> <strong>ArduSim</strong> <span>Help &amp; Guide</span> </div>
+                </div>
+                <nav class="guide-nav">
+                    <button class="guide-tab active" data-tab="home">🏠 Home</button>
+                    <button class="guide-tab" data-tab="components">🧩 Component Reference</button>
+                    <button class="guide-tab" data-tab="tutorials">📖 How to Use</button>
+                </nav>
+                <div class="guide-header-actions">
+                    <button class="gh-btn gh-btn-primary gh-btn-sm" id="guide-launch">Launch Simulator</button>
+                    <button class="modal-close guide-close" id="guide-close" aria-label="Close">✕</button>
+                </div>
+            </header>
+            <div class="guide-body" id="guide-body">
+                <div class="guide-pane active" id="guide-pane-home"></div>
+                <div class="guide-pane" id="guide-pane-components"></div>
+                <div class="guide-pane" id="guide-pane-tutorials"></div>
+            </div>
+        </div>
     </div> <!-- ════════════════ CONFIRM DIALOG ════════════════ -->
     <div class="confirm-overlay hidden" id="confirm-overlay" role="dialog" aria-modal="true"
         aria-labelledby="confirm-title">
@@ -576,6 +645,7 @@
     <script src="js/storage.js?v=20260825-2"></script>
     <script src="js/editor.js?v=20260825-1"></script>
     <script src="js/thumbnails.js?v=20260825-1"></script>
+    <script src="js/guide.js?v=20260821-1"></script>
     <script src="js/app.js?v=20260825-2"></script>
 </body>
 

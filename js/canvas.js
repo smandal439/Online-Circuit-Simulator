@@ -1099,6 +1099,18 @@ class CircuitCanvas {
       };
 
       addRow('Type', typeLabel);
+      // Pin function description from the guide reference
+      const pinDoc = window.GuidePinDescs && window.GuidePinDescs[inst.type];
+      if (pinDoc) {
+        if (pinDoc[pin.id] && pinDoc[pin.id].desc) {
+          addRow('Function', pinDoc[pin.id].desc);
+        } else {
+          // Board-style grouped pins (e.g. D0–D13, VP / VN): find a matching group
+          const match = Object.entries(pinDoc).find(([k, v]) =>
+            v.label && this._pinMatchesGroup(pin.id, v.label));
+          if (match && match[1].desc) addRow('Function', match[1].desc);
+        }
+      }
       if (inst.type === 'esp32_devkit_v1') {
         const espAliases = { VP:36, VN:39, TX0:1, RX0:3, EN:0 };
         if (pin.id in espAliases || /^D\d+$/.test(pin.id)) {
@@ -1212,6 +1224,27 @@ class CircuitCanvas {
     if (pinId in esp32Map) return esp32Map[pinId];
     const n = parseInt(pinId.replace(/[^0-9]/g,''));
     return isNaN(n) ? 0 : n;
+  }
+
+  /* Match a pin like D7/A3/VP against a group label like "D0–D13",
+     "A0–A5", "VP / VN" or "D34 / D35". */
+  _pinMatchesGroup(pinId, groupLabel) {
+    const label = String(groupLabel || '').trim();
+    // Range form: "D0–D13"
+    if (label.includes('–') || label.includes('-')) {
+      const parts = label.split(/[–-]/);
+      if (parts.length !== 2) return false;
+      const m = /^([AD])(\d+)$/.exec(pinId);
+      if (!m) return false;
+      const letter = m[1];
+      const num = parseInt(m[2], 10);
+      const start = /^([AD])(\d+)$/.exec(parts[0].trim());
+      const end = /^([AD])(\d+)$/.exec(parts[1].trim());
+      if (!start || !end || start[1] !== letter || end[1] !== letter) return false;
+      return num >= parseInt(start[2], 10) && num <= parseInt(end[2], 10);
+    }
+    // List form: "VP / VN" — match if pinId appears on either side
+    return label.split('/').map(s => s.trim()).includes(pinId);
   }
 
   _placeComponent(world) {

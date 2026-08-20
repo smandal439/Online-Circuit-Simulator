@@ -37,6 +37,7 @@ class App {
       this._renderComponentLibrary();
       this._renderExamples();
       this._initBoardSelector();
+      window.GuideManager?.bind?.();
       this._restoreProject();
       this._setupBeforeUnloadGuard();
       this._syncProjectsFromServer();
@@ -157,6 +158,27 @@ class App {
       this._showModal('modal-examples');
     });
     shortcutsBtn?.addEventListener('click', () => this._showModal('modal-shortcuts'));
+    const homeBtn = get('btn-home');
+    homeBtn?.addEventListener('click', () => window.GuideManager?.open('home'));
+    const helpComponentsBtn = get('btn-help-components');
+    helpComponentsBtn?.addEventListener('click', () => {
+      this._closeHeaderDropdowns();
+      window.GuideManager?.open('components');
+    });
+    const helpTutorialsBtn = get('btn-help-tutorials');
+    helpTutorialsBtn?.addEventListener('click', () => {
+      this._closeHeaderDropdowns();
+      window.GuideManager?.open('tutorials');
+    });
+    const helpShortcutsBtn = get('btn-help-shortcuts');
+    helpShortcutsBtn?.addEventListener('click', () => {
+      this._closeHeaderDropdowns();
+      this._showModal('modal-shortcuts');
+    });
+    const guideLaunch = get('guide-launch');
+    guideLaunch?.addEventListener('click', () => window.GuideManager?.close());
+    const guideClose = get('guide-close');
+    guideClose?.addEventListener('click', () => window.GuideManager?.close());
     toggleEditorBtn?.addEventListener('click', () => this._togglePanel('panel-editor', toggleEditorBtn, 'Collapse Editor', 'Expand Editor'));
     toggleComponentsBtn?.addEventListener('click', () => this._togglePanel('panel-components', toggleComponentsBtn, 'Collapse Panel', 'Expand Panel'));
     showEditorBtn?.addEventListener('click', () => this._togglePanel('panel-editor', toggleEditorBtn, 'Collapse Editor', 'Expand Editor'));
@@ -284,6 +306,10 @@ class App {
         return;
       }
       if (e.key === 'Escape') {
+        if (window.GuideManager?.isOpen?.()) {
+          window.GuideManager.close();
+          return;
+        }
         this._closeModal();
         this._closeContextMenu();
         this._closeHeaderDropdowns();
@@ -834,7 +860,8 @@ _newProject() {
         const item = document.createElement('button');
         item.className = 'comp-item';
         item.title = def.desc || def.name;
-        item.innerHTML = `<span class="comp-icon">${def.icon || '🔧'}</span><span class="comp-name">${def.name}</span>`;
+        const shortDesc = (def.desc || '').length > 42 ? def.desc.slice(0, 42) + '…' : (def.desc || '');
+        item.innerHTML = `<span class="comp-icon">${def.icon || '🔧'}</span><span class="comp-info"><span class="comp-name">${def.name}</span>${shortDesc ? `<span class="comp-desc">${shortDesc}</span>` : ''}</span>`;
         item.addEventListener('click', () => {
           if (this.canvas) {
             this.canvas.startPlacing(id);
@@ -1482,6 +1509,16 @@ _newProject() {
     return String(s == null ? '' : s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
   }
 
+  /* Load a built-in example by its id (used by the guide tutorials). */
+  loadExampleById(id) {
+    const ex = (window.EXAMPLE_SKETCHES || []).find(x => x.id === id);
+    if (!ex) { this.showToast(`Example "${id}" not found`, 'error'); return; }
+    this._setProjectName(ex.name);
+    if (this.editor) this.editor.setCode(ex.code || '');
+    if (ex.circuit && this.canvas) this._loadExampleCircuit(ex.circuit);
+    this.showToast(`${ex.name} loaded`, 'success');
+  }
+
   _loadExampleCircuit(key) {
     if (!this.canvas) return;
 
@@ -1521,16 +1558,50 @@ _newProject() {
     const overlay = document.getElementById('modal-overlay');
 
     if (!comp || !body || !modal || !overlay) return;
-    if (title) title.textContent = `${comp.type} Properties`;
+
+    const def = (window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS[comp.type]);
+    const g = (window.GuideManagerData && window.GuideManagerData.GUIDE_COMPONENTS[comp.type]) || {};
+    if (title) title.textContent = `${def ? def.name : comp.type} Properties`;
+
+    const esc = this._escHtml;
+    const pinDescs = g.pins || {};
+
+    // Description header block
+    const infoBlock = document.createElement('div');
+    infoBlock.className = 'props-info';
+    const pinsPreview = (def && def.pins && def.pins.length)
+      ? def.pins.map(p => {
+          const pinInfo = pinDescs[p.id] || {};
+          const label = pinInfo.label || p.label || p.id;
+          const tip = pinInfo.desc || '';
+          const typeMap = { digital: 'Digital', analog: 'Analog', power: 'Power', gnd: 'GND', pwm: 'PWM', signal: 'Signal' };
+          return `<span class="props-pin" title="${esc(tip)}"><code>${esc(label)}</code><i>${esc(typeMap[p.type] || p.type)}</i></span>`;
+        }).join('')
+      : '';
+    infoBlock.innerHTML = `
+      <div class="props-desc">
+        <span class="props-comp-icon">${def ? def.icon : '🔧'}</span>
+        <div>
+          <p class="props-desc-text">${esc(g.longDesc || def?.desc || '')}</p>
+          <button type="button" class="gh-btn gh-btn-ghost gh-btn-sm props-ref-btn">Open full reference →</button>
+        </div>
+      </div>
+      ${pinsPreview ? `<div class="props-pins"><span class="props-pins-label">Pins</span><div class="props-pins-list">${pinsPreview}</div></div>` : ''}
+      <div class="props-hr"></div>
+      <p class="props-editable-label">Editable properties</p>`;
+    body.innerHTML = '';
+    body.appendChild(infoBlock);
 
     const rows = [];
     Object.entries(comp.props || {}).forEach(([key, value]) => {
       const row   = document.createElement('div');
       row.className = 'prop-row';
       const label = document.createElement('label');
+      const propDoc = (g.props && g.props[key]) || '';
       label.textContent = key.replace(/_/g, ' ');
       label.className = 'prop-label';
       label.htmlFor = `prop-${key}`;
+      if (propDoc) label.title = propDoc;
       const input = document.createElement('input');
       input.className = 'prop-input';
       input.name = key;
@@ -1544,8 +1615,18 @@ _newProject() {
       rows.push(row);
     });
 
-    body.innerHTML = '';
     rows.forEach(row => body.appendChild(row));
+
+    const refBtn = body.querySelector('.props-ref-btn');
+    if (refBtn) refBtn.addEventListener('click', () => {
+      this._closeModal();
+      window.GuideManager?._renderCompDetail?.(
+        document.getElementById('guide-pane-components'),
+        comp.type
+      );
+      window.GuideManager?.open('components');
+    });
+
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     overlay.classList.remove('hidden');
     modal.classList.add('active');
