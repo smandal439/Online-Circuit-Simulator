@@ -1,0 +1,21 @@
+{
+  "name": "Potentiometer Read",
+  "id": "potentiometer",
+  "code": "/*\n * Potentiometer Read — Read potentiometer on A0 and display the value\n */\n\nint potPin = A0;\nint ledPin = 9;\nint potValue = 0;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  potValue = analogRead(potPin);\n  analogWrite(ledPin, map(potValue, 0, 1023, 0, 255));\n  Serial.println(potValue);\n  delay(10);\n}",
+  "circuit": {
+    "components": [
+      { "id": "b1", "type": "arduino_uno", "x": 200, "y": 100 },
+      { "id": "pot1", "type": "potentiometer", "x": 120, "y": 300 },
+      { "id": "led1", "type": "led", "x": 340, "y": 260 },
+      { "id": "r1", "type": "resistor", "x": 340, "y": 340 }
+    ],
+    "wires": [
+      { "id": "w1", "from": { "instId": "b1", "pinId": "5V" }, "to": { "instId": "pot1", "pinId": "vcc" } },
+      { "id": "w2", "from": { "instId": "pot1", "pinId": "wiper" }, "to": { "instId": "b1", "pinId": "A0" } },
+      { "id": "w3", "from": { "instId": "pot1", "pinId": "gnd" }, "to": { "instId": "b1", "pinId": "GND1" } },
+      { "id": "w4", "from": { "instId": "b1", "pinId": "D9" }, "to": { "instId": "led1", "pinId": "anode" } },
+      { "id": "w5", "from": { "instId": "led1", "pinId": "cathode" }, "to": { "instId": "r1", "pinId": "p1" } },
+      { "id": "w6", "from": { "instId": "r1", "pinId": "p2" }, "to": { "instId": "b1", "pinId": "GND1" } }
+    ]
+  }
+}

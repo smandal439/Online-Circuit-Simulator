@@ -1,0 +1,16 @@
+{
+  "name": "Temperature Sensor",
+  "id": "temperature",
+  "code": "/*\n * DHT11 Temperature & Humidity (simulated)\n */\n\nint dataPin = 2;\nfloat temperature = 0;\nfloat humidity = 0;\nint count = 0;\n\nfloat readTemperature() {\n  // Simulate varying temperature 20-30°C\n  return 25.0 + 5.0 * sin(count * 0.1);\n}\n\nfloat readHumidity() {\n  // Simulate varying humidity 40-70%\n  return 55.0 + 15.0 * cos(count * 0.1);\n}\n\nvoid setup() {\n  Serial.begin(9600);\n  Serial.println(\"DHT11 Sensor started\");\n  Serial.println(\"Temp(C)\\tHumidity(%)\");\n}\n\nvoid loop() {\n  temperature = readTemperature();\n  humidity = readHumidity();\n  count++;\n\n  Serial.print(temperature, 1);\n  Serial.print(\"\\t\");\n  Serial.println(humidity, 1);\n\n  delay(2000);\n}",
+  "circuit": {
+    "components": [
+      { "id": "b1", "type": "arduino_uno", "x": 200, "y": 100 },
+      { "id": "dht1", "type": "dht11", "x": 500, "y": 150 }
+    ],
+    "wires": [
+      { "id": "w1", "from": { "instId": "b1", "pinId": "5V" }, "to": { "instId": "dht1", "pinId": "vcc" } },
+      { "id": "w2", "from": { "instId": "b1", "pinId": "D2" }, "to": { "instId": "dht1", "pinId": "data" } },
+      { "id": "w3", "from": { "instId": "dht1", "pinId": "gnd" }, "to": { "instId": "b1", "pinId": "GND1" } }
+    ]
+  }
+}

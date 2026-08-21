@@ -57,199 +57,477 @@ function defComp(def) {
 /* ─── ARDUINO UNO ─── */
 defComp({
   id: 'arduino_uno',
-  name: 'Arduino Uno',
+  name: 'Arduino Uno R3',
   category: 'Boards',
   icon: '🎛️',
   desc: 'ATmega328P microcontroller board',
-  width: 200,
-  height: 140,
+  width: 230,
+  height: 150,
   defaultProps: { label: 'UNO' },
   pins: [
-    // Digital pins top row (D0–D13, from right)
-    { id:'D0',  label:'D0',  type:PIN_TYPE.DIGITAL, x:186, y: 14, side:'top' },
-    { id:'D1',  label:'D1',  type:PIN_TYPE.DIGITAL, x:172, y: 14, side:'top' },
-    { id:'D2',  label:'D2',  type:PIN_TYPE.DIGITAL, x:158, y: 14, side:'top' },
-    { id:'D3',  label:'D3~', type:PIN_TYPE.PWM,     x:144, y: 14, side:'top' },
-    { id:'D4',  label:'D4',  type:PIN_TYPE.DIGITAL, x:130, y: 14, side:'top' },
-    { id:'D5',  label:'D5~', type:PIN_TYPE.PWM,     x:116, y: 14, side:'top' },
-    { id:'D6',  label:'D6~', type:PIN_TYPE.PWM,     x:102, y: 14, side:'top' },
-    { id:'D7',  label:'D7',  type:PIN_TYPE.DIGITAL, x: 88, y: 14, side:'top' },
-    { id:'D8',  label:'D8',  type:PIN_TYPE.DIGITAL, x: 74, y: 14, side:'top' },
-    { id:'D9',  label:'D9~', type:PIN_TYPE.PWM,     x: 60, y: 14, side:'top' },
-    { id:'D10', label:'D10~',type:PIN_TYPE.PWM,     x: 46, y: 14, side:'top' },
-    { id:'D11', label:'D11~',type:PIN_TYPE.PWM,     x: 32, y: 14, side:'top' },
-    { id:'D12', label:'D12', type:PIN_TYPE.DIGITAL, x: 18, y: 14, side:'top' },
-    { id:'D13', label:'D13', type:PIN_TYPE.DIGITAL, x:  4, y: 14, side:'top' },
+    // Digital pins top row (D0–D13, from left), then GND + AREF
+    { id:'D0',   label:'D0',   type:PIN_TYPE.DIGITAL, x: 10, y: 12, side:'top' },
+    { id:'D1',   label:'D1',   type:PIN_TYPE.DIGITAL, x: 24, y: 12, side:'top' },
+    { id:'D2',   label:'D2',   type:PIN_TYPE.DIGITAL, x: 38, y: 12, side:'top' },
+    { id:'D3',   label:'D3~',  type:PIN_TYPE.PWM,     x: 52, y: 12, side:'top' },
+    { id:'D4',   label:'D4',   type:PIN_TYPE.DIGITAL, x: 66, y: 12, side:'top' },
+    { id:'D5',   label:'D5~',  type:PIN_TYPE.PWM,     x: 80, y: 12, side:'top' },
+    { id:'D6',   label:'D6~',  type:PIN_TYPE.PWM,     x: 94, y: 12, side:'top' },
+    { id:'D7',   label:'D7',   type:PIN_TYPE.DIGITAL, x:108, y: 12, side:'top' },
+    { id:'D8',   label:'D8',   type:PIN_TYPE.DIGITAL, x:122, y: 12, side:'top' },
+    { id:'D9',   label:'D9~',  type:PIN_TYPE.PWM,     x:136, y: 12, side:'top' },
+    { id:'D10',  label:'D10~', type:PIN_TYPE.PWM,     x:150, y: 12, side:'top' },
+    { id:'D11',  label:'D11~', type:PIN_TYPE.PWM,     x:164, y: 12, side:'top' },
+    { id:'D12',  label:'D12',  type:PIN_TYPE.DIGITAL, x:178, y: 12, side:'top' },
+    { id:'D13',  label:'D13',  type:PIN_TYPE.DIGITAL, x:192, y: 12, side:'top' },
     // Power top
-    { id:'GND_D',label:'GND',type:PIN_TYPE.GND,    x:200, y: 14, side:'top' },
-    { id:'AREF', label:'AREF',type:PIN_TYPE.SIGNAL, x:214, y: 14, side:'top' },
-    // Analog pins bottom row
-    { id:'A0', label:'A0', type:PIN_TYPE.ANALOG, x: 14, y:126, side:'bottom' },
-    { id:'A1', label:'A1', type:PIN_TYPE.ANALOG, x: 28, y:126, side:'bottom' },
-    { id:'A2', label:'A2', type:PIN_TYPE.ANALOG, x: 42, y:126, side:'bottom' },
-    { id:'A3', label:'A3', type:PIN_TYPE.ANALOG, x: 56, y:126, side:'bottom' },
-    { id:'A4', label:'A4', type:PIN_TYPE.ANALOG, x: 70, y:126, side:'bottom' },
-    { id:'A5', label:'A5', type:PIN_TYPE.ANALOG, x: 84, y:126, side:'bottom' },
-    // Power bottom
-    { id:'VIN',  label:'VIN', type:PIN_TYPE.POWER, x:104, y:126, side:'bottom' },
-    { id:'GND1', label:'GND', type:PIN_TYPE.GND,   x:118, y:126, side:'bottom' },
-    { id:'GND2', label:'GND', type:PIN_TYPE.GND,   x:132, y:126, side:'bottom' },
-    { id:'5V',   label:'5V',  type:PIN_TYPE.POWER, x:146, y:126, side:'bottom' },
-    { id:'3V3',  label:'3.3V',type:PIN_TYPE.POWER, x:160, y:126, side:'bottom' },
-    { id:'RST',  label:'RST', type:PIN_TYPE.SIGNAL,x:174, y:126, side:'bottom' },
+    { id:'GND_D', label:'GND',  type:PIN_TYPE.GND,    x:206, y: 12, side:'top' },
+    { id:'AREF',  label:'AREF', type:PIN_TYPE.SIGNAL, x:220, y: 12, side:'top' },
+    // Analog pins bottom row (left)
+    { id:'A0', label:'A0', type:PIN_TYPE.ANALOG, x: 14, y:134, side:'bottom' },
+    { id:'A1', label:'A1', type:PIN_TYPE.ANALOG, x: 28, y:134, side:'bottom' },
+    { id:'A2', label:'A2', type:PIN_TYPE.ANALOG, x: 42, y:134, side:'bottom' },
+    { id:'A3', label:'A3', type:PIN_TYPE.ANALOG, x: 56, y:134, side:'bottom' },
+    { id:'A4', label:'A4', type:PIN_TYPE.ANALOG, x: 70, y:134, side:'bottom' },
+    { id:'A5', label:'A5', type:PIN_TYPE.ANALOG, x: 84, y:134, side:'bottom' },
+    // Power bottom (right)
+    { id:'VIN',  label:'VIN',  type:PIN_TYPE.POWER, x:104, y:134, side:'bottom' },
+    { id:'GND1', label:'GND',  type:PIN_TYPE.GND,   x:118, y:134, side:'bottom' },
+    { id:'GND2', label:'GND',  type:PIN_TYPE.GND,   x:132, y:134, side:'bottom' },
+    { id:'5V',   label:'5V',   type:PIN_TYPE.POWER, x:146, y:134, side:'bottom' },
+    { id:'3V3',  label:'3.3V', type:PIN_TYPE.POWER, x:160, y:134, side:'bottom' },
+    { id:'RST',  label:'RST',  type:PIN_TYPE.SIGNAL,x:174, y:134, side:'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y, width: W, height: H } = inst;
 
-    // Board body
+    // ── PCB body ──
     ctx.save();
     ctx.translate(x, y);
 
-    // PCB background
     const grad = ctx.createLinearGradient(0, 0, W, H);
     grad.addColorStop(0, '#1e6d33');
-    grad.addColorStop(1, '#12461f');
+    grad.addColorStop(0.45, '#187a30');
+    grad.addColorStop(1, '#0f4d1d');
     ctx.fillStyle = grad;
-    roundRect(ctx, 0, 0, W, H, 10);
+    roundRect(ctx, 0, 0, W, H, 8);
     ctx.fill();
     ctx.strokeStyle = '#194c24';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Silkscreen outline
-    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    // ── Silkscreen frame ──
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1;
-    roundRect(ctx, 6, 6, W - 12, H - 12, 8);
+    roundRect(ctx, 5, 5, W - 10, H - 10, 6);
     ctx.stroke();
 
-    // USB Type-B connector
-    ctx.fillStyle = '#a0a0a0';
-    roundRect(ctx, -14, 48, 18, 28, 4);
-    ctx.fill();
-    ctx.fillStyle = '#444';
-    roundRect(ctx, -11, 52, 12, 20, 3);
-    ctx.fill();
-    ctx.fillStyle = '#ddd';
-    ctx.fillRect(-8, 59, 8, 6);
+    // ── Subtle copper traces ──
+    ctx.strokeStyle = 'rgba(170,220,150,0.10)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 12; i++) {
+      ctx.beginPath();
+      ctx.moveTo(14, 22 + i * 9);
+      ctx.lineTo(46, 22 + i * 9);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 9; i++) {
+      ctx.beginPath();
+      ctx.moveTo(196, 22 + i * 11);
+      ctx.lineTo(218, 22 + i * 11);
+      ctx.stroke();
+    }
 
-    // Barrel jack
-    ctx.fillStyle = '#222';
-    roundRect(ctx, -12, 88, 16, 20, 4);
+    // ── USB Type-B connector (left edge) ──
+    ctx.fillStyle = '#7f8c8d';
+    roundRect(ctx, -16, 32, 18, 26, 3);
     ctx.fill();
-    ctx.fillStyle = '#666';
-    ctx.beginPath(); ctx.arc(-4, 99, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#222';
-    ctx.beginPath(); ctx.arc(-4, 99, 2.5, 0, Math.PI * 2); ctx.fill();
-
-    // Crystal oscillator
-    ctx.fillStyle = '#999';
-    roundRect(ctx, 78, 52, 18, 8, 3);
+    ctx.fillStyle = '#3a3a3a';
+    roundRect(ctx, -13, 35, 12, 20, 2);
     ctx.fill();
-    ctx.fillStyle = '#eee';
-    ctx.font = '5px sans-serif';
-    ctx.fillText('16MHz', 87, 58);
-
-    // Voltage regulator
-    ctx.fillStyle = '#2e2e2e';
-    roundRect(ctx, 46, 48, 14, 18, 3);
+    ctx.fillStyle = '#d5d8dc';
+    roundRect(ctx, -10, 42, 9, 5, 1);
     ctx.fill();
 
-    // ATmega chip
-    ctx.fillStyle = '#111';
-    roundRect(ctx, 60, 68, 80, 50, 5);
+    // ── 16U2 USB-serial chip (top-left) ──
+    ctx.fillStyle = '#101010';
+    roundRect(ctx, 10, 34, 18, 16, 2);
     ctx.fill();
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
     ctx.stroke();
-
-    // Chip pins
     ctx.strokeStyle = '#666';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 8; i++) {
-      ctx.beginPath(); ctx.moveTo(64 + i * 9, 68); ctx.lineTo(64 + i * 9, 62); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(64 + i * 9, 118); ctx.lineTo(64 + i * 9, 124); ctx.stroke();
-    }
     for (let i = 0; i < 4; i++) {
-      ctx.beginPath(); ctx.moveTo(60, 76 + i * 11); ctx.lineTo(54, 76 + i * 11); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(140, 76 + i * 11); ctx.lineTo(146, 76 + i * 11); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(10, 37 + i * 4); ctx.lineTo(6, 37 + i * 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(28, 37 + i * 4); ctx.lineTo(32, 37 + i * 4); ctx.stroke();
     }
-
-    // Chip text
-    ctx.fillStyle = '#ddd';
-    ctx.font = 'bold 7px JetBrains Mono, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('ATmega328P', 100, 92);
-    ctx.font = '6px JetBrains Mono, monospace';
-    ctx.fillText('MCU', 100, 103);
-
-    // Reset button
-    ctx.fillStyle = '#c43c3c';
-    ctx.beginPath(); ctx.arc(30, 56, 6, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ff7373';
-    ctx.beginPath(); ctx.arc(30, 56, 3.2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = '#ccc';
     ctx.font = '5px sans-serif';
-    ctx.fillText('RST', 30, 70);
+    ctx.textAlign = 'center';
+    ctx.fillText('16U2', 19, 44);
 
-    // LEDs
-    drawLED_on_board(ctx, 150, 32, sim && sim.pinStates && (sim.pinStates['pin_13'] || 0) > 0 ? '#ffff66' : '#555', 4);
-    drawLED_on_board(ctx, 166, 32, '#5cff6d', 4);
-    drawLED_on_board(ctx, 182, 32, '#ff4d4d', 3);
-    drawLED_on_board(ctx, 198, 32, '#ff4d4d', 3);
+    // ── ATmega328P DIP (center) ──
+    const chipX = 58, chipY = 60, chipW = 76, chipH = 32;
+    ctx.fillStyle = '#0c0c0c';
+    roundRect(ctx, chipX, chipY, chipW, chipH, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#3a3a3a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.strokeStyle = '#888';
+    for (let i = 0; i < 14; i++) {
+      const px = chipX + 3 + i * (chipW - 6) / 13;
+      ctx.beginPath(); ctx.moveTo(px, chipY); ctx.lineTo(px, chipY - 6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, chipY + chipH); ctx.lineTo(px, chipY + chipH + 6); ctx.stroke();
+    }
+    for (let i = 0; i < 3; i++) {
+      const py = chipY + 5 + i * 11;
+      ctx.beginPath(); ctx.moveTo(chipX, py); ctx.lineTo(chipX - 6, py); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(chipX + chipW, py); ctx.lineTo(chipX + chipW + 6, py); ctx.stroke();
+    }
+    // notch
+    ctx.fillStyle = '#0c0c0c';
+    ctx.beginPath();
+    ctx.arc(chipX + chipW / 2, chipY, 4, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#d8d8d8';
+    ctx.font = 'bold 7px JetBrains Mono, monospace';
+    ctx.fillText('ATmega328P', chipX + chipW / 2, chipY + 14);
+    ctx.font = '5px JetBrains Mono, monospace';
+    ctx.fillText('- P U -', chipX + chipW / 2, chipY + 22);
 
-    // LED labels
+    // ── ICSP header (right of chip) ──
+    ctx.fillStyle = '#151517';
+    roundRect(ctx, 148, 62, 20, 24, 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 2; col++) {
+        const sx = 152 + col * 8;
+        const sy = 66 + row * 7;
+        ctx.fillStyle = '#c8b06a';
+        ctx.beginPath(); ctx.arc(sx, sy, 2.2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0c0c0e';
+        ctx.beginPath(); ctx.arc(sx, sy, 0.9, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.fillStyle = '#bfbfbf';
+    ctx.font = '4.5px sans-serif';
+    ctx.fillText('ICSP', 158, 60);
+
+    // ── Crystal oscillator ──
+    ctx.fillStyle = '#b0b0b0';
+    roundRect(ctx, 42, 78, 22, 9, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#777';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#f0f0f0';
+    ctx.font = '5px sans-serif';
+    ctx.fillText('16MHz', 53, 85);
+    ctx.strokeStyle = '#999';
+    ctx.beginPath(); ctx.moveTo(46, 87); ctx.lineTo(46, 92); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(60, 87); ctx.lineTo(60, 92); ctx.stroke();
+
+    // ── Reset button (bottom-left) ──
+    ctx.fillStyle = '#c43c3c';
+    roundRect(ctx, 10, 92, 18, 18, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#7a2020';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#ff7373';
+    roundRect(ctx, 13, 95, 12, 6, 2);
+    ctx.fill();
     ctx.fillStyle = '#bfbfbf';
     ctx.font = '5px sans-serif';
-    ctx.fillText('L', 150, 42);
-    ctx.fillText('ON', 166, 42);
-    ctx.fillText('TX', 182, 42);
-    ctx.fillText('RX', 198, 42);
+    ctx.fillText('RST', 19, 116);
 
-    // Digital pin headers (top)
-    const pinX = 186;
-    for (let i = 0; i < 14; i++) {
-      const px = pinX - i * 12;
-      ctx.fillStyle = '#c8a84b';
-      roundRect(ctx, px - 5, 18, 10, 10, 2);
-      ctx.fill();
-      ctx.fillStyle = '#333';
-      ctx.font = '5px sans-serif';
-      ctx.fillText(`D${13 - i}`, px, 13);
+    // ── Barrel jack (bottom-left edge) ──
+    ctx.fillStyle = '#1c1c1c';
+    roundRect(ctx, -14, 100, 20, 26, 4);
+    ctx.fill();
+    ctx.fillStyle = '#4a4a4a';
+    ctx.beginPath(); ctx.arc(-4, 113, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1c1c1c';
+    ctx.beginPath(); ctx.arc(-4, 113, 3, 0, Math.PI * 2); ctx.fill();
+
+    // ── Voltage regulator (SOT-223, right-bottom) ──
+    ctx.fillStyle = '#2e2e2e';
+    roundRect(ctx, 156, 102, 18, 20, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#4a4a4a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#3d3d3d';
+    roundRect(ctx, 158, 96, 14, 6, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#666';
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath(); ctx.moveTo(160 + i * 5, 122); ctx.lineTo(160 + i * 5, 128); ctx.stroke();
+    }
+    ctx.fillStyle = '#d8d8d8';
+    ctx.font = '5px sans-serif';
+    ctx.fillText('5V', 165, 115);
+
+    // ── Electrolytic capacitors ──
+    const caps = [
+      { cx: 132, cy: 112, r: 5,   t: '1' },
+      { cx: 120, cy: 112, r: 4.2, t: '2' },
+    ];
+    for (const c of caps) {
+      ctx.fillStyle = '#101010';
+      ctx.beginPath(); ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#3a3a3a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.strokeStyle = '#d8d8d8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(c.cx, c.cy, c.r - 1, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+      ctx.fillStyle = '#eee';
+      ctx.font = `${c.r}px sans-serif`;
+      ctx.fillText(c.t, c.cx, c.cy + c.r * 0.35);
     }
 
-    // Analog pin headers (bottom left)
-    for (let i = 0; i < 6; i++) {
-      const px = 14 + i * 16;
-      ctx.fillStyle = '#c8a84b';
-      roundRect(ctx, px - 5, 114, 10, 10, 2);
-      ctx.fill();
-      ctx.fillStyle = '#333';
-      ctx.fillText(`A${i}`, px, 122);
-    }
+    // ── Status LEDs ──
+    const lit = sim && sim.pinStates && (sim.pinStates['pin_13'] || 0) > 0;
+    drawLED_on_board(ctx, 150, 36, lit ? '#ffee33' : '#555', 3.5);  // L (D13)
+    drawLED_on_board(ctx, 12, 62, '#ff4d4d', 3);  // TX
+    drawLED_on_board(ctx, 22, 62, '#ff4d4d', 3);  // RX
+    drawLED_on_board(ctx, 32, 62, '#33ff66', 3);  // ON
+    ctx.fillStyle = '#bfbfbf';
+    ctx.font = '5px sans-serif';
+    ctx.fillText('L', 150, 46);
+    ctx.fillText('TX', 12, 72);
+    ctx.fillText('RX', 22, 72);
+    ctx.fillText('ON', 32, 72);
 
-    // Power headers bottom right
-    const pwrLabels = ['VIN', 'GND', 'GND', '5V', '3V3', 'RST'];
-    for (let i = 0; i < pwrLabels.length; i++) {
-      const px = 104 + i * 16;
-      ctx.fillStyle = ['GND','GND'].includes(pwrLabels[i]) ? '#3d3d3d' : pwrLabels[i] === 'RST' ? '#8b8b8b' : '#c8a84b';
-      roundRect(ctx, px - 5, 114, 10, 10, 2);
-      ctx.fill();
-      ctx.fillStyle = '#333';
-      ctx.fillText(pwrLabels[i], px, 122);
-    }
+    // ── Header strips ──
+    const topHoles = [], analogHoles = [], powerHoles = [];
+    for (let i = 0; i < 16; i++) topHoles.push(10 + i * 14);
+    for (let i = 0; i < 6; i++) { analogHoles.push(14 + i * 14); powerHoles.push(104 + i * 14); }
+    drawHeaderStrip(ctx, 4, 6, 222, topHoles, 12);
+    drawHeaderStrip(ctx, 4, 128, 94, analogHoles, 134);
+    drawHeaderStrip(ctx, 96, 128, 90, powerHoles, 134);
 
-    // Board name
-    ctx.fillStyle = '#f6f6f6';
-    ctx.font = 'bold 12px sans-serif';
+    // ── Silkscreen labels ──
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = 'bold 8px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('UNO', 100, 36);
+    ctx.fillText('ARDUINO', 196, 48);
+    ctx.font = 'bold 6px sans-serif';
+    ctx.fillText('UNO', 196, 57);
 
-    // Selection outline
+    // ── Pin labels (silkscreen, always readable) ──
+    ctx.font = 'bold 5px JetBrains Mono, monospace';
+    const paintPinLabel = (cx, baseline, text) => {
+      const w = ctx.measureText(text).width + 5;
+      ctx.fillStyle = 'rgba(8,44,18,0.9)';
+      roundRect(ctx, cx - w / 2, baseline - 4.5, w, 7, 2);
+      ctx.fill();
+      ctx.fillStyle = '#eef9ec';
+      ctx.fillText(text, cx, baseline + 1);
+    };
+    const topLabels   = ['D0','D1','D2','D3~','D4','D5~','D6~','D7','D8','D9~','D10~','D11~','D12','D13','GND','AREF'];
+    const analogLabels = ['A0','A1','A2','A3','A4','A5'];
+    const powerLabels  = ['VIN','GND','GND','5V','3.3V','RST'];
+    for (let i = 0; i < 16; i++) paintPinLabel(topHoles[i], 25, topLabels[i]);
+    for (let i = 0; i < 6; i++)  paintPinLabel(analogHoles[i], 120, analogLabels[i]);
+    for (let i = 0; i < 6; i++)  paintPinLabel(powerHoles[i], 120, powerLabels[i]);
+
+    // Vertical "MADE IN ITALY" on the right edge
+    ctx.save();
+    ctx.translate(224, 14);
+    ctx.rotate(Math.PI / 2);
+    ctx.font = '5px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillText('MADE IN ITALY', 0, 0);
+    ctx.restore();
+
+    // ── Selection outline ──
     if (inst.selected) {
       ctx.strokeStyle = '#00e5ff';
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 3]);
-      roundRect(ctx, -3, -3, W+6, H+6, 10);
+      roundRect(ctx, -3, -3, W + 6, H + 6, 10);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+  }
+});
+
+/* ─── ESP32 DEVKIT V1 ─── */
+defComp({
+  id: 'esp32_devkit_v1',
+  name: 'ESP32 DevKit V1',
+  category: 'Boards',
+  icon: '🔌',
+  desc: 'Espressif ESP-WROOM-32 dual-core 3.3V development board',
+  width: 170,
+  height: 272,
+  defaultProps: { label: 'ESP32' },
+  pins: [
+    // Left header (from top)
+    { id: 'EN',   label: 'EN',   type: PIN_TYPE.SIGNAL,  x: 16, y:  40, side: 'left',  gpio: 0 },
+    { id: 'VP',   label: 'VP',   type: PIN_TYPE.ANALOG,  x: 16, y:  55, side: 'left',  gpio: 36 },
+    { id: 'VN',   label: 'VN',   type: PIN_TYPE.ANALOG,  x: 16, y:  70, side: 'left',  gpio: 39 },
+    { id: 'D34',  label: 'D34',  type: PIN_TYPE.ANALOG,  x: 16, y:  85, side: 'left',  gpio: 34 },
+    { id: 'D35',  label: 'D35',  type: PIN_TYPE.ANALOG,  x: 16, y: 100, side: 'left',  gpio: 35 },
+    { id: 'D32',  label: 'D32',  type: PIN_TYPE.ANALOG,  x: 16, y: 115, side: 'left',  gpio: 32 },
+    { id: 'D33',  label: 'D33',  type: PIN_TYPE.ANALOG,  x: 16, y: 130, side: 'left',  gpio: 33 },
+    { id: 'D25',  label: 'D25',  type: PIN_TYPE.ANALOG,  x: 16, y: 145, side: 'left',  gpio: 25 },
+    { id: 'D26',  label: 'D26',  type: PIN_TYPE.ANALOG,  x: 16, y: 160, side: 'left',  gpio: 26 },
+    { id: 'D27',  label: 'D27',  type: PIN_TYPE.PWM,     x: 16, y: 175, side: 'left',  gpio: 27 },
+    { id: 'D14',  label: 'D14',  type: PIN_TYPE.PWM,     x: 16, y: 190, side: 'left',  gpio: 14 },
+    { id: 'D12',  label: 'D12',  type: PIN_TYPE.PWM,     x: 16, y: 205, side: 'left',  gpio: 12 },
+    { id: 'D13',  label: 'D13',  type: PIN_TYPE.PWM,     x: 16, y: 220, side: 'left',  gpio: 13 },
+    { id: 'GND1', label: 'GND',  type: PIN_TYPE.GND,     x: 16, y: 235, side: 'left' },
+    { id: 'VIN',  label: 'VIN',  type: PIN_TYPE.POWER,   x: 16, y: 250, side: 'left' },
+    // Right header (from top)
+    { id: 'D23',  label: 'D23',  type: PIN_TYPE.PWM,     x: 154, y:  40, side: 'right', gpio: 23 },
+    { id: 'D22',  label: 'D22',  type: PIN_TYPE.PWM,     x: 154, y:  55, side: 'right', gpio: 22 },
+    { id: 'TX0',  label: 'TX0',  type: PIN_TYPE.SIGNAL,  x: 154, y:  70, side: 'right', gpio: 1 },
+    { id: 'RX0',  label: 'RX0',  type: PIN_TYPE.SIGNAL,  x: 154, y:  85, side: 'right', gpio: 3 },
+    { id: 'D21',  label: 'D21',  type: PIN_TYPE.PWM,     x: 154, y: 100, side: 'right', gpio: 21 },
+    { id: 'D19',  label: 'D19',  type: PIN_TYPE.PWM,     x: 154, y: 115, side: 'right', gpio: 19 },
+    { id: 'D18',  label: 'D18',  type: PIN_TYPE.PWM,     x: 154, y: 130, side: 'right', gpio: 18 },
+    { id: 'D5',   label: 'D5',   type: PIN_TYPE.PWM,     x: 154, y: 145, side: 'right', gpio: 5 },
+    { id: 'D17',  label: 'D17',  type: PIN_TYPE.PWM,     x: 154, y: 160, side: 'right', gpio: 17 },
+    { id: 'D16',  label: 'D16',  type: PIN_TYPE.PWM,     x: 154, y: 175, side: 'right', gpio: 16 },
+    { id: 'D4',   label: 'D4',   type: PIN_TYPE.PWM,     x: 154, y: 190, side: 'right', gpio: 4 },
+    { id: 'D2',   label: 'D2',   type: PIN_TYPE.PWM,     x: 154, y: 205, side: 'right', gpio: 2 },
+    { id: 'D15',  label: 'D15',  type: PIN_TYPE.PWM,     x: 154, y: 220, side: 'right', gpio: 15 },
+    { id: 'GND2', label: 'GND',  type: PIN_TYPE.GND,     x: 154, y: 235, side: 'right' },
+    { id: '3V3',  label: '3V3',  type: PIN_TYPE.POWER,   x: 154, y: 250, side: 'right' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y, width: W, height: H } = inst;
+    const WROOM_W = 92, WROOM_H = 118, WROOM_X = 39, WROOM_Y = 18;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // ── PCB body ──
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, '#18222b');
+    grad.addColorStop(0.5, '#202d38');
+    grad.addColorStop(1, '#11171d');
+    ctx.fillStyle = grad;
+    roundRect(ctx, 0, 0, W, H, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#0c1116';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Silkscreen frame
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, 3, 3, W - 6, H - 6, 5);
+    ctx.stroke();
+
+    // ── ESP-WROOM-32 metal shield ──
+    ctx.fillStyle = '#c8cfd6';
+    roundRect(ctx, WROOM_X, WROOM_Y, WROOM_W, WROOM_H, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#8b949e';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Trace pattern on shield
+    ctx.strokeStyle = 'rgba(60,70,80,0.5)';
+    ctx.lineWidth = 0.6;
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(WROOM_X + 6, WROOM_Y + 16 + i * 9);
+      ctx.lineTo(WROOM_X + WROOM_W - 6, WROOM_Y + 16 + i * 9);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#3a434b';
+    ctx.font = 'bold 8px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ESP-WROOM-32', WROOM_X + WROOM_W / 2, WROOM_Y + WROOM_H / 2 + 10);
+    ctx.font = '5px sans-serif';
+    ctx.fillText('FLASH 4MB · DUAL CORE', WROOM_X + WROOM_W / 2, WROOM_Y + WROOM_H / 2 + 22);
+
+    // ── 32.768kHz crystal + flash chip hints ──
+    ctx.fillStyle = '#0d0d0d';
+    roundRect(ctx, 8, 34, 16, 12, 2);
+    ctx.fill();
+    ctx.fillStyle = '#3d464e';
+    roundRect(ctx, 146, 34, 16, 12, 2);
+    ctx.fill();
+
+    // ── USB connector (bottom center) ──
+    ctx.fillStyle = '#6b7280';
+    roundRect(ctx, W / 2 - 11, H - 26, 22, 26, 3);
+    ctx.fill();
+    ctx.fillStyle = '#2a2f36';
+    roundRect(ctx, W / 2 - 7, H - 20, 14, 8, 1);
+    ctx.fill();
+
+    // ── Header strips ──
+    const leftYs  = this.pins.filter(p => p.side === 'left').map(p => p.y);
+    const rightYs = this.pins.filter(p => p.side === 'right').map(p => p.y);
+    const drawVertHeader = (hx, holeXs, holeYs, holeX) => {
+      ctx.fillStyle = '#15181c';
+      roundRect(ctx, hx, 32, 16, H - 62, 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      for (const hy of holeYs) {
+        ctx.fillStyle = '#c8b06a';
+        ctx.beginPath(); ctx.arc(holeX, hy, 4.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0b0b0d';
+        ctx.beginPath(); ctx.arc(holeX, hy, 2, 0, Math.PI * 2); ctx.fill();
+      }
+    };
+    drawVertHeader(8,  leftYs, leftYs, 16);
+    drawVertHeader(146, rightYs, rightYs, 154);
+
+    // ── Pin labels (silkscreen, baked in) ──
+    ctx.font = 'bold 5px JetBrains Mono, monospace';
+    for (const pin of this.pins) {
+      const pw = ctx.measureText(pin.label).width + 3;
+      let bx;
+      if (pin.side === 'left')  bx = pin.x - 3 - pw;
+      else                      bx = pin.x + 3;
+      ctx.fillStyle = 'rgba(6,12,18,0.85)';
+      roundRect(ctx, bx, pin.y - 3.5, pw, 7, 1.5);
+      ctx.fill();
+      ctx.fillStyle = '#dbe4ea';
+      ctx.textAlign = pin.side === 'left' ? 'right' : 'left';
+      ctx.fillText(pin.label, bx + (pin.side === 'left' ? pw - 2 : 2), pin.y + 1.5);
+    }
+
+    // ── Built-in LED (GPIO2) — on the PCB between the headers ──
+    const ledCx = 66, ledCy = 208;
+    const lit = sim && sim.pinStates && (sim.pinStates.pin_2 || 0) > 0;
+    drawLED_on_board(ctx, ledCx, ledCy, lit ? '#ffee33' : '#555', 3.5);
+    ctx.fillStyle = '#8b949e';
+    ctx.font = 'bold 5px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('L', ledCx, ledCy + 9);
+    ctx.fillText('GPIO2', ledCx, ledCy - 6);
+
+    // ── Board name ──
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ESP32', W / 2, H - 6);
+    ctx.font = '5px sans-serif';
+    ctx.fillText('DEVKIT V1', W / 2, H - 1);
+
+    // ── Selection outline ──
+    if (inst.selected) {
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      roundRect(ctx, -3, -3, W + 6, H + 6, 8);
       ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -269,13 +547,22 @@ defComp({
   height: 60,
   defaultProps: { color: '#ff3333', colorName: 'Red' },
   pins: [
-    { id: 'anode',   label: '+', type: PIN_TYPE.DIGITAL, x: 15, y:  0, side: 'top' },
+    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
     { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const col = inst.props.color || '#ff3333';
-    const isOn = sim && sim.pinStates && getInstPinState(inst, 'anode', sim) > 0.1;
+    const brightness = (inst.runtimeState && inst.runtimeState.brightness !== undefined)
+      ? inst.runtimeState.brightness
+      : (getInstPinState(inst, 'anode', sim) > 1 ? getInstPinState(inst, 'anode', sim) / 255 : (getInstPinState(inst, 'anode', sim) > 0.05 ? 1 : 0));
+    const isOn = (inst.runtimeState && inst.runtimeState.lit !== undefined)
+      ? (inst.runtimeState.lit && brightness > 0.01)
+      : (brightness > 0.02);
+    const blown = !!(inst.runtimeState && inst.runtimeState.blown);
+    const overloaded = !!(inst.runtimeState && inst.runtimeState.overload) && !blown;
+    const time = Date.now() / 250;
+    const pulse = isOn ? 1 + Math.sin(time) * 0.08 : 1;
 
     ctx.save();
     ctx.translate(x, y);
@@ -293,32 +580,73 @@ defComp({
     ctx.moveTo(8, 42); ctx.lineTo(22, 42);
     ctx.stroke();
 
-    // LED body
+    // 1. Ambient Volumetric Glow Halo (Breathing illumination)
+    if (isOn) {
+      const glowR = (32 + brightness * 20) * pulse;
+      const halo = ctx.createRadialGradient(15, 30, 0, 15, 30, glowR);
+      halo.addColorStop(0, hexToRgba(col, 0.55 * brightness));
+      halo.addColorStop(0.3, hexToRgba(col, 0.28 * brightness));
+      halo.addColorStop(0.7, hexToRgba(col, 0.08 * brightness));
+      halo.addColorStop(1, hexToRgba(col, 0));
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(15, 30, glowR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 2. Inner glow aura with shadow
     if (isOn) {
       ctx.shadowColor = col;
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = (18 + brightness * 14) * pulse;
     }
-    ctx.fillStyle = isOn ? col : hexToRgba(col, 0.35);
+
+    // 3. LED Bulb body
+    ctx.fillStyle = isOn ? hexToRgba(col, 0.75 + 0.25 * brightness) : (blown ? 'rgba(52,52,58,0.95)' : hexToRgba(col, 0.3));
     ctx.beginPath();
     ctx.arc(15, 30, 13, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = isOn ? col : hexToRgba(col, 0.6);
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = isOn ? '#ffffff' : (blown ? 'rgba(30,30,34,0.9)' : hexToRgba(col, 0.5));
+    ctx.lineWidth = isOn ? 1.5 : 1;
     ctx.stroke();
 
-    // Lens glare
+    // 4. Glowing Internal Core & Die
     if (isOn) {
-      const glare = ctx.createRadialGradient(10, 23, 0, 15, 28, 11);
-      glare.addColorStop(0, 'rgba(255,255,255,0.6)');
-      glare.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = glare;
+      const coreGrad = ctx.createRadialGradient(15, 29, 0, 15, 29, 9);
+      coreGrad.addColorStop(0, '#ffffff');
+      coreGrad.addColorStop(0.45, hexToRgba(col, 0.95));
+      coreGrad.addColorStop(1, hexToRgba(col, 0.3));
+      ctx.fillStyle = coreGrad;
       ctx.beginPath();
-      ctx.arc(15, 30, 13, 0, Math.PI*2);
+      ctx.arc(15, 29, 8, 0, Math.PI * 2);
       ctx.fill();
+
+      // Incandescent die center
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillRect(13, 27, 4, 4);
+    } else {
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
+      ctx.fillRect(13, 27, 4, 4);
     }
 
     ctx.shadowBlur = 0;
+
+    // 5. Specular 3D Glass Dome Highlight
+    const glare = ctx.createRadialGradient(11, 23, 0, 15, 28, 12);
+    glare.addColorStop(0, isOn ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)');
+    glare.addColorStop(0.5, isOn ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)');
+    glare.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glare;
+    ctx.beginPath();
+    ctx.arc(15, 30, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Top rim highlight arc
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(15, 30, 11, -Math.PI * 0.75, -Math.PI * 0.25);
+    ctx.stroke();
 
     // Polarity marks
     ctx.fillStyle = '#aaa';
@@ -484,6 +812,9 @@ defComp({
   width: 50,
   height: 60,
   defaultProps: { value: 512, maxValue: 1023, resistance: 10000 },
+  interactive: [
+    { field: 'value', label: 'Wiper', min: 0, max: 1023, step: 1 },
+  ],
   pins: [
     { id: 'vcc',    label: 'VCC', type: PIN_TYPE.POWER,  x:  8, y: 60, side: 'bottom' },
     { id: 'wiper',  label: 'OUT', type: PIN_TYPE.ANALOG, x: 25, y: 60, side: 'bottom' },
@@ -721,6 +1052,113 @@ defComp({
   }
 });
 
+/* ─── Multi-Color LED Array ─── */
+defComp({
+  id: 'multi_led_array',
+  name: 'Multi-Color LED Array',
+  category: 'Output',
+  icon: '🚥',
+  desc: 'Array of 4 individual colored LEDs (Red, Yellow, Green, Blue) with shared ground',
+  width: 90,
+  height: 60,
+  defaultProps: {},
+  pins: [
+    { id: 'led_r', label: 'R', type: PIN_TYPE.DIGITAL, x: 15, y: 60, side: 'bottom' },
+    { id: 'led_y', label: 'Y', type: PIN_TYPE.DIGITAL, x: 30, y: 60, side: 'bottom' },
+    { id: 'led_g', label: 'G', type: PIN_TYPE.DIGITAL, x: 45, y: 60, side: 'bottom' },
+    { id: 'led_b', label: 'B', type: PIN_TYPE.DIGITAL, x: 60, y: 60, side: 'bottom' },
+    { id: 'gnd',   label: '−', type: PIN_TYPE.GND,     x: 75, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+
+    // Configuration for each LED in the module
+    const leds = [
+      { id: 'led_r', color: '#ff3333', label: 'R', x: 15 },
+      { id: 'led_y', color: '#ffcc00', label: 'Y', x: 30 },
+      { id: 'led_g', color: '#33cc33', label: 'G', x: 45 },
+      { id: 'led_b', color: '#3388ff', label: 'B', x: 60 },
+    ];
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Module Housing Base
+    ctx.fillStyle = '#1e1e24';
+    roundRect(ctx, 4, 10, 82, 30, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#3a3a42';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Bottom Lead Pins
+    const pinXs = [15, 30, 45, 60, 75];
+    ctx.strokeStyle = '#888888';
+    ctx.lineWidth = 1.5;
+    pinXs.forEach(px => {
+      ctx.beginPath();
+      ctx.moveTo(px, 40);
+      ctx.lineTo(px, 60);
+      ctx.stroke();
+    });
+
+    // Common Cathode (GND) Mark
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('−', 75, 53);
+
+    // Render Individual LEDs
+    leds.forEach(led => {
+      const val = getInstPinState(inst, led.id, sim) || 0;
+      const brightness = val > 1 ? Math.min(val / 255, 1) : Math.max(val, 0);
+      const isOn = brightness > 0.02;
+      const col = led.color;
+      const lx = led.x;
+      const ly = 25;
+
+      // Pin Text Labels
+      ctx.fillStyle = '#aaaaaa';
+      ctx.font = 'bold 7px sans-serif';
+      ctx.fillText(led.label, lx, 53);
+
+      // 1. Ambient Volumetric Glow Halo (When Lit)
+      if (isOn) {
+        const glowRadius = 18 * brightness;
+        const halo = ctx.createRadialGradient(lx, ly, 0, lx, ly, glowRadius);
+        halo.addColorStop(0, hexToRgba(col, 0.65 * brightness));
+        halo.addColorStop(0.5, hexToRgba(col, 0.25 * brightness));
+        halo.addColorStop(1, hexToRgba(col, 0));
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(lx, ly, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 2. LED Bulb Lens Body
+      ctx.fillStyle = isOn ? hexToRgba(col, 0.9) : hexToRgba(col, 0.3);
+      ctx.beginPath();
+      ctx.arc(lx, ly, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = isOn ? '#ffffff' : hexToRgba(col, 0.6);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // 3. Bright Specular Highlight Core
+      if (isOn) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(lx - 2, ly - 2, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, 5, 94, 60);
+    ctx.restore();
+  }
+});
+
 /* ─── BREADBOARD ─── */
 defComp({
   id: 'breadboard',
@@ -816,11 +1254,17 @@ defComp({
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const r = sim ? (getInstPinPWM(inst, 'red', sim) / 255 * 255) : 0;
-    const g = sim ? (getInstPinPWM(inst, 'green', sim) / 255 * 255) : 0;
-    const b = sim ? (getInstPinPWM(inst, 'blue', sim) / 255 * 255) : 0;
-    const isOn = r > 0 || g > 0 || b > 0;
-    const col = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+    const rVal = (inst.runtimeState && inst.runtimeState.red !== undefined) ? inst.runtimeState.red : getInstPinPWM(inst, 'red', sim);
+    const gVal = (inst.runtimeState && inst.runtimeState.green !== undefined) ? inst.runtimeState.green : getInstPinPWM(inst, 'green', sim);
+    const bVal = (inst.runtimeState && inst.runtimeState.blue !== undefined) ? inst.runtimeState.blue : getInstPinPWM(inst, 'blue', sim);
+    const r = Math.min(255, Math.max(0, Math.round(rVal > 1 ? rVal : (rVal ? 255 : 0))));
+    const g = Math.min(255, Math.max(0, Math.round(gVal > 1 ? gVal : (gVal ? 255 : 0))));
+    const b = Math.min(255, Math.max(0, Math.round(bVal > 1 ? bVal : (bVal ? 255 : 0))));
+    const totalLum = Math.min(1, (r * 0.299 + g * 0.587 + b * 0.114) / 255);
+    const isOn = (r + g + b) > 5;
+    const col = `rgb(${r},${g},${b})`;
+    const time = Date.now() / 250;
+    const pulse = isOn ? 1 + Math.sin(time) * 0.07 : 1;
 
     ctx.save();
     ctx.translate(x, y);
@@ -832,18 +1276,58 @@ defComp({
     ctx.strokeStyle = '#4444cc'; ctx.beginPath(); ctx.moveTo(24, 0); ctx.lineTo(24, 22); ctx.stroke();
     ctx.strokeStyle = '#888'; ctx.beginPath(); ctx.moveTo(15, 48); ctx.lineTo(15, 70); ctx.stroke();
 
+    // 1. Ambient Volumetric Glow Halo
+    if (isOn) {
+      const glowR = (36 + totalLum * 22) * pulse;
+      const halo = ctx.createRadialGradient(15, 35, 0, 15, 35, glowR);
+      halo.addColorStop(0, `rgba(${r},${g},${b},${0.5 * totalLum})`);
+      halo.addColorStop(0.35, `rgba(${r},${g},${b},${0.24 * totalLum})`);
+      halo.addColorStop(0.7, `rgba(${r},${g},${b},${0.07 * totalLum})`);
+      halo.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(15, 35, glowR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 2. Glow shadow
     if (isOn) {
       ctx.shadowColor = col;
-      ctx.shadowBlur = 18;
+      ctx.shadowBlur = (20 + totalLum * 15) * pulse;
     }
-    ctx.fillStyle = isOn ? col : '#2a2a2a';
+
+    // 3. Bulb body
+    ctx.fillStyle = isOn ? `rgba(${r},${g},${b},0.85)` : '#2a2a2a';
     ctx.beginPath();
     ctx.arc(15, 35, 14, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = isOn ? col : '#555';
+    ctx.strokeStyle = isOn ? 'rgba(255,255,255,0.75)' : '#555';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    // 4. White hotspot core
+    if (isOn) {
+      const core = ctx.createRadialGradient(15, 34, 0, 15, 34, 9);
+      core.addColorStop(0, '#ffffff');
+      core.addColorStop(0.45, `rgba(${r},${g},${b},0.95)`);
+      core.addColorStop(1, `rgba(${r},${g},${b},0.3)`);
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(15, 34, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.shadowBlur = 0;
+
+    // 5. Specular dome glare
+    const glare = ctx.createRadialGradient(11, 28, 0, 15, 33, 13);
+    glare.addColorStop(0, isOn ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)');
+    glare.addColorStop(0.5, isOn ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)');
+    glare.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glare;
+    ctx.beginPath();
+    ctx.arc(15, 35, 14, 0, Math.PI * 2);
+    ctx.fill();
 
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 36, 76);
     ctx.restore();
@@ -924,6 +1408,69 @@ defComp({
   }
 });
 
+// /* ─── DHT11 Temperature Sensor ─── */
+// defComp({
+//   id: 'dht11',
+//   name: 'DHT11 Sensor',
+//   category: 'Sensors',
+//   icon: '🌡️',
+//   desc: 'Temperature & humidity sensor',
+//   width: 30,
+//   height: 50,
+//   defaultProps: { temperature: 25, humidity: 60 },
+//   interactive: [
+//     { field: 'temperature', label: 'Temp', min: 0, max: 50, step: 1, unit: '°C' },
+//     { field: 'humidity',    label: 'Hum',  min: 0, max: 100, step: 1, unit: '%' },
+//   ],
+//   pins: [
+//     { id:'vcc',  label:'VCC', type:PIN_TYPE.POWER,  x: 6, y: 0, side:'top' },
+//     { id:'data', label:'DAT', type:PIN_TYPE.DIGITAL, x:15, y: 0, side:'top' },
+//     { id:'nc',   label:'NC',  type:PIN_TYPE.SIGNAL,  x:24, y: 0, side:'top' },
+//     { id:'gnd',  label:'GND', type:PIN_TYPE.GND,     x:15, y:50, side:'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const temp = inst.props.temperature || 25;
+//     const hum  = inst.props.humidity || 60;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // Body
+//     ctx.fillStyle = '#1a55cc';
+//     roundRect(ctx, 2, 8, 26, 36, 3);
+//     ctx.fill();
+//     ctx.strokeStyle = '#2266ee';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Grille
+//     ctx.fillStyle = '#0a2a88';
+//     for (let row = 0; row < 3; row++) {
+//       for (let col = 0; col < 4; col++) {
+//         roundRect(ctx, 5 + col*5, 12 + row*8, 4, 6, 1);
+//         ctx.fill();
+//       }
+//     }
+
+//     // Label
+//     ctx.fillStyle = '#fff';
+//     ctx.font = 'bold 6px sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('DHT11', 15, 48);
+
+//     // Leads
+//     ctx.strokeStyle = '#888';
+//     ctx.lineWidth = 1.5;
+//     ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, 8); ctx.stroke();
+//     ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(15, 8); ctx.stroke();
+//     ctx.beginPath(); ctx.moveTo(24, 0); ctx.lineTo(24, 8); ctx.stroke();
+
+//     if (inst.selected) drawSelectionRect(ctx, -1, 5, 32, 53);
+//     ctx.restore();
+//   }
+// });
+
 /* ─── DHT11 Temperature Sensor ─── */
 defComp({
   id: 'dht11',
@@ -934,51 +1481,60 @@ defComp({
   width: 30,
   height: 50,
   defaultProps: { temperature: 25, humidity: 60 },
+  interactive: [
+    { field: 'temperature', label: 'Temp', min: 0, max: 50, step: 1, unit: '°C' },
+    { field: 'humidity',    label: 'Hum',  min: 0, max: 100, step: 1, unit: '%' },
+  ],
   pins: [
-    { id:'vcc',  label:'VCC', type:PIN_TYPE.POWER,  x: 6, y: 0, side:'top' },
-    { id:'data', label:'DAT', type:PIN_TYPE.DIGITAL, x:15, y: 0, side:'top' },
-    { id:'nc',   label:'NC',  type:PIN_TYPE.SIGNAL,  x:24, y: 0, side:'top' },
-    { id:'gnd',  label:'GND', type:PIN_TYPE.GND,     x:15, y:50, side:'bottom' },
+    { id: 'vcc',  label: 'VCC',  type: PIN_TYPE.POWER,   x: 6,  y: 50, side: 'bottom' },
+    { id: 'data', label: 'DAT',  type: PIN_TYPE.DIGITAL, x: 12, y: 50, side: 'bottom' },
+    { id: 'nc',   label: 'NC',   type: PIN_TYPE.SIGNAL,  x: 18, y: 50, side: 'bottom' },
+    { id: 'gnd',  label: 'GND',  type: PIN_TYPE.GND,     x: 24, y: 50, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const temp = inst.props.temperature || 25;
-    const hum  = inst.props.humidity || 60;
+    const temp = inst.props.temperature ?? 25;
+    const hum  = inst.props.humidity ?? 60;
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Body
+    // Main Plastic Body
     ctx.fillStyle = '#1a55cc';
-    roundRect(ctx, 2, 8, 26, 36, 3);
+    roundRect(ctx, 2, 2, 26, 38, 3);
     ctx.fill();
     ctx.strokeStyle = '#2266ee';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Grille
+    // Vent Grille
     ctx.fillStyle = '#0a2a88';
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 4; col++) {
-        roundRect(ctx, 5 + col*5, 12 + row*8, 4, 6, 1);
+        roundRect(ctx, 5 + col * 5, 5 + row * 6, 4, 4, 1);
         ctx.fill();
       }
     }
 
-    // Label
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 6px sans-serif';
+    // Dynamic Sensor Readout Display
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 5px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('DHT11', 15, 48);
+    ctx.fillText(`${temp}°C`, 15, 27);
+    ctx.fillText(`${hum}%`, 15, 34);
 
-    // Leads
-    ctx.strokeStyle = '#888';
+    // Pin Leads (Bottom)
+    const pinXs = [6, 12, 18, 24];
+    ctx.strokeStyle = '#a0a0a0';
     ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, 8); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(15, 8); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(24, 0); ctx.lineTo(24, 8); ctx.stroke();
+    for (const px of pinXs) {
+      ctx.beginPath();
+      ctx.moveTo(px, 40);
+      ctx.lineTo(px, 50);
+      ctx.stroke();
+    }
 
-    if (inst.selected) drawSelectionRect(ctx, -1, 5, 32, 53);
+    if (inst.selected) drawSelectionRect(ctx, 0, 0, 30, 50);
     ctx.restore();
   }
 });
@@ -993,6 +1549,9 @@ defComp({
   width: 70,
   height: 40,
   defaultProps: { distance: 20 },
+  interactive: [
+    { field: 'distance', label: 'Dist', min: 2, max: 400, step: 1, unit: 'cm' },
+  ],
   pins: [
     { id:'vcc',   label:'VCC',   type:PIN_TYPE.POWER,  x:  8, y: 0, side:'top' },
     { id:'trig',  label:'TRIG',  type:PIN_TYPE.DIGITAL, x:24, y: 0, side:'top' },
@@ -1037,6 +1596,385 @@ defComp({
     });
 
     if (inst.selected) drawSelectionRect(ctx, -3, 5, 76, 40);
+    ctx.restore();
+  }
+});
+
+/* ─── Electromagnetic Relay ─── */
+defComp({
+  id: 'relay',
+  name: 'Relay Module',
+  category: 'Actuators',
+  icon: '⚡',
+  desc: 'Electromagnetic relay — coil driven by a signal pin switches COM to NO/NC',
+  width: 90,
+  height: 50,
+  defaultProps: { label: 'RELAY' },
+  pins: [
+    { id: 'vcc',  label: 'VCC',  type: PIN_TYPE.POWER,   x: 12, y: 50, side: 'bottom' },
+    { id: 'gnd',  label: 'GND',  type: PIN_TYPE.GND,     x: 24, y: 50, side: 'bottom' },
+    { id: 'sig',  label: 'IN',   type: PIN_TYPE.DIGITAL, x: 36, y: 50, side: 'bottom' },
+    { id: 'com',  label: 'COM',  type: PIN_TYPE.SIGNAL,  x: 54, y: 50, side: 'bottom' },
+    { id: 'no',   label: 'NO',   type: PIN_TYPE.SIGNAL,  x: 66, y: 50, side: 'bottom' },
+    { id: 'nc',   label: 'NC',   type: PIN_TYPE.SIGNAL,  x: 78, y: 50, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const active = inst.runtimeState && inst.runtimeState.active;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Pin leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [12,24,36,54,66,78].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 44); ctx.lineTo(px, 50); ctx.stroke();
+    });
+
+    // Body
+    const bodyGrad = ctx.createLinearGradient(0, 4, 90, 46);
+    bodyGrad.addColorStop(0, '#3d4a5a');
+    bodyGrad.addColorStop(1, '#1c2530');
+    ctx.fillStyle = bodyGrad;
+    roundRect(ctx, 2, 4, 86, 40, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#55677a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Coil (left) — inductor loops
+    ctx.strokeStyle = '#ffd24a';
+    ctx.lineWidth = 2;
+    const coilY = 22;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const cx = 14 + i * 5;
+      ctx.moveTo(cx, coilY + 3);
+      ctx.arc(cx, coilY, 3, 0, Math.PI);
+    }
+    ctx.stroke();
+
+    // Signal LED indicator
+    ctx.fillStyle = active ? '#33ff66' : '#335533';
+    ctx.beginPath(); ctx.arc(26, 22, 3.5, 0, Math.PI * 2); ctx.fill();
+    if (active) { ctx.shadowColor = '#33ff66'; ctx.shadowBlur = 6; }
+    ctx.beginPath(); ctx.arc(26, 22, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Contacts: COM terminal at right, lever swings between NO / NC
+    ctx.fillStyle = '#999';
+    ctx.fillRect(48, 20, 4, 4);   // COM fixed contact
+    ctx.fillRect(active ? 60 : 72, 12, 4, 4);  // NO (top) or NC (bottom) contact
+    // Moving lever
+    ctx.strokeStyle = active ? '#33ff66' : '#cc3333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(50, 22);
+    ctx.lineTo(active ? 62 : 74, active ? 14 : 30);
+    ctx.stroke();
+
+    // Labels
+    ctx.fillStyle = '#aab4c0';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(active ? 'ON' : 'OFF', 72, 42);
+    ctx.fillText('RELAY', 40, 10);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 2, 96, 55);
+    ctx.restore();
+  }
+});
+
+/* ─── DC Motor ─── */
+defComp({
+  id: 'dc_motor',
+  name: 'DC Motor',
+  category: 'Actuators',
+  icon: '🌀',
+  desc: 'Brushed DC motor — speed follows the PWM value on the IN pin',
+  width: 50,
+  height: 60,
+  defaultProps: { label: 'MOTOR' },
+  pins: [
+    { id: 'in',   label: 'IN',  type: PIN_TYPE.PWM,  x: 20, y: 60, side: 'bottom' },
+    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,  x: 34, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const speed = inst.runtimeState && inst.runtimeState.speed !== undefined ? inst.runtimeState.speed : 0;
+    const rpm = inst.runtimeState && inst.runtimeState.rpm !== undefined ? inst.runtimeState.rpm : 0;
+    const t = (sim && sim.simTime) || 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [[20,60],[34,60]].forEach(([px,py]) => {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 52); ctx.stroke();
+    });
+
+    // Body
+    const bodyGrad = ctx.createLinearGradient(2, 6, 48, 54);
+    bodyGrad.addColorStop(0, '#45474b');
+    bodyGrad.addColorStop(1, '#222428');
+    ctx.fillStyle = bodyGrad;
+    roundRect(ctx, 4, 6, 42, 46, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#5a5d63';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // End cap lines
+    ctx.strokeStyle = '#3a3d42';
+    ctx.beginPath(); ctx.moveTo(18, 8); ctx.lineTo(18, 50); ctx.stroke();
+
+    // Rotating shaft + fan (spins proportional to speed)
+    ctx.save();
+    ctx.translate(32, 26);
+    ctx.rotate(t * 0.02 * speed);
+    ctx.fillStyle = '#8a8e96';
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.rotate((i * Math.PI * 2) / 3);
+      roundRect(ctx, -2, -14, 4, 12, 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = '#555';
+    ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // Speed display
+    ctx.fillStyle = speed > 0.02 ? '#33ffcc' : '#8a8e96';
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${rpm} RPM`, 25, 48);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 3, 56, 63);
+    ctx.restore();
+  }
+});
+
+/* ─── LDR Photoresistor ─── */
+defComp({
+  id: 'ldr',
+  name: 'LDR Photoresistor',
+  category: 'Sensors',
+  icon: '💡',
+  desc: 'Light-dependent resistor — light level appears on the A pin (0–1023)',
+  width: 40,
+  height: 40,
+  defaultProps: { light: 512 },
+  interactive: [
+    { field: 'light', label: 'Light', min: 0, max: 1023, step: 1, unit: ' lx' },
+  ],
+  pins: [
+    { id: 'vcc',  label: 'VCC', type: PIN_TYPE.POWER,  x:  8, y: 40, side: 'bottom' },
+    { id: 'a',    label: 'A',   type: PIN_TYPE.ANALOG, x: 20, y: 40, side: 'bottom' },
+    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,    x: 32, y: 40, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const light = inst.runtimeState && inst.runtimeState.light !== undefined ? inst.runtimeState.light : (inst.props.light || 512);
+    const pct = light / 1023;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [[8,40],[20,40],[32,40]].forEach(([px,py]) => {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 34); ctx.stroke();
+    });
+
+    // Body
+    ctx.fillStyle = '#2a2a2a';
+    roundRect(ctx, 2, 3, 36, 31, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Wavy resistive track
+    ctx.strokeStyle = '#c8b06a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(8, 18);
+    ctx.lineTo(14, 12); ctx.lineTo(18, 24); ctx.lineTo(22, 12); ctx.lineTo(26, 24); ctx.lineTo(31, 18);
+    ctx.stroke();
+
+    // Light rays (animated with brightness)
+    const rayOn = pct > 0.05;
+    ctx.strokeStyle = rayOn ? '#ffee88' : '#666';
+    ctx.lineWidth = 1;
+    if (rayOn) { ctx.shadowColor = '#ffee88'; ctx.shadowBlur = 5; }
+    [[-2,4],[14,-2],[30,4]].forEach(([rx,ry]) => {
+      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 3, ry - 5); ctx.stroke();
+    });
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('LDR', 20, 30);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 0, 46, 46);
+    ctx.restore();
+  }
+});
+
+/* ─── PIR Motion Sensor ─── */
+defComp({
+  id: 'pir',
+  name: 'PIR Motion Sensor',
+  category: 'Sensors',
+  icon: '🚶',
+  desc: 'Passive infrared sensor — OUT goes HIGH while motion is detected',
+  width: 50,
+  height: 40,
+  defaultProps: { motion: 0 },
+  interactive: [
+    { field: 'motion', label: 'Motion', min: 0, max: 1, step: 1, unit: '' },
+  ],
+  pins: [
+    { id: 'vcc',  label: 'VCC', type: PIN_TYPE.POWER,   x: 12, y: 40, side: 'bottom' },
+    { id: 'out',  label: 'OUT', type: PIN_TYPE.DIGITAL, x: 25, y: 40, side: 'bottom' },
+    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,     x: 38, y: 40, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const motion = inst.runtimeState && inst.runtimeState.motion !== undefined ? !!inst.runtimeState.motion : !!(inst.props.motion || 0);
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [[12,40],[25,40],[38,40]].forEach(([px,py]) => {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 36); ctx.stroke();
+    });
+
+    // Board
+    ctx.fillStyle = '#1a5c1a';
+    roundRect(ctx, 2, 12, 46, 24, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#2d8c2d';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Sensor dome
+    ctx.fillStyle = motion ? '#e8f4ff' : '#cfd8e0';
+    ctx.beginPath();
+    ctx.arc(25, 12, 13, Math.PI, 0);
+    ctx.fill();
+    ctx.strokeStyle = '#aab4c0';
+    ctx.stroke();
+    ctx.fillStyle = motion ? '#3399ff' : '#77828e';
+    ctx.beginPath();
+    ctx.arc(25, 12, 7, Math.PI, 0);
+    ctx.fill();
+
+    // Indicator LED
+    ctx.fillStyle = motion ? '#ff5555' : '#442222';
+    ctx.beginPath(); ctx.arc(12, 22, 2.5, 0, Math.PI * 2); ctx.fill();
+    if (motion) { ctx.shadowColor = '#ff5555'; ctx.shadowBlur = 5; }
+    ctx.beginPath(); ctx.arc(12, 22, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#c8c8c8';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(motion ? 'MOTION' : 'IDLE', 33, 28);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 56, 46);
+    ctx.restore();
+  }
+});
+
+/* ─── Joystick ─── */
+defComp({
+  id: 'joystick',
+  name: 'Joystick Module',
+  category: 'Input',
+  icon: '🕹️',
+  desc: '2-axis analog joystick with push button (X, Y, SW)',
+  width: 60,
+  height: 60,
+  defaultProps: { x: 512, y: 512, sw: 0 },
+  interactive: [
+    { field: 'x',  label: 'X',  min: 0, max: 1023, step: 1 },
+    { field: 'y',  label: 'Y',  min: 0, max: 1023, step: 1 },
+    { field: 'sw', label: 'SW', min: 0, max: 1,    step: 1 },
+  ],
+  pins: [
+    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,     x:  8, y: 60, side: 'bottom' },
+    { id: 'vcc',  label: 'VCC', type: PIN_TYPE.POWER,   x: 20, y: 60, side: 'bottom' },
+    { id: 'x',    label: 'X',   type: PIN_TYPE.ANALOG,  x: 32, y: 60, side: 'bottom' },
+    { id: 'y',    label: 'Y',   type: PIN_TYPE.ANALOG,  x: 44, y: 60, side: 'bottom' },
+    { id: 'sw',   label: 'SW',  type: PIN_TYPE.DIGITAL, x: 56, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const xv = inst.runtimeState && inst.runtimeState.x !== undefined ? inst.runtimeState.x : (inst.props.x || 512);
+    const yv = inst.runtimeState && inst.runtimeState.y !== undefined ? inst.runtimeState.y : (inst.props.y || 512);
+    const pressed = inst.runtimeState && inst.runtimeState.sw !== undefined ? !!inst.runtimeState.sw : !!(inst.props.sw || 0);
+    const stickX = (xv / 1023 - 0.5) * 12;
+    const stickY = (yv / 1023 - 0.5) * 12;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Leads
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    [[8,60],[20,60],[32,60],[44,60],[56,60]].forEach(([px,py]) => {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 54); ctx.stroke();
+    });
+
+    // Base
+    ctx.fillStyle = '#26303a';
+    roundRect(ctx, 2, 6, 56, 48, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#4a5a68';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Thumb pad base
+    ctx.fillStyle = '#34424e';
+    ctx.beginPath(); ctx.arc(30, 28, 18, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#55677a';
+    ctx.stroke();
+
+    // Direction guides
+    ctx.strokeStyle = '#55677a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(30, 12); ctx.lineTo(30, 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(30, 42); ctx.lineTo(30, 44); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14, 28); ctx.lineTo(16, 28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(44, 28); ctx.lineTo(46, 28); ctx.stroke();
+
+    // Stick
+    ctx.save();
+    ctx.translate(30 + stickX, 28 + stickY);
+    ctx.fillStyle = '#c8d0d8';
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#8a96a2';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#f0f4f8';
+    ctx.beginPath(); ctx.arc(-2.5, -2.5, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // SW indicator
+    ctx.fillStyle = pressed ? '#ff5555' : '#444';
+    ctx.beginPath(); ctx.arc(44, 46, 3, 0, Math.PI * 2); ctx.fill();
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 3, 66, 63);
     ctx.restore();
   }
 });
@@ -1101,6 +2039,180 @@ defComp({
     });
 
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 126, 66);
+    ctx.restore();
+  }
+});
+
+/* ─── LCD 16x2 (I2C) ─── */
+defComp({
+  id: 'lcd1602_i2c',
+  name: 'LCD 16×2 (I2C)',
+  category: 'Output',
+  icon: '🖥️',
+  desc: '16×2 character LCD display with PCF8574 I2C adapter module',
+  width: 120,
+  height: 65,
+  defaultProps: { address: '0x27', line1: 'Hello, I2C!    ', line2: 'Addr: 0x27      ' },
+  interactive: [
+    { field: 'address', label: 'I2C Addr', type: 'text' },
+  ],
+  pins: [
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 35, y: 65, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 50, y: 65, side: 'bottom' },
+    { id: 'sda', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 65, y: 65, side: 'bottom' },
+    { id: 'scl', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 80, y: 65, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const line1 = (inst.runtimeState && inst.runtimeState.line1) || inst.props.line1 || '                ';
+    const line2 = (inst.runtimeState && inst.runtimeState.line2) || inst.props.line2 || '                ';
+    const powered = inst.runtimeState && inst.runtimeState.powered;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Main Green PCB Frame
+    ctx.fillStyle = '#1a4a1a';
+    roundRect(ctx, 0, 0, 120, 52, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#2d8c2d';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // LCD Screen Area
+    ctx.fillStyle = powered ? '#4a7a2a' : '#2a4a1a';
+    roundRect(ctx, 6, 5, 108, 42, 3);
+    ctx.fill();
+
+    // Display Text
+    const txColor = powered ? '#88ff88' : '#556655';
+    ctx.fillStyle = txColor;
+    ctx.font = 'bold 8px JetBrains Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(line1.substring(0, 16).padEnd(16), 9, 20);
+    ctx.fillText(line2.substring(0, 16).padEnd(16), 9, 38);
+
+    // I2C Backpack Board Overlay
+    ctx.fillStyle = '#102244';
+    roundRect(ctx, 25, 52, 70, 8, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#2255aa';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // PCF8574 Chip & Contrast Trimpot Detail
+    ctx.fillStyle = '#222222';
+    ctx.fillRect(30, 54, 12, 4);
+    ctx.fillStyle = '#ccaa00';
+    ctx.fillRect(82, 54, 4, 4);
+
+    // 4 I2C Pin Leads (GND, VCC, SDA, SCL)
+    const pinXs = [35, 50, 65, 80];
+    ctx.strokeStyle = '#aaaaaa';
+    ctx.lineWidth = 1.5;
+    pinXs.forEach(px => {
+      ctx.beginPath();
+      ctx.moveTo(px, 58);
+      ctx.lineTo(px, 65);
+      ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 126, 71);
+    ctx.restore();
+  }
+});
+
+/* ─── OLED 128x64 (SSD1306, I2C) ─── */
+defComp({
+  id: 'oled_ssd1306',
+  name: 'OLED 128×64 (I2C)',
+  category: 'Output',
+  icon: '🖥️',
+  desc: '128×64 monochrome OLED display with SSD1306 controller (I2C)',
+  width: 132,
+  height: 76,
+  defaultProps: { address: '0x3C' },
+  interactive: [
+    { field: 'address', label: 'I2C Addr', type: 'text' },
+  ],
+  pins: [
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 36, y: 76, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 52, y: 76, side: 'bottom' },
+    { id: 'scl', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 68, y: 76, side: 'bottom' },
+    { id: 'sda', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 84, y: 76, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const o = inst.runtimeState && inst.runtimeState.oled;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB
+    ctx.fillStyle = '#0e1a2a';
+    roundRect(ctx, 0, 0, 132, 70, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#2a4a6a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Screen (128×64 internal, rendered 1:1)
+    ctx.fillStyle = o && o.power ? '#06121c' : '#0a1620';
+    roundRect(ctx, 2, 2, 128, 64, 2);
+    ctx.fill();
+
+    if (o && o.pixels) {
+      const lit = o.invert ? '#0a1620' : '#7fd4ff';
+      const dim = o.invert ? '#7fd4ff' : '#0a1620';
+      if (o.invert) {
+        // Inverted display: full screen lit, "on" pixels carved out in dark
+        ctx.fillStyle = dim;
+        ctx.fillRect(2, 2, 128, 64);
+      }
+      ctx.fillStyle = lit;
+      const px = o.pixels;
+      for (let i = 0; i < px.length; i++) {
+        if (!px[i]) continue;
+        ctx.fillRect(i % 128, (i / 128) | 0, 1, 1);
+      }
+    }
+
+    // Text layer (Adafruit_GFX setCursor(x, y) is the top-left of the text;
+    // canvas fillText y is the baseline, so offset by the line height)
+    if (o && o.texts) {
+      ctx.textAlign = 'left';
+      for (const t of o.texts) {
+        ctx.font = `${t.size * 8}px JetBrains Mono, monospace`;
+        ctx.fillStyle = (o.invert ? t.color === 0 : t.color === 1) ? '#7fd4ff' : '#06121c';
+        ctx.fillText(t.text, t.x, t.y + t.size * 8);
+      }
+    }
+
+    if (!o || !o.power) {
+      // Idle splash so the component reads as an OLED even before running
+      ctx.fillStyle = 'rgba(127,212,255,0.25)';
+      ctx.font = '8px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('ArduSim', 66, 38);
+    }
+
+    // Label
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '7px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`OLED ${inst.props.address || '0x3C'}`, 66, 68);
+
+    // 4 I2C Pin Leads (GND, VCC, SCL, SDA)
+    ctx.strokeStyle = '#aaaaaa';
+    ctx.lineWidth = 1.5;
+    [36, 52, 68, 84].forEach(px => {
+      ctx.beginPath();
+      ctx.moveTo(px, 70);
+      ctx.lineTo(px, 76);
+      ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 138, 82);
     ctx.restore();
   }
 });
@@ -1215,16 +2327,37 @@ defComp({
 
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
-  { category: 'Boards',    ids: ['arduino_uno'] },
-  { category: 'Output',    ids: ['led', 'rgb_led', 'buzzer', 'seg7', 'lcd1602'] },
-  { category: 'Input',     ids: ['push_button', 'potentiometer'] },
-  { category: 'Actuators', ids: ['servo'] },
-  { category: 'Sensors',   ids: ['dht11', 'hcsr04'] },
+  { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
+  { category: 'Output',    ids: ['led', 'multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306'] },
+  { category: 'Input',     ids: ['push_button', 'potentiometer', 'joystick'] },
+  { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay'] },
+  { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir'] },
   { category: 'Passive',   ids: ['resistor', 'capacitor', 'breadboard'] },
   { category: 'Power',     ids: ['power_5v', 'power_gnd'] },
 ];
 
 /* ═══════════════ HELPER DRAWING FUNCTIONS ═══════════════ */
+
+function drawHeaderStrip(ctx, hx, hy, hw, holes, pinY) {
+  ctx.fillStyle = '#141416';
+  roundRect(ctx, hx, hy, hw, 12, 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = '#c8b06a';
+  for (const cx of holes) {
+    ctx.beginPath();
+    ctx.arc(cx, pinY, 4.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#0b0b0d';
+  for (const cx of holes) {
+    ctx.beginPath();
+    ctx.arc(cx, pinY, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -1254,30 +2387,73 @@ function drawSelectionRect(ctx, x, y, w, h) {
 }
 
 function drawLED_on_board(ctx, cx, cy, color, r) {
+  const isLit = color !== '#555' && color !== '#333' && color !== '#444';
+  if (isLit) {
+    const pulse = 1 + Math.sin(Date.now() / 250) * 0.08;
+    // Ambient bloom
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, (r * 3.5) * pulse);
+    glow.addColorStop(0, color);
+    glow.addColorStop(0.35, color);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, (r * 3.5) * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12 * pulse;
+  }
   ctx.fillStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = color === '#555' ? 0 : 8;
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
+  if (isLit) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.shadowBlur = 0;
 }
 
 function hexToRgba(hex, alpha) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
+  if (!hex || !hex.startsWith('#')) return `rgba(255,50,50,${alpha})`;
+  let h = hex.slice(1);
+  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  const r = parseInt(h.slice(0,2),16) || 0;
+  const g = parseInt(h.slice(2,4),16) || 0;
+  const b = parseInt(h.slice(4,6),16) || 0;
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
 function getInstPinState(inst, pinId, sim) {
-  const key = `${inst.id}_${pinId}`;
-  return sim.pinStates[key] || 0;
+  if (inst && inst.runtimeState && inst.runtimeState.val !== undefined) {
+    return inst.runtimeState.val;
+  }
+  if (inst && inst.runtimeState && inst.runtimeState.lit !== undefined) {
+    return inst.runtimeState.lit ? 1 : 0;
+  }
+  if (!sim || !sim.pinStates) return 0;
+  if (window.CircuitCanvas && typeof window.CircuitCanvas._getConnectedPinNum === 'function') {
+    const pinNum = window.CircuitCanvas._getConnectedPinNum(inst.id, pinId);
+    if (pinNum !== null) return sim.pinStates[`pin_${pinNum}`] || 0;
+  }
+  return sim.pinStates[`${inst.id}_${pinId}`] || 0;
 }
 
 function getInstPinPWM(inst, pinId, sim) {
-  const key = `${inst.id}_${pinId}`;
-  return sim.pinStates[key] || 0;
+  if (inst && inst.runtimeState && inst.runtimeState[pinId] !== undefined) {
+    return inst.runtimeState[pinId];
+  }
+  if (!sim || !sim.pinStates) return 0;
+  if (window.CircuitCanvas && typeof window.CircuitCanvas._getConnectedPinNum === 'function') {
+    const pinNum = window.CircuitCanvas._getConnectedPinNum(inst.id, pinId);
+    if (pinNum !== null) return sim.pinStates[`pin_${pinNum}`] || 0;
+  }
+  return sim.pinStates[`${inst.id}_${pinId}`] || 0;
 }
 
 /* Resistor color bands */
