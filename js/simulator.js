@@ -711,6 +711,8 @@ class ArduinoSimulator {
       A3: this.board === 'esp32_devkit_v1' ? 35 : 17,
       A4: this.board === 'esp32_devkit_v1' ? 32 : 18,
       A5: this.board === 'esp32_devkit_v1' ? 33 : 19,
+      // Nano-only analog pins (ADC6/ADC7, no digital I/O on real hardware)
+      ...(this.board === 'arduino_nano' ? { A6: 20, A7: 21 } : {}),
       LED_BUILTIN: this.board === 'esp32_devkit_v1' ? 2 : 13,
       PI: Math.PI, TWO_PI: Math.PI * 2, HALF_PI: Math.PI / 2,
       DEG_TO_RAD: Math.PI / 180, RAD_TO_DEG: 180 / Math.PI,

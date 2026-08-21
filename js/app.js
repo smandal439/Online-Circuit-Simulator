@@ -1023,6 +1023,19 @@ _newProject() {
   _buildPinMonitor(grid, boardType) {
     grid.innerHTML = '';
     const esp32 = boardType === 'esp32_devkit_v1';
+    const nano  = boardType === 'arduino_nano';
+    const unoPins = [
+      { key: 'pin_0',  label: 'D0' },  { key: 'pin_1',  label: 'D1' },
+      { key: 'pin_2',  label: 'D2' },  { key: 'pin_3',  label: 'D3~' },
+      { key: 'pin_4',  label: 'D4' },  { key: 'pin_5',  label: 'D5~' },
+      { key: 'pin_6',  label: 'D6~' }, { key: 'pin_7',  label: 'D7' },
+      { key: 'pin_8',  label: 'D8' },  { key: 'pin_9',  label: 'D9~' },
+      { key: 'pin_10', label: 'D10~'},  { key: 'pin_11', label: 'D11~'},
+      { key: 'pin_12', label: 'D12' }, { key: 'pin_13', label: 'D13 · L' },
+      { key: 'pin_14', label: 'A0' },  { key: 'pin_15', label: 'A1' },
+      { key: 'pin_16', label: 'A2' },  { key: 'pin_17', label: 'A3' },
+      { key: 'pin_18', label: 'A4' },  { key: 'pin_19', label: 'A5' },
+    ];
     const pins = esp32 ? [
       { key: 'pin_2',  label: 'D2 · L' },  { key: 'pin_4',  label: 'D4' },
       { key: 'pin_5',  label: 'D5' },      { key: 'pin_12', label: 'D12' },
@@ -1037,18 +1050,10 @@ _newProject() {
       { key: 'pin_35', label: 'D35' },     { key: 'pin_36', label: 'VP · 36' },
       { key: 'pin_39', label: 'VN · 39' }, { key: 'pin_1',  label: 'TX0' },
       { key: 'pin_3',  label: 'RX0' },
-    ] : [
-      { key: 'pin_0',  label: 'D0' },  { key: 'pin_1',  label: 'D1' },
-      { key: 'pin_2',  label: 'D2' },  { key: 'pin_3',  label: 'D3~' },
-      { key: 'pin_4',  label: 'D4' },  { key: 'pin_5',  label: 'D5~' },
-      { key: 'pin_6',  label: 'D6~' }, { key: 'pin_7',  label: 'D7' },
-      { key: 'pin_8',  label: 'D8' },  { key: 'pin_9',  label: 'D9~' },
-      { key: 'pin_10', label: 'D10~'},  { key: 'pin_11', label: 'D11~'},
-      { key: 'pin_12', label: 'D12' }, { key: 'pin_13', label: 'D13' },
-      { key: 'pin_14', label: 'A0' },  { key: 'pin_15', label: 'A1' },
-      { key: 'pin_16', label: 'A2' },  { key: 'pin_17', label: 'A3' },
-      { key: 'pin_18', label: 'A4' },  { key: 'pin_19', label: 'A5' },
-    ];
+    ] : nano ? [
+      ...unoPins,
+      { key: 'pin_20', label: 'A6 · 20' }, { key: 'pin_21', label: 'A7 · 21' },
+    ] : unoPins;
     pins.forEach(pin => {
       const row = document.createElement('div');
       row.className = 'pin-row';

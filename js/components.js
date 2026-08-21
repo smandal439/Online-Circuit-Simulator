@@ -2431,7 +2431,7 @@ defComp({
 
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
-  { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
+  { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1', 'arduino_nano'] },
   { category: 'Output',    ids: ['led', 'multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306'] },
   { category: 'Input',     ids: ['push_button', 'potentiometer', 'joystick'] },
   { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay'] },
