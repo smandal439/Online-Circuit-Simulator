@@ -12,7 +12,7 @@ class CircuitCanvas {
 
     /* State */
     this.components   = [];  // { id, type, x, y, props, runtimeState, selected, rotation }
-    this.wires        = [];  // { id, from:{instId,pinId}, to:{instId,pinId}, color }
+    this.wires        = [];  // { id, from:{instId,pinId}, to:{instId,pinId}, color, waypoints:[] }
     this.selected     = null;
     this.selectedWire = null;
 
@@ -29,6 +29,7 @@ class CircuitCanvas {
     this.wireMouse    = null;     // { x, y } world coords
     this.placingType  = null;
     this._wireOffsets = {};       // wireId -> {hx, hy} routing hint for wire reshape
+    this.draggingWire = null;     // { wireId, segIdx } — which wire segment is being dragged
     this.placingMouse = null;
 
     /* History */
@@ -361,6 +362,9 @@ class CircuitCanvas {
     const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
     const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
     if (!p1 || !p2) return null;
+    if (wire.waypoints && Array.isArray(wire.waypoints) && wire.waypoints.length > 0) {
+      return [p1, ...wire.waypoints.map(wp => ({ x: wp.x, y: wp.y })), p2];
+    }
     const d1 = this._getPinExitDir(wire.from.instId, wire.from.pinId);
     const d2 = this._getPinExitDir(wire.to.instId, wire.to.pinId);
     const off = this._wireOffsets && this._wireOffsets[wire.id];
@@ -376,22 +380,24 @@ class CircuitCanvas {
       const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
       if (!p1 || !p2) continue;
 
-      // Get wire state from simulation
-      const pinKey = this._getPinKey(wire.from.instId, wire.from.pinId);
-      const val = sim.isRunning ? (sim.pinStates[pinKey] || 0) : 0;
-
-      let color;
-      const pinType = this._getPinType(wire.from.instId, wire.from.pinId);
-      if (pinType === 'gnd')   color = '#444';
-      else if (pinType === 'power') color = '#994444';
-      else if (val > 1 && val <= 255) color = `rgba(247,201,72,${0.6 + val/255*0.4})`; // PWM yellow
-      else color = val > 0 ? '#cc3333' : '#2266aa'; // HIGH=red, LOW=blue
-
       const isSelected = this.selectedWire && this.selectedWire.id === wire.id;
-      if (isSelected) color = '#00e5ff';
+
+      // Determine color: custom color takes priority, then dynamic sim state
+      let color;
+      if (wire.color) {
+        color = wire.color;
+      } else {
+        const pinKey = this._getPinKey(wire.from.instId, wire.from.pinId);
+        const val = sim.isRunning ? (sim.pinStates[pinKey] || 0) : 0;
+        const pinType = this._getPinType(wire.from.instId, wire.from.pinId);
+        if (pinType === 'gnd')   color = '#444';
+        else if (pinType === 'power') color = '#994444';
+        else if (val > 1 && val <= 255) color = `rgba(247,201,72,${0.6 + val/255*0.4})`;
+        else color = val > 0 ? '#cc3333' : '#2266aa';
+      }
 
       const pts = this._wirePath(wire);
-      if (pts) this._drawWire(ctx, pts, color, isSelected);
+      if (pts) this._drawWire(ctx, pts, color, isSelected, wire);
     }
 
     // Active wire preview
@@ -399,19 +405,33 @@ class CircuitCanvas {
       const p1 = { x: this.wiringFrom.wx, y: this.wiringFrom.wy };
       const d1 = this._getPinExitDir(this.wiringFrom.instId, this.wiringFrom.pinId);
       const pts = this._routePath(p1, d1, this.wireMouse, null, this.wireMouse);
-      this._drawWire(ctx, pts, '#00e5ff', true);
+      this._drawWire(ctx, pts, '#00e5ff', true, null);
     }
   }
 
-  _drawWire(ctx, pts, color, highlighted) {
+  _drawWire(ctx, pts, color, highlighted, wire) {
     if (!pts || pts.length < 2) return;
     ctx.save();
-    ctx.strokeStyle = color;
+
+    // Selection glow behind wire
+    if (highlighted) {
+      ctx.strokeStyle = 'rgba(0,229,255,0.25)';
+      ctx.lineWidth = 8 / this.zoom;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+    }
+
+    // Main wire stroke
+    ctx.strokeStyle = highlighted ? '#00e5ff' : color;
     ctx.lineWidth = highlighted ? 3 / this.zoom : 2 / this.zoom;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     if (highlighted) {
-      ctx.shadowColor = color;
+      ctx.shadowColor = '#00e5ff';
       ctx.shadowBlur = 6;
     }
 
@@ -422,11 +442,24 @@ class CircuitCanvas {
 
     // Junction dots at the pins
     ctx.shadowBlur = 0;
-    ctx.fillStyle = color;
+    ctx.fillStyle = highlighted ? '#00e5ff' : color;
     ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, 3 / this.zoom, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(pts[pts.length - 1].x, pts[pts.length - 1].y, 3 / this.zoom, 0, Math.PI * 2); ctx.fill();
 
+    // Draw bend-point handles on selected wire
+    if (highlighted && wire && Array.isArray(wire.waypoints) && wire.waypoints.length > 0) {
+      ctx.fillStyle = '#00e5ff';
+      ctx.strokeStyle = '#0d1117';
+      ctx.lineWidth = 1.5 / this.zoom;
+      for (const wp of wire.waypoints) {
+        const sz = 4 / this.zoom;
+        ctx.fillRect(wp.x - sz, wp.y - sz, sz * 2, sz * 2);
+        ctx.strokeRect(wp.x - sz, wp.y - sz, sz * 2, sz * 2);
+      }
+    }
+
     ctx.restore();
+
   }
 
   // ─── Interactive on-canvas controls (sliders for sensors / potentiometer) ───
@@ -590,7 +623,7 @@ class CircuitCanvas {
     this._onChanged();
   }
 
-  addWire(fromInstId, fromPinId, toInstId, toPinId) {
+  addWire(fromInstId, fromPinId, toInstId, toPinId, color = null, waypoints = []) {
     // Never allow a pin to be wired to itself
     if (fromInstId === toInstId && fromPinId === toPinId) return null;
 
@@ -603,13 +636,52 @@ class CircuitCanvas {
 
     this._pushHistory();
     const wire = {
-      id: `wire_${Date.now()}`,
+      id: `wire_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       from: { instId: fromInstId, pinId: fromPinId },
       to:   { instId: toInstId,   pinId: toPinId },
+      color: color || null,
+      waypoints: Array.isArray(waypoints) ? waypoints.map(wp => ({ x: wp.x, y: wp.y })) : []
     };
     this.wires.push(wire);
     this._onChanged();
     return wire;
+  }
+
+  setWireColor(wireId, color) {
+    const wire = this.wires.find(w => w.id === wireId);
+    if (!wire) return;
+    this._pushHistory();
+    wire.color = color || null;
+    this._onChanged();
+  }
+
+  _simplifyWaypoints(wire) {
+    if (!wire || !wire.waypoints || wire.waypoints.length === 0) return;
+    const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
+    const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
+    if (!p1 || !p2) return;
+
+    let pts = [p1, ...wire.waypoints, p2];
+    let simplified = [pts[0]];
+
+    for (let i = 1; i < pts.length - 1; i++) {
+      const prev = simplified[simplified.length - 1];
+      const curr = pts[i];
+      const next = pts[i + 1];
+
+      // Skip duplicate consecutive points
+      if (Math.abs(curr.x - prev.x) < 0.5 && Math.abs(curr.y - prev.y) < 0.5) continue;
+
+      // Skip redundant collinear points on straight line
+      const isCollinearX = Math.abs(prev.x - curr.x) < 0.5 && Math.abs(curr.x - next.x) < 0.5;
+      const isCollinearY = Math.abs(prev.y - curr.y) < 0.5 && Math.abs(curr.y - next.y) < 0.5;
+      if (isCollinearX || isCollinearY) continue;
+
+      simplified.push(curr);
+    }
+    simplified.push(p2);
+
+    wire.waypoints = simplified.slice(1, -1).map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
   }
 
   removeWire(id) {
@@ -795,23 +867,36 @@ class CircuitCanvas {
         return;
       }
 
-      // Check wire click
-      const wireHit = this._hitTestWire(world.x, world.y);
-      if (wireHit) {
+      // Check wire click (select and/or start dragging segment/handle)
+      const wireDetail = this._hitTestWireDetails(world.x, world.y);
+      if (wireDetail) {
         this._selectAll(false);
-        this.selectedWire = wireHit;
+        this.selectedWire = wireDetail.wire;
         this.selected = null;
-        return;
-      }
 
-      // ── wire‑drag: re-route the wire through the cursor ─────────────────
-      if (this.mode !== 'wiring' && this.mode !== 'panning') {
-        const wire = this._hitTestWire(world.x, world.y);
-        if (wire) {
-          this.mode = 'wiredrag';
-          this.draggingWire = { wireId: wire.id };
-          this._wireOffsets[wire.id] = { hx: world.x, hy: world.y };
+        const wire = wireDetail.wire;
+        const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
+        const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
+
+        // If wire doesn't have waypoints yet, initialize them from current polyline
+        if ((!wire.waypoints || wire.waypoints.length === 0) && wireDetail.pts && wireDetail.pts.length > 2) {
+          wire.waypoints = wireDetail.pts.slice(1, -1).map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
         }
+
+        const currentPts = this._wirePath(wire) || wireDetail.pts;
+
+        this.mode = 'wiredrag';
+        this.draggingWire = {
+          wireId: wire.id,
+          handleIdx: wireDetail.handleIdx,
+          segIdx: wireDetail.segIdx,
+          startWorld: { x: world.x, y: world.y },
+          initialWaypoints: (wire.waypoints || []).map(p => ({ x: p.x, y: p.y })),
+          pts: currentPts.map(p => ({ x: p.x, y: p.y })),
+          moved: false
+        };
+        this.canvas.style.cursor = 'grabbing';
+        return;
       }
 
       // Check component click
@@ -885,9 +970,104 @@ class CircuitCanvas {
 
     if (this.mode === 'wiredrag' && this.draggingWire) {
       const wire = this.wires.find(w => w.id === this.draggingWire.wireId);
-      if (wire) {
-        this._wireOffsets[wire.id] = { hx: world.x, hy: world.y };
+      if (!wire) return;
+
+      const p1 = this._getPinWorldPos(wire.from.instId, wire.from.pinId);
+      const p2 = this._getPinWorldPos(wire.to.instId, wire.to.pinId);
+      if (!p1 || !p2) return;
+
+      this.draggingWire.moved = true;
+      const snapX = this._snap(world.x);
+      const snapY = this._snap(world.y);
+
+      // Case 1: Dragging an existing waypoint handle directly
+      if (this.draggingWire.handleIdx >= 0 && wire.waypoints && wire.waypoints[this.draggingWire.handleIdx]) {
+        wire.waypoints[this.draggingWire.handleIdx].x = snapX;
+        wire.waypoints[this.draggingWire.handleIdx].y = snapY;
+        this._render();
+        return;
       }
+
+      // Case 2: Dragging a segment
+      const initPts = [p1, ...this.draggingWire.initialWaypoints.map(p => ({ x: p.x, y: p.y })), p2];
+      const segIdx = this.draggingWire.segIdx;
+
+      if (segIdx >= 0 && segIdx < initPts.length - 1) {
+        const a = initPts[segIdx];
+        const b = initPts[segIdx + 1];
+        const isHoriz = Math.abs(a.y - b.y) <= 2;
+        const isVert  = Math.abs(a.x - b.x) <= 2;
+
+        if (isHoriz) {
+          if (initPts.length === 2) {
+            wire.waypoints = [
+              { x: a.x, y: snapY },
+              { x: b.x, y: snapY }
+            ];
+          } else if (segIdx === 0) {
+            const nextWp = initPts[1];
+            wire.waypoints = [
+              { x: a.x, y: snapY },
+              { x: nextWp.x, y: snapY },
+              ...initPts.slice(2, -1)
+            ];
+          } else if (segIdx === initPts.length - 2) {
+            const prevWp = initPts[initPts.length - 2];
+            wire.waypoints = [
+              ...initPts.slice(1, -2),
+              { x: prevWp.x, y: snapY },
+              { x: b.x, y: snapY }
+            ];
+          } else {
+            const wps = this.draggingWire.initialWaypoints.map(p => ({ ...p }));
+            const wpAIdx = segIdx - 1;
+            const wpBIdx = segIdx;
+            if (wps[wpAIdx]) wps[wpAIdx].y = snapY;
+            if (wps[wpBIdx]) wps[wpBIdx].y = snapY;
+            wire.waypoints = wps;
+          }
+        } else if (isVert) {
+          if (initPts.length === 2) {
+            wire.waypoints = [
+              { x: snapX, y: a.y },
+              { x: snapX, y: b.y }
+            ];
+          } else if (segIdx === 0) {
+            const nextWp = initPts[1];
+            wire.waypoints = [
+              { x: snapX, y: a.y },
+              { x: snapX, y: nextWp.y },
+              ...initPts.slice(2, -1)
+            ];
+          } else if (segIdx === initPts.length - 2) {
+            const prevWp = initPts[initPts.length - 2];
+            wire.waypoints = [
+              ...initPts.slice(1, -2),
+              { x: snapX, y: prevWp.y },
+              { x: snapX, y: b.y }
+            ];
+          } else {
+            const wps = this.draggingWire.initialWaypoints.map(p => ({ ...p }));
+            const wpAIdx = segIdx - 1;
+            const wpBIdx = segIdx;
+            if (wps[wpAIdx]) wps[wpAIdx].x = snapX;
+            if (wps[wpBIdx]) wps[wpBIdx].x = snapX;
+            wire.waypoints = wps;
+          }
+        } else {
+          if (segIdx === 0) {
+            wire.waypoints = [{ x: snapX, y: snapY }, ...initPts.slice(2, -1)];
+          } else {
+            const wps = this.draggingWire.initialWaypoints.map(p => ({ ...p }));
+            if (wps[segIdx - 1]) {
+              wps[segIdx - 1].x = snapX;
+              wps[segIdx - 1].y = snapY;
+            }
+            wire.waypoints = wps;
+          }
+        }
+      }
+
       this._render();
       return;
     }
@@ -907,13 +1087,20 @@ class CircuitCanvas {
     // Hover cursor + pin tooltip
     const pin = this._hitTestPin(world.x, world.y);
     const comp = this._hitTestComp(world.x, world.y);
+    const wireDetail = this._hitTestWireDetails(world.x, world.y);
+
     if (pin) {
       this.canvas.style.cursor = 'crosshair';
       this._showPinTooltip(pin, e);
     } else {
       this._hidePinTooltip();
-      if (comp) this.canvas.style.cursor = 'move';
-      else this.canvas.style.cursor = '';
+      if (comp) {
+        this.canvas.style.cursor = 'move';
+      } else if (wireDetail) {
+        this.canvas.style.cursor = 'grab';
+      } else {
+        this.canvas.style.cursor = '';
+      }
     }
   }
 
@@ -935,10 +1122,17 @@ class CircuitCanvas {
       this.sliderDrag = null;
     }
     if (this.mode === 'wiredrag' && this.draggingWire) {
-      this._pushHistory();
-      this._onChanged();
+      const wire = this.wires.find(w => w.id === this.draggingWire.wireId);
+      if (wire) {
+        this._simplifyWaypoints(wire);
+      }
+      if (this.draggingWire.moved) {
+        this._pushHistory();
+        this._onChanged();
+      }
       this.mode = 'idle';
       this.draggingWire = null;
+      this.canvas.style.cursor = '';
     }
   }
 
@@ -1164,16 +1358,40 @@ class CircuitCanvas {
   }
 
   _hitTestWire(wx, wy) {
-    const threshold = Math.max(5, 6 / this.zoom);
+    const detail = this._hitTestWireDetails(wx, wy);
+    return detail ? detail.wire : null;
+  }
+
+  _hitTestWireDetails(wx, wy) {
+    const threshold = Math.max(6, 8 / this.zoom);
+    let best = null;
+
     for (const wire of [...this.wires].reverse()) {
       const pts = this._wirePath(wire);
-      if (!pts) continue;
+      if (!pts || pts.length < 2) continue;
+
+      // Check waypoint handles if wire has waypoints
+      if (wire.waypoints && Array.isArray(wire.waypoints)) {
+        for (let j = 0; j < wire.waypoints.length; j++) {
+          const wp = wire.waypoints[j];
+          const dist = Math.hypot(wx - wp.x, wy - wp.y);
+          if (dist <= threshold + 4) {
+            return { wire, pts, segIdx: -1, handleIdx: j, dist };
+          }
+        }
+      }
+
+      // Check segments
       for (let i = 0; i < pts.length - 1; i++) {
         const d = this._distToSegment(wx, wy, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
-        if (d <= threshold) return wire;
+        if (d <= threshold) {
+          if (!best || d < best.dist) {
+            best = { wire, pts, segIdx: i, handleIdx: -1, dist: d };
+          }
+        }
       }
     }
-    return null;
+    return best;
   }
 
   _distToSegment(px, py, x1, y1, x2, y2) {
@@ -1335,7 +1553,13 @@ class CircuitCanvas {
     try {
       const { components, wires } = JSON.parse(json);
       this.components = components;
-      this.wires = wires;
+      this.wires = (Array.isArray(wires) ? wires : []).map(w => ({
+        ...w,
+        color: (typeof w.color === 'string' && w.color.length > 0) ? w.color : null,
+        waypoints: Array.isArray(w.waypoints)
+          ? w.waypoints.filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y)).map(p => ({ x: Number(p.x), y: Number(p.y) }))
+          : []
+      }));
       this.selected = null;
       this.selectedWire = null;
       this._onChanged();
@@ -1389,6 +1613,10 @@ class CircuitCanvas {
         id: String(w.id || `wire_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
         from: { instId: String(w.from.instId), pinId: String(w.from.pinId) },
         to:   { instId: String(w.to.instId),   pinId: String(w.to.pinId) },
+        color: (typeof w.color === 'string' && w.color.length > 0) ? w.color : null,
+        waypoints: Array.isArray(w.waypoints)
+          ? w.waypoints.filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y)).map(p => ({ x: Number(p.x), y: Number(p.y) }))
+          : []
       }))
       .filter(w => {
         if (w.from.instId === w.to.instId && w.from.pinId === w.to.pinId) return false;

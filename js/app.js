@@ -1146,28 +1146,68 @@ _newProject() {
     menu.classList.remove('hidden');
     menu.classList.add('active');
 
-    const itemDelete    = document.getElementById('ctx-delete');
-    const itemProps     = document.getElementById('ctx-props');
+    const compGroup   = document.getElementById('ctx-comp-group');
+    const wireGroup   = document.getElementById('ctx-wire-group');
+    const itemDelete  = document.getElementById('ctx-delete');
+    const itemProps   = document.getElementById('ctx-props');
     const itemDuplicate = document.getElementById('ctx-duplicate');
-    const itemRotate    = document.getElementById('ctx-rotate');
+    const itemRotate  = document.getElementById('ctx-rotate');
+    const itemWireAuto = document.getElementById('ctx-wire-auto');
+    const wirePalette = document.getElementById('wire-palette');
 
     const cleanup = () => this._closeContextMenu();
+
+    const isWire = inst && (inst.type === 'wire' || !!inst.wire);
+    const wireObj = isWire ? (inst.wire || inst) : null;
+
+    if (isWire) {
+      if (compGroup) compGroup.classList.add('hidden');
+      if (wireGroup) wireGroup.classList.remove('hidden');
+
+      // Highlight current wire color in palette
+      if (wirePalette) {
+        wirePalette.querySelectorAll('.wire-color-btn').forEach(btn => {
+          const isSelected = wireObj && wireObj.color && wireObj.color.toLowerCase() === btn.dataset.color.toLowerCase();
+          btn.classList.toggle('active', !!isSelected);
+
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            if (wireObj) {
+              this.canvas?.setWireColor(wireObj.id, btn.dataset.color);
+            }
+            cleanup();
+          };
+        });
+      }
+
+      if (itemWireAuto) {
+        itemWireAuto.onclick = () => {
+          if (wireObj) {
+            this.canvas?.setWireColor(wireObj.id, null);
+          }
+          cleanup();
+        };
+      }
+    } else {
+      if (compGroup) compGroup.classList.remove('hidden');
+      if (wireGroup) wireGroup.classList.add('hidden');
+
+      itemProps?.removeEventListener('click', itemProps._handler);
+      itemProps._handler = () => { if (inst) this.openPropsModal(inst); cleanup(); };
+      itemProps?.addEventListener('click', itemProps._handler, { once: true });
+
+      itemDuplicate?.removeEventListener('click', itemDuplicate._handler);
+      itemDuplicate._handler = () => { this.canvas?.duplicateSelected?.(); cleanup(); };
+      itemDuplicate?.addEventListener('click', itemDuplicate._handler, { once: true });
+
+      itemRotate?.removeEventListener('click', itemRotate._handler);
+      itemRotate._handler = () => { this.canvas?.rotateSelected?.(); cleanup(); };
+      itemRotate?.addEventListener('click', itemRotate._handler, { once: true });
+    }
 
     itemDelete?.removeEventListener('click', itemDelete._handler);
     itemDelete._handler = () => { this.canvas?.deleteSelected(); cleanup(); };
     itemDelete?.addEventListener('click', itemDelete._handler, { once: true });
-
-    itemProps?.removeEventListener('click', itemProps._handler);
-    itemProps._handler = () => { if (inst) this.openPropsModal(inst); cleanup(); };
-    itemProps?.addEventListener('click', itemProps._handler, { once: true });
-
-    itemDuplicate?.removeEventListener('click', itemDuplicate._handler);
-    itemDuplicate._handler = () => { this.canvas?.duplicateSelected?.(); cleanup(); };
-    itemDuplicate?.addEventListener('click', itemDuplicate._handler, { once: true });
-
-    itemRotate?.removeEventListener('click', itemRotate._handler);
-    itemRotate._handler = () => { this.canvas?.rotateSelected?.(); cleanup(); };
-    itemRotate?.addEventListener('click', itemRotate._handler, { once: true });
   }
 
   _closeContextMenu() {
