@@ -676,11 +676,16 @@ void loop() {
 
     let savedTheme = localStorage.getItem('ardusim-theme');
     
-    if (!savedTheme) {
+    if (!savedTheme || savedTheme === 'dark') {
+      savedTheme = 'arduino-dark';
+    } else if (savedTheme === 'light') {
+      savedTheme = 'arduino-light';
+    } else if (savedTheme !== 'arduino-dark' && savedTheme !== 'arduino-light') {
       savedTheme = this.detectSystemTheme();
     }
 
     this.editor.updateOptions({ theme: savedTheme });
+    localStorage.setItem('ardusim-theme', savedTheme);
     this.updateThemeButtonUI(savedTheme);
     
     return savedTheme;

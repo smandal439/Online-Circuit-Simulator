@@ -1092,13 +1092,13 @@ _newProject() {
     if (this.editor?.setTheme) this.editor.setTheme(darkMode);
     if (iconDark)  iconDark.classList.toggle('hidden', !darkMode);
     if (iconLight) iconLight.classList.toggle('hidden', darkMode);
-    try { localStorage.setItem('ardusim-theme', darkMode ? 'dark' : 'light'); } catch (e) {}
+    try { localStorage.setItem('ardusim-theme', darkMode ? 'arduino-dark' : 'arduino-light'); } catch (e) {}
   }
 
   _loadTheme() {
     let theme;
     try { theme = localStorage.getItem('ardusim-theme'); } catch (e) { theme = null; }
-    const darkMode = theme !== 'light';
+    const darkMode = theme !== 'light' && theme !== 'arduino-light';
     const iconDark  = document.getElementById('theme-icon-dark');
     const iconLight = document.getElementById('theme-icon-light');
     document.body.classList.toggle('dark-theme', darkMode);
