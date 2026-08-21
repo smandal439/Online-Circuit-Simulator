@@ -20,7 +20,7 @@ class CircuitCanvas {
     this.panX  = 0;
     this.panY  = 0;
     this.zoom  = 1;
-    this.GRID  = 20;
+    this.GRID  = 10;
 
     /* Interaction state machine */
     this.mode         = 'idle';   // idle | dragging | panning | wiring | placing | wiredrag

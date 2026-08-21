@@ -16,7 +16,7 @@ const CircuitThumbnail = {
   /* Sanitize raw project data the same way CircuitCanvas.deserialize does */
   _sanitize(circuit) {
     const defs = this._getDefs();
-    const GRID = 20;
+    const GRID = 10;
     const seenIds = new Set();
     const components = (circuit && Array.isArray(circuit.components) ? circuit.components : [])
       .filter(c => c && typeof c === 'object' && c.type && defs[c.type] && c.id)
