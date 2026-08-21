@@ -39,6 +39,8 @@ void loop() {
 }`,
 
   init() {
+    // The pre-set `window.require = { paths }` config object or a blocked CDN leaves
+    // `require` as an object — only the real AMD loader function can load Monaco.
     if (typeof require !== 'function' || typeof require.config !== 'function') {
       console.error('Monaco loader not available');
       this._initFallback();
@@ -50,12 +52,13 @@ void loop() {
       this._createEditor();
       this.monacoReady = true;
 
+      // Auto-load project from URL Hash if present
       const hashLoaded = this.loadFromUrlHash();
-      this.loadSavedTheme();
-      this._listenSystemThemeChanges();
 
       if (window.App) window.App.onEditorReady(hashLoaded);
     }, (err) => {
+      // Monaco failed to load (CDN blocked, offline, or config issue) — fall back to a
+      // plain textarea so the editor always has content and examples still load code.
       console.error('Monaco failed to load, falling back to plain text editor:', err);
       this._initFallback();
     });
@@ -174,9 +177,6 @@ void loop() {
       }
     });
 
-    // Custom formatter for Arduino language
-    this._registerArduinoFormatter();
-
     // Dark Theme
     monaco.editor.defineTheme('arduino-dark', {
       base: 'vs-dark',
@@ -200,136 +200,27 @@ void loop() {
         'editorLineNumber.foreground': '#484f58',
       }
     });
-
-    // Light Theme
-    monaco.editor.defineTheme('arduino-light', {
-      base: 'vs',
-      inherit: true,
-      rules: [
-        { token: 'comment', foreground: '6a7b8c', fontStyle: 'italic' },
-        { token: 'keyword', foreground: '9b59b6' },
-        { token: 'constant', foreground: 'e67e22' },
-        { token: 'string', foreground: '27ae60' },
-        { token: 'number', foreground: 'd35400' },
-        { token: 'preprocessor', foreground: '8e44ad' },
-        { token: 'arduino-api', foreground: '2980b9', fontStyle: 'bold' },
-        { token: 'identifier', foreground: '2c3e50' },
-      ],
-      colors: {
-        'editor.background': '#fafbfc',
-        'editor.foreground': '#2c3e50',
-        'editor.lineHighlightBackground': '#f0f2f5',
-        'editorCursor.foreground': '#00979c',
-        'editor.selectionBackground': '#c8d6e5',
-        'editorLineNumber.foreground': '#8395a7',
-        'editor.overviewRulerBorder': '#e1e4e8',
-        'editorGutter.background': '#fafbfc',
-      }
-    });
   },
 
-  /**
-   * Register custom formatter for Arduino language
-   * This provides Format Document and Format Selection functionality
-   */
-  _registerArduinoFormatter() {
-    // Simple Arduino code formatter
-    const formatArduinoCode = (code, options = {}) => {
-      const tabSize = options.tabSize || 2;
-      const insertSpaces = options.insertSpaces !== false;
-      const indent = insertSpaces ? ' '.repeat(tabSize) : '\t';
-      
-      let lines = code.split('\n');
-      let formattedLines = [];
-      let indentLevel = 0;
-      let inBlockComment = false;
-      
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-        let trimmed = line.trim();
-        
-        // Skip empty lines
-        if (trimmed === '') {
-          formattedLines.push('');
-          continue;
-        }
-        
-        // Skip preprocessor directives and comments (keep them at start of line)
-        if (trimmed.startsWith('#') || trimmed.startsWith('//')) {
-          formattedLines.push(trimmed);
-          continue;
-        }
-        
-        // Handle block comments
-        if (trimmed.startsWith('/*')) {
-          inBlockComment = true;
-          formattedLines.push(trimmed);
-          continue;
-        }
-        if (trimmed.endsWith('*/')) {
-          inBlockComment = false;
-          formattedLines.push(trimmed);
-          continue;
-        }
-        if (inBlockComment) {
-          formattedLines.push(trimmed);
-          continue;
-        }
-        
-        // Calculate indentation level
-        let currentIndent = indentLevel;
-        
-        // Decrease indent for closing braces
-        if (trimmed.startsWith('}')) {
-          currentIndent = Math.max(0, indentLevel - 1);
-        }
-        
-        // Apply indentation
-        let formattedLine = indent.repeat(currentIndent) + trimmed;
-        
-        // Handle multi-line statements
-        if (trimmed.includes('{') && !trimmed.includes('}')) {
-          indentLevel++;
-        }
-        if (trimmed.includes('}') && !trimmed.includes('{')) {
-          indentLevel = Math.max(0, indentLevel - 1);
-        }
-        if (trimmed.includes('{') && trimmed.includes('}')) {
-          // Same line opening and closing
-        }
-        
-        formattedLines.push(formattedLine);
-      }
-      
-      return formattedLines.join('\n');
-    };
+  // _createEditor() {
+  //   const container = document.getElementById('editor-container');
+  //   if (!container) return;
 
-    // Register document formatter
-    monaco.languages.registerDocumentFormattingEditProvider('arduino', {
-      provideDocumentFormattingEdits(model, options) {
-        const code = model.getValue();
-        const formattedCode = formatArduinoCode(code, options);
-        
-        return [{
-          range: model.getFullModelRange(),
-          text: formattedCode
-        }];
-      }
-    });
-
-    // Register range formatter for selection formatting
-    monaco.languages.registerDocumentRangeFormattingEditProvider('arduino', {
-      provideDocumentRangeFormattingEdits(model, range, options) {
-        const selectedCode = model.getValueInRange(range);
-        const formattedCode = formatArduinoCode(selectedCode, options);
-        
-        return [{
-          range: range,
-          text: formattedCode
-        }];
-      }
-    });
-  },
+  //   this.editor = monaco.editor.create(container, {
+  //     value: this.DEFAULT_CODE,
+  //     language: 'arduino',
+  //     theme: 'arduino-dark',
+  //     fontSize: 18,
+  //     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+  //     fontLigatures: true,
+  //     lineNumbers: 'on',
+  //     minimap: { enabled: true, scale: 0.8 },
+  //     scrollBeyondLastLine: false,
+  //     automaticLayout: true,
+  //     folding: true,
+  //     tabSize: 2,
+  //     insertSpaces: true,
+  //   });
 
   _createEditor() {
     const container = document.getElementById('editor-container');
@@ -339,7 +230,7 @@ void loop() {
       value: this.DEFAULT_CODE,
       language: 'arduino',
       theme: 'arduino-dark',
-      fontSize: 15,
+      fontSize: 13,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
       fontLigatures: true,
       lineNumbers: 'on',
@@ -349,10 +240,7 @@ void loop() {
       folding: true,
       tabSize: 2,
       insertSpaces: true,
-      mouseWheelZoom: true,
-      cursorBlinking: 'smooth',
-      cursorSmoothCaretAnimation: 'on',
-      smoothScrolling: true,
+      mouseWheelZoom: true, // <--- Add this line
     });
 
     container.addEventListener('wheel', (e) => {
@@ -360,7 +248,7 @@ void loop() {
         e.preventDefault();
         const currentSize = this.editor.getOption(monaco.editor.EditorOption.fontSize);
         const newSize = e.deltaY < 0 ? currentSize + 1 : currentSize - 1;
-        const clampedSize = Math.max(8, Math.min(32, newSize));
+        const clampedSize = Math.max(8, Math.min(32, newSize)); // Min: 8px, Max: 32px
         this.editor.updateOptions({ fontSize: clampedSize });
       }
     }, { passive: false });
@@ -393,18 +281,6 @@ void loop() {
     this.editor.addCommand(monaco.KeyCode.F6, () => {
       if (window.App) window.App.stop();
     });
-    
-    // Format Document Shortcut (Shift+Alt+F)
-    this.editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
-      this.formatCode(false);
-    });
-    
-    // Format Selection Shortcut (Ctrl+K Ctrl+F)
-    this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
-      // This is a two-part shortcut, handled differently
-      this._formatSelectionShortcut();
-    });
-    
     // Copy Shareable URL Shortcut (Ctrl+Shift+S)
     this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, async () => {
       const shareUrl = this.getShareableUrl();
@@ -417,37 +293,6 @@ void loop() {
         }
       }
     });
-    
-    // Theme Toggle Shortcut (Ctrl+Shift+T)
-    this.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyT, () => {
-      this.toggleTheme();
-      const theme = this.editor._themeService?._theme?.themeName || 'arduino-dark';
-      if (window.App && window.App.showToast) {
-        window.App.showToast(`Theme switched to ${theme.replace('arduino-', '')} mode`);
-      }
-    });
-  },
-
-  /**
-   * Handle the Ctrl+K Ctrl+F format selection shortcut
-   */
-  _formatSelectionShortcut() {
-    // This is called when Ctrl+K is pressed
-    // We need to handle the next key press
-    let formatListener = null;
-    
-    formatListener = this.editor.onKeyDown((e) => {
-      if (e.keyCode === monaco.KeyCode.KeyF) {
-        // Ctrl+K Ctrl+F detected - format selection
-        this.formatCode(true);
-        if (formatListener) formatListener.dispose();
-      }
-    });
-    
-    // Dispose listener after 2 seconds if not used
-    setTimeout(() => {
-      if (formatListener) formatListener.dispose();
-    }, 2000);
   },
 
   _initFallback() {
@@ -474,96 +319,6 @@ void loop() {
     } else if (this._fallbackTA) {
       this._fallbackTA.value = code;
     }
-  },
-
-  /**
-   * Format code in the editor
-   * @param {boolean} selectionOnly - If true, format only selected text
-   */
-  formatCode(selectionOnly = false) {
-    if (!this.editor || !this.monacoReady) {
-      if (window.App && window.App.showToast) {
-        window.App.showToast('Editor not ready', 'warning');
-      }
-      return;
-    }
-
-    try {
-      const action = selectionOnly ? 
-        'editor.action.formatSelection' : 
-        'editor.action.formatDocument';
-      
-      const actionObj = this.editor.getAction(action);
-      
-      if (actionObj) {
-        actionObj.run().then(() => {
-          if (window.App && window.App.showToast) {
-            window.App.showToast(selectionOnly ? 'Selection formatted' : 'Document formatted');
-          }
-        }).catch((err) => {
-          console.error('Formatting error:', err);
-          if (window.App && window.App.showToast) {
-            window.App.showToast('Formatting failed', 'error');
-          }
-        });
-      } else {
-        // Fallback: manually format using our custom formatter
-        const model = this.editor.getModel();
-        if (model) {
-          const code = model.getValue();
-          const formatted = this._formatArduinoCode(code);
-          model.setValue(formatted);
-          if (window.App && window.App.showToast) {
-            window.App.showToast('Document formatted (manual)');
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Formatting error:', err);
-      if (window.App && window.App.showToast) {
-        window.App.showToast('Formatting failed', 'error');
-      }
-    }
-  },
-
-  /**
-   * Simple Arduino code formatter (fallback)
-   */
-  _formatArduinoCode(code) {
-    const lines = code.split('\n');
-    const formatted = [];
-    let indentLevel = 0;
-    const indent = '  ';
-    
-    for (let line of lines) {
-      const trimmed = line.trim();
-      
-      if (trimmed === '') {
-        formatted.push('');
-        continue;
-      }
-      
-      if (trimmed.startsWith('#') || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
-        formatted.push(trimmed);
-        continue;
-      }
-      
-      if (trimmed.startsWith('}')) {
-        indentLevel = Math.max(0, indentLevel - 1);
-      }
-      
-      formatted.push(indent.repeat(indentLevel) + trimmed);
-      
-      if (trimmed.endsWith('{') && !trimmed.includes('//')) {
-        indentLevel++;
-      }
-      
-      if (trimmed.endsWith('}') && !trimmed.includes('{')) {
-        // Already handled above
-      }
-    }
-    
-    return formatted.join('\n');
   },
 
   /**
@@ -623,115 +378,16 @@ void loop() {
     }
   },
 
-  /**
-   * Toggle between dark and light themes with smooth transition
-   */
-  toggleTheme() {
-    if (!this.editor || !this.monacoReady) return;
-
-    const currentTheme = this.editor._themeService?._theme?.themeName || 'arduino-dark';
-    const newTheme = currentTheme === 'arduino-dark' ? 'arduino-light' : 'arduino-dark';
-    
-    this.editor.updateOptions({ 
-      theme: newTheme,
-      cursorBlinking: 'smooth',
-      cursorSmoothCaretAnimation: 'on'
-    });
-
-    localStorage.setItem('ardusim-theme', newTheme);
-    this.updateThemeButtonUI(newTheme);
-
-    if (window.App && window.App.onThemeChange) {
-      window.App.onThemeChange(newTheme);
-    }
-
-    return newTheme;
-  },
-
-  /**
-   * Update the theme toggle button UI
-   */
-  updateThemeButtonUI(theme) {
-    const btn = document.getElementById('theme-toggle');
-    if (!btn) return;
-
-    if (theme === 'arduino-light') {
-      btn.innerHTML = '🌙';
-      btn.title = 'Switch to Dark Theme';
-      btn.className = 'theme-toggle light-mode';
-    } else {
-      btn.innerHTML = '☀️';
-      btn.title = 'Switch to Light Theme';
-      btn.className = 'theme-toggle dark-mode';
-    }
-
-    document.body.className = theme === 'arduino-light' ? 'light-theme' : 'dark-theme';
-  },
-
-  /**
-   * Load saved theme preference
-   */
-  loadSavedTheme() {
-    if (!this.editor || !this.monacoReady) return;
-
-    let savedTheme = localStorage.getItem('ardusim-theme');
-    
-    if (!savedTheme) {
-      savedTheme = this.detectSystemTheme();
-    }
-
-    this.editor.updateOptions({ theme: savedTheme });
-    this.updateThemeButtonUI(savedTheme);
-    
-    return savedTheme;
-  },
-
-  /**
-   * Detect system theme preference
-   */
-  detectSystemTheme() {
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'arduino-dark';
-    } else {
-      return 'arduino-light';
-    }
-  },
-
-  /**
-   * Listen for system theme changes
-   */
-  _listenSystemThemeChanges() {
-    if (window.matchMedia) {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      mediaQuery.addEventListener('change', (e) => {
-        if (!localStorage.getItem('ardusim-theme')) {
-          const newTheme = e.matches ? 'arduino-dark' : 'arduino-light';
-          if (this.editor && this.monacoReady) {
-            this.editor.updateOptions({ theme: newTheme });
-            this.updateThemeButtonUI(newTheme);
-          }
-        }
-      });
-    }
-  },
-
   setTheme(dark) {
-    if (this.editor && this.monacoReady) {
-      const theme = dark ? 'arduino-dark' : 'arduino-light';
-      this.editor.updateOptions({ theme });
-      localStorage.setItem('ardusim-theme', theme);
-      this.updateThemeButtonUI(theme);
+    if (this.editor) {
+      monaco.editor.setTheme(dark ? 'arduino-dark' : 'arduino-light');
     }
   },
 
-  /**
-   * Get Monaco editor action by ID
-   * @param {string} actionId - The action ID
-   * @returns {monaco.editor.IActionDescriptor|null}
-   */
-  getAction(actionId) {
-    if (!this.editor || !this.monacoReady) return null;
-    return this.editor.getAction(actionId);
+  formatCode() {
+    if (this.editor) {
+      this.editor.getAction('editor.action.formatDocument')?.run();
+    }
   },
 
   showError(line, msg) {
@@ -756,32 +412,6 @@ void loop() {
     const el = document.getElementById('editor-errors');
     if (el) el.textContent = '';
   },
-
-  /**
-   * Clean up resources
-   */
-  dispose() {
-    if (this.editor) {
-      this.editor.dispose();
-      this.editor = null;
-    }
-    if (this._fallbackTA) {
-      this._fallbackTA.remove();
-      this._fallbackTA = null;
-    }
-  }
 };
 
 window.EditorManager = EditorManager;
-
-// Initialize theme toggle button when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  const themeToggleBtn = document.getElementById('theme-toggle');
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
-      if (window.EditorManager) {
-        window.EditorManager.toggleTheme();
-      }
-    });
-  }
-});
