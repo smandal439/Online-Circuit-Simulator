@@ -154,9 +154,23 @@ class ArduinoSimulator {
     js = js.replace(/\bMSBFIRST\b/g, '1');
     js = js.replace(/\bLSBFIRST\b/g, '0');
 
-    // 9b. Strip unsupported C++ declarations
+    // 9b. Strip unsupported C++ type declarations
+    js = js.replace(/\bunsigned\s+long\s+/g, 'var ');
+    js = js.replace(/\bunsigned\s+int\s+/g, 'var ');
+    js = js.replace(/\bunsigned\s+short\s+/g, 'var ');
+    js = js.replace(/\bunsigned\s+char\s+/g, 'var ');
     js = js.replace(/\bconst\s+char\s*\*\s*/g, 'var ');
     js = js.replace(/\bconst\s+String\s*/g, 'var ');
+    js = js.replace(/\bconst\s+int\s+/g, 'var ');
+    js = js.replace(/\bconst\s+float\s+/g, 'var ');
+    js = js.replace(/\bconst\s+double\s+/g, 'var ');
+    js = js.replace(/\bint\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bfloat\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bdouble\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\blong\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bshort\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bchar\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bbyte\s+(?=[a-zA-Z_])/g, 'var ');
     js = js.replace(/\bString\s+/g, 'var ');
 
     // 9c. Map Arduino API calls
@@ -261,7 +275,287 @@ class ArduinoSimulator {
     js = js.replace(/\bEEPROM\.read\s*\(/g, '_a.eepromRead(');
     js = js.replace(/\bEEPROM\.write\s*\(/g, '_a.eepromWrite(');
     js = js.replace(/\bEEPROM\.update\s*\(/g, '_a.eepromUpdate(');
+    js = js.replace(/\bEEPROM\.get\s*\(/g, '_a.eepromGet(');
+    js = js.replace(/\bEEPROM\.put\s*\(/g, '_a.eepromPut(');
+    js = js.replace(/\bEEPROM\.begin\s*\(/g, '_a.eepromBegin(');
+    js = js.replace(/\bEEPROM\.commit\s*\(/g, '_a.eepromCommit(');
     js = js.replace(/\bEEPROM\.length\b/g, '512');
+    js = js.replace(/\bEEPROM\.length\s*\(/g, '512');
+
+    // SoftwareSerial -- constructor (methods route through existing generic rules)
+    js = js.replace(/\bSoftwareSerial\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.softwareSerialNew($2)');
+    js = js.replace(/\b(\w+)\.println\s*\(/g, function (match, v) {
+      if (v === 'Serial') return match;
+      return '_a.softSerialPrintln(' + v + ', ';
+    });
+    js = js.replace(/\b(\w+)\.listen\s*\(/g, '_a.softSerialListen($1)');
+    js = js.replace(/\b(\w+)\.isListening\s*\(/g, '_a.softSerialIsListening($1)');
+
+    // Stepper library
+    js = js.replace(/\bStepper\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.stepperNew($2)');
+    js = js.replace(/\b(\w+)\.setSpeed\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperSetSpeed(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.step\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperStep(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.distanceToGo\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperDistanceToGo(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.currentPosition\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperCurrentPosition(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.setCurrentPosition\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperSetCurrentPosition(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.run\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperRun(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.runSpeed\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperRunSpeed(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.stop\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperStop(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.disableOutputs\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperDisableOutputs(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.enableOutputs\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperEnableOutputs(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.maxSpeed\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperMaxSpeed(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.acceleration\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperAcceleration(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.setAcceleration\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperSetAcceleration(' + varName + ', ';
+    });
+
+    // NewPing library
+    js = js.replace(/\bNewPing\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.newPingNew($2)');
+    js = js.replace(/\b(\w+)\.ping_cm\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.newPingCm(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.ping_in\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.newPingInch(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.ping_median\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.newPingMedian(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.ping\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.newPingPing(' + varName + ')';
+    });
+
+    // IRremote — IRsend / IRrecv
+    js = js.replace(/\bIRsend\s+(\w+)\s*\(([^)]*)\)/g, 'var $1 = _a.irsendNew($2)');
+    js = js.replace(/\bIRrecv\s+(\w+)\s*\(([^)]*)\)/g, 'var $1 = _a.irrecvNew($2)');
+    js = js.replace(/\b(\w+)\.sendNEC\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendNEC(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.sendSony\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendSony(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.sendRC5\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendRC5(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.sendRC6\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendRC6(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.sendRaw\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendRaw(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.enableIRIn\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irrecvEnableIRIn(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.resume\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irrecvResume(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.decode\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irrecvDecode(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.stopIRSend\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendStop(' + varName + ')';
+    });
+    js = js.replace(/\bresults\.decode_type\b/g, 'results.protocol');
+    js = js.replace(/\bresults\.value\b/g, 'results.value');
+    js = js.replace(/\bresults\.bits\b/g, 'results.bits');
+    js = js.replace(/\bDECODE_SUPPORTED\b/g, 'true');
+    js = js.replace(/\bNECBITS\b/g, '32');
+    js = js.replace(/\bUSE_FAST\b/g, 'false');
+
+    // FastLED library
+    js = js.replace(/\bFastLED\.addLeds\s*\(/g, '_a.fastledAddLeds(');
+    js = js.replace(/\bFastLED\.show\s*\(/g, '_a.fastledShow(');
+    js = js.replace(/\bFastLED\.setBrightness\s*\(/g, '_a.fastledSetBrightness(');
+    js = js.replace(/\bFastLED\.setCorrection\s*\(/g, '_a.fastledSetCorrection(');
+    js = js.replace(/\bFastLED\.setColorCorrection\s*\(/g, '_a.fastledSetColorCorrection(');
+    js = js.replace(/\bFastLED\.maxPowerInMilliamps\s*\(/g, '_a.fastledMaxPower(');
+    js = js.replace(/\bFastLED\.clear\s*\(/g, '_a.fastledClear(');
+    js = js.replace(/\bCRGB\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.crgbNew($2)');
+    js = js.replace(/\bCRGB\s+(\w+)\s*\[\s*(\d+)\s*\]/g, 'var $1 = _a.crgbArray($2)');
+    js = js.replace(/\bCHSV\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.chsvNew($2)');
+    js = js.replace(/\bTWhite\b/g, '255');
+
+    // Adafruit NeoPixel library
+    js = js.replace(/\bAdafruit_NeoPixel\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.neopixelNew($2)');
+    js = js.replace(/\b(\w+)\.show\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelShow(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.setPixelColor\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelSetPixelColor(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.getPixelColor\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelGetPixelColor(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.setBrightness\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelSetBrightness(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.Color\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelColor(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.numPixels\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelNumPixels(' + varName + ')';
+    });
+    js = js.replace(/\bNEO_GRB\b/g, '0x02');
+    js = js.replace(/\bNEO_GRBW\b/g, '0x04');
+    js = js.replace(/\bNEO_KHZ800\b/g, '0x00');
+    js = js.replace(/\bNEO_KHZ400\b/g, '0x01');
+    js = js.replace(/\bNEO_RGB\b/g, '0x00');
+    js = js.replace(/\bNEO_RGBW\b/g, '0x03');
+    js = js.replace(/\bNEO_BRG\b/g, '0x01');
+    js = js.replace(/\bNEO_RBG\b/g, '0x02');
+
+    // MFRC522 RFID library
+    js = js.replace(/\bMFRC522\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.rfidNew($2)');
+    js = js.replace(/\b(\w+)\.PCD_Init\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidInit(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PCD_DumpVersionToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpVersion(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_IsNewCardPresent\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidIsNewCard(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_ReadCardSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidReadCard(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_HaltA\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidHaltA(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PCD_StopCrypto1\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidStopCrypto(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.uid\.uidByte\b/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidUidBytes(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.uid\.size\b/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidUidSize(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.MIFARE_Read\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidMifareRead(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.MIFARE_Write\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidMifareWrite(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.PICC_REQA\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidREQA(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_WUPA\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidWUPA(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_Select\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidSelect(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_ComputeBCC\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidComputeBCC(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.PICC_StopCrypto1\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidStopCrypto(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpDetailsToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpDetails(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpToSerial(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpMifareClassicSectorToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpSector(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpMifareClassicToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpClassic(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpMifareUltralightToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpUltralight(' + varName + ')';
+    });
+    js = js.replace(/\bMFRC522::MIFARE_Key\b/g, 'var');
+    js = js.replace(/\bMFRC522::PICC_Type\b/g, 'var');
+    js = js.replace(/\bPICC_TYPE_MIFARE_1K\b/g, '1');
+    js = js.replace(/\bPICC_TYPE_MIFARE_4K\b/g, '2');
+    js = js.replace(/\bPICC_TYPE_MIFARE_UL\b/g, '3');
+    js = js.replace(/\bPICC_TYPE_NOT_COMPLETE\b/g, '0');
+    js = js.replace(/\bSTATUS_OK\b/g, '0');
+    js = js.replace(/\bSTATUS_ERROR\b/g, '1');
+    js = js.replace(/\bSTATUS_COLLISION\b/g, '2');
+    js = js.replace(/\bSTATUS_TIMEOUT\b/g, '3');
+    js = js.replace(/\bSTATUS_NO_ROOM\b/g, '4');
+    js = js.replace(/\bSTATUS_INTERNAL_ERROR\b/g, '5');
+    js = js.replace(/\bSTATUS_INVALID\b/g, '6');
+    js = js.replace(/\bSTATUS_CRC_WRONG\b/g, '7');
+    js = js.replace(/\bSTATUS_MIFARE_NACK\b/g, '8');
 
     // Servo library
     js = js.replace(/\b(\w+)\.attach\s*\(/g, '_a.servoAttach($1, ');
@@ -479,6 +773,10 @@ class ArduinoSimulator {
         eepromRead(addr) { return self._eeprom[addr & 511] || 0; },
         eepromWrite(addr, val) { self._eeprom[addr & 511] = val & 0xFF; },
         eepromUpdate(addr, val) { self._eeprom[addr & 511] = val & 0xFF; },
+        eepromGet(addr, obj) { return obj; },
+        eepromPut(addr, val) { },
+        eepromBegin(size) { self._serialLog(`[EEPROM] begin(${size || 512})\n`, 'system'); },
+        eepromCommit() { self._serialLog('[EEPROM] commit\n', 'system'); },
 
         /* Serial extras */
         serialParseInt() { return 0; },
@@ -506,6 +804,11 @@ class ArduinoSimulator {
         /* Servo */
         servoAttach(varName, pin) { /* tracked by canvas */ },
         servoWrite(varName, angle) {
+          if (varName && varName._ssId) {
+            const ch = self._softSerial && self._softSerial[varName._ssId];
+            if (ch) { self._serialLog('[SoftwareSerial] write(' + angle + ')\n', 'data'); }
+            return;
+          }
           self._emitEvent('servo', { angle: Math.max(0, Math.min(180, angle)) });
         },
         servoWriteMs(varName, us) { /* advanced */ },
@@ -513,6 +816,16 @@ class ArduinoSimulator {
 
         /* LCD (and OLED / WebServer share the generic `.begin` transpile) */
         lcdBegin(varName, cols, rows) {
+          if (varName && varName._ssId) {
+            const ch = self._softSerial && self._softSerial[varName._ssId];
+            if (ch) { ch.listening = true; ch.baud = cols; }
+            self._serialLog('[SoftwareSerial] begin(' + cols + ')\n', 'system');
+            return;
+          }
+          if (varName && varName._npId) {
+            self._serialLog('[NeoPixel] begin\n', 'system');
+            return;
+          }
           if (varName && varName.__webserver) {
             const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
             cfg.port = Number(cols) || cfg.port || 80;
@@ -529,6 +842,11 @@ class ArduinoSimulator {
           self._lcdCursor = { col: Number(col) || 0, row: Number(row) || 0 };
         },
         lcdPrint(varName, val) {
+          if (varName && varName._ssId) {
+            const ch = self._softSerial && self._softSerial[varName._ssId];
+            if (ch) { self._serialLog(String(val) + '\n', 'data'); }
+            return;
+          }
           const text = String(val);
           const cursor = self._lcdCursor || { col: 0, row: 0 };
           // OLED (Adafruit_SSD1306): cursor is in pixels, sized by setTextSize()
@@ -553,6 +871,11 @@ class ArduinoSimulator {
           self._lcdCursor = { col, row };
         },
         lcdClear(varName) {
+          if (varName && varName._npId) {
+            const np = self._neopixels && self._neopixels[varName._npId];
+            if (np) np.pixels.fill(0);
+            return;
+          }
           if (varName && varName.__oled) {
             self._emitEvent('oled_draw', { op: 'clear' });
             return;
@@ -699,6 +1022,339 @@ class ArduinoSimulator {
         wifiSoftAP(ssid, pass) {
           self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system');
         },
+
+        /* ══════════ SoftwareSerial ══════════ */
+        softwareSerialNew(rxPin, txPin) {
+          const id = `_ss_${rxPin}_${txPin}`;
+          const buf = [];
+          self._softSerial = self._softSerial || {};
+          self._softSerial[id] = { rxPin, txPin, buf, listening: false };
+          self._serialLog(`[SoftwareSerial] Created rx=${rxPin} tx=${txPin}\n`, 'system');
+          return { _ssId: id, rxPin, txPin };
+        },
+        softSerialBegin(obj, baud) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch) { ch.listening = true; ch.baud = baud; }
+          self._serialLog(`[SoftwareSerial] begin(${baud})\n`, 'system');
+        },
+        softSerialWrite(obj, val) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch) { self._serialLog(`[SoftwareSerial] write(${val})\n`, 'data'); }
+        },
+        softSerialPrintln(obj, val) {
+          self._serialLog(String(val) + '\n', 'data');
+        },
+        softSerialRead(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch && ch.buf.length > 0) return ch.buf.shift().charCodeAt(0);
+          return -1;
+        },
+        softSerialAvailable(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          return ch ? ch.buf.length : 0;
+        },
+        softSerialPeek(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch && ch.buf.length > 0) return ch.buf[0].charCodeAt(0);
+          return -1;
+        },
+        softSerialEnd(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch) ch.listening = false;
+        },
+        softSerialFlush(obj) { },
+        softSerialListen(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch) ch.listening = true;
+        },
+        softSerialIsListening(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          return ch ? ch.listening : false;
+        },
+
+        /* ══════════ Stepper ══════════ */
+        stepperNew(stepsPerRev, pin1, pin2) {
+          const id = `_stepper_${pin1}_${pin2}`;
+          self._steppers = self._steppers || {};
+          const s = { stepsPerRev, pin1, pin2, pos: 0, target: 0, speed: 1, accel: 100 };
+          self._steppers[id] = s;
+          self._serialLog(`[Stepper] Created stepsPerRev=${stepsPerRev}\n`, 'system');
+          return { _stepperId: id };
+        },
+        stepperSetSpeed(obj, rpm) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) s.speed = Number(rpm) || 1;
+        },
+        stepperStep(obj, steps) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) { s.pos += Number(steps) || 0; s.target = s.pos; }
+          self._serialLog(`[Stepper] step(${steps}) → pos=${s ? s.pos : 0}\n`, 'system');
+        },
+        stepperDistanceToGo(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          return s ? s.target - s.pos : 0;
+        },
+        stepperCurrentPosition(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          return s ? s.pos : 0;
+        },
+        stepperSetCurrentPosition(obj, pos) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) s.pos = s.target = Number(pos) || 0;
+        },
+        stepperRun(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (!s) return false;
+          if (s.pos === s.target) return false;
+          s.pos += s.pos < s.target ? 1 : -1;
+          return true;
+        },
+        stepperRunSpeed(obj) {
+          return this.stepperRun(obj);
+        },
+        stepperStop(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) s.target = s.pos;
+        },
+        stepperDisableOutputs(obj) { },
+        stepperEnableOutputs(obj) { },
+        stepperMaxSpeed(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          return s ? s.speed : 0;
+        },
+        stepperAcceleration(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          return s ? s.accel : 0;
+        },
+        stepperSetAcceleration(obj, accel) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) s.accel = Number(accel) || 100;
+        },
+
+        /* ══════════ NewPing ══════════ */
+        newPingNew(triggerPin, echoPin, maxDistance) {
+          const id = `_ping_${triggerPin}_${echoPin}`;
+          self._pings = self._pings || {};
+          self._pings[id] = { triggerPin, echoPin, maxDist: maxDistance || 400 };
+          return { _pingId: id };
+        },
+        newPingCm(obj) {
+          const p = self._pings && self._pings[obj._pingId];
+          if (!p) return 0;
+          const key = `pin_${p.triggerPin}`;
+          const v = self.pinStates[key] || 0;
+          return v > 0 ? Math.min(p.maxDist, Math.round(Math.random() * p.maxDist)) : 0;
+        },
+        newPingInch(obj) {
+          return Math.round(this.newPingCm(obj) / 2.54);
+        },
+        newPingMedian(obj, iter) {
+          const results = [];
+          for (let i = 0; i < (iter || 5); i++) results.push(this.newPingCm(obj));
+          results.sort((a, b) => a - b);
+          return results[Math.floor(results.length / 2)] || 0;
+        },
+        newPingPing(obj) {
+          return this.newPingCm(obj);
+        },
+
+        /* ══════════ IRremote ══════════ */
+        irsendNew(pin) {
+          self._irsend = self._irsend || {};
+          self._irsend.pin = pin;
+          return { _irId: 'irsend' };
+        },
+        irrecvNew(pin) {
+          self._irrecv = self._irrecv || {};
+          self._irrecv.pin = pin;
+          self._irrecv.results = { protocol: 0, value: 0, bits: 0 };
+          return { _irId: 'irrecv' };
+        },
+        irsendNEC(obj, data, nbits) {
+          self._serialLog(`[IRremote] Send NEC: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 32} bits)\n`, 'system');
+        },
+        irsendSony(obj, data, nbits) {
+          self._serialLog(`[IRremote] Send Sony: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 12} bits)\n`, 'system');
+        },
+        irsendRC5(obj, data, nbits) {
+          self._serialLog(`[IRremote] Send RC5: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 14} bits)\n`, 'system');
+        },
+        irsendRC6(obj, data, nbits) {
+          self._serialLog(`[IRremote] Send RC6: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 20} bits)\n`, 'system');
+        },
+        irsendRaw(buf, len, hz) {
+          self._serialLog(`[IRremote] Send raw: ${len} samples\n`, 'system');
+        },
+        irsendStop(obj) { },
+        irrecvEnableIRIn(obj) {
+          self._serialLog('[IRremote] IR receiver enabled\n', 'system');
+        },
+        irrecvDecode(obj, results) {
+          const r = self._irrecv ? self._irrecv.results : { protocol: 0, value: 0, bits: 0 };
+          if (results) {
+            results.protocol = r.protocol;
+            results.value = r.value;
+            results.bits = r.bits;
+          }
+          return false;
+        },
+        irrecvResume(obj) { },
+
+        /* ══════════ FastLED ══════════ */
+        fastledAddLeds(ledType, dataPin, numLeds) {
+          self._fastled = self._fastled || { leds: [], brightness: 255 };
+          self._fastled.leds = new Array(Number(numLeds) || 0).fill(null).map(() => ({ r: 0, g: 0, b: 0 }));
+          self._fastled.dataPin = dataPin;
+          self._serialLog(`[FastLED] ${numLeds} LEDs on pin ${dataPin}\n`, 'system');
+        },
+        fastledShow() {
+          if (self._fastled) {
+            self._emitEvent('fastled_show', { leds: self._fastled.leds, brightness: self._fastled.brightness });
+          }
+        },
+        fastledSetBrightness(b) {
+          if (self._fastled) self._fastled.brightness = Math.max(0, Math.min(255, Number(b) || 0));
+        },
+        fastledSetCorrection(type) { },
+        fastledSetColorCorrection(type) { },
+        fastledMaxPower(milliamps) { },
+        fastledClear() {
+          if (self._fastled) self._fastled.leds.forEach(l => { l.r = 0; l.g = 0; l.b = 0; });
+        },
+        crgbNew(r, g, b) { return { r: Math.max(0, Math.min(255, Number(r) || 0)), g: Math.max(0, Math.min(255, Number(g) || 0)), b: Math.max(0, Math.min(255, Number(b) || 0)) }; },
+        crgbArray(size) { return new Array(Number(size) || 0).fill(null).map(() => ({ r: 0, g: 0, b: 0 })); },
+        chsvNew(h, s, v) {
+          h = Number(h) || 0; s = Number(s) || 255; v = Number(v) || 255;
+          const c = { r: 0, g: 0, b: 0 };
+          const i = Math.floor(h / 43) % 6;
+          const f = (h / 43) - Math.floor(h / 43);
+          const p = (v * (255 - s)) >> 8;
+          const q = (v * (255 - (s * f) >> 8)) >> 8;
+          const t = (v * (255 - (s * (255 - f) >> 8))) >> 8;
+          switch (i) {
+            case 0: c.r = v; c.g = t; c.b = p; break;
+            case 1: c.r = q; c.g = v; c.b = p; break;
+            case 2: c.r = p; c.g = v; c.b = t; break;
+            case 3: c.r = p; c.g = q; c.b = v; break;
+            case 4: c.r = t; c.g = p; c.b = v; break;
+            case 5: c.r = v; c.g = p; c.b = q; break;
+          }
+          return c;
+        },
+
+        /* ══════════ Adafruit NeoPixel ══════════ */
+        neopixelNew(numLedsPin, pinOrType, type) {
+          const numLeds = Number(numLedsPin) || 0;
+          const pin = typeof pinOrType === 'number' ? pinOrType : 6;
+          const id = `_np_${pin}`;
+          self._neopixels = self._neopixels || {};
+          self._neopixels[id] = { pin, numLeds, brightness: 255, pixels: new Array(numLeds).fill(0) };
+          return { _npId: id };
+        },
+        neopixelBegin(obj) {
+          self._serialLog('[NeoPixel] begin\n', 'system');
+        },
+        neopixelShow(obj) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          if (np) {
+            const leds = np.pixels.map(c => ({
+              r: (c >> 16) & 0xFF,
+              g: (c >> 8) & 0xFF,
+              b: c & 0xFF,
+            }));
+            self._emitEvent('fastled_show', { leds, brightness: np.brightness });
+          }
+        },
+        neopixelSetPixelColor(obj, i, rOrColor, g, b) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          if (!np) return;
+          const i2 = Number(i) || 0;
+          if (g !== undefined) {
+            np.pixels[i2] = ((Number(rOrColor) || 0) << 16) | ((Number(g) || 0) << 8) | (Number(b) || 0);
+          } else {
+            np.pixels[i2] = Number(rOrColor) || 0;
+          }
+        },
+        neopixelGetPixelColor(obj, i) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          return np ? (np.pixels[Number(i) || 0] || 0) : 0;
+        },
+        neopixelSetBrightness(obj, b) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          if (np) np.brightness = Math.max(0, Math.min(255, Number(b) || 0));
+        },
+        neopixelColor(obj, r, g, b) {
+          return ((Number(r) || 0) << 16) | ((Number(g) || 0) << 8) | (Number(b) || 0);
+        },
+        neopixelNumPixels(obj) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          return np ? np.numLeds : 0;
+        },
+        neopixelClear(obj) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          if (np) np.pixels.fill(0);
+        },
+
+        /* ══════════ MFRC522 RFID ══════════ */
+        rfidNew(csPin, rstPin) {
+          const id = `_rfid_${csPin}_${rstPin}`;
+          self._rfid = self._rfid || {};
+          self._rfid[id] = { csPin, rstPin, initialized: false, cardPresent: false, uidBytes: [0xA1, 0xB2, 0xC3, 0xD4], uidSize: 4 };
+          self._serialLog(`[MFRC522] Created CS=${csPin} RST=${rstPin}\n`, 'system');
+          return { _rfidId: id, uid: { uidByte: null, size: 0 } };
+        },
+        rfidInit(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          if (r) {
+            r.initialized = true;
+            self._serialLog('[MFRC522] PCD_Init\n', 'system');
+            self._serialLog('[MFRC522] Firmware: v0x92 (simulated)\n', 'system');
+          }
+        },
+        rfidDumpVersion(obj) {
+          self._serialLog('[MFRC522] PCD Version: v2.0 (simulated)\n', 'system');
+        },
+        rfidIsNewCard(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          if (!r || !r.initialized) return false;
+          // Simulate a card being present every few calls
+          r.cardPresent = Math.random() < 0.3;
+          return r.cardPresent;
+        },
+        rfidReadCard(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          if (!r || !r.cardPresent) return false;
+          obj.uid = { uidByte: r.uidBytes, size: r.uidSize };
+          self._serialLog(`[MFRC522] Card UID: ${r.uidBytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ')}\n`, 'system');
+          return true;
+        },
+        rfidHaltA(obj) { },
+        rfidStopCrypto(obj) { },
+        rfidUidBytes(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          return r ? r.uidBytes : [0];
+        },
+        rfidUidSize(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          return r ? r.uidSize : 0;
+        },
+        rfidMifareRead(obj, blockAddr, buf) {
+          self._serialLog(`[MFRC522] MIFARE_Read block ${blockAddr}\n`, 'system');
+          return true;
+        },
+        rfidMifareWrite(obj, blockAddr, buf) {
+          self._serialLog(`[MFRC522] MIFARE_Write block ${blockAddr}\n`, 'system');
+          return true;
+        },
+        rfidREQA(obj) { return 0; },
+        rfidWUPA(obj) { return 0; },
+        rfidSelect(obj) { return 0; },
+        rfidComputeBCC(obj, buf) { return 0; },
+        rfidDumpDetails(obj) { },
+        rfidDumpToSerial(obj) { },
+        rfidDumpSector(obj, uid, sector) { },
+        rfidDumpClassic(obj, uid, type) { },
+        rfidDumpUltralight(obj) { },
       },
 
       /* Global constants */
@@ -2810,35 +3466,33 @@ void setup() {
 }
 
 void loop() {
-  unsigned long epoch = ntpEpoch();
-  int hours   = (epoch % 86400) / 3600;
-  int minutes = (epoch % 3600)   / 60;
-  int seconds = epoch % 60;
+  var epoch = ntpEpoch();
+  var hours   = Math.floor((epoch % 86400) / 3600);
+  var minutes = Math.floor((epoch % 3600)   / 60);
+  var seconds = epoch % 60;
+
+  var hh = hours < 10 ? "0" + hours : "" + hours;
+  var mm = minutes < 10 ? "0" + minutes : "" + minutes;
+  var ss = seconds < 10 ? "0" + seconds : "" + seconds;
 
   lcd.setCursor(0, 0);
-  lcd.print("  NTP Time (UTC) ");
+  lcd.print("  NTP Time (UTC)");
 
   lcd.setCursor(0, 1);
   lcd.print("    ");
-  if (hours < 10) lcd.print("0");
-  lcd.print(hours);
+  lcd.print(hh);
   lcd.print(":");
-  if (minutes < 10) lcd.print("0");
-  lcd.print(minutes);
+  lcd.print(mm);
   lcd.print(":");
-  if (seconds < 10) lcd.print("0");
-  lcd.print(seconds);
+  lcd.print(ss);
   lcd.print("    ");
 
   Serial.print("Time: ");
-  if (hours < 10) Serial.print("0");
-  Serial.print(hours);
+  Serial.print(hh);
   Serial.print(":");
-  if (minutes < 10) Serial.print("0");
-  Serial.print(minutes);
+  Serial.print(mm);
   Serial.print(":");
-  if (seconds < 10) Serial.print("0");
-  Serial.println(seconds);
+  Serial.println(ss);
 
   delay(1000);
 }`
