@@ -224,7 +224,7 @@ class CircuitCanvas {
       }
 
       // Pin label (only when zoomed in enough) — boards have baked-in labels
-      const isBoard = inst.type === 'arduino_uno' || inst.type === 'esp32_devkit_v1';
+      const isBoard = inst.type === 'arduino_uno' || inst.type === 'esp32_devkit_v1' || inst.type === 'arduino_nano';
       if (this.zoom >= 1 && !isBoard) {
         ctx.fillStyle = '#888';
         ctx.font = `${8 / this.zoom}px Inter, sans-serif`;
@@ -1120,7 +1120,7 @@ class CircuitCanvas {
         if (pin.id in espAliases || /^D\d+$/.test(pin.id)) {
           addRow('GPIO', pinNum);
         }
-      } else if (inst.type === 'arduino_uno' && /^[AD]\d+$/.test(pin.id)) {
+      } else if ((inst.type === 'arduino_uno' || inst.type === 'arduino_nano') && /^[AD]\d+$/.test(pin.id)) {
         addRow('Arduino Pin', pinNum);
       }
       if (running) {
@@ -1441,7 +1441,7 @@ class CircuitCanvas {
 
   // Get whichever microcontroller board instance is placed (first one found)
   getBoardInst() {
-    return this.components.find(c => c.type === 'arduino_uno' || c.type === 'esp32_devkit_v1') || null;
+    return this.components.find(c => c.type === 'arduino_uno' || c.type === 'esp32_devkit_v1' || c.type === 'arduino_nano') || null;
   }
 
   // Update component display based on simulation state and circuit electrical paths
