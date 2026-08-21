@@ -154,7 +154,12 @@ class ArduinoSimulator {
     js = js.replace(/\bMSBFIRST\b/g, '1');
     js = js.replace(/\bLSBFIRST\b/g, '0');
 
-    // 9. Map Arduino API calls
+    // 9b. Strip unsupported C++ declarations
+    js = js.replace(/\bconst\s+char\s*\*\s*/g, 'var ');
+    js = js.replace(/\bconst\s+String\s*/g, 'var ');
+    js = js.replace(/\bString\s+/g, 'var ');
+
+    // 9c. Map Arduino API calls
     const API = [
       ['delay', '_a.delay'],
       ['delayMicroseconds', '_a.delayMicroseconds'],
@@ -172,6 +177,7 @@ class ArduinoSimulator {
       ['detachInterrupt', '_a.detachInterrupt'],
       ['randomSeed', '_a.randomSeed'],
       ['random', '_a.random'],
+      ['ntpEpoch', '_a.ntpEpoch'],
       ['map', '_a.map'],
       ['constrain', '_a.constrain'],
       ['abs', 'Math.abs'],
@@ -363,6 +369,9 @@ class ArduinoSimulator {
         },
         millis() { return self.simTime; },
         micros() { return self.simTime * 1000; },
+
+        /* NTP — returns current UTC epoch seconds from the browser clock */
+        ntpEpoch() { return Math.floor(Date.now() / 1000); },
 
         /* Serial */
         serialBegin(baud) {
@@ -1628,6 +1637,18 @@ const EXAMPLE_CIRCUITS = {
     ],
     wires: [],
   },
+  esp32_ntp_lcd: {
+    components: [
+      { id: 'b1', type: 'esp32_devkit_v1', x: 300, y: 60 },
+      { id: 'lcd1', type: 'lcd1602_i2c', x: 110, y: 320 },
+    ],
+    wires: [
+      { id: 'w1', from: { instId: 'b1', pinId: '3V3' }, to: { instId: 'lcd1', pinId: 'vcc' } },
+      { id: 'w2', from: { instId: 'b1', pinId: 'GND1' }, to: { instId: 'lcd1', pinId: 'gnd' } },
+      { id: 'w3', from: { instId: 'b1', pinId: 'D21' }, to: { instId: 'lcd1', pinId: 'sda' } },
+      { id: 'w4', from: { instId: 'b1', pinId: 'D22' }, to: { instId: 'lcd1', pinId: 'scl' } },
+    ],
+  },
 };
 
 const EXAMPLE_SKETCHES = [
@@ -2736,6 +2757,90 @@ void loop() {
   Serial.print("  SW: ");
   Serial.println(sw == LOW ? "PRESSED" : "released");
   delay(80);
+}`
+  },
+  {
+    id: 'esp32_ntp_lcd',
+    name: 'ESP32 NTP Clock (LCD)',
+    icon: '🕐',
+    desc: 'ESP32 DevKit V1 — fetch the current time from an NTP server and display it on a 16×2 I2C LCD',
+    tags: ['esp32', 'wifi', 'ntp', 'lcd', 'i2c', 'display', 'clock'],
+    circuit: EXAMPLE_CIRCUITS.esp32_ntp_lcd,
+    code: `/*
+ * ESP32 NTP Clock on LCD I2C
+ * Connects to Wi-Fi, fetches UTC time via ntpEpoch(),
+ * and displays HH:MM:SS on a 16x2 LCD.
+ *
+ * Wiring: LCD VCC -> 3V3, GND -> GND, SDA -> D21, SCL -> D22
+ */
+
+#include <WiFi.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+var ssid     = "ArduSimNet";
+var password = "simulator";
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void setup() {
+  Serial.begin(115200);
+  lcd.init();
+  lcd.backlight();
+
+  lcd.setCursor(0, 0);
+  lcd.print("Connecting...");
+  Serial.println("Connecting to Wi-Fi...");
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(300);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("  NTP Clock");
+  lcd.setCursor(0, 1);
+  lcd.print(WiFi.localIP());
+  delay(1500);
+}
+
+void loop() {
+  unsigned long epoch = ntpEpoch();
+  int hours   = (epoch % 86400) / 3600;
+  int minutes = (epoch % 3600)   / 60;
+  int seconds = epoch % 60;
+
+  lcd.setCursor(0, 0);
+  lcd.print("  NTP Time (UTC) ");
+
+  lcd.setCursor(0, 1);
+  lcd.print("    ");
+  if (hours < 10) lcd.print("0");
+  lcd.print(hours);
+  lcd.print(":");
+  if (minutes < 10) lcd.print("0");
+  lcd.print(minutes);
+  lcd.print(":");
+  if (seconds < 10) lcd.print("0");
+  lcd.print(seconds);
+  lcd.print("    ");
+
+  Serial.print("Time: ");
+  if (hours < 10) Serial.print("0");
+  Serial.print(hours);
+  Serial.print(":");
+  if (minutes < 10) Serial.print("0");
+  Serial.print(minutes);
+  Serial.print(":");
+  if (seconds < 10) Serial.print("0");
+  Serial.println(seconds);
+
+  delay(1000);
 }`
   },
 ];
