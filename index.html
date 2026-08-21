@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>ArduSim — Arduino Online Simulator</title>
     <meta name="description"
         content="Simulate Arduino circuits online with real-time code execution, component drag-and-drop, serial monitor, and oscilloscope. No installation required." />
@@ -25,7 +25,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet" />
-    <link rel="stylesheet" href="css/style.css" /> <noscript>
+    <link rel="stylesheet" href="css/style.css?v=20260826-1" /> <noscript>
         <style>
             .loading-overlay {
                 display: flex !important;
@@ -207,8 +207,8 @@
                     class="hidden">
                     <path
                         d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 1 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708" />
-                </svg> </button> <!-- Keyboard shortcuts --> 
-                <!-- <button class="hdr-btn hdr-btn-icon" id="btn-shortcuts"
+                </svg> </button> <!-- Keyboard shortcuts -->
+            <!-- <button class="hdr-btn hdr-btn-icon" id="btn-shortcuts"
                 title="Keyboard Shortcuts"> <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                     <path
                         d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
@@ -383,13 +383,13 @@
                             <option value="1200">1200</option>
                             <option value="2400">2400</option>
                             <option value="4800">4800</option>
-                            <option value="9600" selected>9600</option>
+                            <option value="9600">9600</option>
                             <option value="14400">14400</option>
                             <option value="19200">19200</option>
                             <option value="28800">28800</option>
                             <option value="38400">38400</option>
                             <option value="57600">57600</option>
-                            <option value="115200">115200</option>
+                            <option value="115200" selected>115200</option>
                         </select> </label> <label class="serial-label">Line ending: <select class="serial-select"
                             id="serial-eol">
                             <option value="">No line ending</option>
@@ -632,11 +632,12 @@
                 <button class="wire-color-btn" data-color="#9C27B0" title="Purple" style="background:#9C27B0;"></button>
                 <button class="wire-color-btn" data-color="#E0E0E0" title="White" style="background:#E0E0E0;"></button>
                 <button class="wire-color-btn" data-color="#00BCD4" title="Cyan" style="background:#00BCD4;"></button>
-                <button class="wire-color-btn" data-color="#424242" title="Dark Gray" style="background:#424242;"></button>
+                <button class="wire-color-btn" data-color="#424242" title="Dark Gray"
+                    style="background:#424242;"></button>
             </div>
             <button class="ctx-item" id="ctx-wire-auto" role="menuitem">
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1m0 1.2a5.8 5.8 0 1 1 0 11.6V2.2z"/>
+                    <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1m0 1.2a5.8 5.8 0 1 1 0 11.6V2.2z" />
                 </svg> Auto (Sim State)
             </button>
         </div>
@@ -655,24 +656,117 @@
     <div class="loading-overlay" id="loading-overlay">
         <div class="loading-spinner"></div>
         <p>Loading ArduSim…</p> <span class="loading-sub">Initializing Monaco Editor &amp; Components</span>
+    </div> <!-- ════════════════════ MOBILE BOTTOM NAV ════════════════════ -->
+    <nav class="mobile-nav" id="mobile-nav">
+        <button class="mobile-nav-btn" data-action="components" title="Components">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+            </svg>
+            <span>Parts</span>
+        </button>
+        <button class="mobile-nav-btn" data-action="editor" title="Code Editor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+            </svg>
+            <span>Code</span>
+        </button>
+        <button class="mobile-nav-btn nav-run" data-action="run" id="mobile-btn-run" title="Run Simulation">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            <span>Run</span>
+        </button>
+        <button class="mobile-nav-btn" data-action="serial" title="Serial Monitor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" />
+            </svg>
+            <span>Serial</span>
+        </button>
+        <button class="mobile-nav-btn" data-action="more" title="More">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="19" r="2" />
+            </svg>
+            <span>More</span>
+        </button>
+    </nav>
+    <!-- ════════════════════ MOBILE BOTTOM SHEETS ════════════════════ -->
+    <div class="bottom-sheet-overlay" id="bottom-sheet-overlay"></div>
+    <div class="bottom-sheet" id="sheet-components">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-header">
+            <span class="bottom-sheet-title">Components</span>
+            <button class="bottom-sheet-close" id="sheet-components-close">&times;</button>
+        </div>
+        <div class="bottom-sheet-body" id="sheet-components-body"></div>
+    </div>
+    <div class="bottom-sheet" id="sheet-editor">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-header">
+            <span class="bottom-sheet-title">Code Editor</span>
+            <button class="bottom-sheet-close" id="sheet-editor-close">&times;</button>
+        </div>
+        <div class="bottom-sheet-body" id="sheet-editor-body"></div>
+    </div>
+    <div class="bottom-sheet" id="sheet-serial">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-header">
+            <span class="bottom-sheet-title">Serial Monitor</span>
+            <button class="bottom-sheet-close" id="sheet-serial-close">&times;</button>
+        </div>
+        <div class="bottom-sheet-body" id="sheet-serial-body"></div>
+    </div>
+    <div class="bottom-sheet" id="sheet-more">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-header">
+            <span class="bottom-sheet-title">More</span>
+            <button class="bottom-sheet-close" id="sheet-more-close">&times;</button>
+        </div>
+        <div class="bottom-sheet-body" id="sheet-more-body">
+            <button class="hdr-dropdown-item mobile-more-btn" data-more-action="examples">Examples</button>
+            <button class="hdr-dropdown-item mobile-more-btn" data-more-action="save">Save</button>
+            <button class="hdr-dropdown-item mobile-more-btn" data-more-action="share">Share</button>
+            <button class="hdr-dropdown-item mobile-more-btn" data-more-action="download">Download</button>
+            <button class="hdr-dropdown-item mobile-more-btn" data-more-action="new">New Project</button>
+            <button class="hdr-dropdown-item mobile-more-btn" data-more-action="board">Board Settings</button>
+            <button class="hdr-dropdown-item mobile-more-btn" data-more-action="shortcuts">Keyboard Shortcuts</button>
+            <button class="hdr-dropdown-item mobile-more-btn" data-more-action="guide">Guide</button>
+        </div>
     </div> <!-- ════════════════════ SCRIPTS ════════════════════ -->
     <script>window.require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    </script>
     <script src="js/utils.js?v=20260825-1"></script>
     <script src="js/components.js?v=20260825-1"></script>
     <script src="js/simulator.js?v=20260826-4"></script>
-    <script src="js/canvas.js?v=20260825-1"></script>
+    <script src="js/canvas.js?v=20260826-1"></script>
     <script src="js/serial.js?v=20260825-1"></script>
     <script src="js/output.js?v=20260825-1"></script>
     <script src="js/oscilloscope.js?v=20260825-1"></script>
     <script src="js/plotter.js?v=20260825-1"></script>
     <script src="js/api.js?v=20260825-2"></script>
     <script src="js/storage.js?v=20260825-2"></script>
-    <script src="js/editor.js?v=20260826-1"></script>
+    <script src="js/editor.js?v=20260826-2"></script>
     <script src="js/thumbnails.js?v=20260825-1"></script>
     <script src="js/guide.js?v=20260821-1"></script>
-    <script src="js/app.js?v=20260826-1"></script>
+    <script src="js/app.js?v=20260826-2"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => { });
+            });
+        }
+    </script>
 </body>
 
 </html>

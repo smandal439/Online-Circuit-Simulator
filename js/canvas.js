@@ -813,8 +813,107 @@ class CircuitCanvas {
     canvas.addEventListener('contextmenu',e => this._onContextMenu(e));
     canvas.addEventListener('mouseleave', () => this._hidePinTooltip());
 
+    // Touch events for mobile
+    canvas.addEventListener('touchstart',  e => this._onTouchStart(e), { passive: false });
+    canvas.addEventListener('touchmove',   e => this._onTouchMove(e), { passive: false });
+    canvas.addEventListener('touchend',    e => this._onTouchEnd(e), { passive: false });
+
     document.addEventListener('keydown', e => this._onKeyDown(e));
     document.addEventListener('mouseup', () => { if (this.mode === 'panning') this.mode = 'idle'; });
+  }
+
+  /* ═══════════════ TOUCH HANDLERS ═══════════════ */
+  _onTouchStart(e) {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      this._pinchStart = this._getTouchDist(e.touches);
+      this._pinchCenter = this._getTouchCenter(e.touches);
+      this._isPinching = true;
+      return;
+    }
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const rect = this.canvas.getBoundingClientRect();
+      const offsetX = touch.clientX - rect.left;
+      const offsetY = touch.clientY - rect.top;
+      this._longPressTimer = setTimeout(() => {
+        this._onLongPress(offsetX, offsetY);
+      }, 500);
+      this._touchStartPos = { x: touch.clientX, y: touch.clientY };
+      // Simulate mouse event for single tap
+      this._onMouseDown({ button: 0, offsetX, offsetY, clientX: touch.clientX, clientY: touch.clientY, altKey: false });
+    }
+  }
+
+  _onTouchMove(e) {
+    if (this._isPinching && e.touches.length === 2) {
+      e.preventDefault();
+      const dist = this._getTouchDist(e.touches);
+      const center = this._getTouchCenter(e.touches);
+      const factor = dist / this._pinchStart;
+      const rect = this.canvas.getBoundingClientRect();
+      const mx = center.x - rect.left;
+      const my = center.y - rect.top;
+
+      this.panX -= (mx - this.panX) * (factor - 1);
+      this.panY -= (my - this.panY) * (factor - 1);
+      this.zoom = Math.max(0.1, Math.min(4, this.zoom * factor));
+      this._pinchStart = dist;
+      this._pinchCenter = center;
+      this._updateZoomDisplay();
+      return;
+    }
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const rect = this.canvas.getBoundingClientRect();
+      const offsetX = touch.clientX - rect.left;
+      const offsetY = touch.clientY - rect.top;
+      // Cancel long press if moved too far
+      if (this._touchStartPos) {
+        const dx = touch.clientX - this._touchStartPos.x;
+        const dy = touch.clientY - this._touchStartPos.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 10) {
+          clearTimeout(this._longPressTimer);
+        }
+      }
+      this._onMouseMove({ offsetX, offsetY, clientX: touch.clientX, clientY: touch.clientY, button: 0 });
+    }
+  }
+
+  _onTouchEnd(e) {
+    clearTimeout(this._longPressTimer);
+    this._isPinching = false;
+    if (e.changedTouches.length === 1) {
+      const touch = e.changedTouches[0];
+      const rect = this.canvas.getBoundingClientRect();
+      const offsetX = touch.clientX - rect.left;
+      const offsetY = touch.clientY - rect.top;
+      this._onMouseUp({ offsetX, offsetY, clientX: touch.clientX, clientY: touch.clientY, button: 0 });
+    }
+  }
+
+  _getTouchDist(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  _getTouchCenter(touches) {
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    };
+  }
+
+  _onLongPress(offsetX, offsetY) {
+    const world = this._toWorld(offsetX, offsetY);
+    const comp = this._hitTestComp(world.x, world.y);
+    if (comp) {
+      this._selectAll(false);
+      comp.selected = true;
+      this.selected = comp;
+      if (window.App) window.App._showContextMenu(comp, offsetX + this.canvas.getBoundingClientRect().left, offsetY + this.canvas.getBoundingClientRect().top);
+    }
   }
 
   _onMouseDown(e) {

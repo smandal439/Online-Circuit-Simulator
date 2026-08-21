@@ -1,0 +1,99 @@
+/* ═══════════════════════════════════════════════════════
+   sw.js — Service Worker for ArduSim PWA
+   ═══════════════════════════════════════════════════════ */
+
+const CACHE_NAME = 'ardusim-v1';
+const STATIC_ASSETS = [
+  '/',
+  '/index.html',
+  '/css/style.css',
+  '/js/app.js',
+  '/js/canvas.js',
+  '/js/editor.js',
+  '/js/simulator.js',
+  '/js/components.js',
+  '/js/serial.js',
+  '/js/output.js',
+  '/js/oscilloscope.js',
+  '/js/plotter.js',
+  '/js/storage.js',
+  '/js/api.js',
+  '/js/utils.js',
+  '/js/thumbnails.js',
+  '/js/guide.js',
+  '/js/sharing.js',
+  '/js/safetyChecker.js',
+  '/favicon.ico',
+];
+
+// Install: cache static assets
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch(() => {
+        // Cache what we can, ignore failures
+        return Promise.allSettled(
+          STATIC_ASSETS.map((url) => cache.add(url).catch(() => {}))
+        );
+      });
+    })
+  );
+  self.skipWaiting();
+});
+
+// Activate: clean old caches
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// Fetch: network-first for API, cache-first for static
+self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+
+  // API calls: network first
+  if (url.pathname.startsWith('/api/')) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // CDN resources (Monaco, fonts): cache-first
+  if (url.hostname !== location.hostname) {
+    e.respondWith(
+      caches.match(e.request).then((cached) => {
+        return cached || fetch(e.request).then((resp) => {
+          const clone = resp.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+          return resp;
+        });
+      })
+    );
+    return;
+  }
+
+  // Static assets: cache first, network fallback
+  e.respondWith(
+    caches.match(e.request).then((cached) => {
+      return cached || fetch(e.request).then((resp) => {
+        if (resp.ok) {
+          const clone = resp.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+        }
+        return resp;
+      });
+    }).catch(() => {
+      // Offline fallback for navigation
+      if (e.request.mode === 'navigate') {
+        return caches.match('/index.html');
+      }
+    })
+  );
+});

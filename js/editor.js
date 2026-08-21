@@ -39,6 +39,13 @@ void loop() {
 }`,
 
   init() {
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+    if (isMobile) {
+      this._initMobileEditor();
+      return;
+    }
+
     if (typeof require !== 'function' || typeof require.config !== 'function') {
       console.error('Monaco loader not available');
       this._initFallback();
@@ -458,6 +465,74 @@ void loop() {
     ta.style.cssText = `width:100%;height:100%;background:#0d1117;color:#e6edf3;font-family:'JetBrains Mono',monospace;font-size:13px;padding:12px;border:none;outline:none;resize:none;`;
     container.appendChild(ta);
     this._fallbackTA = ta;
+    if (window.App) window.App.onEditorReady(this.loadFromUrlHash());
+  },
+
+  /* Mobile-optimized code editor using enhanced textarea with line numbers */
+  _initMobileEditor() {
+    const container = document.getElementById('editor-container');
+    if (!container) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;width:100%;height:100%;overflow:hidden;background:#0d1117;';
+
+    // Line numbers gutter
+    const gutter = document.createElement('div');
+    gutter.style.cssText = 'width:40px;padding:12px 4px 12px 8px;text-align:right;color:#484f58;font-family:"JetBrains Mono",monospace;font-size:13px;line-height:1.6;overflow:hidden;user-select:none;flex-shrink:0;background:#0d1117;border-right:1px solid #21262d;';
+    gutter.id = 'mobile-line-numbers';
+
+    // Code textarea
+    const ta = document.createElement('textarea');
+    ta.value = this.DEFAULT_CODE;
+    ta.spellcheck = false;
+    ta.autocomplete = 'off';
+    ta.autocorrect = 'off';
+    ta.autocapitalize = 'off';
+    ta.style.cssText = `flex:1;width:100%;background:#0d1117;color:#e6edf3;font-family:'JetBrains Mono',monospace;font-size:14px;padding:12px;border:none;outline:none;resize:none;tab-size:2;white-space:pre;line-height:1.6;overflow:auto;-webkit-overflow-scrolling:touch;`;
+
+    wrapper.appendChild(gutter);
+    wrapper.appendChild(ta);
+    container.appendChild(wrapper);
+
+    this._fallbackTA = ta;
+
+    // Update line numbers
+    const updateLineNumbers = () => {
+      const lines = ta.value.split('\n').length;
+      gutter.innerHTML = Array.from({ length: lines }, (_, i) => `<div style="height:1.6em">${i + 1}</div>`).join('');
+    };
+    updateLineNumbers();
+
+    ta.addEventListener('input', updateLineNumbers);
+    ta.addEventListener('scroll', () => {
+      gutter.scrollTop = ta.scrollTop;
+    });
+
+    // Handle Tab key for indentation
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        ta.value = ta.value.substring(0, start) + '  ' + ta.value.substring(end);
+        ta.selectionStart = ta.selectionEnd = start + 2;
+        updateLineNumbers();
+      }
+    });
+
+    // Auto-save on change (debounced)
+    ta.addEventListener('input', () => {
+      if (window.StorageManager) window.StorageManager.markDirty();
+      clearTimeout(this._saveTimer);
+      this._saveTimer = setTimeout(() => {
+        if (window.CircuitCanvas && window.StorageManager && window.App) {
+          const projectName = window.App.getProjectName ? window.App.getProjectName() : 'Untitled Project';
+          window.StorageManager.autoSave(this.getCode(), window.CircuitCanvas.serialize(), projectName);
+        }
+      }, 2000);
+    });
+
+    this.monacoReady = false;
     if (window.App) window.App.onEditorReady(this.loadFromUrlHash());
   },
 

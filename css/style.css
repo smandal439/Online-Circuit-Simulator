@@ -616,6 +616,7 @@ body.view-serial #resizer-bottom { display: none; }
   width: 100%;
   height: 100%;
   display: block;
+  touch-action: none;
 }
 
 .canvas-footer {
@@ -2290,5 +2291,401 @@ body.view-serial #resizer-bottom { display: none; }
   .guide-hero h1 { font-size: 30px; }
   .gc-detail-head { flex-direction: column; align-items: flex-start; }
   .gc-detail-actions { margin-left: 0; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — Bottom Navigation Bar
+   ══════════════════════════════════════════════════════════════════ */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  z-index: 90;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.mobile-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: all var(--trans-fast);
+  -webkit-tap-highlight-color: transparent;
+  min-width: 56px;
+}
+.mobile-nav-btn svg {
+  width: 20px;
+  height: 20px;
+}
+.mobile-nav-btn:active {
+  background: var(--bg-hover);
+}
+.mobile-nav-btn.active {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.mobile-nav-btn.nav-run {
+  color: var(--run-color);
+}
+.mobile-nav-btn.nav-run.running {
+  color: var(--stop-color);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — Bottom Sheet
+   ══════════════════════════════════════════════════════════════════ */
+.bottom-sheet-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 160;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: fadeIn 0.15s ease;
+}
+.bottom-sheet-overlay.active {
+  display: block;
+}
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 85vh;
+  background: var(--bg-panel);
+  border-radius: 16px 16px 0 0;
+  z-index: 170;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.bottom-sheet.open {
+  transform: translateY(0);
+}
+.bottom-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--text-muted);
+  border-radius: 2px;
+  margin: 10px auto 6px;
+  flex-shrink: 0;
+  cursor: grab;
+}
+.bottom-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.bottom-sheet-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.bottom-sheet-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+.bottom-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   TABLET BREAKPOINT (768px – 1024px)
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  :root {
+    --panel-editor-w: 340px;
+    --panel-comp-w: 220px;
+  }
+  .logo-tag, .speed-label, .autosave-status { display: none; }
+  .project-name-wrapper { max-width: 140px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE BREAKPOINT (< 768px)
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* --- Variables --- */
+  :root {
+    --hdr-height: 46px;
+    --statusbar-h: 0px;
+    --bottom-h: 0px;
+  }
+
+  /* --- Body --- */
+  body {
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+  }
+
+  /* --- Header: compact --- */
+  .header {
+    height: 46px;
+    padding: 0 8px;
+    gap: 6px;
+  }
+  .logo-text-group { display: none; }
+  .project-name-wrapper { display: none; }
+  .header-controls {
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .header-controls::-webkit-scrollbar { display: none; }
+  .hdr-divider, .hdr-divider-sm { display: none; }
+  .hdr-btn { padding: 6px 8px; font-size: 11px; white-space: nowrap; }
+  .hdr-btn svg { display: none; }
+  .hdr-btn-run { min-width: auto; padding: 6px 14px; }
+  .hdr-btn-run svg { display: inline; }
+  .hdr-select { font-size: 11px; padding: 4px 6px; }
+  .speed-ctrl, .board-ctrl { display: none; }
+  .hdr-dropdown { position: static; }
+  .hdr-dropdown-menu {
+    position: fixed;
+    top: auto;
+    bottom: 52px;
+    left: 8px;
+    right: 8px;
+    min-width: auto;
+    border-radius: var(--radius-md);
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  /* --- Status bar: hide --- */
+  .sim-statusbar { display: none; }
+
+  /* --- Main layout: full screen canvas --- */
+  .main-layout {
+    top: 46px;
+    left: 0;
+    right: 0;
+    bottom: 52px;
+    flex-direction: column;
+    position: fixed;
+  }
+
+  /* --- Hide all desktop panels by default --- */
+  .panel-editor {
+    display: none !important;
+    position: fixed;
+    inset: 0;
+    top: 46px;
+    bottom: 52px;
+    z-index: 80;
+    width: 100% !important;
+    flex-shrink: 0;
+    border-right: none;
+    background: var(--bg-root);
+  }
+  .panel-editor.mobile-open {
+    display: flex !important;
+  }
+  .panel-components {
+    display: none !important;
+  }
+  .panel-resizer,
+  .panel-resizer-h {
+    display: none !important;
+  }
+
+  /* --- Canvas: full screen --- */
+  .panel-canvas {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+  .panel-canvas .panel-header {
+    height: 36px;
+    padding: 0 6px;
+    gap: 4px;
+  }
+  .panel-canvas .panel-title { font-size: 11px; }
+  .canvas-zoom-ctrl { gap: 2px; }
+  .panel-toggle-btn { display: none; }
+  .canvas-footer { display: none; }
+
+  /* --- Bottom panel: hide desktop, show in sheet --- */
+  .bottom-panel {
+    display: none !important;
+    position: fixed;
+    inset: 0;
+    top: 46px;
+    bottom: 52px;
+    height: auto !important;
+    z-index: 80;
+    border-top: none;
+    background: var(--bg-root);
+  }
+  .bottom-panel.mobile-open {
+    display: flex !important;
+    flex-direction: column;
+  }
+  .bottom-panel .panel-resizer-h { display: none !important; }
+  .bottom-panel .bottom-panel-tabs {
+    flex-shrink: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 0 4px;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+  }
+  .bottom-panel .bottom-panel-tabs::-webkit-scrollbar { display: none; }
+  .bottom-panel .btm-tab {
+    font-size: 11px;
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+  .bottom-panel .btm-tab svg { display: none; }
+  .bottom-panel .btm-tab-spacer { display: none; }
+  .bottom-panel .btm-panel-toggle { display: none; }
+
+  /* --- Mobile nav: show --- */
+  .mobile-nav {
+    display: flex;
+  }
+
+  /* --- Modals: full screen on mobile --- */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal, .modal-sm, .modal-lg {
+    max-width: 100%;
+    max-height: 90vh;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+  }
+  .modal-body { max-height: 70vh; }
+
+  /* --- Guide overlay: full screen --- */
+  .guide-overlay { z-index: 200; }
+  .guide-shell { max-width: 100%; }
+  .guide-header { padding: 10px 14px; }
+  .guide-brand-text span { display: none; }
+  .guide-nav { gap: 2px; overflow-x: auto; flex-wrap: nowrap; }
+  .guide-tab { padding: 5px 10px; font-size: 11px; }
+  .guide-pane { padding: 14px 12px 40px; }
+  .guide-hero h1 { font-size: 22px; }
+  .guide-hero p { font-size: 13px; }
+
+  /* --- Context menu: bottom sheet style --- */
+  .canvas-context-menu {
+    position: fixed;
+    bottom: 52px;
+    left: 8px;
+    right: 8px;
+    top: auto;
+    border-radius: var(--radius-md);
+    z-index: 170;
+    min-width: auto;
+  }
+
+  /* --- Toast: full width --- */
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    top: 56px;
+  }
+  .toast {
+    width: 100%;
+  }
+
+  /* --- Confirm dialog --- */
+  .confirm-overlay {
+    padding: 16px;
+    align-items: center;
+  }
+  .confirm-box {
+    max-width: 320px;
+    width: 100%;
+  }
+
+  /* --- Component search in sheet --- */
+  .component-search-box {
+    padding: 8px 12px;
+  }
+
+  /* --- Pin tooltip --- */
+  .pin-tooltip {
+    display: none !important;
+  }
+
+  /* --- Wiring/placing hints: bottom positioned --- */
+  .wiring-hint, .placing-hint {
+    position: fixed;
+    bottom: 58px;
+    left: 8px;
+    right: 8px;
+    top: auto;
+    z-index: 75;
+    text-align: center;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+  }
+
+  /* --- Scrollbar thin on mobile --- */
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SMALL PHONE BREAKPOINT (< 480px)
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .header { height: 42px; padding: 0 6px; }
+  .hdr-btn { padding: 5px 6px; font-size: 10px; }
+  .hdr-btn-run { padding: 5px 10px; }
+  .main-layout { top: 42px; bottom: 48px; }
+  .mobile-nav { height: 48px; }
+  .mobile-nav-btn { font-size: 9px; padding: 4px 8px; min-width: 48px; }
+  .mobile-nav-btn svg { width: 18px; height: 18px; }
+  .panel-canvas .panel-header { height: 32px; }
+  .panel-canvas .panel-title { font-size: 10px; }
 }
 

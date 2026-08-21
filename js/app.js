@@ -46,6 +46,8 @@ class App {
         this.editor.init();
       }
 
+      this._initMobile();
+
       this._updateStatus('Ready — press Run to start simulation');
       this._updateCompileStatus('Ready');
       this._hideLoadingOverlay();
@@ -1745,6 +1747,199 @@ _newProject() {
     // Limit stack to 5 toasts
     while (container.childElementCount > 5) {
       container.firstChild?.remove();
+    }
+  }
+
+  /* ══════════════════════ MOBILE SUPPORT ══════════════════════ */
+  _initMobile() {
+    this._isMobile = window.matchMedia('(max-width: 768px)').matches;
+    this._openSheet = null;
+
+    // Bottom nav buttons
+    const nav = document.getElementById('mobile-nav');
+    if (nav) {
+      nav.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => this._handleMobileNav(btn));
+      });
+    }
+
+    // Bottom sheet overlay close
+    const overlay = document.getElementById('bottom-sheet-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', () => this._closeAllMobileSheets());
+    }
+
+    // Bottom sheet close buttons
+    document.querySelectorAll('.bottom-sheet-close').forEach(btn => {
+      btn.addEventListener('click', () => this._closeAllMobileSheets());
+    });
+
+    // More menu actions
+    document.querySelectorAll('.mobile-more-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.moreAction;
+        this._closeAllMobileSheets();
+        this._handleMoreAction(action);
+      });
+    });
+
+    // Resize listener for orientation changes
+    window.addEventListener('resize', () => {
+      const wasMobile = this._isMobile;
+      this._isMobile = window.matchMedia('(max-width: 768px)').matches;
+      if (wasMobile !== this._isMobile) {
+        this._closeAllMobileSheets();
+      }
+    });
+
+    // Swipe-to-close on bottom sheet handles
+    document.querySelectorAll('.bottom-sheet-handle').forEach(handle => {
+      let startY = 0;
+      let currentY = 0;
+      const sheet = handle.closest('.bottom-sheet');
+      if (!sheet) return;
+
+      handle.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+      handle.addEventListener('touchmove', (e) => {
+        currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+        if (diff > 0) {
+          sheet.style.transform = `translateY(${diff}px)`;
+        }
+      }, { passive: true });
+      handle.addEventListener('touchend', () => {
+        const diff = currentY - startY;
+        sheet.style.transform = '';
+        if (diff > 80) {
+          this._closeAllMobileSheets();
+        }
+        startY = 0;
+        currentY = 0;
+      }, { passive: true });
+    });
+  }
+
+  _handleMobileNav(btn) {
+    const action = btn.dataset.action;
+
+    // Update active state
+    document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+
+    if (action === 'run') {
+      this.isRunning ? this.stop() : this.run();
+      btn.classList.toggle('running', this.isRunning);
+      return;
+    }
+
+    // Toggle bottom sheet
+    const sheetId = `sheet-${action}`;
+    const sheet = document.getElementById(sheetId);
+
+    if (this._openSheet === sheetId) {
+      this._closeAllMobileSheets();
+      return;
+    }
+
+    this._closeAllMobileSheets();
+    if (sheet) {
+      this._openMobileSheet(sheetId);
+      btn.classList.add('active');
+    }
+  }
+
+  _openMobileSheet(sheetId) {
+    if (!this._isMobile) return;
+
+    const sheet = document.getElementById(sheetId);
+    const overlay = document.getElementById('bottom-sheet-overlay');
+    if (!sheet || !overlay) return;
+
+    // Clone content for dynamic sheets
+    if (sheetId === 'sheet-components') {
+      const body = document.getElementById('sheet-components-body');
+      const container = document.getElementById('components-container');
+      if (body && container && !body.hasChildNodes()) {
+        body.appendChild(container.cloneNode(true));
+      }
+    } else if (sheetId === 'sheet-editor') {
+      const body = document.getElementById('sheet-editor-body');
+      const editorContainer = document.getElementById('editor-container');
+      if (body && editorContainer && !body.hasChildNodes()) {
+        body.appendChild(editorContainer);
+        if (this.editor?.editor) {
+          setTimeout(() => this.editor.editor.layout?.(), 100);
+        }
+      }
+    } else if (sheetId === 'sheet-serial') {
+      const body = document.getElementById('sheet-serial-body');
+      const serialPane = document.getElementById('pane-serial');
+      if (body && serialPane && !body.hasChildNodes()) {
+        body.appendChild(serialPane.cloneNode(true));
+      }
+    }
+
+    overlay.classList.add('active');
+    sheet.classList.add('open');
+    this._openSheet = sheetId;
+    document.body.style.overflow = 'hidden';
+  }
+
+  _closeAllMobileSheets() {
+    document.querySelectorAll('.bottom-sheet').forEach(s => {
+      s.classList.remove('open');
+      s.style.transform = '';
+    });
+    const overlay = document.getElementById('bottom-sheet-overlay');
+    if (overlay) overlay.classList.remove('active');
+    document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+    this._openSheet = null;
+    document.body.style.overflow = '';
+
+    // Return editor container to its original position if it was moved
+    if (this._isMobile) {
+      const editorBody = document.getElementById('sheet-editor-body');
+      const editorContainer = document.getElementById('editor-container');
+      if (editorBody && editorContainer && editorBody.contains(editorContainer)) {
+        const panelEditor = document.getElementById('panel-editor');
+        if (panelEditor) {
+          panelEditor.appendChild(editorContainer);
+          if (this.editor?.editor) {
+            setTimeout(() => this.editor.editor.layout?.(), 100);
+          }
+        }
+      }
+    }
+  }
+
+  _handleMoreAction(action) {
+    switch (action) {
+      case 'examples':
+        this._renderExamples();
+        this._showModal('modal-examples');
+        break;
+      case 'save':
+        this.saveProject();
+        break;
+      case 'share':
+        this.shareProject();
+        break;
+      case 'download':
+        this.downloadProject();
+        break;
+      case 'new':
+        this._newProject();
+        break;
+      case 'board':
+        // TODO: board settings modal
+        break;
+      case 'shortcuts':
+        this._showModal('modal-shortcuts');
+        break;
+      case 'guide':
+        window.GuideManager?.open('home');
+        break;
     }
   }
 }
