@@ -351,6 +351,13 @@ class App {
         this._triggerAutoSave();
         window.StorageManager?.markDirty();
       };
+      this.canvas.onPlacingChanged = (placing) => {
+        document.querySelectorAll('.comp-item').forEach(item => {
+          item.classList.toggle('placing', placing);
+        });
+      };
+      // Initial sync — if already in placing mode from a previous session
+      this.canvas.onPlacingChanged(this.canvas.placingType != null);
       this.canvas.onContextMenu = (inst, x, y) => this._showContextMenu(inst, x, y);
       this._refreshCanvasSummary();
     }
@@ -867,6 +874,20 @@ _newProject() {
             this.canvas.startPlacing(id);
             this.showToast(`${def.name} selected — click on canvas to place`, 'info');
           }
+        });
+        // Hover tooltip showing full description
+        item.addEventListener('mouseenter', () => {
+          const existing = item.querySelector('.comp-tooltip');
+          if (existing) return;
+          const tip = document.createElement('span');
+          tip.className = 'comp-tooltip';
+          tip.textContent = def.desc || '';
+          tip.style.cssText = 'position:absolute;bottom:100%;left:50%;transform:translateX(-50%) translateY(4px);background:var(--bg-panel);padding:6px 10px;border-radius:var(--radius-sm);font-size:11px;color:var(--text-muted);white-space:normal;max-width:200px;box-shadow:var(--shadow-sm);z-index:10;';
+          item.appendChild(tip);
+        });
+        item.addEventListener('mouseleave', () => {
+          const tip = item.querySelector('.comp-tooltip');
+          if (tip) tip.remove();
         });
         section.appendChild(item);
       }

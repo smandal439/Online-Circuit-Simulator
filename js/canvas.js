@@ -712,6 +712,8 @@ class CircuitCanvas {
       nameEl.textContent = def ? def.name : type;
       hint.classList.remove('hidden');
     }
+    // Notify app that placing mode started
+    if (this.onPlacingChanged) this.onPlacingChanged(true);
   }
 
   cancelPlacing() {
@@ -723,6 +725,8 @@ class CircuitCanvas {
     if (hint) hint.classList.add('hidden');
     // Remove active class from sidebar
     document.querySelectorAll('.comp-item').forEach(el => el.classList.remove('placing'));
+    // Notify app that placing mode ended
+    if (this.onPlacingChanged) this.onPlacingChanged(false);
   }
 
   /* ══════════════ EVENT HANDLING ══════════════ */

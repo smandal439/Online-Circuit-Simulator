@@ -796,6 +796,23 @@ body.view-serial #resizer-bottom { display: none; }
   text-overflow: ellipsis;
 }
 
+/* Tooltip that appears on hover over comp-item descriptions */
+.comp-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--bg-panel);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: normal;
+  max-width: 200px;
+  box-shadow: var(--shadow-sm);
+  z-index: 10;
+}
+
 .comp-add-btn {
   width: 22px;
   height: 22px;
@@ -1840,6 +1857,11 @@ body.view-serial #resizer-bottom { display: none; }
   white-space: nowrap;
 }
 .guide-tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+.guide-tab.active {
+  background: var(--accent-dim);
+  color: var(--text-primary);
+  box-shadow: inset 0 -2px var(--accent);
+}
 .guide-tab.active {
   background: var(--accent);
   color: #fff;
