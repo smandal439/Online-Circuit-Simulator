@@ -834,7 +834,7 @@ class CircuitCanvas {
         this.dragging = {
           inst: compHit,
           offsetX: world.x - compHit.x,
-          offsetY: compHit.y,
+          offsetY: world.y - compHit.y,
           startX: compHit.x,
           startY: compHit.y,
           moved: false,
@@ -1786,12 +1786,14 @@ case 'push_button': {
         }
       }
 
-      // 4b. Relay internal pass-through (COM <-> NO when active, else COM <-> NC)
+      // 4b. Relay internal pass-through (COM ↔ NO when active, COM ↔ NC when inactive)
       if (inst.type === 'relay') {
         const relayOn = !!(inst.runtimeState && inst.runtimeState.active);
         if (current.pinId === 'com') {
           queue.push({ instId: inst.id, pinId: relayOn ? 'no' : 'nc', resistance: current.resistance });
-        } else if (current.pinId === 'no' || current.pinId === 'nc') {
+        } else if (current.pinId === 'no' && relayOn) {
+          queue.push({ instId: inst.id, pinId: 'com', resistance: current.resistance });
+        } else if (current.pinId === 'nc' && !relayOn) {
           queue.push({ instId: inst.id, pinId: 'com', resistance: current.resistance });
         }
       }
