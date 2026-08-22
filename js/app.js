@@ -155,6 +155,10 @@ class App {
     exportBtn?.addEventListener('click', () => this.exportImage());
     formatBtn?.addEventListener('click', () => this.formatCode());
     verifyBtn?.addEventListener('click', () => this.verify());
+    // Logo click → go to home page
+    document.querySelector('.header-logo')?.addEventListener('click', () => {
+      window.location.href = '/';
+    });
     examplesBtn?.addEventListener('click', () => {
       this._renderExamples();
       this._showModal('modal-examples');

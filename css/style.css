@@ -151,6 +151,8 @@ kbd {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
 }
 
 .logo-icon {
