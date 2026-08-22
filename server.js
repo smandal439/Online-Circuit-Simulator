@@ -162,10 +162,22 @@ function serveStatic(req, res, urlPath) {
     if (err || !stat.isFile()) return sendJson(res, 404, { error: 'Not found' });
     const ext = path.extname(filePath).toLowerCase();
     const type = MIME[ext] || 'application/octet-stream';
+
+    // ETag based on mtime + size for cache validation
+    const etag = `"${stat.mtimeMs}-${stat.size}"`;
+    const ifNoneMatch = req.headers['if-none-match'];
+    if (ifNoneMatch === etag) {
+      res.writeHead(304);
+      return res.end();
+    }
+
+    const noCache = ext === '.html' || ext === '.json';
     res.writeHead(200, {
       'Content-Type': type,
       'Content-Length': stat.size,
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=86400',
+      'Cache-Control': noCache ? 'no-cache' : 'public, max-age=0, must-revalidate',
+      'ETag': etag,
+      'Last-Modified': stat.mtime.toUTCString(),
     });
     fs.createReadStream(filePath).pipe(res);
   });
