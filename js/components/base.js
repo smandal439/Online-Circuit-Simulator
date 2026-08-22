@@ -1,0 +1,225 @@
+/* ═══════════════════════════════════════════════════════
+   components/base.js — Shared utilities for all components
+   Load this file FIRST before any component files.
+   ═══════════════════════════════════════════════════════ */
+
+'use strict';
+
+const GRID = 10;
+
+/* ── Pin types ── */
+const PIN_TYPE = {
+  DIGITAL:  'digital',
+  ANALOG:   'analog',
+  POWER:    'power',
+  GND:      'gnd',
+  PWM:      'pwm',
+  SIGNAL:   'signal',
+};
+
+/* ── Color map for components ── */
+const C = {
+  BOARD:   '#1a5c1a',
+  BOARD_D: '#12401a',
+  PCB:     '#1d6b2e',
+  PIN_HDR: '#c8a84b',
+  CHIP:    '#2a2a2a',
+  CHIP_TXT:'#cccccc',
+  WHITE:   '#f0f0f0',
+  GRAY:    '#888',
+  LGRAY:   '#aaa',
+  DGRAY:   '#444',
+  RED_LED: '#ff3333',
+  GRN_LED: '#33ff66',
+  BLU_LED: '#3399ff',
+  YLW_LED: '#ffee33',
+  ORG_LED: '#ff8833',
+  WHT_LED: '#ffffff',
+  WIRE_H:  '#ff5555',
+  WIRE_L:  '#4488cc',
+};
+
+/* ══════════════════════════════════════════════════════
+   COMPONENT DEFINITIONS REGISTRY
+   ══════════════════════════════════════════════════════ */
+
+const COMPONENT_DEFS = {};
+
+function defComp(def) {
+  COMPONENT_DEFS[def.id] = def;
+}
+
+/* ═══════════════ HELPER DRAWING FUNCTIONS ═══════════════ */
+
+function drawHeaderStrip(ctx, hx, hy, hw, holes, pinY) {
+  ctx.fillStyle = '#141416';
+  roundRect(ctx, hx, hy, hw, 12, 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = '#c8b06a';
+  for (const cx of holes) {
+    ctx.beginPath();
+    ctx.arc(cx, pinY, 4.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#0b0b0d';
+  for (const cx of holes) {
+    ctx.beginPath();
+    ctx.arc(cx, pinY, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawSelectionRect(ctx, x, y, w, h) {
+  ctx.save();
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.shadowColor = '#00e5ff';
+  ctx.shadowBlur = 6;
+  ctx.strokeRect(x, y, w, h);
+  ctx.setLineDash([]);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawLED_on_board(ctx, cx, cy, color, r) {
+  const isLit = color !== '#555' && color !== '#333' && color !== '#444';
+  if (isLit) {
+    const pulse = 1 + Math.sin(Date.now() / 250) * 0.08;
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, (r * 3.5) * pulse);
+    glow.addColorStop(0, color);
+    glow.addColorStop(0.35, color);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, (r * 3.5) * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12 * pulse;
+  }
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  if (isLit) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
+
+function hexToRgba(hex, alpha) {
+  if (!hex || !hex.startsWith('#')) return `rgba(255,50,50,${alpha})`;
+  let h = hex.slice(1);
+  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  const r = parseInt(h.slice(0,2),16) || 0;
+  const g = parseInt(h.slice(2,4),16) || 0;
+  const b = parseInt(h.slice(4,6),16) || 0;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function getInstPinState(inst, pinId, sim) {
+  if (inst && inst.runtimeState && inst.runtimeState.val !== undefined) {
+    return inst.runtimeState.val;
+  }
+  if (inst && inst.runtimeState && inst.runtimeState.lit !== undefined) {
+    return inst.runtimeState.lit ? 1 : 0;
+  }
+  if (!sim || !sim.pinStates) return 0;
+  if (window.CircuitCanvas && typeof window.CircuitCanvas._getConnectedPinNum === 'function') {
+    const pinNum = window.CircuitCanvas._getConnectedPinNum(inst.id, pinId);
+    if (pinNum !== null) return sim.pinStates[`pin_${pinNum}`] || 0;
+  }
+  return sim.pinStates[`${inst.id}_${pinId}`] || 0;
+}
+
+function getInstPinPWM(inst, pinId, sim) {
+  if (inst && inst.runtimeState && inst.runtimeState[pinId] !== undefined) {
+    return inst.runtimeState[pinId];
+  }
+  if (!sim || !sim.pinStates) return 0;
+  if (window.CircuitCanvas && typeof window.CircuitCanvas._getConnectedPinNum === 'function') {
+    const pinNum = window.CircuitCanvas._getConnectedPinNum(inst.id, pinId);
+    if (pinNum !== null) return sim.pinStates[`pin_${pinNum}`] || 0;
+  }
+  return sim.pinStates[`${inst.id}_${pinId}`] || 0;
+}
+
+/* Resistor color bands */
+function resistorBands(val) {
+  const COLORS = ['#000','#884400','#ff0000','#ff8800','#ffff00','#00aa00','#0000ff','#aa00aa','#888888','#ffffff'];
+  const digits = String(Math.round(val)).replace(/0+$/, '');
+  const significant = digits.padStart(2, '0');
+  const multiplier = Math.floor(Math.log10(val)) - 1;
+  return [
+    COLORS[parseInt(significant[0])] || '#000',
+    COLORS[parseInt(significant[1])] || '#000',
+    COLORS[Math.max(0, multiplier)] || '#000',
+  ];
+}
+
+function formatResistance(val) {
+  if (val >= 1000000) return (val/1000000).toFixed(1) + 'MΩ';
+  if (val >= 1000) return (val/1000).toFixed(1) + 'kΩ';
+  return val + 'Ω';
+}
+
+/* Get all world-space pin positions for a component instance */
+function getComponentPins(inst) {
+  const def = COMPONENT_DEFS[inst.type];
+  if (!def) return [];
+  return def.pins.map(pin => ({
+    ...pin,
+    worldX: inst.x + pin.x,
+    worldY: inst.y + pin.y,
+    instId: inst.id,
+  }));
+}
+
+/* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
+const COMPONENT_CATALOG = [
+  { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
+  { category: 'Output',    ids: ['led', 'multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306'] },
+  { category: 'Input',     ids: ['push_button', 'potentiometer', 'joystick'] },
+  { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay'] },
+  { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir'] },
+  { category: 'Passive',   ids: ['resistor', 'capacitor', 'breadboard'] },
+  { category: 'Power',     ids: ['power_5v', 'power_gnd'] },
+  { category: 'Digital ICs', ids: ['ic_555', 'ic_74hc00', 'ic_74hc04', 'ic_74hc08', 'ic_74hc32', 'ic_74hc595', 'ic_74hc138', 'ic_74hc245'] },
+];
+
+/* Export */
+window.ArduinoComponents = {
+  COMPONENT_DEFS,
+  COMPONENT_CATALOG,
+  GRID,
+  PIN_TYPE,
+  roundRect,
+  drawSelectionRect,
+  getComponentPins,
+  hexToRgba,
+  resistorBands,
+  formatResistance,
+};

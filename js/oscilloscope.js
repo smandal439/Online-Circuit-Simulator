@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   oscilloscope.js — Real-time Oscilloscope
+   oscilloscope.js — Real-time Oscilloscope with Enhanced Grid & Slider
    ═══════════════════════════════════════════════════════ */
 
 'use strict';
@@ -15,18 +15,39 @@ class Oscilloscope {
     this.ch2Pin   = 'none';
     this.timebase = 500; // ms per div
     this.gridDivs = 10;
+    this.voltageDivs = 8; // Number of vertical divisions
+
+    /* Horizontal offset (slider value) - percentage of viewport */
+    this.horizontalOffset = 0; // 0 to 100 (0 = latest data, 100 = oldest)
+    this._offsetSamples = 0; // Calculated sample offset
 
     /* Data buffers */
     this.ch1Data = [];
     this.ch2Data = [];
     this.maxSamples = 2000;
 
+    /* Signal grid configuration */
+    this.signalLevels = {
+      HIGH: 1023,
+      LOW: 0,
+      threshold: 512
+    };
+
     /* Colors */
-    this.CH1_COLOR = '#00e5ff';
+    this.CH1_COLOR = '#1eff00';
     this.CH2_COLOR = '#ff9800';
     this.GRID_COLOR = 'rgba(255,255,255,0.06)';
     this.GRID_MAJOR = 'rgba(255,255,255,0.12)';
+    this.GRID_TRIGGER = 'rgba(255,0,0,0.15)';
     this.BG_COLOR   = '#0a0e14';
+    this.TRIGGER_COLOR = '#ff0044';
+
+    /* Trigger settings */
+    this.triggerChannel = 1;
+    this.triggerLevel = 512;
+    this.triggerRising = true;
+    this.triggerEnabled = false;
+    this._triggerPosition = 0;
 
     /* RAF */
     this._rafId  = null;
@@ -73,6 +94,42 @@ class Oscilloscope {
 
     if (this.ch1Data.length > this.maxSamples) this.ch1Data.shift();
     if (this.ch2Data.length > this.maxSamples) this.ch2Data.shift();
+
+    // Update trigger position
+    if (this.triggerEnabled) {
+      this._updateTrigger();
+    }
+  }
+
+  _updateTrigger() {
+    const data = this.triggerChannel === 1 ? this.ch1Data : this.ch2Data;
+    if (data.length < 2) return;
+
+    const triggerValue = this.triggerLevel;
+    let found = false;
+
+    for (let i = data.length - 2; i >= 0; i--) {
+      const current = data[i];
+      const next = data[i + 1];
+      
+      if (this.triggerRising) {
+        if (current.v <= triggerValue && next.v > triggerValue) {
+          this._triggerPosition = data.length - i;
+          found = true;
+          break;
+        }
+      } else {
+        if (current.v >= triggerValue && next.v < triggerValue) {
+          this._triggerPosition = data.length - i;
+          found = true;
+          break;
+        }
+      }
+    }
+
+    if (!found) {
+      this._triggerPosition = 0;
+    }
   }
 
   _render() {
@@ -83,89 +140,217 @@ class Oscilloscope {
     ctx.fillStyle = this.BG_COLOR;
     ctx.fillRect(0, 0, W, H);
 
-    this._drawGrid(ctx, W, H);
-    this._drawWaveform(ctx, W, H, this.ch1Data, this.CH1_COLOR, 1023);
-    if (this.ch2Pin !== 'none') {
-      this._drawWaveform(ctx, W, H, this.ch2Data, this.CH2_COLOR, 1023);
+    // Calculate visible data range based on horizontal offset
+    const now = this.ch1Data.length > 0 ? this.ch1Data[this.ch1Data.length - 1].t : 0;
+    const windowMs = this.timebase * this.gridDivs;
+    const totalDataMs = this.ch1Data.length > 0 ? this.ch1Data[this.ch1Data.length - 1].t - this.ch1Data[0].t : windowMs;
+    
+    // Calculate offset in time
+    const offsetMs = (this.horizontalOffset / 100) * Math.max(totalDataMs - windowMs, 0);
+    
+    // Determine view window
+    let startT = now - windowMs - offsetMs;
+    let endT = now - offsetMs;
+
+    // If we have less data than window, shift to show latest
+    if (this.ch1Data.length > 0 && startT < this.ch1Data[0].t) {
+      startT = this.ch1Data[0].t;
+      endT = startT + windowMs;
     }
-    this._drawLabels(ctx, W, H);
+
+    this._drawGrid(ctx, W, H, startT, endT);
+    this._drawTriggerIndicator(ctx, W, H);
+    this._drawWaveform(ctx, W, H, this.ch1Data, this.CH1_COLOR, 1023, startT, endT, 'CH1');
+    if (this.ch2Pin !== 'none') {
+      this._drawWaveform(ctx, W, H, this.ch2Data, this.CH2_COLOR, 1023, startT, endT, 'CH2');
+    }
+    this._drawLabels(ctx, W, H, startT, endT);
+    this._drawSliderInfo(ctx, W, H);
   }
 
-  _drawGrid(ctx, W, H) {
+  _drawGrid(ctx, W, H, startT, endT) {
     const divW = W / this.gridDivs;
-    const divH = H / 8;
+    const divH = H / this.voltageDivs;
+    const timePerDiv = (endT - startT) / this.gridDivs;
 
     // Vertical lines (time divisions)
     for (let i = 0; i <= this.gridDivs; i++) {
       const x = i * divW;
       ctx.strokeStyle = i % 5 === 0 ? this.GRID_MAJOR : this.GRID_COLOR;
       ctx.lineWidth = i % 5 === 0 ? 1 : 0.5;
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      ctx.beginPath(); 
+      ctx.moveTo(x, 0); 
+      ctx.lineTo(x, H); 
+      ctx.stroke();
+
+      // Time labels
+      if (i < this.gridDivs) {
+        const time = startT + (i * timePerDiv);
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.font = '8px JetBrains Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${time.toFixed(0)}ms`, x + divW/2, H - 4);
+      }
     }
 
-    // Horizontal lines
-    for (let i = 0; i <= 8; i++) {
+    // Horizontal lines (voltage divisions)
+    for (let i = 0; i <= this.voltageDivs; i++) {
       const y = i * divH;
       ctx.strokeStyle = i % 4 === 0 ? this.GRID_MAJOR : this.GRID_COLOR;
       ctx.lineWidth = i % 4 === 0 ? 1 : 0.5;
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      ctx.beginPath(); 
+      ctx.moveTo(0, y); 
+      ctx.lineTo(W, y); 
+      ctx.stroke();
+
+      // Voltage labels
+      const voltage = ((this.voltageDivs - i) / this.voltageDivs) * 5; // 0-5V
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.font = '8px JetBrains Mono, monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${voltage.toFixed(1)}V`, 4, y - 2);
     }
 
-    // Center lines (bright)
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke();
+    // Center line (0V reference) - brighter
+    const zeroY = H - (0 / 5) * H * 0.9 - H * 0.05;
+    if (zeroY > 0 && zeroY < H) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); 
+      ctx.moveTo(0, zeroY); 
+      ctx.lineTo(W, zeroY); 
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 5V reference line (top)
+    const fiveVY = H - (5 / 5) * H * 0.9 - H * 0.05;
+    if (fiveVY > 0 && fiveVY < H) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath(); 
+      ctx.moveTo(0, fiveVY); 
+      ctx.lineTo(W, fiveVY); 
+      ctx.stroke();
+    }
+
+    // Grid labels
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '8px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${this.timebase}ms/div`, W - 4, 12);
+    ctx.fillText('5V/div', W - 4, H - 4);
   }
 
-  _drawWaveform(ctx, W, H, data, color, maxVal) {
+  _drawTriggerIndicator(ctx, W, H) {
+    if (!this.triggerEnabled || this._triggerPosition === 0) return;
+
+    const triggerX = (this._triggerPosition / this.maxSamples) * W;
+    if (triggerX > 0 && triggerX < W) {
+      ctx.strokeStyle = this.TRIGGER_COLOR;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(triggerX, 0);
+      ctx.lineTo(triggerX, H);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Trigger label
+      ctx.fillStyle = this.TRIGGER_COLOR;
+      ctx.font = '8px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('▼ TRIG', triggerX, 14);
+    }
+  }
+
+  _drawWaveform(ctx, W, H, data, color, maxVal, startT, endT, channel) {
     if (data.length < 2) return;
 
-    const now = data[data.length - 1].t;
-    const windowMs = this.timebase * this.gridDivs;
-    const startT = now - windowMs;
+    const windowMs = endT - startT;
+    if (windowMs <= 0) return;
+
+    // Filter data for digital signals
+    const threshold = this.signalLevels.threshold;
+    const isDigital = data.some(d => d.v === 0 || d.v === 1023);
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = isDigital ? 2 : 1.5;
     ctx.shadowColor = color;
-    ctx.shadowBlur = 4;
+    ctx.shadowBlur = isDigital ? 8 : 4;
     ctx.beginPath();
 
     let first = true;
-    for (const pt of data) {
-      if (pt.t < startT) continue;
+    let lastX = 0, lastY = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const pt = data[i];
+      if (pt.t < startT || pt.t > endT) continue;
+      
       const x = ((pt.t - startT) / windowMs) * W;
       const y = H - (pt.v / maxVal) * H * 0.9 - H * 0.05;
-      if (first) { ctx.moveTo(x, y); first = false; }
-      else ctx.lineTo(x, y);
+
+      if (first) {
+        ctx.moveTo(x, y);
+        first = false;
+      } else {
+        // For digital signals, draw perfect square waves
+        if (isDigital) {
+          const prev = data[i-1];
+          if (prev && (prev.v <= threshold && pt.v > threshold) || (prev.v >= threshold && pt.v < threshold)) {
+            // Draw vertical line at transition
+            ctx.lineTo(x, lastY);
+            ctx.lineTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      lastX = x;
+      lastY = y;
     }
 
     ctx.stroke();
     ctx.shadowBlur = 0;
   }
 
-  _drawLabels(ctx, W, H) {
+  _drawLabels(ctx, W, H, startT, endT) {
+    // Channel labels
     ctx.font = '10px JetBrains Mono, monospace';
-    ctx.fillStyle = this.CH1_COLOR;
     ctx.textAlign = 'left';
-    ctx.fillText(`CH1: ${this.ch1Pin}`, 8, 16);
+    
+    ctx.fillStyle = this.CH1_COLOR;
+    const ch1Val = this.ch1Data.length > 0 ? this.ch1Data[this.ch1Data.length - 1].v : 0;
+    ctx.fillText(`CH1: ${this.ch1Pin} (${ch1Val})`, 8, 16);
 
     if (this.ch2Pin !== 'none') {
       ctx.fillStyle = this.CH2_COLOR;
-      ctx.fillText(`CH2: ${this.ch2Pin}`, 8, 30);
+      const ch2Val = this.ch2Data.length > 0 ? this.ch2Data[this.ch2Data.length - 1].v : 0;
+      ctx.fillText(`CH2: ${this.ch2Pin} (${ch2Val})`, 8, 30);
     }
 
-    // Time/div
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    // Time window info
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '8px JetBrains Mono, monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(`${this.timebase}ms/div`, W - 8, 16);
+    ctx.fillText(`Window: ${(endT - startT).toFixed(0)}ms`, W - 8, 28);
 
-    // Current values
+    // Sample count
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillText(`Samples: ${this.ch1Data.length}`, 8, H - 4);
+
+    // Digital signal indicator
     if (this.ch1Data.length > 0) {
-      const last = this.ch1Data[this.ch1Data.length - 1];
-      ctx.fillStyle = this.CH1_COLOR;
-      ctx.textAlign = 'right';
-      ctx.fillText(`${last.v}`, W - 8, H - 8);
+      const isDigital = this.ch1Data.some(d => d.v === 0 || d.v === 1023);
+      if (isDigital) {
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.textAlign = 'right';
+        ctx.fillText('DIGITAL', W - 8, H - 20);
+      }
     }
 
     // Pause indicator
@@ -174,6 +359,35 @@ class Oscilloscope {
       ctx.font = 'bold 11px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('⏸ PAUSED', W/2, 20);
+    }
+
+    // Trigger status
+    if (this.triggerEnabled) {
+      ctx.fillStyle = this.TRIGGER_COLOR;
+      ctx.font = '8px JetBrains Mono, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`TRIG: CH${this.triggerChannel} ${this.triggerRising ? '↑' : '↓'} ${this.triggerLevel}`, W - 8, 40);
+    }
+  }
+
+  _drawSliderInfo(ctx, W, H) {
+    // Draw horizontal slider indicator
+    if (this.horizontalOffset > 0) {
+      const sliderWidth = 100;
+      const sliderX = W - sliderWidth - 8;
+      const sliderY = H - 20;
+      
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(sliderX, sliderY, sliderWidth, 4);
+      
+      const pos = sliderX + (this.horizontalOffset / 100) * sliderWidth;
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillRect(pos - 2, sliderY - 2, 4, 8);
+      
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.font = '7px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`↔ ${this.horizontalOffset}%`, W/2, H - 4);
     }
   }
 
@@ -186,9 +400,31 @@ class Oscilloscope {
     this.timebase = parseInt(ms) || 500;
   }
 
+  setVoltageDivs(divs) {
+    this.voltageDivs = parseInt(divs) || 8;
+  }
+
+  setHorizontalOffset(percent) {
+    this.horizontalOffset = Math.max(0, Math.min(100, parseInt(percent) || 0));
+  }
+
+  setTrigger(channel, level, rising) {
+    this.triggerChannel = channel;
+    this.triggerLevel = parseInt(level) || 512;
+    this.triggerRising = rising !== undefined ? rising : true;
+    this.triggerEnabled = true;
+    this._triggerPosition = 0;
+  }
+
+  disableTrigger() {
+    this.triggerEnabled = false;
+    this._triggerPosition = 0;
+  }
+
   clear() {
     this.ch1Data = [];
     this.ch2Data = [];
+    this._triggerPosition = 0;
   }
 
   togglePause() {
@@ -197,7 +433,10 @@ class Oscilloscope {
   }
 
   _pinNameToNum(name) {
-    const map = { A0:14, A1:15, A2:16, A3:17, A4:18, A5:19, D3:3, D5:5, D6:6, D9:9, D10:10, D11:11, D13:13 };
+    const map = { 
+      A0:14, A1:15, A2:16, A3:17, A4:18, A5:19, 
+      D3:3, D5:5, D6:6, D9:9, D10:10, D11:11, D13:13 
+    };
     return map[name] !== undefined ? map[name] : null;
   }
 }
