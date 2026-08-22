@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ArduSim - Complete Project Guide</title>
+<style>
+body{font-family:Calibri,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;line-height:1.6;color:#1a1a1a}
+h1{color:#00979c;border-bottom:3px solid #00979c;padding-bottom:10px}
+h2{color:#00695c;border-bottom:2px solid #ccc;padding-bottom:5px;margin-top:40px}
+h3{color:#004d40;margin-top:25px}
+h4{color:#333;margin-top:15px}
+code,pre{font-family:Consolas,'Courier New',monospace;background:#f4f4f4;border-radius:4px}
+code{padding:2px 5px;font-size:0.9em}
+pre{padding:15px;overflow-x:auto;border:1px solid #ddd;font-size:0.85em;line-height:1.4}
+table{border-collapse:collapse;width:100%;margin:15px 0}
+th,td{border:1px solid #ccc;padding:8px 12px;text-align:left}
+th{background:#00979c;color:white}
+tr:nth-child(even){background:#f9f9f9}
+.tip{background:#e8f5e9;border-left:4px solid #4caf50;padding:10px 15px;margin:15px 0}
+.warn{background:#fff3e0;border-left:4px solid #ff9800;padding:10px 15px;margin:15px 0}
+.info{background:#e3f2fd;border-left:4px solid #2196f3;padding:10px 15px;margin:15px 0}
+.tree{background:#f5f5f5;padding:15px;border-radius:6px;font-family:Consolas,monospace;font-size:0.9em;white-space:pre}
+a{color:#00979c}
+</style>
+</head>
+<body>
+<h1>ArduSim &mdash; Complete Project Guide</h1>
+<p><strong>Version:</strong> 1.1 &nbsp;|&nbsp; <strong>Last Updated:</strong> August 2026</p>
+<p>This guide explains how every file in the ArduSim project works, how they connect, and how to add new components and examples without external help.</p>
+
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#overview">Project Overview</a></li>
+<li><a href="#structure">File &amp; Folder Structure</a></li>
+<li><a href="#architecture">Architecture &amp; Data Flow</a></li>
+<li><a href="#files">File-by-File Breakdown</a></li>
+<li><a href="#components">How Components Work</a></li>
+<li><a href="#add-component">How to Add a New Component</a></li>
+<li><a href="#add-example">How to Add a New Example</a></li>
+<li><a href="#simulation">How the Simulation Engine Works</a></li>
+<li><a href="#script-order">Script Load Order</a></li>
+<li><a href="#debugging">Debugging &amp; Troubleshooting</a></li>
+</ol>
+
+<h2 id="overview">1. Project Overview</h2>
+<p>ArduSim is a <strong>browser-based Arduino/ESP32 circuit simulator</strong>. Users write Arduino C++ code in a Monaco editor, drag components onto a canvas, wire them up, and press Run to simulate. The app includes:</p>
+<ul>
+<li><strong>Monaco Code Editor</strong> &mdash; VS Code-grade editor with Arduino syntax highlighting and IntelliSense</li>
+<li><strong>Canvas Circuit Editor</strong> &mdash; Drag-and-drop component placement with wiring</li>
+<li><strong>Simulation Engine</strong> &mdash; Transpiles Arduino C++ to JavaScript and runs it in real-time</li>
+<li><strong>33 Components</strong> &mdash; Arduino Uno, ESP32, LEDs, sensors, displays, ICs, actuators</li>
+<li><strong>Serial Monitor</strong> &mdash; Real-time serial output with baud rate control</li>
+<li><strong>Oscilloscope</strong> &mdash; Dual-channel waveform viewer</li>
+<li><strong>Serial Plotter</strong> &mdash; Real-time data graphing</li>
+<li><strong>28 Built-in Examples</strong> &mdash; From beginner blink to advanced IoT</li>
+<li><strong>Node.js Backend</strong> &mdash; Project persistence via SQLite (optional)</li>
+</ul>
+
+<h2 id="structure">2. File &amp; Folder Structure</h2>
+<div class="tree">Online Circuit Simulator/
++-- index.html                 Main HTML page (all UI markup)
++-- server.js                  Node.js backend (zero deps)
++-- sw.js                      Service Worker for PWA/offline
++-- manifest.json              PWA manifest
++-- package.json               Project metadata
+|
++-- css/
+|   +-- style.css              All styles (~2700 lines, dark+light themes)
+|
++-- js/
+|   +-- app.js                 App orchestrator - binds UI, manages lifecycle
+|   +-- canvas.js              Circuit canvas - rendering, placement, wiring
+|   +-- editor.js              Monaco Editor + Arduino language
+|   +-- simulator.js           Arduino C++ to JS transpiler + runtime
+|   +-- serial.js              Serial Monitor UI
+|   +-- oscilloscope.js        Oscilloscope UI
+|   +-- plotter.js             Serial Plotter UI
+|   +-- output.js              Compile/debug output panel
+|   +-- storage.js             LocalStorage + server persistence
+|   +-- api.js                 REST API client for server.js
+|   +-- sharing.js             URL-based project sharing
+|   +-- thumbnails.js          Circuit preview renderer
+|   +-- guide.js               Help and component reference
+|   +-- utils.js               Utility functions
+|   +-- base.js                defComp(), drawing helpers, COMPONENT_DEFS
+|   +-- components/
+|       +-- boards.js          Arduino Uno, ESP32 DevKit V1
+|       +-- output.js          LEDs, RGB LED, Buzzer, LCD, OLED, 7-Seg
+|       +-- input.js           Push Button, Switch, Potentiometer, Joystick
+|       +-- actuators.js       Servo, DC Motor, Relay
+|       +-- sensors.js         DHT11, HC-SR04, LDR, PIR
+|       +-- passive.js         Resistors, Capacitor
+|       +-- power.js           Battery, Power Supply
+|       +-- ics.js             555 Timer, 74HC series (8 ICs)
+|
++-- examples/                  28 individual JSON files
++-- circuits/                  Circuit JSONs (used by examples)
++-- scripts/                   Utility scripts
++-- test/test_ics.js           904 tests for ICs
++-- data/                      SQLite database folder
++-- icons/                     PWA icons</div>
+<h2 id="architecture">3. Architecture &amp; Data Flow</h2>
+
+<h3>3.1 How the App Starts</h3>
+<ol>
+<li><code>index.html</code> loads all CSS and JS files in dependency order</li>
+<li><code>app.js</code> creates an <code>App</code> instance as <code>window.App</code></li>
+<li><code>App.init()</code> runs this sequence:
+<pre>_initErrorHandlers &rarr; _bindUi &rarr; _initResizers &rarr; _loadTheme &rarr;
+_initCanvas &rarr; _initSerial &rarr; _initOutput &rarr; _initOscilloscope &rarr;
+_initPlotter &rarr; _attachSimulatorEvents &rarr; _renderComponentLibrary &rarr;
+_renderExamples &rarr; _initBoardSelector &rarr; GuideManager.bind &rarr;
+_restoreProject &rarr; _setupBeforeUnloadGuard &rarr; _syncProjectsFromServer &rarr;
+EditorManager.init &rarr; _initMobile &rarr; _hideLoadingOverlay</pre>
+</li>
+</ol>
+
+<h3>3.2 How a User Runs Code</h3>
+<ol>
+<li>User clicks <strong>Run</strong> (or presses F5)</li>
+<li><code>app.js:run()</code> gets code from <code>EditorManager.getCode()</code></li>
+<li>Calls <code>ArduinoSimulator.run(code)</code></li>
+<li><code>simulator.js</code> transpiles Arduino C++ to JavaScript</li>
+<li>Creates a sandboxed runtime with <code>pinMode()</code>, <code>digitalWrite()</code>, <code>analogRead()</code>, etc.</li>
+<li>Runs <code>setup()</code> once, then <code>loop()</code> repeatedly with async delays</li>
+<li>When code calls <code>digitalWrite(13, HIGH)</code>, the simulator fires <code>onPinChange</code></li>
+<li><code>canvas.js:updateSimState()</code> receives pin states and updates LED colors, IC outputs, etc.</li>
+<li>The canvas re-renders at 60 FPS showing the visual changes</li>
+</ol>
+
+<h3>3.3 How Components Are Wired Together</h3>
+<pre>User clicks Component Panel item (e.g., "LED")
+    |
+app.js calls canvas.startPlacing('led')
+    |
+User clicks on canvas: canvas.addComponent('led', x, y)
+    |
+Component instance stored in canvas.components[]
+    |
+User right-clicks a pin: "Connect Wire"
+    |
+User clicks second pin: wire stored in canvas.wires[]
+    |
+Wire has { from: {instId, pinId}, to: {instId, pinId} }
+    |
+During simulation: canvas traces pin connections to find Arduino pins
+    |
+ICs/sensors are simulated in canvas.updateSimState()</pre>
+
+<h3>3.4 Global Namespace Map</h3>
+<table>
+<tr><th>Global Variable</th><th>Defined In</th><th>Type</th></tr>
+<tr><td><code>window.ArduinoComponents</code></td><td>base.js</td><td>Object with COMPONENT_DEFS</td></tr>
+<tr><td><code>window.ArduinoSim</code></td><td>simulator.js</td><td>ArduinoSimulator instance</td></tr>
+<tr><td><code>window.CircuitCanvasClass</code></td><td>canvas.js</td><td>Class constructor</td></tr>
+<tr><td><code>window.CircuitCanvas</code></td><td>app.js</td><td>CircuitCanvas instance</td></tr>
+<tr><td><code>window.EditorManager</code></td><td>editor.js</td><td>Singleton</td></tr>
+<tr><td><code>window.SerialMonitorClass</code></td><td>serial.js</td><td>Class constructor</td></tr>
+<tr><td><code>window.SerialMonitor</code></td><td>app.js</td><td>SerialMonitor instance</td></tr>
+<tr><td><code>window.OutputPanelClass</code></td><td>output.js</td><td>Class constructor</td></tr>
+<tr><td><code>window.OutputPanel</code></td><td>app.js</td><td>OutputPanel instance</td></tr>
+<tr><td><code>window.OscilloscopeClass</code></td><td>oscilloscope.js</td><td>Class constructor</td></tr>
+<tr><td><code>window.Oscilloscope</code></td><td>app.js</td><td>Oscilloscope instance</td></tr>
+<tr><td><code>window.SerialPlotterClass</code></td><td>plotter.js</td><td>Class constructor</td></tr>
+<tr><td><code>window.SerialPlotter</code></td><td>app.js</td><td>SerialPlotter instance</td></tr>
+<tr><td><code>window.StorageManager</code></td><td>storage.js</td><td>Singleton</td></tr>
+<tr><td><code>window.GuideManager</code></td><td>guide.js</td><td>Singleton</td></tr>
+<tr><td><code>window.CircuitThumbnail</code></td><td>thumbnails.js</td><td>Singleton</td></tr>
+<tr><td><code>window.ArduSimApi</code></td><td>api.js</td><td>REST client</td></tr>
+<tr><td><code>window.Utils</code></td><td>utils.js</td><td>Utility functions</td></tr>
+<tr><td><code>window.App</code></td><td>app.js</td><td>Main App instance</td></tr>
+</table>
+
+<h2 id="files">4. File-by-File Breakdown</h2>
+
+<h3>4.1 index.html</h3>
+<p>The single HTML page containing all UI markup. Key sections:</p>
+<table>
+<tr><th>Section</th><th>ID / Description</th></tr>
+<tr><td>Header</td><td><code>#header</code> &mdash; Logo, project name, buttons</td></tr>
+<tr><td>Component Panel</td><td><code>#panel-components</code> &mdash; Right sidebar with searchable component library</td></tr>
+<tr><td>Editor Panel</td><td><code>#panel-editor</code> &mdash; Monaco Editor container</td></tr>
+<tr><td>Canvas</td><td><code>#circuit-canvas</code> &mdash; HTML5 Canvas for circuit</td></tr>
+<tr><td>Bottom Panel</td><td>Tabs: Serial Monitor, Output, Oscilloscope, Plotter</td></tr>
+<tr><td>Modals</td><td>Examples, Shortcuts, Saved Projects, Share, Export, Guide</td></tr>
+</table>
+
+<h3>4.2 css/style.css (~2700 lines)</h3>
+<ul>
+<li>CSS custom properties for theming &mdash; dark (default) + light</li>
+<li>Flexbox-based panels with draggable resizers</li>
+<li>Mobile responsive <code>@media</code> queries</li>
+<li>Animations: fade, pulse, loading spinner</li>
+</ul>
+
+<h3>4.3 js/base.js &mdash; Component Registration Foundation</h3>
+<p><strong>Every component file depends on this.</strong> Provides:</p>
+<ul>
+<li><code>COMPONENT_DEFS</code> &mdash; Global registry (keyed by component ID)</li>
+<li><code>defComp(id, config)</code> &mdash; Registers a component</li>
+<li><code>PIN_TYPE</code> &mdash; Enum: INPUT, OUTPUT, BIDIR, PASSIVE, POWER</li>
+<li>Drawing helpers: <code>drawPins()</code>, <code>drawChip()</code>, <code>drawChipPins()</code>, <code>roundRect()</code></li>
+<li><code>resolvePinColor(voltage)</code> &mdash; Maps voltage to wire color</li>
+</ul>
+
+<h3>4.4 js/simulator.js &mdash; Arduino C++ Transpiler + Runtime (~1900 lines)</h3>
+<ol>
+<li><strong>Transpiles</strong> Arduino C++ to JavaScript (pinMode, digitalWrite, analogRead, delay, Serial, tone, map, etc.)</li>
+<li><strong>Creates a sandbox</strong> with Arduino API implementations</li>
+<li><strong>Runs</strong> setup() once, then loop() repeatedly with async delays</li>
+<li><strong>Fires events</strong>: onPinChange, onSerial, onStart, onStop, onError, onEvent</li>
+</ol>
+
+<h3>4.5 js/canvas.js &mdash; Circuit Canvas (~2445 lines)</h3>
+<ul>
+<li><strong>Rendering</strong> &mdash; 60 FPS draw loop on HTML5 Canvas</li>
+<li><strong>Placement</strong> &mdash; startPlacing(type) then click then addComponent()</li>
+<li><strong>Wiring</strong> &mdash; Right-click pin, Connect Wire, click second pin</li>
+<li><strong>Selection/Drag/Undo/Redo/Zoom</strong> &mdash; Full editing support</li>
+<li><strong>Simulation visuals</strong> &mdash; updateSimState() updates LED brightness, wire colors, IC outputs</li>
+<li><strong>Component simulation</strong> &mdash; Simulates ICs (555, 74HC series) directly in canvas</li>
+<li><strong>Serialization</strong> &mdash; serialize() / deserialize() for save/load</li>
+</ul>
+
+<h3>4.6 js/editor.js &mdash; Monaco Editor</h3>
+<ul>
+<li>Loads Monaco from CDN, registers custom 'arduino' language</li>
+<li>Arduino IntelliSense, error markers, falls back to textarea on mobile</li>
+</ul>
+
+<h3>4.7 js/serial.js, oscilloscope.js, plotter.js, output.js</h3>
+<p>Independent UI modules for Serial Monitor (5K line buffer, baud selector), Oscilloscope (dual-channel), Plotter (auto-parses numeric output), and Output (compile/debug log).</p>
+
+<h3>4.8 js/storage.js + api.js</h3>
+<p>Storage: auto-save to localStorage, project library, JSON download/upload, URL sharing.
+API: REST client for server.js with 2.5s timeout and graceful offline fallback.</p>
+
+<h3>4.9 js/guide.js, thumbnails.js, utils.js, sharing.js</h3>
+<p>Guide: full component reference overlay. Thumbnails: circuit preview renderer (300-entry LRU cache).
+Utils: debounce, throttle, deepClone, ConfirmDialog. Sharing: base64 URL encoding/decoding.</p>
+
+<h3>4.10 server.js &mdash; Node.js Backend (zero deps)</h3>
+<table>
+<tr><th>Endpoint</th><th>Method</th><th>Description</th></tr>
+<tr><td><code>/api/health</code></td><td>GET</td><td>Health check</td></tr>
+<tr><td><code>/api/projects</code></td><td>GET/POST</td><td>List / Save projects</td></tr>
+<tr><td><code>/api/projects/:id</code></td><td>GET/DELETE</td><td>Get / Delete project</td></tr>
+<tr><td><code>/api/examples</code></td><td>GET</td><td>List examples</td></tr>
+<tr><td><code>*</code></td><td>GET</td><td>Static files (ETag caching)</td></tr>
+</table>
+
+<h2 id="components">5. How Components Work</h2>
+
+<h3>5.1 The defComp() Pattern</h3>
+<p>Every component is registered by calling <code>defComp(id, config)</code> from js/base.js.</p>
+
+<h4>Component Definition Structure:</h4>
+<pre>defComp('led', {
+  name:       'LED',
+  category:   'Output',
+  icon:       '&#x1F4A1;',
+  desc:       'Light Emitting Diode',
+  width:      60,
+  height:     60,
+  pins: [
+    { id: 'anode',  label: '+',  side: 'top',    type: PIN_TYPE.INPUT  },
+    { id: 'cathode', label: '-', side: 'bottom', type: PIN_TYPE.OUTPUT },
+  ],
+  defaultProps: { color: '#ff3333' },
+  draw(ctx, inst, defs) {
+    // Canvas 2D drawing code
+    // ctx = CanvasRenderingContext2D
+    // inst = { id, type, x, y, props, runtimeState, selected }
+    // defs = COMPONENT_DEFS reference
+  },
+});</pre>
+
+<h4>Property Reference:</h4>
+<table>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>id</code></td><td>string</td><td>Yes</td><td>Unique ID, e.g. 'led', 'ic_74hc00'</td></tr>
+<tr><td><code>name</code></td><td>string</td><td>Yes</td><td>Display name in panel</td></tr>
+<tr><td><code>category</code></td><td>string</td><td>Yes</td><td>Boards, Output, Input, Actuators, Sensors, Passive, Power, ICs</td></tr>
+<tr><td><code>icon</code></td><td>string</td><td>Yes</td><td>Emoji shown in panel</td></tr>
+<tr><td><code>desc</code></td><td>string</td><td>Yes</td><td>Short description</td></tr>
+<tr><td><code>width</code></td><td>number</td><td>Yes</td><td>Width in canvas pixels</td></tr>
+<tr><td><code>height</code></td><td>number</td><td>Yes</td><td>Height in canvas pixels</td></tr>
+<tr><td><code>pins</code></td><td>array</td><td>Yes</td><td>Array of pin objects</td></tr>
+<tr><td><code>defaultProps</code></td><td>object</td><td>No</td><td>Default user-editable properties</td></tr>
+<tr><td><code>draw(ctx, inst, defs)</code></td><td>function</td><td>Yes</td><td>Canvas 2D drawing function</td></tr>
+</table>
+
+<h4>Pin Object Structure:</h4>
+<pre>{
+  id:    'anode',        // Unique pin ID within this component
+  label: '+',            // Display label
+  side:  'top',          // 'top' | 'bottom' | 'left' | 'right'
+  type:  PIN_TYPE.INPUT  // INPUT | OUTPUT | BIDIR | PASSIVE | POWER
+}</pre>
+
+<h3>5.2 Component Files and Contents</h3>
+<table>
+<tr><th>File</th><th>Components</th><th>IDs</th></tr>
+<tr><td>boards.js</td><td>Arduino Uno, ESP32 DevKit V1</td><td>board_arduino_uno, board_esp32</td></tr>
+<tr><td>output.js</td><td>LED, RGB LED, Buzzer, LCD 16x2, LCD I2C, OLED SSD1306, 7-Segment</td><td>led, rgb_led, buzzer, lcd_16x2, lcd_i2c, oled_ssd1306, seg7</td></tr>
+<tr><td>input.js</td><td>Push Button, Slide Switch, Potentiometer, Joystick</td><td>push_button, slide_switch, potentiometer, joystick</td></tr>
+<tr><td>actuators.js</td><td>Servo, DC Motor, Relay</td><td>servo, dc_motor, relay</td></tr>
+<tr><td>sensors.js</td><td>DHT11, HC-SR04, LDR, PIR Motion</td><td>dht11, hc_sr04, ldr, pir</td></tr>
+<tr><td>passive.js</td><td>Resistor, Capacitor</td><td>resistor, capacitor</td></tr>
+<tr><td>power.js</td><td>Battery, Power Supply</td><td>battery, power_supply</td></tr>
+<tr><td>ics.js</td><td>555 Timer, 74HC00/04/08/32/595/138/245</td><td>ic_555, ic_74hc00..ic_74hc245</td></tr>
+</table>
+
+<h3>5.3 Simulation: How canvas.js Simulates Components</h3>
+<p>During simulation, <code>canvas.updateSimState(pinStates)</code> is called every tick. It contains a switch statement on <code>inst.type</code> that handles each component type:</p>
+<ul>
+<li><strong>Boards</strong> &mdash; No simulation needed (they produce pin states)</li>
+<li><strong>LEDs</strong> &mdash; Read voltage across anode/cathode, compute brightness from runtimeState</li>
+<li><strong>Buttons</strong> &mdash; If pressed (interactive property), connect pins to GND</li>
+<li><strong>Potentiometers</strong> &mdash; Output analog value based on wiper position</li>
+<li><strong>Servos</strong> &mdash; Read PWM signal, update angle</li>
+<li><strong>DC Motors</strong> &mdash; Read PWM input, compute RPM</li>
+<li><strong>Relays</strong> &mdash; Read signal pin, toggle COM/NO/NC contacts</li>
+<li><strong>Sensors</strong> (DHT11, HC-SR04, LDR, PIR) &mdash; Read interactive properties, output values</li>
+<li><strong>ICs</strong> &mdash; Evaluate logic gates based on input pins (NAND, NOT, AND, OR, shift register, decoder, bus transceiver)</li>
+<li><strong>555 Timer</strong> &mdash; Astable oscillator with capacitor charge/discharge</li>
+</ul>
+
+<h2 id="add-component">6. How to Add a New Component</h2>
+
+<div class="tip"><strong>Step-by-step guide:</strong> Follow these steps to add any new electronic component.</div>
+
+<h3>Step 1: Choose the right file</h3>
+<table>
+<tr><th>Component Type</th><th>Add to File</th></tr>
+<tr><td>LED, Display, Buzzer</td><td>js/components/output.js</td></tr>
+<tr><td>Button, Sensor, Joystick</td><td>js/components/input.js</td></tr>
+<tr><td>Motor, Servo, Relay</td><td>js/components/actuators.js</td></tr>
+<tr><td>Temperature, Light, Motion sensor</td><td>js/components/sensors.js</td></tr>
+<tr><td>Resistor, Capacitor, Inductor</td><td>js/components/passive.js</td></tr>
+<tr><td>Battery, Power supply</td><td>js/components/power.js</td></tr>
+<tr><td>Logic IC, Timer, Shift register</td><td>js/components/ics.js</td></tr>
+<tr><td>Microcontroller board</td><td>js/components/boards.js</td></tr>
+</table>
+
+<h3>Step 2: Define the component with defComp()</h3>
+<pre>defComp('my_sensor', {
+  name:       'My Sensor',
+  category:   'Sensors',
+  icon:       '&#x1F321;',       // thermometer emoji
+  desc:       'Custom temperature sensor',
+  width:      80,
+  height:     70,
+  pins: [
+    { id: 'vcc',  label: 'VCC', side: 'top',    type: PIN_TYPE.POWER  },
+    { id: 'out',  label: 'OUT', side: 'left',   type: PIN_TYPE.OUTPUT },
+    { id: 'gnd',  label: 'GND', side: 'bottom', type: PIN_TYPE.POWER  },
+  ],
+  defaultProps: { unit: 'C' },
+  draw(ctx, inst, defs) {
+    const { x, y, width: w, height: h, props, selected } = inst;
+    // Draw body
+    ctx.fillStyle = '#2d333b';
+    roundRect(ctx, x, y, w, h, 4);
+    ctx.fill();
+    if (selected) { ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2; ctx.stroke(); }
+    // Draw label
+    ctx.fillStyle = '#ccc';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SENSOR', x + w/2, y + h/2 + 4);
+    // Draw pins
+    drawPins(ctx, inst, defs);
+  },
+});</pre>
+
+<h3>Step 3: Add simulation logic to canvas.js</h3>
+<p>Open <code>js/canvas.js</code> and find the <code>updateSimState(pinStates)</code> method. Add a case for your component in the simulation switch:</p>
+<pre>case 'my_sensor': {
+  // Read interactive property from the component
+  const value = inst.props.value || 25; // default 25 degrees
+  // Set output pin voltage
+  const outPin = inst.pins.find(p => p.id === 'out');
+  if (outPin) {
+    // Map value to voltage (0-5V)
+    const voltage = (value / 100) * 5;
+    this._setPinVoltage(inst.id, 'out', voltage);
+  }
+  break;
+}</pre>
+
+<h3>Step 4 (optional): Add to guide.js</h3>
+<p>Add documentation in <code>js/guide.js</code> so the help overlay shows your component's description, pinout, and sample code.</p>
+
+<h3>Step 5: Test it</h3>
+<ol>
+<li>Refresh the browser</li>
+<li>Find your component in the right panel under its category</li>
+<li>Click it, place it on the canvas, wire it up, and run</li>
+</ol>
+
+<div class="warn"><strong>Important:</strong> The component ID you use in defComp() must match the type string used in canvas.js updateSimState() switch statement.</div>
+
+<h2 id="add-example">7. How to Add a New Example</h2>
+
+<h3>Step 1: Create the circuit in the simulator</h3>
+<ol>
+<li>Place all components on the canvas</li>
+<li>Wire them together</li>
+<li>Write the Arduino code in the editor</li>
+<li>Test that it works (Run button)</li>
+</ol>
+
+<h3>Step 2: Export the circuit as JSON</h3>
+<p>Click the <strong>Download</strong> button or use the browser console:</p>
+<pre>// In browser console:
+const data = window.App.canvas.serialize();
+const code = window.EditorManager.getCode();
+const example = {
+  id: 'my_example',
+  name: 'My Example',
+  icon: '&#x2728;',
+  desc: 'Description of what this example does',
+  tags: ['beginner', 'LED'],
+  circuit: data,
+  code: code
+};
+console.log(JSON.stringify(example, null, 2));</pre>
+
+<h3>Step 3: Save as JSON file</h3>
+<p>Create a file <code>examples/my_example.json</code> with the JSON output from Step 2.</p>
+
+<h3>Step 4: Update simulator.js loader</h3>
+<p>The <code>loadExamplesFromFiles()</code> function in simulator.js automatically reads all JSON files from the <code>examples/</code> folder. Just make sure the file is valid JSON with the required fields: <code>id</code>, <code>name</code>, <code>icon</code>, <code>desc</code>, <code>tags</code>, <code>circuit</code>, <code>code</code>.</p>
+
+<div class="info"><strong>That's it!</strong> Refresh the browser and click the Examples button. Your new example will appear in the grid.</div>
+
+<h3>Example JSON Structure:</h3>
+<pre>{
+  "id": "my_example",
+  "name": "My Custom Example",
+  "icon": "&#x2728;",
+  "desc": "A brief description of what this example demonstrates",
+  "tags": ["beginner", "LED", "digital"],
+  "circuit": {
+    "components": [
+      { "id": "board1", "type": "board_arduino_uno", "x": 200, "y": 150, "props": {} },
+      { "id": "led1", "type": "led", "x": 400, "y": 200, "props": { "color": "#ff0000" } }
+    ],
+    "wires": [
+      { "id": "w1", "from": { "instId": "board1", "pinId": "D13" }, "to": { "instId": "led1", "pinId": "anode" } }
+    ]
+  },
+  "code": "int ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(ledPin, HIGH);\n  delay(500);\n  digitalWrite(ledPin, LOW);\n  delay(500);\n}"
+}</pre>
+
+<h2 id="simulation">8. How the Simulation Engine Works</h2>
+
+<h3>8.1 Transpilation (simulator.js)</h3>
+<p>Arduino C++ is converted to JavaScript via string replacement:</p>
+<table>
+<tr><th>Arduino C++</th><th>JavaScript</th></tr>
+<tr><td><code>pinMode(13, OUTPUT)</code></td><td><code>_a.pinMode(13, 1)</code></td></tr>
+<tr><td><code>digitalWrite(13, HIGH)</code></td><td><code>_a.digitalWrite(13, 1)</code></td></tr>
+<tr><td><code>analogRead(A0)</code></td><td><code>_a.analogRead(14)</code></td></tr>
+<tr><td><code>delay(1000)</code></td><td><code>await _a.delay(1000)</code></td></tr>
+<tr><td><code>millis()</code></td><td><code>_a.millis()</code></td></tr>
+<tr><td><code>Serial.begin(9600)</code></td><td><code>_a.serial.begin(9600)</code></td></tr>
+<tr><td><code>Serial.println("hi")</code></td><td><code>_a.serial.println("hi")</code></td></tr>
+</table>
+
+<h3>8.2 Pin State Flow</h3>
+<pre>Arduino code calls digitalWrite(13, HIGH)
+    |
+simulator fires onPinChange callback
+    |
+app.js receives it, passes to canvas.updateSimState()
+    |
+canvas reads pinStates: { 'D13': 5.0, 'D12': 0, 'A0': 2.5, ... }
+    |
+For each component on canvas, canvas traces wire connections:
+  LED anode is wired to D13: pin voltage = 5.0V
+  LED cathode is wired to GND: pin voltage = 0V
+    |
+Canvas computes LED brightness from voltage difference
+    |
+Canvas re-draws LED with glow effect at 60 FPS</pre>
+
+<h3>8.3 IC Simulation (in canvas.js)</h3>
+<p>Digital ICs are simulated by evaluating gate logic each tick:</p>
+<pre>case 'ic_74hc00': {  // 4x NAND gates
+  // Gate 1: pins 1,2 (inputs) -> pin 3 (output)
+  const i1 = this._getPinVoltage(inst.id, '1') > 2.5 ? 1 : 0;
+  const i2 = this._getPinVoltage(inst.id, '2') > 2.5 ? 1 : 0;
+  const out = !(i1 && i2) ? 5 : 0;
+  this._setPinVoltage(inst.id, '3', out);
+  // Repeat for gates 2,3,4 (pins 4,5->6; 9,10->8; 12,13->11)
+  break;
+}</pre>
+
+<h2 id="script-order">9. Script Load Order</h2>
+<p>Files in <code>index.html</code> are loaded in this exact order (dependencies first):</p>
+<ol>
+<li><strong>CDN:</strong> Monaco Editor (loaded async via AMD require)</li>
+<li><strong>js/utils.js</strong> &mdash; No dependencies</li>
+<li><strong>js/base.js</strong> &mdash; Defines COMPONENT_DEFS, defComp, PIN_TYPE</li>
+<li><strong>js/components/boards.js</strong> &mdash; Calls defComp() for boards</li>
+<li><strong>js/components/output.js</strong> &mdash; Calls defComp() for output devices</li>
+<li><strong>js/components/input.js</strong> &mdash; Calls defComp() for input devices</li>
+<li><strong>js/components/actuators.js</strong> &mdash; Calls defComp() for actuators</li>
+<li><strong>js/components/sensors.js</strong> &mdash; Calls defComp() for sensors</li>
+<li><strong>js/components/passive.js</strong> &mdash; Calls defComp() for passive components</li>
+<li><strong>js/components/power.js</strong> &mdash; Calls defComp() for power components</li>
+<li><strong>js/components/ics.js</strong> &mdash; Calls defComp() for ICs</li>
+<li><strong>js/simulator.js</strong> &mdash; ArduinoSimulator class (needs COMPONENT_DEFS)</li>
+<li><strong>js/canvas.js</strong> &mdash; CircuitCanvas class (needs COMPONENT_DEFS)</li>
+<li><strong>js/serial.js, oscilloscope.js, plotter.js, output.js</strong> &mdash; Independent UI</li>
+<li><strong>js/storage.js, api.js, sharing.js</strong> &mdash; Data modules</li>
+<li><strong>js/editor.js</strong> &mdash; Monaco integration</li>
+<li><strong>js/thumbnails.js, guide.js</strong> &mdash; Need COMPONENT_DEFS</li>
+<li><strong>js/app.js</strong> &mdash; Orchestrator (needs everything above)</li>
+</ol>
+
+<div class="warn"><strong>Rule:</strong> If you add a new JS file, add its <code>&lt;script&gt;</code> tag AFTER base.js and BEFORE app.js in index.html.</div>
+
+<h2 id="debugging">10. Debugging &amp; Troubleshooting</h2>
+
+<h3>Common Issues</h3>
+<table>
+<tr><th>Problem</th><th>Solution</th></tr>
+<tr><td>Component doesn't appear in panel</td><td>Check that defComp() is called with correct category name. Open browser console for errors.</td></tr>
+<tr><td>Component doesn't simulate</td><td>Add a case in canvas.js updateSimState() switch statement matching your component's ID.</td></tr>
+<tr><td>Wire shows gray (no signal)</td><td>The wire's pins may not be connected to anything producing a voltage. Check wiring.</td></tr>
+<tr><td>Editor shows errors after transpilation</td><td>Check if your Arduino code uses unsupported functions. See simulator.js transpile() for supported list.</td></tr>
+<tr><td>Example not loading</td><td>Check JSON file syntax. Required fields: id, name, icon, desc, tags, circuit, code.</td></tr>
+<tr><td>Browser caching old files</td><td>Server uses ETag caching. Hard refresh (Ctrl+Shift+R) or restart server.</td></tr>
+</table>
+
+<h3>Browser Console Debugging</h3>
+<pre>// List all registered components
+Object.keys(window.ArduinoComponents.COMPONENT_DEFS)
+
+// Check a specific component definition
+window.ArduinoComponents.COMPONENT_DEFS['led']
+
+// Get all components on canvas
+window.App.canvas.components
+
+// Get all wires on canvas
+window.App.canvas.wires
+
+// Manually trigger simulation tick
+window.App.canvas.updateSimState({D13: 5, D12: 0})
+
+// Export current circuit
+JSON.stringify(window.App.canvas.serialize())</pre>
+
+<h3>Adding a Component: Quick Checklist</h3>
+<ol>
+<li>[ ] Pick the right file in js/components/</li>
+<li>[ ] Call defComp('my_id', { ... }) with all required fields</li>
+<li>[ ] Define pins with correct side positions and types</li>
+<li>[ ] Write the draw() function (use drawPins, drawChip, roundRect helpers)</li>
+<li>[ ] Add simulation logic in canvas.js updateSimState() if needed</li>
+<li>[ ] (Optional) Add documentation in guide.js</li>
+<li>[ ] Test: refresh, place, wire, run</li>
+</ol>
+
+<h3>Adding an Example: Quick Checklist</h3>
+<ol>
+<li>[ ] Build circuit on canvas and write code</li>
+<li>[ ] Export circuit via console: window.App.canvas.serialize()</li>
+<li>[ ] Create examples/my_example.json with required fields</li>
+<li>[ ] Refresh browser and check Examples panel</li>
+</ol>
+
+<hr>
+<p style="text-align:center;color:#666;margin-top:40px">ArduSim Project Guide &mdash; Generated August 2026</p>
+
+</body>
+</html>
