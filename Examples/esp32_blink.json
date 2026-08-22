@@ -1,0 +1,23 @@
+{
+  "id": "esp32_blink",
+  "name": "ESP32 Onboard LED",
+  "icon": "🔌",
+  "desc": "ESP32 DevKit V1 — blink the built-in LED on GPIO2 (LED_BUILTIN) with no wiring needed",
+  "tags": [
+    "esp32",
+    "beginner",
+    "LED"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "esp32_devkit_v1",
+        "x": 200,
+        "y": 100
+      }
+    ],
+    "wires": []
+  },
+  "code": "/*\n * ESP32 Onboard LED Blink\n * The DevKit V1 has a blue built-in LED on GPIO2.\n * LED_BUILTIN is mapped to GPIO2 automatically.\n */\n\nvoid setup() {\n  pinMode(LED_BUILTIN, OUTPUT);\n  Serial.begin(115200);\n  Serial.println(\"ESP32 onboard LED blink started\");\n}\n\nvoid loop() {\n  digitalWrite(LED_BUILTIN, HIGH);\n  Serial.println(\"LED ON\");\n  delay(1000);\n\n  digitalWrite(LED_BUILTIN, LOW);\n  Serial.println(\"LED OFF\");\n  delay(1000);\n}"
+}

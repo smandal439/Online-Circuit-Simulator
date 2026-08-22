@@ -1,12 +1,13 @@
 {
-  "id": "potentiometer",
-  "name": "Potentiometer Read",
-  "icon": "🎚️",
-  "desc": "Read a potentiometer on A0 and display the value",
+  "id": "dc_motor_speed",
+  "name": "DC Motor Speed",
+  "icon": "🌀",
+  "desc": "Control DC motor speed with a potentiometer — analogRead A0 maps to PWM on D9",
   "tags": [
     "beginner",
-    "analog",
-    "sensor"
+    "motor",
+    "PWM",
+    "analog"
   ],
   "circuit": {
     "components": [
@@ -23,16 +24,10 @@
         "y": 300
       },
       {
-        "id": "led1",
-        "type": "led",
+        "id": "mt1",
+        "type": "dc_motor",
         "x": 340,
-        "y": 260
-      },
-      {
-        "id": "r1",
-        "type": "resistor",
-        "x": 340,
-        "y": 340
+        "y": 300
       }
     ],
     "wires": [
@@ -76,26 +71,15 @@
           "pinId": "D9"
         },
         "to": {
-          "instId": "led1",
-          "pinId": "anode"
+          "instId": "mt1",
+          "pinId": "in"
         }
       },
       {
         "id": "w5",
         "from": {
-          "instId": "led1",
-          "pinId": "cathode"
-        },
-        "to": {
-          "instId": "r1",
-          "pinId": "p1"
-        }
-      },
-      {
-        "id": "w6",
-        "from": {
-          "instId": "r1",
-          "pinId": "p2"
+          "instId": "mt1",
+          "pinId": "gnd"
         },
         "to": {
           "instId": "b1",
@@ -104,5 +88,5 @@
       }
     ]
   },
-  "code": "/*\n * Potentiometer — Analog input reading\n */\n\nint potPin = A0;\nint ledPin = 9;\nint potValue = 0;\n\nvoid setup() {\n  Serial.begin(9600);\n  Serial.println(\"Potentiometer reader ready.\");\n}\n\nvoid loop() {\n  potValue = analogRead(potPin);\n\n  // Map to PWM range\n  int brightness = map(potValue, 0, 1023, 0, 255);\n  analogWrite(ledPin, brightness);\n\n  Serial.print(\"Pot: \");\n  Serial.print(potValue);\n  Serial.print(\" | Brightness: \");\n  Serial.println(brightness);\n\n  delay(100);\n}"
+  "code": "/*\n * DC Motor Speed — potentiometer controls PWM speed\n * Turn the potentiometer slider to speed the motor up or down.\n */\n\nint motorPin = 9;\nint potPin = A0;\n\nvoid setup() {\n  pinMode(motorPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"DC motor speed control started\");\n}\n\nvoid loop() {\n  int pot = analogRead(potPin);            // 0..1023\n  int speed = map(pot, 0, 1023, 0, 255);   // 0..255 PWM\n  analogWrite(motorPin, speed);\n\n  Serial.print(\"Pot: \");\n  Serial.print(pot);\n  Serial.print(\"  Speed: \");\n  Serial.println(speed);\n  delay(50);\n}"
 }

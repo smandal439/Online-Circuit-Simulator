@@ -1,0 +1,119 @@
+{
+  "id": "seg7_counter",
+  "name": "7-Segment Counter",
+  "icon": "🔢",
+  "desc": "Count 0–9 on a single 7-segment display (common cathode, D2–D8)",
+  "tags": [
+    "intermediate",
+    "display",
+    "seg7",
+    "counter"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100
+      },
+      {
+        "id": "s7",
+        "type": "seg7",
+        "x": 120,
+        "y": 320
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "D2"
+        },
+        "to": {
+          "instId": "s7",
+          "pinId": "segA"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "b1",
+          "pinId": "D3"
+        },
+        "to": {
+          "instId": "s7",
+          "pinId": "segB"
+        }
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "b1",
+          "pinId": "D4"
+        },
+        "to": {
+          "instId": "s7",
+          "pinId": "segC"
+        }
+      },
+      {
+        "id": "w4",
+        "from": {
+          "instId": "b1",
+          "pinId": "D5"
+        },
+        "to": {
+          "instId": "s7",
+          "pinId": "segD"
+        }
+      },
+      {
+        "id": "w5",
+        "from": {
+          "instId": "b1",
+          "pinId": "D6"
+        },
+        "to": {
+          "instId": "s7",
+          "pinId": "segE"
+        }
+      },
+      {
+        "id": "w6",
+        "from": {
+          "instId": "b1",
+          "pinId": "D7"
+        },
+        "to": {
+          "instId": "s7",
+          "pinId": "segF"
+        }
+      },
+      {
+        "id": "w7",
+        "from": {
+          "instId": "b1",
+          "pinId": "D8"
+        },
+        "to": {
+          "instId": "s7",
+          "pinId": "segG"
+        }
+      },
+      {
+        "id": "w8",
+        "from": {
+          "instId": "s7",
+          "pinId": "com"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "GND1"
+        }
+      }
+    ]
+  },
+  "code": "/*\n * 7-Segment Counter — display digits 0..9\n * Segments a–g on D2..D8, common cathode to GND\n */\n\nint segPins[7] = {2, 3, 4, 5, 6, 7, 8};\n\n// Segment masks for digits 0..9 (a=MSB ... g=LSB)\nbyte digits[10] = {\n  0b1111110, // 0\n  0b0110000, // 1\n  0b1101101, // 2\n  0b1111001, // 3\n  0b0110011, // 4\n  0b1011011, // 5\n  0b1011111, // 6\n  0b1110000, // 7\n  0b1111111, // 8\n  0b1111011  // 9\n};\n\nvoid setup() {\n  for (int i = 0; i < 7; i++) pinMode(segPins[i], OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"7-segment counter started\");\n}\n\nvoid showDigit(int d) {\n  for (int i = 0; i < 7; i++) {\n    digitalWrite(segPins[i], (digits[d] >> (6 - i)) & 1 ? HIGH : LOW);\n  }\n}\n\nvoid loop() {\n  for (int d = 0; d <= 9; d++) {\n    showDigit(d);\n    Serial.print(\"Count: \");\n    Serial.println(d);\n    delay(500);\n  }\n}"
+}

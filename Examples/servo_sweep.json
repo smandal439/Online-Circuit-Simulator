@@ -1,16 +1,63 @@
 {
-  "name": "Servo Sweep",
   "id": "servo_sweep",
-  "code": "/*\n * Servo Sweep — Sweep a servo motor from 0° to 180° and back\n */\n\n#include <Servo.h>\n\nServo myServo;\nint pos = 0;\nint dir = 1;\n\nvoid setup() {\n  myServo.attach(9);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  pos += dir;\n  if (pos >= 180 || pos <= 0) dir = -dir;\n  myServo.write(pos);\n  Serial.println(pos);\n  delay(15);\n}",
+  "name": "Servo Sweep",
+  "icon": "⚙️",
+  "desc": "Sweep a servo motor from 0° to 180° and back",
+  "tags": [
+    "intermediate",
+    "servo",
+    "motor"
+  ],
   "circuit": {
     "components": [
-      { "id": "b1", "type": "arduino_uno", "x": 200, "y": 100 },
-      { "id": "sv1", "type": "servo", "x": 120, "y": 320 }
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100
+      },
+      {
+        "id": "sv1",
+        "type": "servo",
+        "x": 120,
+        "y": 320
+      }
     ],
     "wires": [
-      { "id": "w1", "from": { "instId": "b1", "pinId": "D9" }, "to": { "instId": "sv1", "pinId": "signal" } },
-      { "id": "w2", "from": { "instId": "b1", "pinId": "5V" }, "to": { "instId": "sv1", "pinId": "vcc" } },
-      { "id": "w3", "from": { "instId": "b1", "pinId": "GND1" }, "to": { "instId": "sv1", "pinId": "gnd" } }
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "D9"
+        },
+        "to": {
+          "instId": "sv1",
+          "pinId": "signal"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "b1",
+          "pinId": "5V"
+        },
+        "to": {
+          "instId": "sv1",
+          "pinId": "vcc"
+        }
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "b1",
+          "pinId": "GND1"
+        },
+        "to": {
+          "instId": "sv1",
+          "pinId": "gnd"
+        }
+      }
     ]
-  }
+  },
+  "code": "/*\n * Servo Sweep — Sweep servo 0 to 180 degrees\n */\n\n#include <Servo.h>\n\nServo myServo;\nint angle = 0;\nint step = 2;\n\nvoid setup() {\n  myServo.attach(9);\n  Serial.begin(9600);\n  Serial.println(\"Servo sweep started\");\n}\n\nvoid loop() {\n  myServo.write(angle);\n  Serial.print(\"Angle: \");\n  Serial.println(angle);\n\n  angle += step;\n  if (angle >= 180 || angle <= 0) {\n    step = -step;\n    delay(200);\n  }\n  delay(15);\n}"
 }

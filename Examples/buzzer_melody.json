@@ -1,0 +1,53 @@
+{
+  "id": "buzzer_melody",
+  "name": "Buzzer Melody",
+  "icon": "🔔",
+  "desc": "Play a simple melody using tone() on a buzzer (pin 8)",
+  "tags": [
+    "beginner",
+    "sound",
+    "tone",
+    "buzzer"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100
+      },
+      {
+        "id": "bz1",
+        "type": "buzzer",
+        "x": 120,
+        "y": 300
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "D8"
+        },
+        "to": {
+          "instId": "bz1",
+          "pinId": "vcc"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "bz1",
+          "pinId": "gnd"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "GND1"
+        }
+      }
+    ]
+  },
+  "code": "/*\n * Buzzer Melody — Play a tune with tone()\n * Buzzer signal on D8, power and ground from the board\n */\n\nint buzzerPin = 8;\n\n// Note frequencies (Hz) — C major scale\n#define NOTE_C4  262\n#define NOTE_D4  294\n#define NOTE_E4  330\n#define NOTE_F4  349\n#define NOTE_G4  392\n#define NOTE_A4  440\n#define NOTE_B4  494\n#define NOTE_C5  523\n\nint melody[] = { NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_A4, NOTE_B4, NOTE_C5 };\nint noteDuration = 250;\n\nvoid setup() {\n  pinMode(buzzerPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Buzzer melody started\");\n}\n\nvoid loop() {\n  for (int i = 0; i < 8; i++) {\n    tone(buzzerPin, melody[i], noteDuration);\n    Serial.print(\"Playing note: \");\n    Serial.println(melody[i]);\n    delay(noteDuration + 30);\n  }\n  noTone(buzzerPin);\n  delay(500);\n}"
+}

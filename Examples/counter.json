@@ -1,20 +1,97 @@
 {
-  "name": "Counter",
   "id": "counter",
-  "code": "/*\n * Counter — Count button presses and show on serial monitor\n */\n\nint buttonPin = 2;\nint count = 0;\n\nvoid setup() {\n  pinMode(buttonPin, INPUT_PULLUP);\n  Serial.begin(9600);\n  Serial.println(\"Counter started.\");\n}\n\nvoid loop() {\n  if (digitalRead(buttonPin) == LOW) {\n    count++;\n    Serial.print(\"Count: \");\n    Serial.println(count);\n    delay(200);\n  }\n}",
+  "name": "Counter with Button",
+  "icon": "🔢",
+  "desc": "Count button presses and show on serial monitor",
+  "tags": [
+    "intermediate",
+    "counter",
+    "button"
+  ],
   "circuit": {
     "components": [
-      { "id": "b1", "type": "arduino_uno", "x": 200, "y": 100 },
-      { "id": "btn1", "type": "push_button", "x": 120, "y": 300 },
-      { "id": "led1", "type": "led", "x": 340, "y": 260 },
-      { "id": "r1", "type": "resistor", "x": 340, "y": 340 }
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100
+      },
+      {
+        "id": "btn1",
+        "type": "push_button",
+        "x": 120,
+        "y": 300
+      },
+      {
+        "id": "led1",
+        "type": "led",
+        "x": 340,
+        "y": 260
+      },
+      {
+        "id": "r1",
+        "type": "resistor",
+        "x": 340,
+        "y": 340
+      }
     ],
     "wires": [
-      { "id": "w1", "from": { "instId": "b1", "pinId": "D2" }, "to": { "instId": "btn1", "pinId": "p1" } },
-      { "id": "w2", "from": { "instId": "btn1", "pinId": "p3" }, "to": { "instId": "b1", "pinId": "GND1" } },
-      { "id": "w3", "from": { "instId": "b1", "pinId": "D13" }, "to": { "instId": "led1", "pinId": "anode" } },
-      { "id": "w4", "from": { "instId": "led1", "pinId": "cathode" }, "to": { "instId": "r1", "pinId": "p1" } },
-      { "id": "w5", "from": { "instId": "r1", "pinId": "p2" }, "to": { "instId": "b1", "pinId": "GND1" } }
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "D2"
+        },
+        "to": {
+          "instId": "btn1",
+          "pinId": "p1"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "btn1",
+          "pinId": "p3"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "GND1"
+        }
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "b1",
+          "pinId": "D13"
+        },
+        "to": {
+          "instId": "led1",
+          "pinId": "anode"
+        }
+      },
+      {
+        "id": "w4",
+        "from": {
+          "instId": "led1",
+          "pinId": "cathode"
+        },
+        "to": {
+          "instId": "r1",
+          "pinId": "p1"
+        }
+      },
+      {
+        "id": "w5",
+        "from": {
+          "instId": "r1",
+          "pinId": "p2"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "GND1"
+        }
+      }
     ]
-  }
+  },
+  "code": "/*\n * Button Counter — Count presses\n */\n\nint buttonPin = 2;\nint ledPin = 13;\nint count = 0;\nint lastState = HIGH;\nint currentState;\n\nvoid setup() {\n  pinMode(buttonPin, INPUT_PULLUP);\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Button counter started. Press button!\");\n}\n\nvoid loop() {\n  currentState = digitalRead(buttonPin);\n\n  // Detect falling edge (button pressed)\n  if (lastState == HIGH && currentState == LOW) {\n    count++;\n    digitalWrite(ledPin, HIGH);\n\n    Serial.print(\"Count: \");\n    Serial.println(count);\n\n    delay(50); // debounce\n    digitalWrite(ledPin, LOW);\n  }\n\n  lastState = currentState;\n  delay(10);\n}"
 }

@@ -1,12 +1,12 @@
 {
-  "id": "potentiometer",
-  "name": "Potentiometer Read",
-  "icon": "🎚️",
-  "desc": "Read a potentiometer on A0 and display the value",
+  "id": "relay_control",
+  "name": "Relay Control",
+  "icon": "⚡",
+  "desc": "Toggle a relay on pin 9 — the LED (on the NO contact) lights when the coil is energized",
   "tags": [
     "beginner",
-    "analog",
-    "sensor"
+    "relay",
+    "output"
   ],
   "circuit": {
     "components": [
@@ -17,8 +17,8 @@
         "y": 100
       },
       {
-        "id": "pot1",
-        "type": "potentiometer",
+        "id": "rly",
+        "type": "relay",
         "x": 120,
         "y": 300
       },
@@ -40,28 +40,28 @@
         "id": "w1",
         "from": {
           "instId": "b1",
-          "pinId": "5V"
+          "pinId": "D9"
         },
         "to": {
-          "instId": "pot1",
-          "pinId": "vcc"
+          "instId": "rly",
+          "pinId": "sig"
         }
       },
       {
         "id": "w2",
         "from": {
-          "instId": "pot1",
-          "pinId": "wiper"
+          "instId": "b1",
+          "pinId": "5V"
         },
         "to": {
-          "instId": "b1",
-          "pinId": "A0"
+          "instId": "rly",
+          "pinId": "vcc"
         }
       },
       {
         "id": "w3",
         "from": {
-          "instId": "pot1",
+          "instId": "rly",
           "pinId": "gnd"
         },
         "to": {
@@ -73,7 +73,18 @@
         "id": "w4",
         "from": {
           "instId": "b1",
-          "pinId": "D9"
+          "pinId": "5V"
+        },
+        "to": {
+          "instId": "rly",
+          "pinId": "com"
+        }
+      },
+      {
+        "id": "w5",
+        "from": {
+          "instId": "rly",
+          "pinId": "no"
         },
         "to": {
           "instId": "led1",
@@ -81,7 +92,7 @@
         }
       },
       {
-        "id": "w5",
+        "id": "w6",
         "from": {
           "instId": "led1",
           "pinId": "cathode"
@@ -92,7 +103,7 @@
         }
       },
       {
-        "id": "w6",
+        "id": "w7",
         "from": {
           "instId": "r1",
           "pinId": "p2"
@@ -104,5 +115,5 @@
       }
     ]
   },
-  "code": "/*\n * Potentiometer — Analog input reading\n */\n\nint potPin = A0;\nint ledPin = 9;\nint potValue = 0;\n\nvoid setup() {\n  Serial.begin(9600);\n  Serial.println(\"Potentiometer reader ready.\");\n}\n\nvoid loop() {\n  potValue = analogRead(potPin);\n\n  // Map to PWM range\n  int brightness = map(potValue, 0, 1023, 0, 255);\n  analogWrite(ledPin, brightness);\n\n  Serial.print(\"Pot: \");\n  Serial.print(potValue);\n  Serial.print(\" | Brightness: \");\n  Serial.println(brightness);\n\n  delay(100);\n}"
+  "code": "/*\n * Relay Control — energize the coil on D9\n * The LED connected to the relay's NO contact turns on\n * when the relay is active.\n */\n\nint relayPin = 9;\n\nvoid setup() {\n  pinMode(relayPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Relay example started\");\n}\n\nvoid loop() {\n  digitalWrite(relayPin, HIGH);\n  Serial.println(\"Relay ON\");\n  delay(1000);\n\n  digitalWrite(relayPin, LOW);\n  Serial.println(\"Relay OFF\");\n  delay(1000);\n}"
 }

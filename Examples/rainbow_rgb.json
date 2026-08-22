@@ -1,17 +1,75 @@
 {
-  "name": "Rainbow RGB",
   "id": "rainbow_rgb",
-  "code": "/*\n * Rainbow RGB — Cycle through colors on an RGB LED\n */\n\nint redPin = 9;\nint greenPin = 10;\nint bluePin = 11;\n\nvoid setup() {\n  pinMode(redPin, OUTPUT);\n  pinMode(greenPin, OUTPUT);\n  pinMode(bluePin, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  // Cycle through colors\n  for (int r = 0; r <= 255; r++) {\n    for (int g = 0; g <= 255; g++) {\n      for (int b = 0; b <= 255; b++) {\n        analogWrite(redPin, r);\n        analogWrite(greenPin, g);\n        analogWrite(bluePin, b);\n        delay(2);\n      }\n    }\n  }\n}",
+  "name": "RGB Rainbow",
+  "icon": "🌈",
+  "desc": "Cycle through colors on an RGB LED",
+  "tags": [
+    "intermediate",
+    "RGB",
+    "PWM",
+    "LED"
+  ],
   "circuit": {
     "components": [
-      { "id": "b1", "type": "arduino_uno", "x": 200, "y": 100 },
-      { "id": "rgb1", "type": "rgb_led", "x": 120, "y": 300 }
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100
+      },
+      {
+        "id": "rgb1",
+        "type": "rgb_led",
+        "x": 120,
+        "y": 300
+      }
     ],
     "wires": [
-      { "id": "w1", "from": { "instId": "b1", "pinId": "D9" }, "to": { "instId": "rgb1", "pinId": "red" } },
-      { "id": "w2", "from": { "instId": "b1", "pinId": "D10" }, "to": { "instId": "rgb1", "pinId": "green" } },
-      { "id": "w3", "from": { "instId": "b1", "pinId": "D11" }, "to": { "instId": "rgb1", "pinId": "blue" } },
-      { "id": "w4", "from": { "instId": "rgb1", "pinId": "gnd" }, "to": { "instId": "b1", "pinId": "GND1" } }
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "D9"
+        },
+        "to": {
+          "instId": "rgb1",
+          "pinId": "red"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "b1",
+          "pinId": "D10"
+        },
+        "to": {
+          "instId": "rgb1",
+          "pinId": "green"
+        }
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "b1",
+          "pinId": "D11"
+        },
+        "to": {
+          "instId": "rgb1",
+          "pinId": "blue"
+        }
+      },
+      {
+        "id": "w4",
+        "from": {
+          "instId": "rgb1",
+          "pinId": "gnd"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "GND1"
+        }
+      }
     ]
-  }
+  },
+  "code": "/*\n * RGB LED Rainbow — Cycle through colors\n * R=9, G=10, B=11\n */\n\nint redPin   = 9;\nint greenPin = 10;\nint bluePin  = 11;\n\nvoid setColor(int r, int g, int b) {\n  analogWrite(redPin,   r);\n  analogWrite(greenPin, g);\n  analogWrite(bluePin,  b);\n}\n\nvoid setup() {\n  pinMode(redPin,   OUTPUT);\n  pinMode(greenPin, OUTPUT);\n  pinMode(bluePin,  OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"RGB Rainbow started!\");\n}\n\nvoid loop() {\n  // Red → Yellow\n  for (int i = 0; i <= 255; i += 5) {\n    setColor(255, i, 0);\n    delay(20);\n  }\n  // Yellow → Green\n  for (int i = 255; i >= 0; i -= 5) {\n    setColor(i, 255, 0);\n    delay(20);\n  }\n  // Green → Cyan\n  for (int i = 0; i <= 255; i += 5) {\n    setColor(0, 255, i);\n    delay(20);\n  }\n  // Cyan → Blue\n  for (int i = 255; i >= 0; i -= 5) {\n    setColor(0, i, 255);\n    delay(20);\n  }\n  // Blue → Magenta\n  for (int i = 0; i <= 255; i += 5) {\n    setColor(i, 0, 255);\n    delay(20);\n  }\n  // Magenta → Red\n  for (int i = 255; i >= 0; i -= 5) {\n    setColor(255, 0, i);\n    delay(20);\n  }\n}"
 }

@@ -1527,7 +1527,10 @@ _newProject() {
   }
 
   /* ══════════════════════ EXAMPLES ══════════════════════ */
-  _renderExamples() {
+  async _renderExamples() {
+    if (window.loadExamplesFromFiles && (!window.EXAMPLE_SKETCHES || window.EXAMPLE_SKETCHES.length === 0)) {
+      await window.loadExamplesFromFiles();
+    }
     const container = document.getElementById('examples-grid');
     if (!container || !window.EXAMPLE_SKETCHES) return;
 

@@ -1,0 +1,64 @@
+{
+  "id": "serial_plotter",
+  "name": "Serial Plotter Demo",
+  "icon": "📈",
+  "desc": "Print two numeric values every 50ms and watch them graph in the Plotter tab (potentiometer + sine wave)",
+  "tags": [
+    "beginner",
+    "plotter",
+    "analog",
+    "serial"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100
+      },
+      {
+        "id": "pot1",
+        "type": "potentiometer",
+        "x": 120,
+        "y": 300
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "5V"
+        },
+        "to": {
+          "instId": "pot1",
+          "pinId": "vcc"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "pot1",
+          "pinId": "wiper"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "A0"
+        }
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "pot1",
+          "pinId": "gnd"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "GND1"
+        }
+      }
+    ]
+  },
+  "code": "/*\n * Serial Plotter — send \"pot:value sine:value\" lines so the Plotter tab\n * can graph them live. Turn the potentiometer on A0 and watch the two\n * waveforms scroll across the plotter.\n */\n\nint potPin = A0;\n\nvoid setup() {\n  Serial.begin(9600);\n  Serial.println(\"Serial Plotter demo started\");\n}\n\nvoid loop() {\n  int potValue = analogRead(potPin);\n  float t = (float)millis() / 1000.0;\n  int sine = (int)((sin(t) + 1.0) * 512.0);\n\n  Serial.print(\"pot:\");\n  Serial.print(potValue);\n  Serial.print(\" sine:\");\n  Serial.println(sine);\n\n  delay(50);\n}"
+}
