@@ -20,7 +20,7 @@ class CircuitCanvas {
     this.panX  = 0;
     this.panY  = 0;
     this.zoom  = 1;
-    this.GRID  = 10;
+    this.GRID  = 5;
 
     /* Interaction state machine */
     this.mode         = 'idle';   // idle | dragging | panning | wiring | placing | wiredrag
@@ -1995,6 +1995,279 @@ case 'push_button': {
             if (xPin !== null) window.ArduinoSim.pinStates[`pin_${xPin}`] = xv;
             if (yPin !== null) window.ArduinoSim.pinStates[`pin_${yPin}`] = yv;
             if (swPin !== null) window.ArduinoSim.pinStates[`pin_${swPin}`] = swPressed ? 0 : 1; // INPUT_PULLUP
+          }
+          break;
+        }
+
+        case 'ic_555': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+
+          const vccNet = this._tracePinNet(inst.id, 'VCC');
+          const gndNet = this._tracePinNet(inst.id, 'GND');
+          const hasVcc = vccNet.sources.some(s => s.voltage >= 4.5);
+          const hasGnd = gndNet.grounds.length > 0;
+
+          if (!hasVcc || !hasGnd) {
+            inst.runtimeState.outHigh = false;
+            break;
+          }
+
+          const trigPin = this._getConnectedPinNum(inst.id, 'TRIG');
+          const thrPin = this._getConnectedPinNum(inst.id, 'THR');
+          const rstPin = this._getConnectedPinNum(inst.id, 'RST');
+          const outPin = this._getConnectedPinNum(inst.id, 'OUT');
+          const disPin = this._getConnectedPinNum(inst.id, 'DIS');
+
+          let resetActive = true;
+          if (rstPin !== null) {
+            resetActive = (sim.pinStates[`pin_${rstPin}`] || 0) > 0;
+          }
+
+          if (!resetActive) {
+            inst.runtimeState.outHigh = false;
+            if (outPin !== null) sim.pinStates[`pin_${outPin}`] = 0;
+            if (disPin !== null) sim.pinStates[`pin_${disPin}`] = 0;
+            break;
+          }
+
+          if (!inst.runtimeState._lastTime) inst.runtimeState._lastTime = Date.now();
+          if (inst.runtimeState._capVoltage === undefined) inst.runtimeState._capVoltage = 0;
+
+          const now = Date.now();
+          const dt = (now - inst.runtimeState._lastTime) / 1000;
+          inst.runtimeState._lastTime = now;
+
+          const freq = inst.props.frequency || 1000;
+          const duty = (inst.props.dutyCycle || 50) / 100;
+          const period = 1 / freq;
+          const tHigh = period * duty;
+          const tLow = period * (1 - duty);
+          const vThresh = 2 / 3;
+          const vTrig = 1 / 3;
+
+          let cv = inst.runtimeState._capVoltage;
+
+          if (inst.runtimeState.outHigh) {
+            cv = Math.min(1.0, cv + dt / tHigh * 0.8);
+            if (cv >= vThresh) {
+              inst.runtimeState.outHigh = false;
+              cv = vThresh;
+            }
+          } else {
+            cv = Math.max(0, cv - dt / tLow * 0.8);
+            if (cv <= vTrig) {
+              inst.runtimeState.outHigh = true;
+              cv = vTrig;
+            }
+          }
+
+          inst.runtimeState._capVoltage = cv;
+
+          const outVal = inst.runtimeState.outHigh ? 255 : 0;
+          if (outPin !== null) sim.pinStates[`pin_${outPin}`] = outVal;
+          if (disPin !== null) sim.pinStates[`pin_${disPin}`] = inst.runtimeState.outHigh ? 0 : 255;
+
+          const capScaled = Math.round(cv * 255);
+          if (thrPin !== null) sim.pinStates[`pin_${thrPin}`] = capScaled;
+          if (trigPin !== null) sim.pinStates[`pin_${trigPin}`] = capScaled;
+          break;
+        }
+
+        case 'ic_74hc00': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
+          };
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+          write('Y1', (read('A1') & read('B1')) ? 0 : 1);
+          write('Y2', (read('A2') & read('B2')) ? 0 : 1);
+          write('Y3', (read('A3') & read('B3')) ? 0 : 1);
+          write('Y4', (read('A4') & read('B4')) ? 0 : 1);
+          break;
+        }
+
+        case 'ic_74hc04': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
+          };
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+          write('Y1', read('A1') ? 0 : 1);
+          write('Y2', read('A2') ? 0 : 1);
+          write('Y3', read('A3') ? 0 : 1);
+          write('Y4', read('A4') ? 0 : 1);
+          write('Y5', read('A5') ? 0 : 1);
+          write('Y6', read('A6') ? 0 : 1);
+          break;
+        }
+
+        case 'ic_74hc08': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
+          };
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+          write('Y1', read('A1') & read('B1'));
+          write('Y2', read('A2') & read('B2'));
+          write('Y3', read('A3') & read('B3'));
+          write('Y4', read('A4') & read('B4'));
+          break;
+        }
+
+        case 'ic_74hc32': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
+          };
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+          write('Y1', read('A1') | read('B1'));
+          write('Y2', read('A2') | read('B2'));
+          write('Y3', read('A3') | read('B3'));
+          write('Y4', read('A4') | read('B4'));
+          break;
+        }
+
+        case 'ic_74hc595': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
+          };
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+
+          if (inst.runtimeState._shiftReg === undefined) inst.runtimeState._shiftReg = 0;
+          if (inst.runtimeState._latchReg === undefined) inst.runtimeState._latchReg = 0;
+          if (inst.runtimeState._lastSRCLK === undefined) inst.runtimeState._lastSRCLK = 0;
+          if (inst.runtimeState._lastRCLK === undefined) inst.runtimeState._lastRCLK = 0;
+
+          const srclk = read('SRCLK');
+          const rclk = read('RCLK');
+          const oe = read('OE');
+          const srclr = read('SRCLR');
+
+          if (srclr === 0) {
+            inst.runtimeState._shiftReg = 0;
+            inst.runtimeState._lastSRCLK = srclk;
+            inst.runtimeState._lastRCLK = rclk;
+            break;
+          }
+
+          if (srclk === 1 && inst.runtimeState._lastSRCLK === 0) {
+            const ser = read('SER');
+            inst.runtimeState._shiftReg = ((inst.runtimeState._shiftReg << 1) | ser) & 0xFF;
+          }
+          inst.runtimeState._lastSRCLK = srclk;
+
+          if (rclk === 1 && inst.runtimeState._lastRCLK === 0) {
+            inst.runtimeState._latchReg = inst.runtimeState._shiftReg;
+          }
+          inst.runtimeState._lastRCLK = rclk;
+
+          const outputActive = oe === 0;
+          const output = outputActive ? inst.runtimeState._latchReg : 0;
+          inst.runtimeState.bits = output;
+
+          ['QA','QB','QC','QD','QE','QF','QG','QH'].forEach((pinId, i) => {
+            write(pinId, (output >> i) & 1);
+          });
+          break;
+        }
+
+        case 'ic_74hc138': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
+          };
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+
+          const a0 = read('A0');
+          const a1 = read('A1');
+          const a2 = read('A2');
+          const g1 = read('G1');
+          const g2a = read('G2A');
+          const g2b = read('G2B');
+
+          const enabled = g1 === 1 && g2a === 0 && g2b === 0;
+          const addr = (a2 << 2) | (a1 << 1) | a0;
+
+          for (let i = 0; i < 8; i++) {
+            write(`Y${i}`, (enabled && i === addr) ? 0 : 1);
+          }
+          inst.runtimeState.activeOutput = enabled ? addr : -1;
+          break;
+        }
+
+        case 'ic_74hc245': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
+          };
+          const readVal = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            return pn !== null ? (ps[`pin_${pn}`] || 0) : 0;
+          };
+          const writeVal = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val;
+          };
+
+          const dir = read('DIR');
+          const oe = read('OE');
+
+          inst.runtimeState.direction = dir;
+
+          if (oe === 1) {
+            for (let i = 1; i <= 8; i++) {
+              writeVal(`A${i}`, 0);
+              writeVal(`B${i}`, 0);
+            }
+          } else if (dir === 1) {
+            for (let i = 1; i <= 8; i++) {
+              writeVal(`B${i}`, readVal(`A${i}`));
+            }
+          } else {
+            for (let i = 1; i <= 8; i++) {
+              writeVal(`A${i}`, readVal(`B${i}`));
+            }
           }
           break;
         }

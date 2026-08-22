@@ -20,13 +20,13 @@ defComp({
   defaultProps: { mode: 'astable', frequency: 1000, dutyCycle: 50 },
   pins: [
     { id: 'GND',  label:'GND', type:PIN_TYPE.GND,     x: 10, y: 50, side:'bottom' },
-    { id: 'TRIG', label:'TRI', type:PIN_TYPE.DIGITAL, x: 20, y: 50, side:'bottom' },
-    { id: 'OUT',  label:'OUT', type:PIN_TYPE.DIGITAL, x: 30, y: 50, side:'bottom' },
-    { id: 'RST',  label:'RST', type:PIN_TYPE.DIGITAL, x: 40, y: 50, side:'bottom' },
-    { id: 'DIS',  label:'DIS', type:PIN_TYPE.DIGITAL, x: 50, y: 50, side:'bottom' },
-    { id: 'THR',  label:'THR', type:PIN_TYPE.DIGITAL, x: 60, y: 50, side:'bottom' },
-    { id: 'CV',   label:'CV',  type:PIN_TYPE.SIGNAL,  x: 70, y: 50, side:'bottom' },
-    { id: 'VCC',  label:'VCC', type:PIN_TYPE.POWER,   x: 40, y:  0, side:'top' },
+    { id: 'TRIG', label:'TRI', type:PIN_TYPE.DIGITAL, x: 25, y: 50, side:'bottom' },
+    { id: 'OUT',  label:'OUT', type:PIN_TYPE.DIGITAL, x: 40, y: 50, side:'bottom' },
+    { id: 'RST',  label:'RST', type:PIN_TYPE.DIGITAL, x: 55, y: 50, side:'bottom' },
+    { id: 'VCC',  label:'VCC', type:PIN_TYPE.POWER,   x: 10, y:  0, side:'top' },
+    { id: 'DIS',  label:'DIS', type:PIN_TYPE.DIGITAL, x: 25, y:  0, side:'top' },
+    { id: 'THR',  label:'THR', type:PIN_TYPE.DIGITAL, x: 40, y:  0, side:'top' },
+    { id: 'CV',   label:'CV',  type:PIN_TYPE.SIGNAL,  x: 55, y:  0, side:'top' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -78,22 +78,15 @@ defComp({
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Pin leads
+    // Pin leads — Bottom (GND, TRIG, OUT, RST)
     ctx.strokeStyle = '#888';
     ctx.lineWidth = 1.5;
-    const leftPins = [10, 20, 30, 40];
-    const rightPins = [50, 60, 70, 40];
-    leftPins.forEach((px, i) => {
-      if (i < 3) {
-        ctx.beginPath(); ctx.moveTo(px, 45); ctx.lineTo(px, 50); ctx.stroke();
-      }
-    });
-    // Top pins
-    ctx.beginPath(); ctx.moveTo(40, 5); ctx.lineTo(40, 0); ctx.stroke();
-
-    // Right side pins
-    [50, 60, 70].forEach(px => {
+    [10, 25, 40, 55].forEach(px => {
       ctx.beginPath(); ctx.moveTo(px, 45); ctx.lineTo(px, 50); ctx.stroke();
+    });
+    // Pin leads — Top (VCC, DIS, THR, CV)
+    [10, 25, 40, 55].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 5); ctx.lineTo(px, 0); ctx.stroke();
     });
 
     if (inst.selected) drawSelectionRect(ctx, -2, -4, 84, 58);

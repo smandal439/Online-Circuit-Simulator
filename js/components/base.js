@@ -5,7 +5,7 @@
 
 'use strict';
 
-const GRID = 10;
+const GRID = 1;
 
 /* ── Pin types ── */
 const PIN_TYPE = {
