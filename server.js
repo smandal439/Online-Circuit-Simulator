@@ -9,8 +9,8 @@
 
 'use strict';
 
-const express = require('express');
-const app = express();
+//const express = require('express');
+//const app = express();
 
 const http  = require('node:http');
 const fs    = require('node:fs');
@@ -249,6 +249,6 @@ server.listen(PORT, HOST, () => {
 
 
 // Pass '0.0.0.0' as the host argument
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on LAN at http://<YOUR_LOCAL_IP>:${PORT}`);
-});
+//server.listen(PORT, '0.0.0.0', () => {
+    //console.log(`Server running on LAN at http://<YOUR_LOCAL_IP>:${PORT}`);
+//});
