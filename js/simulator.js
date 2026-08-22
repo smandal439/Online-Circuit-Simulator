@@ -6,653 +6,175 @@
 
 class ArduinoSimulator {
   constructor() {
-    // Core state
     this.isRunning = false;
     this.isPaused = false;
-    this.simTime = 0;
+    this.simTime = 0; // ms
     this.speed = 1;
-    this.board = 'arduino_uno';
-    
-    // Pin management with validation
-    this.pinStates = new Map();
-    this.pinModes = new Map();
-    this._maxPin = this.board === 'esp32_devkit_v1' ? 39 : 19;
-    
-    // Serial
+    this.board = 'arduino_uno'; // arduino_uno | esp32_devkit_v1
+    this.pinStates = {}; // pinKey → value (0-255, or 0/1)
+    this.pinModes = {}; // pinKey → INPUT/OUTPUT/INPUT_PULLUP
     this.serialBaud = 9600;
     this.serialInputBuffer = [];
-    this._maxSerialBuffer = 8192;
-    this._serialLogCallback = null;
-    
-    // Control
     this._loopAbortController = null;
     this._loopPromise = null;
-    this._runSeq = 0;
-    this._isStopping = false;
-    
-    // Callbacks with validation
-    this._callbacks = {
-      onSerial: null,
-      onStart: null,
-      onPinChange: null,
-      onError: null,
-      onStatus: null,
-      onStop: null,
-      onTick: null,
-      onEvent: null
-    };
-    
-    // Performance tracking
+    this.onSerial = null;  // callback(text, type)
+    this.onStart = null;  // callback() — fired when the simulation loop actually starts
+    this.onPinChange = null;  // callback(pinKey, value)
+    this.onError = null;  // callback(err)
+    this.onStatus = null;  // callback(msg)
+    this.onStop = null;  // callback()
+    this.onTick = null;  // callback(simTime, fps, loopCount)
+    this._toneActive = {};
+    this._toneCtx = null;
+    this._toneOscillators = {};
+    this._startRealTime = 0;
+    this._delays = [];
+    this._mqttOpen = []; // live MQTT.js connections to close on stop/run
+    this._customDelay = null;
+    // FPS / loop tracking
     this._fps = 0;
     this._fpsFrames = 0;
     this._fpsLast = 0;
     this._loopCount = 0;
     this._fpsInterval = null;
-    this._startRealTime = 0;
-    
-    // Infinite-loop guard
+    this._runSeq = 0;
+    // Infinite-loop guard: max iterations per real-second without a delay
     this._iterSinceDelay = 0;
     this._MAX_TIGHT_ITERS = 50000;
-    this._lastYieldTime = 0;
-    this._minYieldInterval = 16; // ms
-    
-    // Audio
-    this._toneActive = new Map();
-    this._toneCtx = null;
-    this._toneOscillators = new Map();
-    
-    // State management
-    this._delays = [];
-    this._mqttOpen = [];
-    this._customDelay = null;
-    this._compiledFn = null;
-    this._compiledCtx = null;
-    this._compiledJs = '';
-    
-    // Hardware simulation
+    // EEPROM simulation (512 bytes)
     this._eeprom = new Uint8Array(512);
-    this._ledcChannels = new Map();
-    this._softSerial = new Map();
-    this._steppers = new Map();
-    this._pings = new Map();
-    this._neopixels = new Map();
-    this._rfid = new Map();
-    this._fastled = null;
-    this._web = null;
-    this._mqtt = null;
-    this._lcdLines = ['', ''];
-    this._lcdCursor = { col: 0, row: 0 };
-    this._oledTextSize = 1;
-    this._oledTextColor = 1;
-    
-    // Validation & security
-    this._reservedWords = new Set([
-      'await', 'break', 'case', 'catch', 'class', 'const', 'continue',
-      'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export',
-      'extends', 'false', 'finally', 'for', 'function', 'if', 'import',
-      'in', 'instanceof', 'new', 'null', 'return', 'super', 'switch',
-      'this', 'throw', 'true', 'try', 'typeof', 'var', 'void', 'while',
-      'with', 'yield', 'let', 'static', 'async', 'await'
-    ]);
-    
-    // Pin validation ranges
-    this._validPins = {
-      arduino_uno: {
-        digital: Array.from({length: 20}, (_, i) => i),
-        analog: [14, 15, 16, 17, 18, 19],
-        pwm: [3, 5, 6, 9, 10, 11],
-        max: 19
-      },
-      esp32_devkit_v1: {
-        digital: Array.from({length: 40}, (_, i) => i),
-        analog: [36, 39, 34, 35, 32, 33],
-        pwm: Array.from({length: 40}, (_, i) => i),
-        max: 39
-      }
-    };
+    // ESP32 LEDC PWM channel registry: channel → { pin, freq, resolution, maxDuty }
+    this._ledcChannels = {};
   }
 
-  /* ═══════════════════════════════════════════════════════
-     PUBLIC API — with validation
-     ═══════════════════════════════════════════════════════ */
-
-  // Callback registration with validation
-  on(event, callback) {
-    const validEvents = ['serial', 'start', 'pinChange', 'error', 'status', 'stop', 'tick', 'event'];
-    if (!validEvents.includes(event)) {
-      throw new Error(`Invalid event: ${event}. Valid events: ${validEvents.join(', ')}`);
-    }
-    if (callback && typeof callback !== 'function') {
-      throw new Error(`Callback for event '${event}' must be a function`);
-    }
-    const key = `on${event.charAt(0).toUpperCase() + event.slice(1)}`;
-    this._callbacks[key] = callback;
-    return this;
-  }
-
-  // Getters with validation
-  getPinState(pin) {
-    this._validatePin(pin);
-    const key = `pin_${pin}`;
-    return this.pinStates.get(key) ?? 0;
-  }
-
-  getPinMode(pin) {
-    this._validatePin(pin);
-    const key = `pin_${pin}`;
-    return this.pinModes.get(key) ?? 'INPUT';
-  }
-
-  setPinState(pin, value) {
-    this._validatePin(pin);
-    this._validatePinValue(value);
-    const key = `pin_${pin}`;
-    this.pinStates.set(key, value);
-    this._emitPinChange(key, value);
-  }
-
-  // Board configuration with validation
-  setBoard(board) {
-    const validBoards = ['arduino_uno', 'esp32_devkit_v1'];
-    if (!validBoards.includes(board)) {
-      throw new Error(`Invalid board: ${board}. Valid boards: ${validBoards.join(', ')}`);
-    }
-    this.board = board;
-    this._maxPin = this._validPins[board].max;
-    this.pinStates.clear();
-    this.pinModes.clear();
-    return this;
-  }
-
-  // Speed control with validation
-  setSpeed(speed) {
-    const v = parseFloat(speed);
-    if (!Number.isFinite(v) || v < 0.01 || v > 100) {
-      throw new Error('Speed must be between 0.01 and 100');
-    }
-    this.speed = v;
-    return this;
-  }
-
-  // Serial input with validation
-  sendSerialInput(text) {
-    if (typeof text !== 'string') {
-      throw new Error('Serial input must be a string');
-    }
-    if (text.length === 0) return;
-    
-    for (const ch of text) {
-      this.serialInputBuffer.push(ch);
-    }
-    
-    // Prevent buffer overflow
-    if (this.serialInputBuffer.length > this._maxSerialBuffer) {
-      this.serialInputBuffer.splice(0, this.serialInputBuffer.length - this._maxSerialBuffer);
-    }
-  }
-
-  /* ═══════════════════════════════════════════════════════
-     TRANSPILER — with enhanced robustness
-     ═══════════════════════════════════════════════════════ */
-
+  /* ══════════════ TRANSPILER ══════════════ */
   transpile(code) {
-    if (typeof code !== 'string') {
-      throw new Error('Code must be a string');
-    }
-    if (code.trim().length === 0) {
-      throw new Error('Code cannot be empty');
-    }
-
-    // Security: block dangerous patterns
-    this._securityCheck(code);
-
+    if (typeof code !== 'string') code = '';
     let js = code;
 
-    // 1. Handle #define macros with improved parsing
+    // Remove comments temporarily for processing, then restore
+    // Actually keep comments — they're valid JS too
+
+    // 1. Handle #define macros (simple value replacement)
     const defines = {};
     js = js.replace(/^[ \t]*#define\s+(\w+)\s+(.*?)[ \t]*$/gm, (_, name, value) => {
-      const trimmed = value.trim();
-      // Validate macro name
-      if (!/^[A-Za-z_]\w*$/.test(name)) {
-        throw new Error(`Invalid macro name: ${name}`);
-      }
-      defines[name] = trimmed;
-      return `/* #define ${name} ${trimmed} */`;
+      defines[name] = value.trim();
+      return `/* #define ${name} ${value} */`;
     });
 
     // 2. Remove other preprocessor directives
     js = js.replace(/^[ \t]*#[^\n]*/gm, '');
 
-    // 3. Apply #define substitutions with safety
+    // 3. Apply #define substitutions (simple word replacement)
+    //    Skip function-like macros and escape any `$` so the replacement is literal.
     for (const [name, value] of Object.entries(defines)) {
       if (!/^[A-Za-z_]\w*$/.test(name)) continue;
-      if (/\(/.test(value)) continue;
-      // Escape special regex characters in value
-      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      js = js.replace(new RegExp(`\\b${escapedName}\\b`, 'g'), () => value);
+      if (/\(/.test(value)) continue; // function-like macro — leave untouched
+      js = js.replace(new RegExp(`\\b${name}\\b`, 'g'), () => value);
     }
 
-    // 4. Function declarations with improved parsing
+    // 4. Replace function declarations (return type + name + params + brace)
     const userFnNames = new Set();
     js = js.replace(
       /\b(?:void|int|float|double|long|unsigned\s+long|unsigned\s+int|byte|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+(\w+)\s*\(([^)]*)\)\s*\{/g,
       (match, name, params) => {
-        if (!/^[A-Za-z_]\w*$/.test(name)) {
-          throw new Error(`Invalid function name: ${name}`);
-        }
         userFnNames.add(name);
-        const cleanParams = params
-          .replace(/\b(?:unsigned\s+)?(?:int|long|short|byte\s*\*?|float|double|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+/g, '')
-          .trim();
+        const cleanParams = params.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte\s*\*?|float|double|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+/g, '');
         return `async function ${name}(${cleanParams}) {`;
       }
     );
 
-    // 5. Variable declarations
+    // 5. Handle variable declarations (not already transformed)
+    // int x = 5; → let x = 5;
     js = js.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|String)\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
+    // char x = 'a'; → let x = 'a';
     js = js.replace(/\bchar\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
-    
-    // Handle const properly
+    // Handle const
     js = js.replace(/\bconst\s+let\b/g, 'let');
     js = js.replace(/\bconst\s+async\b/g, 'async');
 
-    // 6. Library declarations with validation
-    const libraryPatterns = [
-      { pattern: /\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g,
-        replacement: 'let $2 = new $1($3)' }
-    ];
-    for (const {pattern, replacement} of libraryPatterns) {
-      js = js.replace(pattern, replacement);
-    }
+    // Object-style library declarations:
+    // Servo myServo;  →  let myServo = new Servo();
+    // LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  →  let lcd = new LiquidCrystal(12, 11, 5, 4, 3, 2);
+    // WiFiClient espClient;  →  let espClient = new WiFiClient();
+    // PubSubClient client(espClient);  →  let client = new PubSubClient(espClient);
+    // WebServer server(80);  →  let server = new WebServer(80);
+    // Adafruit_SSD1306 display(128, 64, &Wire, -1);  →  let display = new Adafruit_SSD1306(128, 64, Wire, -1);
+    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
 
-    // Strip & from Adafruit_SSD1306 constructors
-    js = js.replace(/new\s+Adafruit_SSD1306\s*\(([^)]*)\)/g, (_, args) => 
-      `new Adafruit_SSD1306(${args.replace(/&\s*/g, '')})`
-    );
+    // C++ passes I2C objects by reference: `&Wire` is invalid JS. Strip the `&`
+    // only inside Adafruit_SSD1306 constructors to avoid breaking `a & b`.
+    js = js.replace(/new\s+Adafruit_SSD1306\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_SSD1306(${args.replace(/&\s*/g, '')})`);
 
-    // 7. Arrays with improved handling
-    js = js.replace(/let\s+(\w+)\s*\[(\d+)\]\s*=\s*\{([^}]*)\}/g, (_, name, size, values) => {
-      const arr = values.split(',').map(v => v.trim());
-      if (arr.length > parseInt(size)) {
-        throw new Error(`Array ${name} has more elements than declared size ${size}`);
-      }
-      return `let ${name} = [${values}]`;
-    });
+    // 6. Handle arrays: int arr[10] → let arr = new Array(10).fill(0)
+    js = js.replace(/let\s+(\w+)\s*\[(\d+)\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$3]');
     js = js.replace(/let\s+(\w+)\s*\[\s*\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$2]');
-    js = js.replace(/let\s+(\w+)\s*\[(\d+)\](?!\s*=)/g, (_, name, size) => {
-      const s = parseInt(size);
-      if (s <= 0 || s > 10000) {
-        throw new Error(`Invalid array size: ${size}`);
-      }
-      return `let ${name} = new Array(${s}).fill(0)`;
-    });
+    js = js.replace(/let\s+(\w+)\s*\[(\d+)\](?!\s*=)/g, 'let $1 = new Array($2).fill(0)');
     js = js.replace(/let\s+(\w+)\s*\[\s*\](?!\s*=)/g, 'let $1 = []');
-    
-    // C-style char arrays
+    // C-style char arrays with string literals: char str[20] = "hi"; / char msg[] = "hi";
     js = js.replace(/let\s+(\w+)\s*\[\s*\d*\s*\]\s*=\s*("[^"]*"|'[^']*')/g, 'let $1 = $2');
 
-    // 8. Constants
-    const constants = {
-      HIGH: '1', LOW: '0',
-      INPUT_PULLUP: '"INPUT_PULLUP"',
-      INPUT: '"INPUT"', OUTPUT: '"OUTPUT"',
-      LED_BUILTIN: this.board === 'esp32_devkit_v1' ? '2' : '13',
-      A0: this.board === 'esp32_devkit_v1' ? '36' : '14',
-      A1: this.board === 'esp32_devkit_v1' ? '39' : '15',
-      A2: this.board === 'esp32_devkit_v1' ? '34' : '16',
-      A3: this.board === 'esp32_devkit_v1' ? '35' : '17',
-      A4: this.board === 'esp32_devkit_v1' ? '32' : '18',
-      A5: this.board === 'esp32_devkit_v1' ? '33' : '19',
-      DEC: '10', HEX: '16', OCT: '8', BIN: '2',
-      MSBFIRST: '1', LSBFIRST: '0'
-    };
-    for (const [name, value] of Object.entries(constants)) {
-      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      js = js.replace(new RegExp(`\\b${escapedName}\\b`, 'g'), value);
+    // 7. Boolean literals
+    js = js.replace(/\btrue\b/g, 'true');
+    js = js.replace(/\bfalse\b/g, 'false');
+
+    // Strip leftover C storage/qualifier keywords that are invalid JS
+    js = js.replace(/\b(?:static|volatile|extern|register|const)\s+let\b/g, 'let');
+    js = js.replace(/\b(?:static|volatile|extern|register|const)\s+async\b/g, 'async');
+
+    // 8. Arduino constants
+    js = js.replace(/\bHIGH\b/g, '1');
+    js = js.replace(/\bLOW\b/g, '0');
+    js = js.replace(/\bINPUT_PULLUP\b/g, '"INPUT_PULLUP"');
+    js = js.replace(/\bINPUT\b/g, '"INPUT"');
+    js = js.replace(/\bOUTPUT\b/g, '"OUTPUT"');
+    if (this.board === 'esp32_devkit_v1') {
+      // ESP32 DevKit V1: built-in LED is on GPIO2; the common analog
+      // pins map to the board's ADC-capable GPIOs.
+      js = js.replace(/\bLED_BUILTIN\b/g, '2');
+      js = js.replace(/\bA0\b/g, '36');
+      js = js.replace(/\bA1\b/g, '39');
+      js = js.replace(/\bA2\b/g, '34');
+      js = js.replace(/\bA3\b/g, '35');
+      js = js.replace(/\bA4\b/g, '32');
+      js = js.replace(/\bA5\b/g, '33');
+    } else {
+      js = js.replace(/\bLED_BUILTIN\b/g, '13');
+      js = js.replace(/\bA0\b/g, '14');
+      js = js.replace(/\bA1\b/g, '15');
+      js = js.replace(/\bA2\b/g, '16');
+      js = js.replace(/\bA3\b/g, '17');
+      js = js.replace(/\bA4\b/g, '18');
+      js = js.replace(/\bA5\b/g, '19');
     }
+    js = js.replace(/\bDEC\b/g, '10');
+    js = js.replace(/\bHEX\b/g, '16');
+    js = js.replace(/\bOCT\b/g, '8');
+    js = js.replace(/\bBIN\b/g, '2');
+    js = js.replace(/\bMSBFIRST\b/g, '1');
+    js = js.replace(/\bLSBFIRST\b/g, '0');
 
-    // 9. Type declarations
-    const types = [
-      'unsigned long', 'unsigned int', 'unsigned short', 'unsigned char',
-      'const char*', 'const String', 'const int', 'const float', 'const double',
-      'int', 'float', 'double', 'long', 'short', 'char', 'byte', 'String'
-    ];
-    for (const type of types) {
-      js = js.replace(new RegExp(`\\b${type}\\s+(?=[a-zA-Z_])`, 'g'), 'var ');
-    }
+    // 9b. Strip unsupported C++ type declarations
+    js = js.replace(/\bunsigned\s+long\s+/g, 'var ');
+    js = js.replace(/\bunsigned\s+int\s+/g, 'var ');
+    js = js.replace(/\bunsigned\s+short\s+/g, 'var ');
+    js = js.replace(/\bunsigned\s+char\s+/g, 'var ');
+    js = js.replace(/\bconst\s+char\s*\*\s*/g, 'var ');
+    js = js.replace(/\bconst\s+String\s*/g, 'var ');
+    js = js.replace(/\bconst\s+int\s+/g, 'var ');
+    js = js.replace(/\bconst\s+float\s+/g, 'var ');
+    js = js.replace(/\bconst\s+double\s+/g, 'var ');
+    js = js.replace(/\bint\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bfloat\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bdouble\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\blong\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bshort\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bchar\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bbyte\s+(?=[a-zA-Z_])/g, 'var ');
+    js = js.replace(/\bString\s+/g, 'var ');
 
-    // 10. API mapping with validation
-    const apiMap = this._buildApiMap();
-    for (const [orig, mapped] of apiMap) {
-      const escapedOrig = orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      js = js.replace(new RegExp(`\\b${escapedOrig}\\b(?=\\s*\\()`, 'g'), mapped);
-    }
-
-    // 11. Serial API
-    const serialMap = {
-      'Serial\\.begin': '_a.serialBegin',
-      'Serial\\.print': '_a.serialPrint',
-      'Serial\\.println': '_a.serialPrintln',
-      'Serial\\.read': '_a.serialRead',
-      'Serial\\.available': '_a.serialAvailable',
-      'Serial\\.write': '_a.serialWrite',
-      'Serial\\.flush': '_a.serialFlush',
-      'Serial\\.parseInt': '_a.serialParseInt',
-      'Serial\\.parseFloat': '_a.serialParseFloat',
-      'Serial\\.peek': '_a.serialPeek',
-      'Serial\\.readString': '_a.serialReadString',
-      'Serial\\.readStringUntil': '_a.serialReadStringUntil',
-      'Serial\\.readBytes': '_a.serialReadBytes',
-      'Serial\\.readBytesUntil': '_a.serialReadBytesUntil',
-      'Serial\\.readLine': '_a.serialReadLine'
-    };
-    for (const [orig, mapped] of Object.entries(serialMap)) {
-      js = js.replace(new RegExp(`\\b${orig}\\s*\\(`, 'g'), `${mapped}(`);
-    }
-
-    // 12. WiFi API
-    const wifiMap = {
-      'WiFi\\.begin': '_a.wifiBegin',
-      'WiFi\\.localIP': '_a.wifiLocalIP',
-      'WiFi\\.softAPIP': '_a.wifiSoftAPIP',
-      'WiFi\\.status': '_a.wifiStatus',
-      'WiFi\\.disconnect': '_a.wifiDisconnect',
-      'WiFi\\.mode': '_a.wifiMode',
-      'WiFi\\.softAP': '_a.wifiSoftAP'
-    };
-    for (const [orig, mapped] of Object.entries(wifiMap)) {
-      js = js.replace(new RegExp(`\\b${orig}\\s*\\(`, 'g'), `${mapped}(`);
-    }
-
-    // 13. Make delay async
-    js = js.replace(/_a\.delay\s*\(/g, 'await _a.delay(');
-    js = js.replace(/_a\.delayMicroseconds\s*\(/g, 'await _a.delayMicroseconds(');
-    js = js.replace(/_a\.pulseIn\s*\(/g, 'await _a.pulseIn(');
-
-    // 14. Auto-await user functions
-    for (const name of userFnNames) {
-      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      js = js.replace(
-        new RegExp(`(?<!function\\s)(?<!await\\s)(?<![\\w.])\\b${escapedName}\\s*\\(`, 'g'),
-        `await ${name}(`
-      );
-    }
-
-    // 15. Remove C++ type casts
-    js = js.replace(/\((?:int|float|double|long|byte|char|uint8_t|uint16_t)\)\s*/g, '');
-
-    // 16. Clean up
-    js = js.replace(/\s*;\s*;/g, ';');
-    js = js.replace(/\s*,\s*/g, ', ');
-    js = js.replace(/\s+$/gm, '');
-
-    return js;
-  }
-
-  /* ═══════════════════════════════════════════════════════
-     COMPILE & RUN — with enhanced error handling
-     ═══════════════════════════════════════════════════════ */
-
-  async compile(code) {
-    try {
-      // Validate input
-      if (typeof code !== 'string') {
-        throw new Error('Code must be a string');
-      }
-      if (code.trim().length === 0) {
-        throw new Error('Code cannot be empty');
-      }
-
-      const js = this.transpile(code);
-      const ctx = this.buildContext();
-      
-      // Filter context keys with validation
-      const filtered = [];
-      for (const [key, val] of Object.entries(ctx)) {
-        if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) continue;
-        if (this._reservedWords.has(key)) continue;
-        filtered.push({ key, val });
-      }
-
-      const keys = filtered.map(entry => entry.key);
-      const vals = filtered.map(entry => entry.val);
-
-      // Build function with safety
-      const body = `{\n"use strict";\n${js}\n\nif(typeof setup === "undefined") throw new Error("Missing setup() function. Every Arduino sketch needs a setup() function."); if(typeof loop === "undefined") throw new Error("Missing loop() function. Every Arduino sketch needs a loop() function."); return { setup, loop };\n}`;
-
-      let fn;
-      try {
-        fn = new Function(...keys, body);
-      } catch (err) {
-        return this._compileError(err, js);
-      }
-
-      this._compiledFn = fn;
-      this._compiledCtx = { keys, vals, fn };
-      this._compiledJs = js;
-      
-      return { ok: true, compiledJs: js };
-    } catch (err) {
-      return this._compileError(err);
-    }
-  }
-
-  async run(code) {
-    if (this.isRunning) {
-      this.stop();
-      // Wait for cleanup
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-
-    if (typeof code !== 'string') {
-      code = '';
-    }
-
-    // Reset state
-    this._resetState();
-    this._startRealTime = Date.now();
-    this._isStopping = false;
-
-    // Compile
-    const result = await this.compile(code);
-    if (!result.ok) {
-      this._emitError(result.error);
-      return false;
-    }
-
-    this.isRunning = true;
-    this.isPaused = false;
-    const runId = ++this._runSeq;
-
-    const { keys, vals, fn } = this._compiledCtx;
-
-    this._serialLog('[ArduSim] Simulation started\n', 'system');
-    if (this._callbacks.onStart) this._callbacks.onStart();
-
-    // Start FPS ticker
-    this._fpsInterval = setInterval(() => this._tickFps(), 500);
-
-    let hadError = false;
-    let setupDone = false;
-
-    try {
-      const { setup, loop } = fn(...vals);
-      setupDone = true;
-
-      // Run setup with timeout protection
-      await this._withTimeout(setup(), 30000, 'Setup function timed out after 30 seconds');
-
-      // Run loop
-      while (this.isRunning && runId === this._runSeq && !this._isStopping) {
-        if (this.isPaused) {
-          await new Promise(resolve => { this._resumeResolve = resolve; });
-          continue;
-        }
-
-        this._iterSinceDelay++;
-
-        // Infinite-loop guard with backoff
-        if (this._iterSinceDelay > this._MAX_TIGHT_ITERS) {
-          this._iterSinceDelay = 0;
-          // Yield to UI with priority
-          await this._yieldToUI();
-        }
-
-        // Run loop iteration with timeout
-        await this._withTimeout(loop(), 5000, 'Loop iteration exceeded 5 seconds');
-
-        this._loopCount++;
-
-        // Yield to UI thread every iteration
-        await this._yieldToUI();
-      }
-    } catch (err) {
-      if (err && err.message !== 'SIMULATION_STOPPED') {
-        hadError = true;
-        const friendly = this._friendlyError(err.message ? err.message : String(err), err instanceof Error ? err : undefined);
-        this._emitError(friendly);
-        this._serialLog(`[Error] ${friendly}\n`, 'error');
-        
-        // Attempt to clean up
-        this._cleanupExecution();
-      }
-    } finally {
-      if (runId === this._runSeq) {
-        this._cleanupExecution();
-      }
-    }
-
-    if (runId === this._runSeq && !hadError) {
-      this.isRunning = false;
-      this._serialLog('[ArduSim] Simulation stopped\n', 'system');
-      if (this._callbacks.onStop) this._callbacks.onStop();
-    }
-
-    return !hadError;
-  }
-
-  stop() {
-    this._isStopping = true;
-    this.isRunning = false;
-    this.isPaused = false;
-    this._runSeq++;
-    
-    // Close MQTT connections
-    for (const c of this._mqttOpen) {
-      try { c.end(true); } catch (e) { /* ignore */ }
-    }
-    this._mqttOpen = [];
-    this._mqtt = null;
-
-    // Cancel delays
-    for (const d of this._delays) {
-      clearTimeout(d.id);
-      if (d.reject) d.reject(new Error('SIMULATION_STOPPED'));
-    }
-    this._delays = [];
-
-    // Resume if paused
-    if (this._resumeResolve) {
-      const r = this._resumeResolve;
-      this._resumeResolve = null;
-      r();
-    }
-
-    this._stopAllTones();
-    
-    // Clean up compiled code
-    this._compiledFn = null;
-    this._compiledCtx = null;
-  }
-
-  pause() {
-    if (!this.isRunning) return;
-    this.isPaused = true;
-    
-    // Freeze delays
-    const now = Date.now();
-    for (const d of this._delays) {
-      if (d.frozen) continue;
-      const remaining = Math.max(0, d.duration - (now - d.start));
-      clearTimeout(d.id);
-      d.frozen = true;
-      d.duration = remaining;
-    }
-  }
-
-  resume() {
-    if (!this.isRunning || !this.isPaused) return;
-    this.isPaused = false;
-    
-    // Restart delays
-    const now = Date.now();
-    for (const d of this._delays) {
-      if (!d.frozen) continue;
-      d.frozen = false;
-      d.start = now;
-      d.id = setTimeout(() => {
-        const idx = this._delays.indexOf(d);
-        if (idx !== -1) this._delays.splice(idx, 1);
-        if (d.resolve) d.resolve();
-      }, Math.max(0, d.duration));
-    }
-    
-    if (this._resumeResolve) {
-      const r = this._resumeResolve;
-      this._resumeResolve = null;
-      r();
-    }
-  }
-
-  /* ═══════════════════════════════════════════════════════
-     PRIVATE HELPERS
-     ═══════════════════════════════════════════════════════ */
-
-  _validatePin(pin) {
-    const num = Number(pin);
-    if (!Number.isInteger(num) || num < 0 || num > this._maxPin) {
-      throw new Error(`Invalid pin: ${pin}. Valid range: 0-${this._maxPin}`);
-    }
-    return num;
-  }
-
-  _validatePinValue(value) {
-    const num = Number(value);
-    if (!Number.isFinite(num) || num < 0 || num > 255) {
-      throw new Error(`Invalid pin value: ${value}. Must be between 0 and 255`);
-    }
-    return num;
-  }
-
-  _securityCheck(code) {
-    const dangerous = [
-      /eval\s*\(/,
-      /Function\s*\(/,
-      /import\s*\(/,
-      /require\s*\(/,
-      /process\./,
-      /global\./,
-      /window\./,
-      /document\./,
-      /localStorage\./,
-      /sessionStorage\./,
-      /fetch\s*\(/,
-      /XMLHttpRequest/,
-      /WebSocket/,
-      /Worker/,
-      /SharedWorker/,
-      /ServiceWorker/
-    ];
-    
-    for (const pattern of dangerous) {
-      if (pattern.test(code)) {
-        throw new Error(`Security violation: ${pattern.source} pattern detected in code`);
-      }
-    }
-  }
-
-  _buildApiMap() {
-    const base = [
+    // 9c. Map Arduino API calls
+    const API = [
       ['delay', '_a.delay'],
       ['delayMicroseconds', '_a.delayMicroseconds'],
       ['pinMode', '_a.pinMode'],
@@ -693,6 +215,7 @@ class ArduinoSimulator {
       ['lowByte', '_a.lowByte'],
       ['highByte', '_a.highByte'],
       ['sensorValue', '_a.sensorValue'],
+      // ESP32 APIs
       ['ledcSetup', '_a.ledcSetup'],
       ['ledcSetupChannel', '_a.ledcSetupChannel'],
       ['ledcAttachPin', '_a.ledcAttachPin'],
@@ -705,19 +228,1171 @@ class ArduinoSimulator {
       ['touchRead', '_a.touchRead'],
       ['hallRead', '_a.hallRead'],
       ['temperatureRead', '_a.temperatureRead'],
-      ['digitalPinToInterrupt', '_a.digitalPinToInterrupt']
+      ['digitalPinToInterrupt', '_a.digitalPinToInterrupt'],
     ];
-    return base;
+
+    for (const [orig, mapped] of API) {
+      js = js.replace(new RegExp(`\\b${orig}\\b(?=\\s*\\()`, 'g'), mapped);
+    }
+
+    // Serial.*
+    js = js.replace(/\bSerial\.begin\s*\(/g, '_a.serialBegin(');
+    js = js.replace(/\bSerial\.print\s*\(/g, '_a.serialPrint(');
+    js = js.replace(/\bSerial\.println\s*\(/g, '_a.serialPrintln(');
+    js = js.replace(/\bSerial\.read\s*\(/g, '_a.serialRead(');
+    js = js.replace(/\bSerial\.available\s*\(/g, '_a.serialAvailable(');
+    js = js.replace(/\bSerial\.write\s*\(/g, '_a.serialWrite(');
+    js = js.replace(/\bSerial\.flush\s*\(/g, '_a.serialFlush(');
+    js = js.replace(/\bSerial\.parseInt\s*\(/g, '_a.serialParseInt(');
+    js = js.replace(/\bSerial\.parseFloat\s*\(/g, '_a.serialParseFloat(');
+    js = js.replace(/\bSerial\.peek\s*\(/g, '_a.serialPeek(');
+    js = js.replace(/\bSerial\.readString\s*\(/g, '_a.serialReadString(');
+    js = js.replace(/\bSerial\.readStringUntil\s*\(/g, '_a.serialReadStringUntil(');
+    js = js.replace(/\bSerial\.readBytes\s*\(/g, '_a.serialReadBytes(');
+    js = js.replace(/\bSerial\.readBytesUntil\s*\(/g, '_a.serialReadBytesUntil(');
+    js = js.replace(/\bSerial\.readLine\s*\(/g, '_a.serialReadLine(');
+
+    // ESP32 Wi-Fi — map before the generic Servo/LCD `.begin` rule below
+    js = js.replace(/\bWiFi\.begin\s*\(/g, '_a.wifiBegin(');
+    js = js.replace(/\bWiFi\.localIP\s*\(/g, '_a.wifiLocalIP(');
+    js = js.replace(/\bWiFi\.softAPIP\s*\(/g, '_a.wifiSoftAPIP(');
+    js = js.replace(/\bWiFi\.status\s*\(/g, '_a.wifiStatus(');
+    js = js.replace(/\bWiFi\.disconnect\s*\(/g, '_a.wifiDisconnect(');
+    js = js.replace(/\bWiFi\.mode\s*\(/g, '_a.wifiMode(');
+    js = js.replace(/\bWiFi\.softAP\s*\(/g, '_a.wifiSoftAP(');
+
+    // Wire (I2C) — stub
+    js = js.replace(/\bWire\.begin\s*\(/g, '_a.wireBegin(');
+    js = js.replace(/\bWire\.requestFrom\s*\(/g, '_a.wireRequestFrom(');
+    js = js.replace(/\bWire\.beginTransmission\s*\(/g, '_a.wireBeginTransmission(');
+    js = js.replace(/\bWire\.endTransmission\s*\(/g, '_a.wireEndTransmission(');
+    js = js.replace(/\bWire\.write\s*\(/g, '_a.wireWrite(');
+    js = js.replace(/\bWire\.read\s*\(/g, '_a.wireRead(');
+    js = js.replace(/\bWire\.available\s*\(/g, '_a.wireAvailable(');
+
+    // SPI — stub
+    js = js.replace(/\bSPI\.begin\s*\(/g, '_a.spiBegin(');
+    js = js.replace(/\bSPI\.transfer\s*\(/g, '_a.spiTransfer(');
+    js = js.replace(/\bSPI\.end\s*\(/g, '_a.spiEnd(');
+
+    // EEPROM
+    js = js.replace(/\bEEPROM\.read\s*\(/g, '_a.eepromRead(');
+    js = js.replace(/\bEEPROM\.write\s*\(/g, '_a.eepromWrite(');
+    js = js.replace(/\bEEPROM\.update\s*\(/g, '_a.eepromUpdate(');
+    js = js.replace(/\bEEPROM\.get\s*\(/g, '_a.eepromGet(');
+    js = js.replace(/\bEEPROM\.put\s*\(/g, '_a.eepromPut(');
+    js = js.replace(/\bEEPROM\.begin\s*\(/g, '_a.eepromBegin(');
+    js = js.replace(/\bEEPROM\.commit\s*\(/g, '_a.eepromCommit(');
+    js = js.replace(/\bEEPROM\.length\b/g, '512');
+    js = js.replace(/\bEEPROM\.length\s*\(/g, '512');
+
+    // SoftwareSerial -- constructor (methods route through existing generic rules)
+    js = js.replace(/\bSoftwareSerial\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.softwareSerialNew($2)');
+    js = js.replace(/\b(\w+)\.println\s*\(/g, function (match, v) {
+      if (v === 'Serial') return match;
+      return '_a.softSerialPrintln(' + v + ', ';
+    });
+    js = js.replace(/\b(\w+)\.listen\s*\(/g, '_a.softSerialListen($1)');
+    js = js.replace(/\b(\w+)\.isListening\s*\(/g, '_a.softSerialIsListening($1)');
+
+    // Stepper library
+    js = js.replace(/\bStepper\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.stepperNew($2)');
+    js = js.replace(/\b(\w+)\.setSpeed\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperSetSpeed(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.step\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperStep(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.distanceToGo\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperDistanceToGo(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.currentPosition\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperCurrentPosition(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.setCurrentPosition\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperSetCurrentPosition(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.run\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperRun(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.runSpeed\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperRunSpeed(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.stop\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperStop(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.disableOutputs\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperDisableOutputs(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.enableOutputs\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperEnableOutputs(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.maxSpeed\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperMaxSpeed(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.acceleration\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperAcceleration(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.setAcceleration\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.stepperSetAcceleration(' + varName + ', ';
+    });
+
+    // NewPing library
+    js = js.replace(/\bNewPing\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.newPingNew($2)');
+    js = js.replace(/\b(\w+)\.ping_cm\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.newPingCm(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.ping_in\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.newPingInch(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.ping_median\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.newPingMedian(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.ping\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.newPingPing(' + varName + ')';
+    });
+
+    // IRremote — IRsend / IRrecv
+    js = js.replace(/\bIRsend\s+(\w+)\s*\(([^)]*)\)/g, 'var $1 = _a.irsendNew($2)');
+    js = js.replace(/\bIRrecv\s+(\w+)\s*\(([^)]*)\)/g, 'var $1 = _a.irrecvNew($2)');
+    js = js.replace(/\b(\w+)\.sendNEC\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendNEC(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.sendSony\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendSony(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.sendRC5\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendRC5(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.sendRC6\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendRC6(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.sendRaw\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendRaw(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.enableIRIn\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irrecvEnableIRIn(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.resume\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irrecvResume(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.decode\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irrecvDecode(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.stopIRSend\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.irsendStop(' + varName + ')';
+    });
+    js = js.replace(/\bresults\.decode_type\b/g, 'results.protocol');
+    js = js.replace(/\bresults\.value\b/g, 'results.value');
+    js = js.replace(/\bresults\.bits\b/g, 'results.bits');
+    js = js.replace(/\bDECODE_SUPPORTED\b/g, 'true');
+    js = js.replace(/\bNECBITS\b/g, '32');
+    js = js.replace(/\bUSE_FAST\b/g, 'false');
+
+    // FastLED library
+    js = js.replace(/\bFastLED\.addLeds\s*\(/g, '_a.fastledAddLeds(');
+    js = js.replace(/\bFastLED\.show\s*\(/g, '_a.fastledShow(');
+    js = js.replace(/\bFastLED\.setBrightness\s*\(/g, '_a.fastledSetBrightness(');
+    js = js.replace(/\bFastLED\.setCorrection\s*\(/g, '_a.fastledSetCorrection(');
+    js = js.replace(/\bFastLED\.setColorCorrection\s*\(/g, '_a.fastledSetColorCorrection(');
+    js = js.replace(/\bFastLED\.maxPowerInMilliamps\s*\(/g, '_a.fastledMaxPower(');
+    js = js.replace(/\bFastLED\.clear\s*\(/g, '_a.fastledClear(');
+    js = js.replace(/\bCRGB\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.crgbNew($2)');
+    js = js.replace(/\bCRGB\s+(\w+)\s*\[\s*(\d+)\s*\]/g, 'var $1 = _a.crgbArray($2)');
+    js = js.replace(/\bCHSV\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.chsvNew($2)');
+    js = js.replace(/\bTWhite\b/g, '255');
+
+    // Adafruit NeoPixel library
+    js = js.replace(/\bAdafruit_NeoPixel\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.neopixelNew($2)');
+    js = js.replace(/\b(\w+)\.show\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelShow(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.setPixelColor\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelSetPixelColor(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.getPixelColor\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelGetPixelColor(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.setBrightness\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelSetBrightness(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.Color\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelColor(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.numPixels\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelNumPixels(' + varName + ')';
+    });
+    js = js.replace(/\bNEO_GRB\b/g, '0x02');
+    js = js.replace(/\bNEO_GRBW\b/g, '0x04');
+    js = js.replace(/\bNEO_KHZ800\b/g, '0x00');
+    js = js.replace(/\bNEO_KHZ400\b/g, '0x01');
+    js = js.replace(/\bNEO_RGB\b/g, '0x00');
+    js = js.replace(/\bNEO_RGBW\b/g, '0x03');
+    js = js.replace(/\bNEO_BRG\b/g, '0x01');
+    js = js.replace(/\bNEO_RBG\b/g, '0x02');
+
+    // MFRC522 RFID library
+    js = js.replace(/\bMFRC522\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.rfidNew($2)');
+    js = js.replace(/\b(\w+)\.PCD_Init\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidInit(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PCD_DumpVersionToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpVersion(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_IsNewCardPresent\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidIsNewCard(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_ReadCardSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidReadCard(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_HaltA\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidHaltA(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PCD_StopCrypto1\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidStopCrypto(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.uid\.uidByte\b/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidUidBytes(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.uid\.size\b/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidUidSize(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.MIFARE_Read\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidMifareRead(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.MIFARE_Write\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidMifareWrite(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.PICC_REQA\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidREQA(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_WUPA\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidWUPA(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_Select\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidSelect(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_ComputeBCC\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidComputeBCC(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.PICC_StopCrypto1\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidStopCrypto(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpDetailsToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpDetails(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpToSerial(' + varName + ')';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpMifareClassicSectorToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpSector(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpMifareClassicToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpClassic(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.PICC_DumpMifareUltralightToSerial\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.rfidDumpUltralight(' + varName + ')';
+    });
+    js = js.replace(/\bMFRC522::MIFARE_Key\b/g, 'var');
+    js = js.replace(/\bMFRC522::PICC_Type\b/g, 'var');
+    js = js.replace(/\bPICC_TYPE_MIFARE_1K\b/g, '1');
+    js = js.replace(/\bPICC_TYPE_MIFARE_4K\b/g, '2');
+    js = js.replace(/\bPICC_TYPE_MIFARE_UL\b/g, '3');
+    js = js.replace(/\bPICC_TYPE_NOT_COMPLETE\b/g, '0');
+    js = js.replace(/\bSTATUS_OK\b/g, '0');
+    js = js.replace(/\bSTATUS_ERROR\b/g, '1');
+    js = js.replace(/\bSTATUS_COLLISION\b/g, '2');
+    js = js.replace(/\bSTATUS_TIMEOUT\b/g, '3');
+    js = js.replace(/\bSTATUS_NO_ROOM\b/g, '4');
+    js = js.replace(/\bSTATUS_INTERNAL_ERROR\b/g, '5');
+    js = js.replace(/\bSTATUS_INVALID\b/g, '6');
+    js = js.replace(/\bSTATUS_CRC_WRONG\b/g, '7');
+    js = js.replace(/\bSTATUS_MIFARE_NACK\b/g, '8');
+
+    // Servo library
+    js = js.replace(/\b(\w+)\.attach\s*\(/g, '_a.servoAttach($1, ');
+    js = js.replace(/\b(\w+)\.write\s*\(/g, '_a.servoWrite($1, ');
+    js = js.replace(/\b(\w+)\.writeMicroseconds\s*\(/g, '_a.servoWriteMs($1, ');
+    js = js.replace(/\b(\w+)\.read\s*\(/g, '_a.servoRead($1');
+
+    // WebServer (ESP32) — map before the generic `.begin` rule below so
+    // server.on/send/arg/handleClient get routed to the WebServer stub.
+    js = js.replace(/\b(\w+)\.on\s*\(/g, '_a.serverOn($1, ');
+    js = js.replace(/\b(\w+)\.send\s*\(/g, '_a.serverSend($1, ');
+    js = js.replace(/\b(\w+)\.arg\s*\(/g, '_a.serverArg($1, ');
+    js = js.replace(/\b(\w+)\.handleClient\s*\(/g, '_a.serverHandleClient($1, ');
+
+    // LiquidCrystal
+    js = js.replace(/\b(\w+)\.begin\s*\(/g, '_a.lcdBegin($1, ');
+    js = js.replace(/\b(\w+)\.setCursor\s*\(/g, '_a.lcdSetCursor($1, ');
+    js = js.replace(/\b(\w+)\.print\s*\(/g, '_a.lcdPrint($1, ');
+    js = js.replace(/\b(\w+)\.clear\s*\(/g, '_a.lcdClear($1');
+    js = js.replace(/\b(\w+)\.home\s*\(/g, '_a.lcdHome($1');
+
+    // Make delay async
+    js = js.replace(/_a\.delay\s*\(/g, 'await _a.delay(');
+    js = js.replace(/_a\.delayMicroseconds\s*\(/g, 'await _a.delayMicroseconds(');
+    js = js.replace(/_a\.pulseIn\s*\(/g, 'await _a.pulseIn(');
+
+    // Auto-await calls to user-defined functions (they were transpiled to `async`,
+    // so an unawaited call would assign a Promise instead of the returned value).
+    for (const name of userFnNames) {
+      js = js.replace(
+        new RegExp(`(?<!function\\s)(?<!await\\s)(?<![\\w.])\\b${name}\\s*\\(`, 'g'),
+        `await ${name}(`
+      );
+    }
+
+    // Remove C++ type casts like (int), (float), etc.
+    js = js.replace(/\((?:int|float|double|long|byte|char|uint8_t|uint16_t)\)\s*/g, '');
+
+    // String() → String()  (already fine for JS)
+    // String to string comparison: == for strings works in JS, so fine
+    // .charAt(), .length, .indexOf() — all work in JS
+
+    // Fix: handle C++ string char arrays declared as: char str[20];
+    // Already handled above
+
+    return js;
   }
 
-  _buildContext() {
+  /* ══════════════ EXECUTION CONTEXT ══════════════ */
+  buildContext() {
     const self = this;
-    const ctx = {
-      _a: this._buildApiObject(self)
-    };
 
-    // Constants
-    const constants = {
+    return {
+      _a: {
+        /* Pin control */
+        pinMode(pin, mode) {
+          const key = `pin_${pin}`;
+          self.pinModes[key] = mode;
+          self._emitPinChange(key, self.pinStates[key] || 0);
+        },
+        digitalWrite(pin, val) {
+          const key = `pin_${pin}`;
+          const v = val ? 1 : 0;
+          self.pinStates[key] = v;
+          self._emitPinChange(key, v);
+        },
+        digitalRead(pin) {
+          const key = `pin_${pin}`;
+          // Check if button connected and pressed
+          const state = self.pinStates[key];
+          if (self.pinModes[key] === 'INPUT_PULLUP') {
+            return state !== undefined ? (state ? 0 : 1) : 1;
+          }
+          return state || 0;
+        },
+        analogWrite(pin, val) {
+          const key = `pin_${pin}`;
+          const v = Math.max(0, Math.min(255, Math.round(Number(val) || 0)));
+          self.pinStates[key] = v;
+          self._emitPinChange(key, v);
+        },
+        analogRead(pin) {
+          const key = `pin_${pin}`;
+          const v = self.pinStates[key];
+          return v !== undefined && v !== null && !Number.isNaN(v) ? v : 0;
+        },
+
+        /* Timing */
+        async delay(ms) {
+          ms = Number(ms);
+          if (!Number.isFinite(ms) || ms < 0) ms = 0;
+          const realMs = ms / self.speed;
+          self.simTime += ms;
+          self._iterSinceDelay = 0;
+          await self._delayPromise(realMs);
+        },
+        async delayMicroseconds(us) {
+          us = Number(us);
+          if (!Number.isFinite(us) || us < 0) us = 0;
+          const ms = us / 1000;
+          const realMs = ms / self.speed;
+          self.simTime += ms;
+          self._iterSinceDelay = 0;
+          await self._delayPromise(realMs);
+        },
+        millis() { return self.simTime; },
+        micros() { return self.simTime * 1000; },
+
+        /* NTP — returns current UTC epoch seconds from the browser clock */
+        ntpEpoch() { return Math.floor(Date.now() / 1000); },
+
+        /* Serial */
+        serialBegin(baud) {
+          self.serialBaud = baud;
+          self._serialLog(`[Serial] Opened at ${baud} baud`, 'system');
+        },
+        serialPrint(val, fmt) {
+          let str;
+          if (fmt === 16) str = parseInt(val).toString(16).toUpperCase();
+          else if (fmt === 2) str = parseInt(val).toString(2);
+          else if (fmt === 8) str = parseInt(val).toString(8);
+          else if (typeof val === 'number' && !Number.isInteger(val)) {
+            const dec = fmt !== undefined ? fmt : 2;
+            str = val.toFixed(dec);
+          } else str = String(val);
+          self._serialLog(str, 'data');
+        },
+        serialPrintln(val, fmt) {
+          let str;
+          if (val === undefined) str = '';
+          else if (fmt === 16) str = parseInt(val).toString(16).toUpperCase();
+          else if (fmt === 2) str = parseInt(val).toString(2);
+          else if (fmt === 8) str = parseInt(val).toString(8);
+          else if (typeof val === 'number' && !Number.isInteger(val)) {
+            const dec = fmt !== undefined ? fmt : 2;
+            str = val.toFixed(dec);
+          } else str = String(val);
+          self._serialLog(str + '\n', 'data');
+        },
+        serialRead() {
+          return self.serialInputBuffer.length > 0
+            ? self.serialInputBuffer.shift().charCodeAt(0)
+            : -1;
+        },
+        serialAvailable() { return self.serialInputBuffer.length; },
+        serialWrite(val) { self._serialLog(String.fromCharCode(val), 'data'); },
+        serialFlush() { },
+
+        /* Math helpers */
+        map(val, inMin, inMax, outMin, outMax) {
+          if (inMax === inMin) return outMin;
+          return (val - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+        },
+        constrain(val, lo, hi) { return Math.max(lo, Math.min(hi, val)); },
+        random(minOrMax, max) {
+          if (max === undefined) {
+            const hi = Math.floor(Number(minOrMax) || 0);
+            if (hi <= 0) return 0;
+            return Math.floor(Math.random() * hi);
+          }
+          const lo = Math.floor(Number(minOrMax) || 0);
+          const hi = Math.floor(Number(max) || 0);
+          if (hi <= lo) return lo;
+          return Math.floor(Math.random() * (hi - lo)) + lo;
+        },
+        randomSeed(seed) { /* Can't set Math.random seed in JS easily */ },
+        min(a, b) { return Math.min(a, b); },
+        max(a, b) { return Math.max(a, b); },
+
+        /* Bit operations */
+        bitRead(val, bit) { return (val >> bit) & 1; },
+        bitWrite(val, bit, bv) { return bv ? val | (1 << bit) : val & ~(1 << bit); },
+        bitSet(val, bit) { return val | (1 << bit); },
+        bitClear(val, bit) { return val & ~(1 << bit); },
+        bit(b) { return 1 << b; },
+        lowByte(val) { return val & 0xFF; },
+        highByte(val) { return (val >> 8) & 0xFF; },
+
+        /* Shift in/out */
+        shiftIn(dataPin, clockPin, bitOrder) { return 0; }, // stub
+        shiftOut(dataPin, clockPin, bitOrder, val) { }, // stub
+
+        /* Interactive sensor widgets (sliders on the canvas).
+           Reads a value from a placed sensor component by instance id or type.
+           Returns -999 if no matching component/field is found.
+           Example: sensorValue('dht11', 'temperature') or sensorValue('pot1', 'value') */
+        sensorValue(instIdOrType, field) {
+          const canvas = window.CircuitCanvas;
+          if (!canvas || !Array.isArray(canvas.components)) return -999;
+          const comps = canvas.components;
+          let inst = comps.find(c => c.id === instIdOrType);
+          if (!inst) inst = comps.find(c => c.type === instIdOrType);
+          if (!inst) return -999;
+          const rs = inst.runtimeState || {};
+          if (rs[field] !== undefined) return rs[field];
+          const props = inst.props || {};
+          return props[field] !== undefined ? props[field] : -999;
+        },
+
+        /* Wire (I2C) stubs */
+        wireBegin() { self._serialLog('[Wire] I2C begin\n', 'system'); },
+        wireRequestFrom(addr, qty) { return qty; },
+        wireBeginTransmission(addr) { },
+        wireEndTransmission() { return 0; },
+        wireWrite(val) { return 1; },
+        wireRead() { return 0; },
+        wireAvailable() { return 0; },
+
+        /* SPI stubs */
+        spiBegin() { self._serialLog('[SPI] begin\n', 'system'); },
+        spiTransfer(val) { return 0; },
+        spiEnd() { },
+
+        /* EEPROM */
+        eepromRead(addr) { return self._eeprom[addr & 511] || 0; },
+        eepromWrite(addr, val) { self._eeprom[addr & 511] = val & 0xFF; },
+        eepromUpdate(addr, val) { self._eeprom[addr & 511] = val & 0xFF; },
+        eepromGet(addr, obj) { return obj; },
+        eepromPut(addr, val) { },
+        eepromBegin(size) { self._serialLog(`[EEPROM] begin(${size || 512})\n`, 'system'); },
+        eepromCommit() { self._serialLog('[EEPROM] commit\n', 'system'); },
+
+        /* Serial extras */
+        serialParseInt() { return 0; },
+        serialParseFloat() { return 0.0; },
+        serialPeek() { return self.serialInputBuffer.length > 0 ? self.serialInputBuffer[0].charCodeAt(0) : -1; },
+        serialReadString() { const s = self.serialInputBuffer.join(''); self.serialInputBuffer = []; return s; },
+        serialReadStringUntil(terminator) {
+          const t = String(terminator);
+          let collected = '';
+          while (self.serialInputBuffer.length > 0) {
+            const ch = self.serialInputBuffer.shift();
+            collected += ch;
+            if (ch === t) break;
+          }
+          return collected;
+        },
+        serialReadBytes(count) {
+          const n = Math.min(count || 1, self.serialInputBuffer.length);
+          const chars = self.serialInputBuffer.splice(0, n);
+          return chars.map(c => c.charCodeAt(0));
+        },
+        serialReadBytesUntil(terminator) {
+          const t = String(terminator);
+          const result = [];
+          while (self.serialInputBuffer.length > 0) {
+            const ch = self.serialInputBuffer.shift();
+            result.push(ch.charCodeAt(0));
+            if (ch === t) break;
+          }
+          return result;
+        },
+        serialReadLine() {
+          const idx = self.serialInputBuffer.indexOf('\n');
+          if (idx === -1) { const s = self.serialInputBuffer.join(''); self.serialInputBuffer = []; return s; }
+          const line = self.serialInputBuffer.splice(0, idx + 1).join('');
+          return line.endsWith('\n') ? line.slice(0, -1) : line;
+        },
+
+        /* Tone */
+        tone(pin, freq, duration) {
+          const key = `pin_${pin}`;
+          freq = Number(freq);
+          if (!Number.isFinite(freq) || freq <= 0) freq = 440;
+          self._startTone(key, freq);
+          if (duration) setTimeout(() => self._stopTone(key), (Number(duration) || 0) / self.speed);
+        },
+        noTone(pin) { self._stopTone(`pin_${pin}`); },
+
+        /* Pulse */
+        async pulseIn(pin, val, timeout) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+          const key = `pin_${pin}`;
+          return self.pinStates[key] ? 1000 : 0;
+        },
+
+        /* Servo */
+        servoAttach(varName, pin) { /* tracked by canvas */ },
+        servoWrite(varName, angle) {
+          if (varName && varName._ssId) {
+            const ch = self._softSerial && self._softSerial[varName._ssId];
+            if (ch) { self._serialLog('[SoftwareSerial] write(' + angle + ')\n', 'data'); }
+            return;
+          }
+          self._emitEvent('servo', { angle: Math.max(0, Math.min(180, angle)) });
+        },
+        servoWriteMs(varName, us) { /* advanced */ },
+        servoRead(varName) { return 90; },
+
+        /* LCD (and OLED / WebServer share the generic `.begin` transpile) */
+        lcdBegin(varName, cols, rows) {
+          if (varName && varName._ssId) {
+            const ch = self._softSerial && self._softSerial[varName._ssId];
+            if (ch) { ch.listening = true; ch.baud = cols; }
+            self._serialLog('[SoftwareSerial] begin(' + cols + ')\n', 'system');
+            return;
+          }
+          if (varName && varName._npId) {
+            self._serialLog('[NeoPixel] begin\n', 'system');
+            return;
+          }
+          if (varName && varName.__webserver) {
+            const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
+            cfg.port = Number(cols) || cfg.port || 80;
+            self._serialLog(`[WebServer] HTTP server started on port ${cfg.port} → http://192.168.1.105/\n`, 'system');
+            return;
+          }
+          if (varName && varName.__oled) {
+            self._emitEvent('oled_power', { on: true });
+            return;
+          }
+          self._emitEvent('lcd_power', { on: true });
+        },
+        lcdSetCursor(varName, col, row) {
+          self._lcdCursor = { col: Number(col) || 0, row: Number(row) || 0 };
+        },
+        lcdPrint(varName, val) {
+          if (varName && varName._ssId) {
+            const ch = self._softSerial && self._softSerial[varName._ssId];
+            if (ch) { self._serialLog(String(val) + '\n', 'data'); }
+            return;
+          }
+          const text = String(val);
+          const cursor = self._lcdCursor || { col: 0, row: 0 };
+          // OLED (Adafruit_SSD1306): cursor is in pixels, sized by setTextSize()
+          if (varName && varName.__oled) {
+            const size = self._oledTextSize || 1;
+            self._emitEvent('oled_draw', {
+              op: 'print',
+              text,
+              cursor: { col: cursor.col, row: cursor.row },
+              size,
+              color: self._oledTextColor === 0 ? 0 : 1,
+            });
+            self._lcdCursor = { col: cursor.col + text.length * 6 * size, row: cursor.row };
+            return;
+          }
+          self._emitEvent('lcd_print', { text, cursor: { col: cursor.col, row: cursor.row } });
+          // Real LCDs advance the cursor after each character (wrap to row 2)
+          let col = cursor.col + text.length;
+          let row = cursor.row;
+          if (col >= 16 && row === 0) { col -= 16; row = 1; }
+          if (col >= 16) col = 15;
+          self._lcdCursor = { col, row };
+        },
+        lcdClear(varName) {
+          if (varName && varName._npId) {
+            const np = self._neopixels && self._neopixels[varName._npId];
+            if (np) np.pixels.fill(0);
+            return;
+          }
+          if (varName && varName.__oled) {
+            self._emitEvent('oled_draw', { op: 'clear' });
+            return;
+          }
+          self._emitEvent('lcd_clear', {});
+        },
+        lcdHome(varName) { self._lcdCursor = { col: 0, row: 0 }; },
+
+        /* ══════════ ESP32 — WebServer (simulated HTTP) ══════════ */
+        serverOn(server, path, m3, m4) {
+          const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
+          const handler = typeof m3 === 'function' ? m3 : m4;
+          const method = typeof m3 === 'function' ? 'GET' : String(m3 || 'GET').replace('HTTP_', '');
+          if (typeof handler === 'function') {
+            cfg.routes.push({ path: String(path), method, handler });
+            self._serialLog(`[WebServer] Route registered: ${method} ${path}\n`, 'system');
+          } else {
+            self._serialLog(`[WebServer] on("${path}"): handler is not a function — route ignored\n`, 'system');
+          }
+        },
+        serverSend(server, code, type, content) {
+          self._webResp = {
+            code: Number(code) || 200,
+            type: String(type || ''),
+            content: String(content || ''),
+          };
+        },
+        serverArg(server, name) { return ''; },
+        serverHandleClient(server) {
+          const cfg = self._web;
+          if (!cfg || !cfg.routes.length) return;
+          const now = Date.now();
+          if (now - (cfg.lastHit || 0) < 1500) return; // one simulated request per 1.5s
+          cfg.lastHit = now;
+          const route = cfg.routes[cfg.reqIdx = ((cfg.reqIdx || 0) % cfg.routes.length)];
+          cfg.reqIdx++;
+          self._webResp = null;
+          // Handlers are transpiled to async functions — log when they resolve.
+          Promise.resolve()
+            .then(() => route.handler())
+            .then(() => {
+              const resp = self._webResp || { code: 200, type: 'text/html', content: '' };
+              self._serialLog(`[WebServer] ${route.method} ${route.path} → ${resp.code} (${resp.type})\n`, 'system');
+              const snippet = String(resp.content).replace(/\s*\n\s*/g, ' ').trim();
+              if (snippet) {
+                self._serialLog(`[WebServer] Response: ${snippet.length > 320 ? snippet.slice(0, 320) + '…' : snippet}\n`, 'system');
+              }
+            })
+            .catch((e) => {
+              self._serialLog(`[WebServer] ${route.method} ${route.path} handler error: ${e && e.message ? e.message : e}\n`, 'system');
+            });
+        },
+
+        /* Interrupts */
+        attachInterrupt(num, fn, mode) { },
+        detachInterrupt(num) { },
+
+        /* ══════════ ESP32 — LEDC PWM ══════════ */
+        ledcSetup(channel, freq, resolution) {
+          const res = Number(resolution) || 8;
+          self._ledcChannels[channel] = {
+            freq: Number(freq) || 5000,
+            resolution: res,
+            maxDuty: Math.pow(2, res) - 1,
+          };
+          self._serialLog(`[ESP32] LEDC channel ${channel} → ${self._ledcChannels[channel].freq}Hz (${res}-bit)\n`, 'system');
+          return self._ledcChannels[channel].maxDuty;
+        },
+        ledcSetupChannel(channel, freq, resolution) {
+          return this.ledcSetup(channel, freq, resolution);
+        },
+        ledcAttachPin(pin, channel) {
+          const cfg = self._ledcChannels[channel] || (self._ledcChannels[channel] = { freq: 5000, resolution: 8, maxDuty: 255 });
+          cfg.pin = Number(pin);
+          self._serialLog(`[ESP32] LEDC: attached GPIO ${cfg.pin} to channel ${channel}\n`, 'system');
+          return 0;
+        },
+        ledcAttach(pin, freq, resolution) {
+          // Modern (v3+) ESP32 core API: ledcAttach(pin, freq, resolution)
+          const res = Number(resolution) || 8;
+          self._ledcChannels[Number(pin)] = {
+            pin: Number(pin),
+            freq: Number(freq) || 5000,
+            resolution: res,
+            maxDuty: Math.pow(2, res) - 1,
+          };
+          self._serialLog(`[ESP32] LEDC: attached GPIO ${Number(pin)} → ${Number(freq) || 5000}Hz (${res}-bit)\n`, 'system');
+          return true;
+        },
+        ledcWrite(channelOrPin, duty) {
+          let pin;
+          const cfg = self._ledcChannels[channelOrPin];
+          if (cfg && cfg.pin !== undefined) {
+            pin = cfg.pin;
+          } else {
+            // Also accept a bare GPIO pin (ledcWrite(pin, duty)) or a channel
+            // that was attached by GPIO number (new API style).
+            pin = Number(channelOrPin);
+          }
+          if (!Number.isFinite(pin)) return;
+          const maxDuty = (cfg && cfg.maxDuty) || 255;
+          const v = Math.max(0, Math.min(255, Math.round((Number(duty) || 0) / maxDuty * 255)));
+          self.pinStates[`pin_${pin}`] = v;
+          self._emitPinChange(`pin_${pin}`, v);
+        },
+        ledcRead(channelOrPin) {
+          const cfg = self._ledcChannels[channelOrPin];
+          const pin = cfg && cfg.pin !== undefined ? cfg.pin : Number(channelOrPin);
+          if (!Number.isFinite(pin)) return 0;
+          return self.pinStates[`pin_${pin}`] || 0;
+        },
+
+        /* ══════════ ESP32 — analog / DAC / sensors ══════════ */
+        dacWrite(pin, value) {
+          const key = `pin_${pin}`;
+          const v = Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+          self.pinStates[key] = v;
+          self._emitPinChange(key, v);
+        },
+        analogReadMilliVolts(pin) {
+          const v = self.pinStates[`pin_${pin}`];
+          if (v === undefined || v === null) return 0;
+          // Simulation stores analog values in the 0–1023 range (10-bit)
+          return Math.round((Number(v) || 0) * 3300 / 1023);
+        },
+        analogReadMicroVolts(pin) { return this.analogReadMilliVolts(pin) * 1000; },
+        touchRead(pin) { return 0; },
+        hallRead() { return 0; },
+        temperatureRead() { return 25.0; },
+        digitalPinToInterrupt(pin) { return Number(pin); },
+
+        /* ══════════ ESP32 — Wi-Fi (simulated) ══════════ */
+        wifiBegin(ssid, pass) {
+          self._serialLog(`[ESP32 Wi-Fi] Connecting to "${ssid}"...\n`, 'system');
+          setTimeout(() => {
+            self._serialLog('[ESP32 Wi-Fi] Connected! IP: 192.168.1.105\n', 'system');
+          }, Math.max(50, 800 / self.speed));
+        },
+        wifiLocalIP() { return '192.168.1.105'; },
+        wifiSoftAPIP() { return '192.168.4.1'; },
+        wifiStatus() { return 3; }, // WL_CONNECTED
+        wifiDisconnect() { self._serialLog('[ESP32 Wi-Fi] Disconnected\n', 'system'); },
+        wifiMode() { },
+        wifiSoftAP(ssid, pass) {
+          self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system');
+        },
+
+        /* ══════════ SoftwareSerial ══════════ */
+        softwareSerialNew(rxPin, txPin) {
+          const id = `_ss_${rxPin}_${txPin}`;
+          const buf = [];
+          self._softSerial = self._softSerial || {};
+          self._softSerial[id] = { rxPin, txPin, buf, listening: false };
+          self._serialLog(`[SoftwareSerial] Created rx=${rxPin} tx=${txPin}\n`, 'system');
+          return { _ssId: id, rxPin, txPin };
+        },
+        softSerialBegin(obj, baud) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch) { ch.listening = true; ch.baud = baud; }
+          self._serialLog(`[SoftwareSerial] begin(${baud})\n`, 'system');
+        },
+        softSerialWrite(obj, val) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch) { self._serialLog(`[SoftwareSerial] write(${val})\n`, 'data'); }
+        },
+        softSerialPrintln(obj, val) {
+          self._serialLog(String(val) + '\n', 'data');
+        },
+        softSerialRead(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch && ch.buf.length > 0) return ch.buf.shift().charCodeAt(0);
+          return -1;
+        },
+        softSerialAvailable(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          return ch ? ch.buf.length : 0;
+        },
+        softSerialPeek(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch && ch.buf.length > 0) return ch.buf[0].charCodeAt(0);
+          return -1;
+        },
+        softSerialEnd(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch) ch.listening = false;
+        },
+        softSerialFlush(obj) { },
+        softSerialListen(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          if (ch) ch.listening = true;
+        },
+        softSerialIsListening(obj) {
+          const ch = self._softSerial && self._softSerial[obj._ssId];
+          return ch ? ch.listening : false;
+        },
+
+        /* ══════════ Stepper ══════════ */
+        stepperNew(stepsPerRev, pin1, pin2) {
+          const id = `_stepper_${pin1}_${pin2}`;
+          self._steppers = self._steppers || {};
+          const s = { stepsPerRev, pin1, pin2, pos: 0, target: 0, speed: 1, accel: 100 };
+          self._steppers[id] = s;
+          self._serialLog(`[Stepper] Created stepsPerRev=${stepsPerRev}\n`, 'system');
+          return { _stepperId: id };
+        },
+        stepperSetSpeed(obj, rpm) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) s.speed = Number(rpm) || 1;
+        },
+        stepperStep(obj, steps) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) { s.pos += Number(steps) || 0; s.target = s.pos; }
+          self._serialLog(`[Stepper] step(${steps}) → pos=${s ? s.pos : 0}\n`, 'system');
+        },
+        stepperDistanceToGo(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          return s ? s.target - s.pos : 0;
+        },
+        stepperCurrentPosition(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          return s ? s.pos : 0;
+        },
+        stepperSetCurrentPosition(obj, pos) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) s.pos = s.target = Number(pos) || 0;
+        },
+        stepperRun(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (!s) return false;
+          if (s.pos === s.target) return false;
+          s.pos += s.pos < s.target ? 1 : -1;
+          return true;
+        },
+        stepperRunSpeed(obj) {
+          return this.stepperRun(obj);
+        },
+        stepperStop(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) s.target = s.pos;
+        },
+        stepperDisableOutputs(obj) { },
+        stepperEnableOutputs(obj) { },
+        stepperMaxSpeed(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          return s ? s.speed : 0;
+        },
+        stepperAcceleration(obj) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          return s ? s.accel : 0;
+        },
+        stepperSetAcceleration(obj, accel) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          if (s) s.accel = Number(accel) || 100;
+        },
+
+        /* ══════════ NewPing ══════════ */
+        newPingNew(triggerPin, echoPin, maxDistance) {
+          const id = `_ping_${triggerPin}_${echoPin}`;
+          self._pings = self._pings || {};
+          self._pings[id] = { triggerPin, echoPin, maxDist: maxDistance || 400 };
+          return { _pingId: id };
+        },
+        newPingCm(obj) {
+          const p = self._pings && self._pings[obj._pingId];
+          if (!p) return 0;
+          const key = `pin_${p.triggerPin}`;
+          const v = self.pinStates[key] || 0;
+          return v > 0 ? Math.min(p.maxDist, Math.round(Math.random() * p.maxDist)) : 0;
+        },
+        newPingInch(obj) {
+          return Math.round(this.newPingCm(obj) / 2.54);
+        },
+        newPingMedian(obj, iter) {
+          const results = [];
+          for (let i = 0; i < (iter || 5); i++) results.push(this.newPingCm(obj));
+          results.sort((a, b) => a - b);
+          return results[Math.floor(results.length / 2)] || 0;
+        },
+        newPingPing(obj) {
+          return this.newPingCm(obj);
+        },
+
+        /* ══════════ IRremote ══════════ */
+        irsendNew(pin) {
+          self._irsend = self._irsend || {};
+          self._irsend.pin = pin;
+          return { _irId: 'irsend' };
+        },
+        irrecvNew(pin) {
+          self._irrecv = self._irrecv || {};
+          self._irrecv.pin = pin;
+          self._irrecv.results = { protocol: 0, value: 0, bits: 0 };
+          return { _irId: 'irrecv' };
+        },
+        irsendNEC(obj, data, nbits) {
+          self._serialLog(`[IRremote] Send NEC: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 32} bits)\n`, 'system');
+        },
+        irsendSony(obj, data, nbits) {
+          self._serialLog(`[IRremote] Send Sony: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 12} bits)\n`, 'system');
+        },
+        irsendRC5(obj, data, nbits) {
+          self._serialLog(`[IRremote] Send RC5: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 14} bits)\n`, 'system');
+        },
+        irsendRC6(obj, data, nbits) {
+          self._serialLog(`[IRremote] Send RC6: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 20} bits)\n`, 'system');
+        },
+        irsendRaw(buf, len, hz) {
+          self._serialLog(`[IRremote] Send raw: ${len} samples\n`, 'system');
+        },
+        irsendStop(obj) { },
+        irrecvEnableIRIn(obj) {
+          self._serialLog('[IRremote] IR receiver enabled\n', 'system');
+        },
+        irrecvDecode(obj, results) {
+          const r = self._irrecv ? self._irrecv.results : { protocol: 0, value: 0, bits: 0 };
+          if (results) {
+            results.protocol = r.protocol;
+            results.value = r.value;
+            results.bits = r.bits;
+          }
+          return false;
+        },
+        irrecvResume(obj) { },
+
+        /* ══════════ FastLED ══════════ */
+        fastledAddLeds(ledType, dataPin, numLeds) {
+          self._fastled = self._fastled || { leds: [], brightness: 255 };
+          self._fastled.leds = new Array(Number(numLeds) || 0).fill(null).map(() => ({ r: 0, g: 0, b: 0 }));
+          self._fastled.dataPin = dataPin;
+          self._serialLog(`[FastLED] ${numLeds} LEDs on pin ${dataPin}\n`, 'system');
+        },
+        fastledShow() {
+          if (self._fastled) {
+            self._emitEvent('fastled_show', { leds: self._fastled.leds, brightness: self._fastled.brightness });
+          }
+        },
+        fastledSetBrightness(b) {
+          if (self._fastled) self._fastled.brightness = Math.max(0, Math.min(255, Number(b) || 0));
+        },
+        fastledSetCorrection(type) { },
+        fastledSetColorCorrection(type) { },
+        fastledMaxPower(milliamps) { },
+        fastledClear() {
+          if (self._fastled) self._fastled.leds.forEach(l => { l.r = 0; l.g = 0; l.b = 0; });
+        },
+        crgbNew(r, g, b) { return { r: Math.max(0, Math.min(255, Number(r) || 0)), g: Math.max(0, Math.min(255, Number(g) || 0)), b: Math.max(0, Math.min(255, Number(b) || 0)) }; },
+        crgbArray(size) { return new Array(Number(size) || 0).fill(null).map(() => ({ r: 0, g: 0, b: 0 })); },
+        chsvNew(h, s, v) {
+          h = Number(h) || 0; s = Number(s) || 255; v = Number(v) || 255;
+          const c = { r: 0, g: 0, b: 0 };
+          const i = Math.floor(h / 43) % 6;
+          const f = (h / 43) - Math.floor(h / 43);
+          const p = (v * (255 - s)) >> 8;
+          const q = (v * (255 - (s * f) >> 8)) >> 8;
+          const t = (v * (255 - (s * (255 - f) >> 8))) >> 8;
+          switch (i) {
+            case 0: c.r = v; c.g = t; c.b = p; break;
+            case 1: c.r = q; c.g = v; c.b = p; break;
+            case 2: c.r = p; c.g = v; c.b = t; break;
+            case 3: c.r = p; c.g = q; c.b = v; break;
+            case 4: c.r = t; c.g = p; c.b = v; break;
+            case 5: c.r = v; c.g = p; c.b = q; break;
+          }
+          return c;
+        },
+
+        /* ══════════ Adafruit NeoPixel ══════════ */
+        neopixelNew(numLedsPin, pinOrType, type) {
+          const numLeds = Number(numLedsPin) || 0;
+          const pin = typeof pinOrType === 'number' ? pinOrType : 6;
+          const id = `_np_${pin}`;
+          self._neopixels = self._neopixels || {};
+          self._neopixels[id] = { pin, numLeds, brightness: 255, pixels: new Array(numLeds).fill(0) };
+          return { _npId: id };
+        },
+        neopixelBegin(obj) {
+          self._serialLog('[NeoPixel] begin\n', 'system');
+        },
+        neopixelShow(obj) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          if (np) {
+            const leds = np.pixels.map(c => ({
+              r: (c >> 16) & 0xFF,
+              g: (c >> 8) & 0xFF,
+              b: c & 0xFF,
+            }));
+            self._emitEvent('fastled_show', { leds, brightness: np.brightness });
+          }
+        },
+        neopixelSetPixelColor(obj, i, rOrColor, g, b) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          if (!np) return;
+          const i2 = Number(i) || 0;
+          if (g !== undefined) {
+            np.pixels[i2] = ((Number(rOrColor) || 0) << 16) | ((Number(g) || 0) << 8) | (Number(b) || 0);
+          } else {
+            np.pixels[i2] = Number(rOrColor) || 0;
+          }
+        },
+        neopixelGetPixelColor(obj, i) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          return np ? (np.pixels[Number(i) || 0] || 0) : 0;
+        },
+        neopixelSetBrightness(obj, b) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          if (np) np.brightness = Math.max(0, Math.min(255, Number(b) || 0));
+        },
+        neopixelColor(obj, r, g, b) {
+          return ((Number(r) || 0) << 16) | ((Number(g) || 0) << 8) | (Number(b) || 0);
+        },
+        neopixelNumPixels(obj) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          return np ? np.numLeds : 0;
+        },
+        neopixelClear(obj) {
+          const np = self._neopixels && self._neopixels[obj._npId];
+          if (np) np.pixels.fill(0);
+        },
+
+        /* ══════════ MFRC522 RFID ══════════ */
+        rfidNew(csPin, rstPin) {
+          const id = `_rfid_${csPin}_${rstPin}`;
+          self._rfid = self._rfid || {};
+          self._rfid[id] = { csPin, rstPin, initialized: false, cardPresent: false, uidBytes: [0xA1, 0xB2, 0xC3, 0xD4], uidSize: 4 };
+          self._serialLog(`[MFRC522] Created CS=${csPin} RST=${rstPin}\n`, 'system');
+          return { _rfidId: id, uid: { uidByte: null, size: 0 } };
+        },
+        rfidInit(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          if (r) {
+            r.initialized = true;
+            self._serialLog('[MFRC522] PCD_Init\n', 'system');
+            self._serialLog('[MFRC522] Firmware: v0x92 (simulated)\n', 'system');
+          }
+        },
+        rfidDumpVersion(obj) {
+          self._serialLog('[MFRC522] PCD Version: v2.0 (simulated)\n', 'system');
+        },
+        rfidIsNewCard(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          if (!r || !r.initialized) return false;
+          // Simulate a card being present every few calls
+          r.cardPresent = Math.random() < 0.3;
+          return r.cardPresent;
+        },
+        rfidReadCard(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          if (!r || !r.cardPresent) return false;
+          obj.uid = { uidByte: r.uidBytes, size: r.uidSize };
+          self._serialLog(`[MFRC522] Card UID: ${r.uidBytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ')}\n`, 'system');
+          return true;
+        },
+        rfidHaltA(obj) { },
+        rfidStopCrypto(obj) { },
+        rfidUidBytes(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          return r ? r.uidBytes : [0];
+        },
+        rfidUidSize(obj) {
+          const r = self._rfid && self._rfid[obj._rfidId];
+          return r ? r.uidSize : 0;
+        },
+        rfidMifareRead(obj, blockAddr, buf) {
+          self._serialLog(`[MFRC522] MIFARE_Read block ${blockAddr}\n`, 'system');
+          return true;
+        },
+        rfidMifareWrite(obj, blockAddr, buf) {
+          self._serialLog(`[MFRC522] MIFARE_Write block ${blockAddr}\n`, 'system');
+          return true;
+        },
+        rfidREQA(obj) { return 0; },
+        rfidWUPA(obj) { return 0; },
+        rfidSelect(obj) { return 0; },
+        rfidComputeBCC(obj, buf) { return 0; },
+        rfidDumpDetails(obj) { },
+        rfidDumpToSerial(obj) { },
+        rfidDumpSector(obj, uid, sector) { },
+        rfidDumpClassic(obj, uid, type) { },
+        rfidDumpUltralight(obj) { },
+      },
+
+      /* Global constants */
       HIGH: 1, LOW: 0,
       INPUT: 'INPUT', OUTPUT: 'OUTPUT', INPUT_PULLUP: 'INPUT_PULLUP',
       RISING: 'RISING', FALLING: 'FALLING', CHANGE: 'CHANGE',
@@ -732,1252 +1407,396 @@ class ArduinoSimulator {
       DEG_TO_RAD: Math.PI / 180, RAD_TO_DEG: 180 / Math.PI,
       MSBFIRST: 1, LSBFIRST: 0,
       BYTE: 0, WORD: 1,
+      // ESP32 Wi-Fi constants
       WIFI_STA: 1, WIFI_AP: 2, WIFI_AP_STA: 3,
       WL_CONNECTED: 3, WL_DISCONNECTED: 6,
-      HTTP_GET: 'GET', HTTP_POST: 'POST', HTTP_PUT: 'PUT',
-      HTTP_DELETE: 'DELETE', HTTP_HEAD: 'HEAD', HTTP_OPTIONS: 'OPTIONS',
-      HTTP_PATCH: 'PATCH', HTTP_ANY: 'ANY',
+      // ESP32 WebServer HTTP method constants
+      HTTP_GET: 'GET', HTTP_POST: 'POST', HTTP_PUT: 'PUT', HTTP_DELETE: 'DELETE',
+      HTTP_HEAD: 'HEAD', HTTP_OPTIONS: 'OPTIONS', HTTP_PATCH: 'PATCH', HTTP_ANY: 'ANY',
+      // Adafruit_SSD1306 constants
       SSD1306_SWITCHCAPVCC: 0x01, SSD1306_EXTERNALVCC: 0x02,
       SSD1306_I2C_ADDRESS: 0x3C, SSD1306_WHITE: 1, SSD1306_BLACK: 0,
       SSD1306_SETCONTRAST: 0x81, SSD1306_SETVCOMDETECT: 0xDB,
-      DEC: 10, HEX: 16, OCT: 8, BIN: 2
-    };
-    Object.assign(ctx, constants);
 
-    // Library stubs
-    ctx.Servo = function() { return {}; };
-    ctx.LiquidCrystal = function() { 
-      const powerOn = () => self._emitEvent('lcd_power', { on: true });
-      return {
-        init: powerOn, begin: powerOn, backlight: powerOn,
-        noBacklight() {}, setBacklight() {}, display() {},
-        noDisplay() {}, blink() {}, noBlink() {},
-        cursor() {}, noCursor() {}, createChar() {}
-      };
-    };
-    ctx.LiquidCrystal_I2C = ctx.LiquidCrystal;
-    ctx.Adafruit_SSD1306 = function() {
-      const draw = (op, extra) => self._emitEvent('oled_draw', Object.assign({ op }, extra));
-      return {
-        __oled: true,
-        begin() { self._emitEvent('oled_power', { on: true }); },
-        init() { self._emitEvent('oled_power', { on: true }); },
-        clearDisplay() { draw('clear'); },
-        display() {},
-        setCursor(col, row) { self._lcdCursor = { col: Math.round(Number(col) || 0), row: Math.round(Number(row) || 0) }; },
-        setTextSize(s) { self._oledTextSize = Math.max(1, Math.round(Number(s) || 1)); },
-        setTextColor(c) { self._oledTextColor = c ? 1 : 0; },
-        setTextWrap(w) {},
-        setRotation(r) {},
-        invertDisplay(i) { draw('invert', { invert: !!i }); },
-        setContrast(c) {},
-        drawPixel(x, y) { draw('pixel', { x: Math.round(Number(x) || 0), y: Math.round(Number(y) || 0) }); },
-        drawLine(x0, y0, x1, y1) { draw('line', { 
-          x0: Math.round(Number(x0) || 0), y0: Math.round(Number(y0) || 0),
-          x1: Math.round(Number(x1) || 0), y1: Math.round(Number(y1) || 0)
-        }); },
-        drawRect(x, y, w, h) { draw('rect', {
-          x: Math.round(Number(x) || 0), y: Math.round(Number(y) || 0),
-          w: Math.round(Number(w) || 0), h: Math.round(Number(h) || 0)
-        }); },
-        fillRect(x, y, w, h) { draw('fillRect', {
-          x: Math.round(Number(x) || 0), y: Math.round(Number(y) || 0),
-          w: Math.round(Number(w) || 0), h: Math.round(Number(h) || 0)
-        }); },
-        drawCircle(x, y, r) { draw('circle', {
-          x: Math.round(Number(x) || 0), y: Math.round(Number(y) || 0),
-          r: Math.round(Number(r) || 0)
-        }); },
-        fillCircle(x, y, r) { draw('fillCircle', {
-          x: Math.round(Number(x) || 0), y: Math.round(Number(y) || 0),
-          r: Math.round(Number(r) || 0)
-        }); },
-        fillScreen(color) { draw('fillScreen', { color: color ? 1 : 0 }); },
-        drawBitmap() {}
-      };
-    };
-
-    ctx.Wire = {
-      begin() {}, requestFrom() { return 0; },
-      beginTransmission() {}, endTransmission() { return 0; },
-      write() { return 1; }, read() { return 0; }, available() { return 0; }
-    };
-    ctx.SPI = {
-      begin() {}, transfer() { return 0; }, end() {},
-      setClockDivider() {}, setBitOrder() {}, setDataMode() {}
-    };
-    ctx.WiFi = {
-      begin(ssid, pass) {
-        self._serialLog(`[ESP32 Wi-Fi] Connecting to "${ssid}"...\n`, 'system');
-        setTimeout(() => self._serialLog('[ESP32 Wi-Fi] Connected! IP: 192.168.1.105\n', 'system'), 
-          Math.max(50, 800 / self.speed));
-      },
-      localIP() { return '192.168.1.105'; },
-      softAPIP() { return '192.168.4.1'; },
-      status() { return 3; },
-      disconnect() {},
-      mode() {},
-      softAP(ssid) { self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system'); },
-      setAutoConnect() {}
-    };
-    ctx.WiFiClient = function() { return {}; };
-    ctx.WebServer = function(port) {
-      const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
-      cfg.port = Number(port) || cfg.port || 80;
-      return {
-        __webserver: true,
-        begin() {},
-        send() {},
-        on() {},
-        arg() { return ''; },
-        sendHeader() {},
-        handleClient() {}
-      };
-    };
-    ctx.PubSubClient = function() { return self._buildPubSubClient(); };
-
-    return ctx;
-  }
-
-  _buildApiObject(self) {
-    return {
-      /* ── Pin Control ── */
-      pinMode(pin, mode) {
-        const p = self._validatePin(pin);
-        const validModes = ['INPUT', 'OUTPUT', 'INPUT_PULLUP'];
-        if (!validModes.includes(mode)) {
-          throw new Error(`Invalid pin mode: ${mode}. Valid modes: ${validModes.join(', ')}`);
-        }
-        const key = `pin_${p}`;
-        self.pinModes.set(key, mode);
-        self._emitPinChange(key, self.pinStates.get(key) || 0);
-      },
-
-      digitalWrite(pin, val) {
-        const p = self._validatePin(pin);
-        const v = val ? 1 : 0;
-        const key = `pin_${p}`;
-        self.pinStates.set(key, v);
-        self._emitPinChange(key, v);
-      },
-
-      digitalRead(pin) {
-        const p = self._validatePin(pin);
-        const key = `pin_${p}`;
-        const state = self.pinStates.get(key);
-        if (self.pinModes.get(key) === 'INPUT_PULLUP') {
-          return state !== undefined ? (state ? 0 : 1) : 1;
-        }
-        return state || 0;
-      },
-
-      analogWrite(pin, val) {
-        const p = self._validatePin(pin);
-        const v = Math.max(0, Math.min(255, Math.round(Number(val) || 0)));
-        const key = `pin_${p}`;
-        self.pinStates.set(key, v);
-        self._emitPinChange(key, v);
-      },
-
-      analogRead(pin) {
-        const p = self._validatePin(pin);
-        const key = `pin_${p}`;
-        const v = self.pinStates.get(key);
-        return v !== undefined && v !== null && !Number.isNaN(v) ? v : 0;
-      },
-
-      /* ── Timing ── */
-      async delay(ms) {
-        ms = Number(ms);
-        if (!Number.isFinite(ms) || ms < 0) ms = 0;
-        if (ms > 86400000) { // 24 hours max
-          throw new Error('delay() maximum is 24 hours (86,400,000 ms)');
-        }
-        const realMs = ms / self.speed;
-        self.simTime += ms;
-        self._iterSinceDelay = 0;
-        await self._delayPromise(realMs);
-      },
-
-      async delayMicroseconds(us) {
-        us = Number(us);
-        if (!Number.isFinite(us) || us < 0) us = 0;
-        if (us > 1000000000) { // 1 second max
-          throw new Error('delayMicroseconds() maximum is 1,000,000,000 µs (1 second)');
-        }
-        const ms = us / 1000;
-        const realMs = ms / self.speed;
-        self.simTime += ms;
-        self._iterSinceDelay = 0;
-        await self._delayPromise(realMs);
-      },
-
-      millis() { return self.simTime; },
-      micros() { return self.simTime * 1000; },
-      ntpEpoch() { return Math.floor(Date.now() / 1000); },
-
-      /* ── Serial ── */
-      serialBegin(baud) {
-        const b = Number(baud);
-        if (!Number.isFinite(b) || b < 300 || b > 2000000) {
-          throw new Error(`Invalid baud rate: ${baud}. Valid range: 300-2,000,000`);
-        }
-        self.serialBaud = b;
-        self._serialLog(`[Serial] Opened at ${b} baud\n`, 'system');
-      },
-
-      serialPrint(val, fmt) {
-        let str = self._formatSerialValue(val, fmt);
-        self._serialLog(str, 'data');
-      },
-
-      serialPrintln(val, fmt) {
-        let str = val === undefined ? '' : self._formatSerialValue(val, fmt);
-        self._serialLog(str + '\n', 'data');
-      },
-
-      serialRead() {
-        return self.serialInputBuffer.length > 0
-          ? self.serialInputBuffer.shift().charCodeAt(0)
-          : -1;
-      },
-
-      serialAvailable() { return self.serialInputBuffer.length; },
-
-      serialWrite(val) {
-        const code = Number(val);
-        if (!Number.isFinite(code) || code < 0 || code > 255) {
-          throw new Error(`serialWrite() value must be 0-255`);
-        }
-        self._serialLog(String.fromCharCode(code), 'data');
-      },
-
-      serialFlush() {},
-      serialParseInt() { return 0; },
-      serialParseFloat() { return 0.0; },
-
-      serialPeek() {
-        return self.serialInputBuffer.length > 0 
-          ? self.serialInputBuffer[0].charCodeAt(0) 
-          : -1;
-      },
-
-      serialReadString() {
-        const s = self.serialInputBuffer.join('');
-        self.serialInputBuffer = [];
-        return s;
-      },
-
-      serialReadStringUntil(terminator) {
-        const t = String(terminator);
-        let collected = '';
-        while (self.serialInputBuffer.length > 0) {
-          const ch = self.serialInputBuffer.shift();
-          collected += ch;
-          if (ch === t) break;
-        }
-        return collected;
-      },
-
-      serialReadBytes(count) {
-        const n = Math.min(count || 1, self.serialInputBuffer.length);
-        const chars = self.serialInputBuffer.splice(0, n);
-        return chars.map(c => c.charCodeAt(0));
-      },
-
-      serialReadBytesUntil(terminator) {
-        const t = String(terminator);
-        const result = [];
-        while (self.serialInputBuffer.length > 0) {
-          const ch = self.serialInputBuffer.shift();
-          result.push(ch.charCodeAt(0));
-          if (ch === t) break;
-        }
-        return result;
-      },
-
-      serialReadLine() {
-        const idx = self.serialInputBuffer.indexOf('\n');
-        if (idx === -1) {
-          const s = self.serialInputBuffer.join('');
-          self.serialInputBuffer = [];
-          return s;
-        }
-        const line = self.serialInputBuffer.splice(0, idx + 1).join('');
-        return line.endsWith('\n') ? line.slice(0, -1) : line;
-      },
-
-      /* ── Math ── */
-      map(val, inMin, inMax, outMin, outMax) {
-        const v = Number(val), imin = Number(inMin), imax = Number(inMax);
-        const omin = Number(outMin), omax = Number(outMax);
-        if (!Number.isFinite(v) || !Number.isFinite(imin) || !Number.isFinite(imax) ||
-            !Number.isFinite(omin) || !Number.isFinite(omax)) {
-          throw new Error('map() arguments must be numbers');
-        }
-        if (imax === imin) return omin;
-        return (v - imin) * (omax - omin) / (imax - imin) + omin;
-      },
-
-      constrain(val, lo, hi) {
-        const v = Number(val), low = Number(lo), high = Number(hi);
-        if (!Number.isFinite(v) || !Number.isFinite(low) || !Number.isFinite(high)) {
-          throw new Error('constrain() arguments must be numbers');
-        }
-        return Math.max(low, Math.min(high, v));
-      },
-
-      random(minOrMax, max) {
-        if (max === undefined) {
-          const hi = Math.floor(Number(minOrMax) || 0);
-          if (hi <= 0) return 0;
-          return Math.floor(Math.random() * hi);
-        }
-        const lo = Math.floor(Number(minOrMax) || 0);
-        const hi = Math.floor(Number(max) || 0);
-        if (hi <= lo) return lo;
-        return Math.floor(Math.random() * (hi - lo)) + lo;
-      },
-
-      randomSeed(seed) {
-        // Seed is ignored in JS
-      },
-
-      min(a, b) { return Math.min(Number(a) || 0, Number(b) || 0); },
-      max(a, b) { return Math.max(Number(a) || 0, Number(b) || 0); },
-
-      /* ── Bit Operations ── */
-      bitRead(val, bit) {
-        const v = Number(val), b = Number(bit);
-        if (!Number.isInteger(v) || !Number.isInteger(b) || b < 0 || b > 31) {
-          throw new Error('bitRead() requires integer val and bit 0-31');
-        }
-        return (v >> b) & 1;
-      },
-
-      bitWrite(val, bit, bv) {
-        const v = Number(val), b = Number(bit);
-        if (!Number.isInteger(v) || !Number.isInteger(b) || b < 0 || b > 31) {
-          throw new Error('bitWrite() requires integer val and bit 0-31');
-        }
-        return bv ? v | (1 << b) : v & ~(1 << b);
-      },
-
-      bitSet(val, bit) {
-        const v = Number(val), b = Number(bit);
-        if (!Number.isInteger(v) || !Number.isInteger(b) || b < 0 || b > 31) {
-          throw new Error('bitSet() requires integer val and bit 0-31');
-        }
-        return v | (1 << b);
-      },
-
-      bitClear(val, bit) {
-        const v = Number(val), b = Number(bit);
-        if (!Number.isInteger(v) || !Number.isInteger(b) || b < 0 || b > 31) {
-          throw new Error('bitClear() requires integer val and bit 0-31');
-        }
-        return v & ~(1 << b);
-      },
-
-      bit(b) {
-        const bit = Number(b);
-        if (!Number.isInteger(bit) || bit < 0 || bit > 31) {
-          throw new Error('bit() requires integer 0-31');
-        }
-        return 1 << bit;
-      },
-
-      lowByte(val) { return (Number(val) || 0) & 0xFF; },
-      highByte(val) { return ((Number(val) || 0) >> 8) & 0xFF; },
-
-      shiftIn(dataPin, clockPin, bitOrder) { return 0; },
-      shiftOut(dataPin, clockPin, bitOrder, val) {},
-
-      /* ── Sensor ── */
-      sensorValue(instIdOrType, field) {
-        const canvas = window.CircuitCanvas;
-        if (!canvas || !Array.isArray(canvas.components)) return -999;
-        const comps = canvas.components;
-        let inst = comps.find(c => c.id === instIdOrType);
-        if (!inst) inst = comps.find(c => c.type === instIdOrType);
-        if (!inst) return -999;
-        const rs = inst.runtimeState || {};
-        if (rs[field] !== undefined) return rs[field];
-        const props = inst.props || {};
-        return props[field] !== undefined ? props[field] : -999;
-      },
-
-      /* ── EEPROM ── */
-      eepromRead(addr) {
-        const a = Number(addr);
-        if (!Number.isInteger(a) || a < 0 || a >= 512) {
-          throw new Error('EEPROM address must be 0-511');
-        }
-        return self._eeprom[a] || 0;
-      },
-
-      eepromWrite(addr, val) {
-        const a = Number(addr), v = Number(val);
-        if (!Number.isInteger(a) || a < 0 || a >= 512) {
-          throw new Error('EEPROM address must be 0-511');
-        }
-        self._eeprom[a] = (v & 0xFF);
-      },
-
-      eepromUpdate(addr, val) { return this.eepromWrite(addr, val); },
-      eepromGet(addr, obj) { return obj; },
-      eepromPut(addr, val) {},
-      eepromBegin(size) { self._serialLog(`[EEPROM] begin(${size || 512})\n`, 'system'); },
-      eepromCommit() { self._serialLog('[EEPROM] commit\n', 'system'); },
-
-      /* ── Tone ── */
-      tone(pin, freq, duration) {
-        const p = self._validatePin(pin);
-        const f = Number(freq);
-        if (!Number.isFinite(f) || f <= 0 || f > 20000) {
-          throw new Error('tone() frequency must be 1-20000 Hz');
-        }
-        const key = `pin_${p}`;
-        self._startTone(key, f);
-        if (duration) {
-          const dur = Number(duration);
-          if (Number.isFinite(dur) && dur > 0) {
-            setTimeout(() => self._stopTone(key), dur / self.speed);
-          }
-        }
-      },
-
-      noTone(pin) {
-        const p = self._validatePin(pin);
-        self._stopTone(`pin_${p}`);
-      },
-
-      /* ── Pulse ── */
-      async pulseIn(pin, val, timeout) {
-        const p = self._validatePin(pin);
-        const t = Number(timeout) || 1000000;
-        if (!Number.isFinite(t) || t < 0) {
-          throw new Error('pulseIn() timeout must be a positive number');
-        }
-        await self._delayPromise(Math.min(t / 1000 / self.speed, 10));
-        const key = `pin_${p}`;
-        return self.pinStates.get(key) ? 1000 : 0;
-      },
-
-      /* ── Servo ── */
-      servoAttach(varName, pin) {},
-      servoWrite(varName, angle) {
-        const a = Number(angle);
-        if (!Number.isFinite(a) || a < 0 || a > 180) {
-          throw new Error('servoWrite() angle must be 0-180');
-        }
-        self._emitEvent('servo', { angle: Math.round(a) });
-      },
-      servoWriteMs(varName, us) {},
-      servoRead(varName) { return 90; },
-
-      /* ── LCD ── */
-      lcdBegin(varName, cols, rows) {
-        if (varName && varName._ssId) {
-          const ch = self._softSerial.get(varName._ssId);
-          if (ch) { ch.listening = true; ch.baud = cols; }
-          self._serialLog('[SoftwareSerial] begin(' + cols + ')\n', 'system');
-          return;
-        }
-        if (varName && varName._npId) {
-          self._serialLog('[NeoPixel] begin\n', 'system');
-          return;
-        }
-        if (varName && varName.__webserver) {
-          const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
-          cfg.port = Number(cols) || cfg.port || 80;
-          self._serialLog(`[WebServer] HTTP server started on port ${cfg.port} → http://192.168.1.105/\n`, 'system');
-          return;
-        }
-        if (varName && varName.__oled) {
-          self._emitEvent('oled_power', { on: true });
-          return;
-        }
-        self._emitEvent('lcd_power', { on: true });
-      },
-
-      lcdSetCursor(varName, col, row) {
-        self._lcdCursor = { 
-          col: Math.max(0, Math.min(15, Number(col) || 0)),
-          row: Math.max(0, Math.min(1, Number(row) || 0))
-        };
-      },
-
-      lcdPrint(varName, val) {
-        if (varName && varName._ssId) {
-          const ch = self._softSerial.get(varName._ssId);
-          if (ch) { self._serialLog(String(val) + '\n', 'data'); }
-          return;
-        }
-        const text = String(val);
-        const cursor = self._lcdCursor || { col: 0, row: 0 };
-        if (varName && varName.__oled) {
-          const size = self._oledTextSize || 1;
-          self._emitEvent('oled_draw', {
-            op: 'print',
-            text,
-            cursor: { col: cursor.col, row: cursor.row },
-            size,
-            color: self._oledTextColor === 0 ? 0 : 1,
-          });
-          self._lcdCursor = { 
-            col: cursor.col + text.length * 6 * size,
-            row: cursor.row 
-          };
-          return;
-        }
-        self._emitEvent('lcd_print', { text, cursor: { col: cursor.col, row: cursor.row } });
-        let col = cursor.col + text.length;
-        let row = cursor.row;
-        if (col >= 16 && row === 0) { col -= 16; row = 1; }
-        if (col >= 16) col = 15;
-        self._lcdCursor = { col, row };
-      },
-
-      lcdClear(varName) {
-        if (varName && varName._npId) {
-          const np = self._neopixels.get(varName._npId);
-          if (np) np.pixels.fill(0);
-          return;
-        }
-        if (varName && varName.__oled) {
-          self._emitEvent('oled_draw', { op: 'clear' });
-          return;
-        }
-        self._emitEvent('lcd_clear', {});
-        self._lcdCursor = { col: 0, row: 0 };
-      },
-
-      lcdHome(varName) { self._lcdCursor = { col: 0, row: 0 }; },
-
-      /* ── ESP32: WebServer ── */
-      serverOn(server, path, m3, m4) {
-        const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
-        const handler = typeof m3 === 'function' ? m3 : m4;
-        const method = typeof m3 === 'function' ? 'GET' : String(m3 || 'GET').replace('HTTP_', '');
-        if (typeof handler === 'function') {
-          cfg.routes.push({ path: String(path), method, handler });
-          self._serialLog(`[WebServer] Route registered: ${method} ${path}\n`, 'system');
-        }
-      },
-
-      serverSend(server, code, type, content) {
-        self._webResp = {
-          code: Number(code) || 200,
-          type: String(type || ''),
-          content: String(content || ''),
-        };
-      },
-
-      serverArg(server, name) { return ''; },
-
-      serverHandleClient(server) {
-        const cfg = self._web;
-        if (!cfg || !cfg.routes.length) return;
-        const now = Date.now();
-        if (now - (cfg.lastHit || 0) < 1500) return;
-        cfg.lastHit = now;
-        const route = cfg.routes[cfg.reqIdx = ((cfg.reqIdx || 0) % cfg.routes.length)];
-        cfg.reqIdx++;
-        self._webResp = null;
-        Promise.resolve()
-          .then(() => route.handler())
-          .then(() => {
-            const resp = self._webResp || { code: 200, type: 'text/html', content: '' };
-            self._serialLog(`[WebServer] ${route.method} ${route.path} → ${resp.code} (${resp.type})\n`, 'system');
-            const snippet = String(resp.content).replace(/\s*\n\s*/g, ' ').trim();
-            if (snippet) {
-              self._serialLog(`[WebServer] Response: ${snippet.length > 320 ? snippet.slice(0, 320) + '…' : snippet}\n`, 'system');
-            }
-          })
-          .catch((e) => {
-            self._serialLog(`[WebServer] ${route.method} ${route.path} handler error: ${e && e.message ? e.message : e}\n`, 'system');
-          });
-      },
-
-      /* ── ESP32: LEDC PWM ── */
-      ledcSetup(channel, freq, resolution) {
-        const ch = Number(channel), f = Number(freq), res = Number(resolution) || 8;
-        if (!Number.isInteger(ch) || ch < 0 || ch > 15) {
-          throw new Error('LEDC channel must be 0-15');
-        }
-        if (!Number.isFinite(f) || f < 1 || f > 40000000) {
-          throw new Error('LEDC frequency must be 1-40,000,000 Hz');
-        }
-        if (res < 1 || res > 16) {
-          throw new Error('LEDC resolution must be 1-16 bits');
-        }
-        const maxDuty = Math.pow(2, res) - 1;
-        self._ledcChannels.set(ch, { freq: f, resolution: res, maxDuty });
-        self._serialLog(`[ESP32] LEDC channel ${ch} → ${f}Hz (${res}-bit)\n`, 'system');
-        return maxDuty;
-      },
-
-      ledcSetupChannel(channel, freq, resolution) {
-        return this.ledcSetup(channel, freq, resolution);
-      },
-
-      ledcAttachPin(pin, channel) {
-        const p = self._validatePin(pin);
-        const ch = Number(channel);
-        if (!self._ledcChannels.has(ch)) {
-          self._ledcChannels.set(ch, { freq: 5000, resolution: 8, maxDuty: 255 });
-        }
-        const cfg = self._ledcChannels.get(ch);
-        cfg.pin = p;
-        self._serialLog(`[ESP32] LEDC: attached GPIO ${p} to channel ${ch}\n`, 'system');
-        return 0;
-      },
-
-      ledcAttach(pin, freq, resolution) {
-        const p = self._validatePin(pin);
-        const f = Number(freq) || 5000;
-        const res = Number(resolution) || 8;
-        const maxDuty = Math.pow(2, res) - 1;
-        self._ledcChannels.set(p, { pin: p, freq: f, resolution: res, maxDuty });
-        self._serialLog(`[ESP32] LEDC: attached GPIO ${p} → ${f}Hz (${res}-bit)\n`, 'system');
-        return true;
-      },
-
-      ledcWrite(channelOrPin, duty) {
-        const id = Number(channelOrPin);
-        let pin, maxDuty = 255;
-        if (self._ledcChannels.has(id)) {
-          const cfg = self._ledcChannels.get(id);
-          pin = cfg.pin !== undefined ? cfg.pin : id;
-          maxDuty = cfg.maxDuty || 255;
-        } else {
-          pin = id;
-        }
-        const p = self._validatePin(pin);
-        const d = Number(duty);
-        if (!Number.isFinite(d) || d < 0) {
-          throw new Error('LEDC duty must be a positive number');
-        }
-        const v = Math.max(0, Math.min(255, Math.round((d / maxDuty) * 255)));
-        const key = `pin_${p}`;
-        self.pinStates.set(key, v);
-        self._emitPinChange(key, v);
-      },
-
-      ledcRead(channelOrPin) {
-        const id = Number(channelOrPin);
-        let pin;
-        if (self._ledcChannels.has(id)) {
-          const cfg = self._ledcChannels.get(id);
-          pin = cfg.pin !== undefined ? cfg.pin : id;
-        } else {
-          pin = id;
-        }
-        const p = self._validatePin(pin);
-        return self.pinStates.get(`pin_${p}`) || 0;
-      },
-
-      /* ── ESP32: Analog / DAC ── */
-      dacWrite(pin, value) {
-        const p = self._validatePin(pin);
-        const v = Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
-        const key = `pin_${p}`;
-        self.pinStates.set(key, v);
-        self._emitPinChange(key, v);
-      },
-
-      analogReadMilliVolts(pin) {
-        const p = self._validatePin(pin);
-        const v = self.pinStates.get(`pin_${p}`);
-        if (v === undefined || v === null) return 0;
-        return Math.round((Number(v) || 0) * 3300 / 1023);
-      },
-
-      analogReadMicroVolts(pin) { return this.analogReadMilliVolts(pin) * 1000; },
-      touchRead(pin) { return 0; },
-      hallRead() { return 0; },
-      temperatureRead() { return 25.0; },
-      digitalPinToInterrupt(pin) { return Number(pin); },
-
-      /* ── ESP32: Wi-Fi ── */
-      wifiBegin(ssid, pass) {
-        self._serialLog(`[ESP32 Wi-Fi] Connecting to "${ssid}"...\n`, 'system');
-        setTimeout(() => {
-          self._serialLog('[ESP32 Wi-Fi] Connected! IP: 192.168.1.105\n', 'system');
-        }, Math.max(50, 800 / self.speed));
-      },
-
-      wifiLocalIP() { return '192.168.1.105'; },
-      wifiSoftAPIP() { return '192.168.4.1'; },
-      wifiStatus() { return 3; },
-      wifiDisconnect() { self._serialLog('[ESP32 Wi-Fi] Disconnected\n', 'system'); },
-      wifiMode() {},
-      wifiSoftAP(ssid, pass) {
-        self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system');
-      },
-
-      /* ── Interrupts ── */
-      attachInterrupt(num, fn, mode) {},
-      detachInterrupt(num) {},
-
-      /* ── SoftwareSerial ── */
-      softwareSerialNew(rxPin, txPin) {
-        const rx = self._validatePin(rxPin);
-        const tx = self._validatePin(txPin);
-        const id = `_ss_${rx}_${tx}`;
-        if (self._softSerial.has(id)) {
-          throw new Error(`SoftwareSerial already exists for pins ${rx}, ${tx}`);
-        }
-        const buf = [];
-        self._softSerial.set(id, { rxPin: rx, txPin: tx, buf, listening: false });
-        self._serialLog(`[SoftwareSerial] Created rx=${rx} tx=${tx}\n`, 'system');
-        return { _ssId: id, rxPin: rx, txPin: tx };
-      },
-
-      softSerialBegin(obj, baud) {
-        const ch = self._softSerial.get(obj._ssId);
-        if (ch) { ch.listening = true; ch.baud = baud; }
-        self._serialLog(`[SoftwareSerial] begin(${baud})\n`, 'system');
-      },
-
-      softSerialWrite(obj, val) {
-        const ch = self._softSerial.get(obj._ssId);
-        if (ch) { self._serialLog(`[SoftwareSerial] write(${val})\n`, 'data'); }
-      },
-
-      softSerialPrintln(obj, val) {
-        self._serialLog(String(val) + '\n', 'data');
-      },
-
-      softSerialRead(obj) {
-        const ch = self._softSerial.get(obj._ssId);
-        if (ch && ch.buf.length > 0) return ch.buf.shift().charCodeAt(0);
-        return -1;
-      },
-
-      softSerialAvailable(obj) {
-        const ch = self._softSerial.get(obj._ssId);
-        return ch ? ch.buf.length : 0;
-      },
-
-      softSerialPeek(obj) {
-        const ch = self._softSerial.get(obj._ssId);
-        if (ch && ch.buf.length > 0) return ch.buf[0].charCodeAt(0);
-        return -1;
-      },
-
-      softSerialEnd(obj) {
-        const ch = self._softSerial.get(obj._ssId);
-        if (ch) ch.listening = false;
-      },
-
-      softSerialFlush(obj) {},
-      softSerialListen(obj) {
-        const ch = self._softSerial.get(obj._ssId);
-        if (ch) ch.listening = true;
-      },
-
-      softSerialIsListening(obj) {
-        const ch = self._softSerial.get(obj._ssId);
-        return ch ? ch.listening : false;
-      },
-
-      /* ── Stepper ── */
-      stepperNew(stepsPerRev, pin1, pin2) {
-        const steps = Number(stepsPerRev);
-        const p1 = self._validatePin(pin1);
-        const p2 = self._validatePin(pin2);
-        if (!Number.isFinite(steps) || steps <= 0) {
-          throw new Error('Stepper stepsPerRev must be a positive number');
-        }
-        const id = `_stepper_${p1}_${p2}`;
-        self._steppers.set(id, { stepsPerRev: steps, pin1: p1, pin2: p2, pos: 0, target: 0, speed: 1, accel: 100 });
-        self._serialLog(`[Stepper] Created stepsPerRev=${steps}\n`, 'system');
-        return { _stepperId: id };
-      },
-
-      stepperSetSpeed(obj, rpm) {
-        const s = self._steppers.get(obj._stepperId);
-        if (s) s.speed = Math.max(0.1, Number(rpm) || 1);
-      },
-
-      stepperStep(obj, steps) {
-        const s = self._steppers.get(obj._stepperId);
-        if (s) { s.pos += Number(steps) || 0; s.target = s.pos; }
-        self._serialLog(`[Stepper] step(${steps}) → pos=${s ? s.pos : 0}\n`, 'system');
-      },
-
-      stepperDistanceToGo(obj) {
-        const s = self._steppers.get(obj._stepperId);
-        return s ? s.target - s.pos : 0;
-      },
-
-      stepperCurrentPosition(obj) {
-        const s = self._steppers.get(obj._stepperId);
-        return s ? s.pos : 0;
-      },
-
-      stepperSetCurrentPosition(obj, pos) {
-        const s = self._steppers.get(obj._stepperId);
-        if (s) s.pos = s.target = Number(pos) || 0;
-      },
-
-      stepperRun(obj) {
-        const s = self._steppers.get(obj._stepperId);
-        if (!s) return false;
-        if (s.pos === s.target) return false;
-        s.pos += s.pos < s.target ? 1 : -1;
-        return true;
-      },
-
-      stepperRunSpeed(obj) { return this.stepperRun(obj); },
-
-      stepperStop(obj) {
-        const s = self._steppers.get(obj._stepperId);
-        if (s) s.target = s.pos;
-      },
-
-      stepperDisableOutputs(obj) {},
-      stepperEnableOutputs(obj) {},
-      stepperMaxSpeed(obj) {
-        const s = self._steppers.get(obj._stepperId);
-        return s ? s.speed : 0;
-      },
-      stepperAcceleration(obj) {
-        const s = self._steppers.get(obj._stepperId);
-        return s ? s.accel : 0;
-      },
-      stepperSetAcceleration(obj, accel) {
-        const s = self._steppers.get(obj._stepperId);
-        if (s) s.accel = Number(accel) || 100;
-      },
-
-      /* ── NewPing ── */
-      newPingNew(triggerPin, echoPin, maxDistance) {
-        const tp = self._validatePin(triggerPin);
-        const ep = self._validatePin(echoPin);
-        const id = `_ping_${tp}_${ep}`;
-        self._pings.set(id, { triggerPin: tp, echoPin: ep, maxDist: maxDistance || 400 });
-        return { _pingId: id };
-      },
-
-      newPingCm(obj) {
-        const p = self._pings.get(obj._pingId);
-        if (!p) return 0;
-        const key = `pin_${p.triggerPin}`;
-        const v = self.pinStates.get(key) || 0;
-        return v > 0 ? Math.min(p.maxDist, Math.round(Math.random() * p.maxDist)) : 0;
-      },
-
-      newPingInch(obj) {
-        return Math.round(this.newPingCm(obj) / 2.54);
-      },
-
-      newPingMedian(obj, iter) {
-        const results = [];
-        for (let i = 0; i < (iter || 5); i++) results.push(this.newPingCm(obj));
-        results.sort((a, b) => a - b);
-        return results[Math.floor(results.length / 2)] || 0;
-      },
-
-      newPingPing(obj) { return this.newPingCm(obj); },
-
-      /* ── IRremote ── */
-      irsendNew(pin) {
-        self._validatePin(pin);
-        self._irsend = { pin };
-        return { _irId: 'irsend' };
-      },
-
-      irrecvNew(pin) {
-        self._validatePin(pin);
-        self._irrecv = { pin, results: { protocol: 0, value: 0, bits: 0 } };
-        return { _irId: 'irrecv' };
-      },
-
-      irsendNEC(obj, data, nbits) {
-        self._serialLog(`[IRremote] Send NEC: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 32} bits)\n`, 'system');
-      },
-
-      irsendSony(obj, data, nbits) {
-        self._serialLog(`[IRremote] Send Sony: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 12} bits)\n`, 'system');
-      },
-
-      irsendRC5(obj, data, nbits) {
-        self._serialLog(`[IRremote] Send RC5: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 14} bits)\n`, 'system');
-      },
-
-      irsendRC6(obj, data, nbits) {
-        self._serialLog(`[IRremote] Send RC6: 0x${Number(data).toString(16).toUpperCase()} (${nbits || 20} bits)\n`, 'system');
-      },
-
-      irsendRaw(buf, len, hz) {
-        self._serialLog(`[IRremote] Send raw: ${len} samples\n`, 'system');
-      },
-
-      irsendStop(obj) {},
-      irrecvEnableIRIn(obj) { self._serialLog('[IRremote] IR receiver enabled\n', 'system'); },
-
-      irrecvDecode(obj, results) {
-        const r = self._irrecv ? self._irrecv.results : { protocol: 0, value: 0, bits: 0 };
-        if (results) {
-          results.protocol = r.protocol;
-          results.value = r.value;
-          results.bits = r.bits;
-        }
-        return false;
-      },
-
-      irrecvResume(obj) {},
-
-      /* ── FastLED ── */
-      fastledAddLeds(ledType, dataPin, numLeds) {
-        const p = self._validatePin(dataPin);
-        const n = Number(numLeds);
-        if (!Number.isInteger(n) || n < 0 || n > 10000) {
-          throw new Error('FastLED numLeds must be 0-10000');
-        }
-        self._fastled = { leds: new Array(n).fill(null).map(() => ({ r: 0, g: 0, b: 0 })), brightness: 255, dataPin: p };
-        self._serialLog(`[FastLED] ${n} LEDs on pin ${p}\n`, 'system');
-      },
-
-      fastledShow() {
-        if (self._fastled) {
-          self._emitEvent('fastled_show', { leds: self._fastled.leds, brightness: self._fastled.brightness });
-        }
-      },
-
-      fastledSetBrightness(b) {
-        if (self._fastled) self._fastled.brightness = Math.max(0, Math.min(255, Number(b) || 0));
-      },
-
-      fastledSetCorrection(type) {},
-      fastledSetColorCorrection(type) {},
-      fastledMaxPower(milliamps) {},
-      fastledClear() {
-        if (self._fastled) self._fastled.leds.forEach(l => { l.r = 0; l.g = 0; l.b = 0; });
-      },
-
-      crgbNew(r, g, b) {
+      /* Servo/LCD class stubs */
+      Servo: function () { return {}; },
+      LiquidCrystal: function () {
+        // Methods that aren't transpiled to _a.lcd* calls must exist on the object
+        const powerOn = () => self._emitEvent('lcd_power', { on: true });
         return {
-          r: Math.max(0, Math.min(255, Number(r) || 0)),
-          g: Math.max(0, Math.min(255, Number(g) || 0)),
-          b: Math.max(0, Math.min(255, Number(b) || 0))
+          init: powerOn, begin: powerOn, backlight: powerOn, noBacklight() { },
+          setBacklight() { }, display() { }, noDisplay() { }, blink() { },
+          noBlink() { }, cursor() { }, noCursor() { }, createChar() { },
         };
       },
-
-      crgbArray(size) {
-        const n = Number(size);
-        if (!Number.isInteger(n) || n < 0 || n > 10000) {
-          throw new Error('CRGB array size must be 0-10000');
-        }
-        return new Array(n).fill(null).map(() => ({ r: 0, g: 0, b: 0 }));
+      LiquidCrystal_I2C: function () {
+        const powerOn = () => self._emitEvent('lcd_power', { on: true });
+        return {
+          init: powerOn, begin: powerOn, backlight: powerOn, noBacklight() { },
+          setBacklight() { }, display() { }, noDisplay() { }, blink() { },
+          noBlink() { }, cursor() { }, noCursor() { }, createChar() { },
+        };
       },
-
-      chsvNew(h, s, v) {
-        const hue = Number(h) || 0, sat = Number(s) || 255, val = Number(v) || 255;
-        const c = { r: 0, g: 0, b: 0 };
-        const i = Math.floor(hue / 43) % 6;
-        const f = (hue / 43) - Math.floor(hue / 43);
-        const p = (val * (255 - sat)) >> 8;
-        const q = (val * (255 - ((sat * f) >> 8))) >> 8;
-        const t = (val * (255 - ((sat * (255 - f)) >> 8))) >> 8;
-        switch (i) {
-          case 0: c.r = val; c.g = t; c.b = p; break;
-          case 1: c.r = q; c.g = val; c.b = p; break;
-          case 2: c.r = p; c.g = val; c.b = t; break;
-          case 3: c.r = p; c.g = q; c.b = val; break;
-          case 4: c.r = t; c.g = p; c.b = val; break;
-          case 5: c.r = val; c.g = p; c.b = q; break;
-        }
-        return c;
+      /* OLED 128×64 (SSD1306, I2C) — Adafruit_SSD1306 library stub.
+         Text/setCursor calls are transpiled to _a.lcd* and dispatched here via
+         the __oled tag; the remaining GFX drawing calls emit oled_draw events. */
+      Adafruit_SSD1306: function () {
+        const num = (v) => Math.round(Number(v) || 0);
+        const draw = (op, extra) => self._emitEvent('oled_draw', Object.assign({ op }, extra));
+        return {
+          __oled: true,
+          begin() { self._emitEvent('oled_power', { on: true }); },
+          init() { self._emitEvent('oled_power', { on: true }); },
+          clearDisplay() { draw('clear'); },
+          display() { /* live rendering — nothing to do */ },
+          setCursor(col, row) { self._lcdCursor = { col: num(col), row: num(row) }; },
+          setTextSize(s) { self._oledTextSize = Math.max(1, Math.round(Number(s) || 1)); },
+          setTextColor(c) { self._oledTextColor = c ? 1 : 0; },
+          setTextWrap(w) { },
+          setRotation(r) { },
+          invertDisplay(i) { draw('invert', { invert: !!i }); },
+          setContrast(c) { },
+          drawPixel(x, y) { draw('pixel', { x: num(x), y: num(y) }); },
+          drawLine(x0, y0, x1, y1) { draw('line', { x0: num(x0), y0: num(y0), x1: num(x1), y1: num(y1) }); },
+          drawRect(x, y, w, h) { draw('rect', { x: num(x), y: num(y), w: num(w), h: num(h) }); },
+          fillRect(x, y, w, h) { draw('fillRect', { x: num(x), y: num(y), w: num(w), h: num(h) }); },
+          drawCircle(x, y, r) { draw('circle', { x: num(x), y: num(y), r: num(r) }); },
+          fillCircle(x, y, r) { draw('fillCircle', { x: num(x), y: num(y), r: num(r) }); },
+          fillScreen(color) { draw('fillScreen', { color: color ? 1 : 0 }); },
+          drawBitmap() { },
+          ssd1306_command() { },
+          ssd1306_command1() { },
+        };
       },
-
-      /* ── Adafruit NeoPixel ── */
-      neopixelNew(numLedsPin, pinOrType, type) {
-        const numLeds = Number(numLedsPin) || 0;
-        const pin = typeof pinOrType === 'number' ? self._validatePin(pinOrType) : 6;
-        if (!Number.isInteger(numLeds) || numLeds < 0 || numLeds > 10000) {
-          throw new Error('NeoPixel numLeds must be 0-10000');
-        }
-        const id = `_np_${pin}`;
-        if (self._neopixels.has(id)) {
-          throw new Error(`NeoPixel already exists on pin ${pin}`);
-        }
-        self._neopixels.set(id, { pin, numLeds, brightness: 255, pixels: new Array(numLeds).fill(0) });
-        return { _npId: id };
+      /* Library stubs (instances) */
+      Wire: { begin() { }, requestFrom() { return 0; }, beginTransmission() { }, endTransmission() { return 0; }, write() { return 1; }, read() { return 0; }, available() { return 0; } },
+      SPI: { begin() { }, transfer() { return 0; }, end() { }, setClockDivider() { }, setBitOrder() { }, setDataMode() { } },
+      /* ESP32 Wi-Fi object stub */
+      WiFi: {
+        begin(ssid, pass) { self._serialLog(`[ESP32 Wi-Fi] Connecting to "${ssid}"...\n`, 'system'); setTimeout(() => self._serialLog('[ESP32 Wi-Fi] Connected! IP: 192.168.1.105\n', 'system'), Math.max(50, 800 / self.speed)); },
+        localIP() { return '192.168.1.105'; },
+        softAPIP() { return '192.168.4.1'; },
+        status() { return 3; },
+        disconnect() { },
+        mode() { },
+        softAP(ssid) { self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system'); },
+        setAutoConnect() { },
       },
-
-      neopixelShow(obj) {
-        const np = self._neopixels.get(obj._npId);
-        if (np) {
-          const leds = np.pixels.map(c => ({
-            r: (c >> 16) & 0xFF,
-            g: (c >> 8) & 0xFF,
-            b: c & 0xFF,
-          }));
-          self._emitEvent('fastled_show', { leds, brightness: np.brightness });
-        }
+      /* ESP32 Wi-Fi client + MQTT (PubSubClient).
+         When the MQTT.js library is loaded (index.html), this also publishes
+         to a real public broker over WebSockets (HiveMQ public broker by
+         default), so you can watch the messages in MQTTX / any MQTT client.
+         If no real broker can be reached, a local in-page broker is used as a
+         fallback so the pub/sub demo still works offline. */
+      WiFiClient: function () { return {}; },
+      /* ESP32 WebServer stub — routes are registered via _a.serverOn() and
+         served by _a.serverHandleClient(), which generates a simulated HTTP
+         request to each route every ~1.5s so you can watch requests/responses
+         in the Serial Monitor. */
+      WebServer: function (port) {
+        const cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
+        cfg.port = Number(port) || cfg.port || 80;
+        return {
+          __webserver: true,
+          begin() { },
+          send() { },
+          on() { },
+          arg() { return ''; },
+          sendHeader() { },
+          handleClient() { },
+        };
       },
+      PubSubClient: function () {
+        const broker = (self._mqtt = self._mqtt || { subs: new Map(), connected: false });
+        // Unique per-session suffix so a shared public broker doesn't clash
+        // with other users running the same example.
+        const session = Math.random().toString(36).slice(2, 7);
+        const ns = (topic) => `${topic}/${session}`;
+        const bare = (topic) => (String(topic).endsWith(`/${session}`)
+          ? String(topic).slice(0, -(session.length + 1))
+          : String(topic));
 
-      neopixelSetPixelColor(obj, i, rOrColor, g, b) {
-        const np = self._neopixels.get(obj._npId);
-        if (!np) return;
-        const idx = Number(i) || 0;
-        if (idx < 0 || idx >= np.numLeds) {
-          throw new Error(`NeoPixel index ${idx} out of range (0-${np.numLeds - 1})`);
-        }
-        if (g !== undefined) {
-          np.pixels[idx] = ((Number(rOrColor) || 0) << 16) | ((Number(g) || 0) << 8) | (Number(b) || 0);
-        } else {
-          np.pixels[idx] = Number(rOrColor) || 0;
-        }
-      },
+        let connected = false;
+        let cb = null;
+        let real = null;       // real MQTT.js client
+        let realReady = false; // real broker connected
+        const pendingSubs = new Set();
 
-      neopixelGetPixelColor(obj, i) {
-        const np = self._neopixels.get(obj._npId);
-        const idx = Number(i) || 0;
-        return np ? (np.pixels[idx] || 0) : 0;
-      },
-
-      neopixelSetBrightness(obj, b) {
-        const np = self._neopixels.get(obj._npId);
-        if (np) np.brightness = Math.max(0, Math.min(255, Number(b) || 0));
-      },
-
-      neopixelColor(obj, r, g, b) {
-        return ((Number(r) || 0) << 16) | ((Number(g) || 0) << 8) | (Number(b) || 0);
-      },
-
-      neopixelNumPixels(obj) {
-        const np = self._neopixels.get(obj._npId);
-        return np ? np.numLeds : 0;
-      },
-
-      neopixelClear(obj) {
-        const np = self._neopixels.get(obj._npId);
-        if (np) np.pixels.fill(0);
-      },
-
-      /* ── MFRC522 RFID ── */
-      rfidNew(csPin, rstPin) {
-        const cs = self._validatePin(csPin);
-        const rst = self._validatePin(rstPin);
-        const id = `_rfid_${cs}_${rst}`;
-        self._rfid.set(id, {
-          csPin: cs, rstPin: rst, initialized: false,
-          cardPresent: false,
-          uidBytes: [0xA1, 0xB2, 0xC3, 0xD4],
-          uidSize: 4
-        });
-        self._serialLog(`[MFRC522] Created CS=${cs} RST=${rst}\n`, 'system');
-        return { _rfidId: id, uid: { uidByte: null, size: 0 } };
-      },
-
-      rfidInit(obj) {
-        const r = self._rfid.get(obj._rfidId);
-        if (r) {
-          r.initialized = true;
-          self._serialLog('[MFRC522] PCD_Init\n', 'system');
-          self._serialLog('[MFRC522] Firmware: v0x92 (simulated)\n', 'system');
-        }
-      },
-
-      rfidDumpVersion(obj) {
-        self._serialLog('[MFRC522] PCD Version: v2.0 (simulated)\n', 'system');
-      },
-
-      rfidIsNewCard(obj) {
-        const r = self._rfid.get(obj._rfidId);
-        if (!r || !r.initialized) return false;
-        r.cardPresent = Math.random() < 0.3;
-        return r.cardPresent;
-      },
-
-      rfidReadCard(obj) {
-        const r = self._rfid.get(obj._rfidId);
-        if (!r || !r.cardPresent) return false;
-        obj.uid = { uidByte: r.uidBytes, size: r.uidSize };
-        self._serialLog(`[MFRC522] Card UID: ${r.uidBytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ')}\n`, 'system');
-        return true;
-      },
-
-      rfidHaltA(obj) {},
-      rfidStopCrypto(obj) {},
-
-      rfidUidBytes(obj) {
-        const r = self._rfid.get(obj._rfidId);
-        return r ? r.uidBytes : [0];
-      },
-
-      rfidUidSize(obj) {
-        const r = self._rfid.get(obj._rfidId);
-        return r ? r.uidSize : 0;
-      },
-
-      rfidMifareRead(obj, blockAddr, buf) {
-        self._serialLog(`[MFRC522] MIFARE_Read block ${blockAddr}\n`, 'system');
-        return true;
-      },
-
-      rfidMifareWrite(obj, blockAddr, buf) {
-        self._serialLog(`[MFRC522] MIFARE_Write block ${blockAddr}\n`, 'system');
-        return true;
-      },
-
-      rfidREQA(obj) { return 0; },
-      rfidWUPA(obj) { return 0; },
-      rfidSelect(obj) { return 0; },
-      rfidComputeBCC(obj, buf) { return 0; },
-      rfidDumpDetails(obj) {},
-      rfidDumpToSerial(obj) {},
-      rfidDumpSector(obj, uid, sector) {},
-      rfidDumpClassic(obj, uid, type) {},
-      rfidDumpUltralight(obj) {}
-    };
-  }
-
-  _buildPubSubClient() {
-    const self = this;
-    const broker = (self._mqtt = self._mqtt || { subs: new Map(), connected: false });
-    const session = Math.random().toString(36).slice(2, 7);
-    
-    const ns = (topic) => `${topic}/${session}`;
-    const bare = (topic) => String(topic).endsWith(`/${session}`)
-      ? String(topic).slice(0, -(session.length + 1))
-      : String(topic);
-
-    let connected = false;
-    let cb = null;
-    let real = null;
-    let realReady = false;
-    const pendingSubs = new Set();
-
-    const deliver = (topic, payload) => {
-      if (!cb) return;
-      try {
-        cb(topic, payload, String(payload).length);
-      } catch (e) {
-        self._serialLog(`[MQTT] callback error: ${e && e.message ? e.message : e}\n`, 'system');
-      }
-    };
-
-    const tryRealConnect = (clientId) => {
-      if (typeof window.mqtt !== 'function' || !window.WebSocket) {
-        self._serialLog('[MQTT] MQTT.js not loaded — using local broker only\n', 'system');
-        return;
-      }
-      const cfg = window.ArduSimMQTT || {};
-      const url = cfg.url || 'wss://broker.hivemq.com:8884/mqtt';
-      try {
-        real = window.mqtt.connect(url, {
-          clientId,
-          clean: true,
-          connectTimeout: cfg.timeout || 10000,
-          reconnectPeriod: 3000,
-          keepalive: 30,
-        });
-        self._mqttOpen.push(real);
-        real.on('connect', () => {
-          realReady = true;
-          self._serialLog(`[MQTT] Live broker connected (${url}) as "${clientId}"\n`, 'system');
-          self._serialLog(`[MQTT] Watch it in MQTTX → subscribe to: ${ns('ardusim/temp')} (and ${ns('ardusim/led')})\n`, 'system');
-          for (const t of pendingSubs) real.subscribe(t);
-          pendingSubs.clear();
-        });
-        real.on('message', (topic, payload) => {
-          deliver(bare(topic), payload.toString());
-        });
-        real.on('error', (e) => {
-          self._serialLog(`[MQTT] Live broker error: ${e && e.message ? e.message : e}\n`, 'system');
-        });
-        real.on('close', () => {
-          if (realReady) self._serialLog('[MQTT] Live broker connection closed — retrying...\n', 'system');
-          realReady = false;
-        });
-        setTimeout(() => {
-          if (!realReady) {
-            self._serialLog('[MQTT] Public broker unreachable — running local broker only\n', 'system');
+        const deliver = (topic, payload) => {
+          if (!cb) return;
+          try {
+            cb(topic, payload, String(payload).length);
+          } catch (e) {
+            self._serialLog(`[MQTT] callback error: ${e && e.message ? e.message : e}\n`, 'system');
           }
-        }, 12000);
-      } catch (e) {
-        self._serialLog(`[MQTT] Live broker unavailable — using local broker only (${e && e.message ? e.message : e})\n`, 'system');
+        };
+
+        const tryRealConnect = (clientId) => {
+          if (typeof window.mqtt !== 'function' || !window.WebSocket) {
+            self._serialLog('[MQTT] MQTT.js not loaded — using local broker only\n', 'system');
+            return;
+          }
+          const cfg = window.ArduSimMQTT || {};
+          const url = cfg.url || 'wss://broker.hivemq.com:8884/mqtt';
+          try {
+            real = window.mqtt.connect(url, {
+              clientId,
+              clean: true,
+              connectTimeout: cfg.timeout || 10000,
+              reconnectPeriod: 3000, // keep retrying so the live broker comes up if it was briefly unreachable
+              keepalive: 30,
+            });
+            self._mqttOpen.push(real);
+            real.on('connect', () => {
+              realReady = true;
+              self._serialLog(`[MQTT] Live broker connected (${url}) as "${clientId}"\n`, 'system');
+              self._serialLog(`[MQTT] Watch it in MQTTX → subscribe to: ${ns('ardusim/temp')} (and ${ns('ardusim/led')})\n`, 'system');
+              for (const t of pendingSubs) real.subscribe(t);
+              pendingSubs.clear();
+            });
+            real.on('message', (topic, payload) => {
+              deliver(bare(topic), payload.toString());
+            });
+            real.on('error', (e) => {
+              self._serialLog(`[MQTT] Live broker error: ${e && e.message ? e.message : e}\n`, 'system');
+            });
+            real.on('close', () => {
+              if (realReady) self._serialLog('[MQTT] Live broker connection closed — retrying...\n', 'system');
+              realReady = false;
+            });
+            // If the public broker can't be reached at all, say so once so the
+            // user knows the demo is running in local-only mode.
+            setTimeout(() => {
+              if (!realReady) {
+                self._serialLog('[MQTT] Public broker unreachable (check internet access) — running local broker only\n', 'system');
+              }
+            }, 12000);
+          } catch (e) {
+            self._serialLog(`[MQTT] Live broker unavailable — using local broker only (${e && e.message ? e.message : e})\n`, 'system');
+          }
+        };
+
+        return {
+          setServer(host, port) {
+            self._serialLog(`[MQTT] Broker ${host}:${port}\n`, 'system');
+          },
+          setCallback(callback) { cb = callback; },
+          connect(id) {
+            const clientId = id || `ArduSim_${Math.random().toString(36).slice(2, 8)}`;
+            connected = true;
+            broker.connected = true;
+            self._serialLog(`[MQTT] Connecting as "${clientId}"...\n`, 'system');
+            tryRealConnect(clientId);
+            return true;
+          },
+          disconnect() {
+            connected = false;
+            broker.connected = false;
+            if (real) {
+              try { real.end(true); } catch (e) { /* noop */ }
+              real = null;
+            }
+            realReady = false;
+            self._serialLog('[MQTT] Disconnected\n', 'system');
+          },
+          connected() { return connected; },
+          subscribe(topic) {
+            const t = String(topic);
+            if (!broker.subs.has(t)) broker.subs.set(t, new Set());
+            broker.subs.get(t).add(deliver);
+            self._serialLog(`[MQTT] Subscribed "${t}"\n`, 'system');
+            if (real) {
+              if (realReady) real.subscribe(ns(t));
+              else pendingSubs.add(ns(t));
+            }
+            return true;
+          },
+          unsubscribe(topic) {
+            const t = String(topic);
+            if (broker.subs.has(t)) broker.subs.get(t).delete(deliver);
+            if (real && realReady) real.unsubscribe(ns(t));
+            return true;
+          },
+          publish(topic, payload) {
+            const t = String(topic);
+            const msg = String(payload);
+            self._serialLog(`[MQTT] Publish "${t}" → ${msg}\n`, 'system');
+            if (real) {
+              try {
+                real.publish(ns(t), msg, { qos: 0, retain: false });
+              } catch (e) { /* noop */ }
+            }
+            // Local delivery: while the live broker is connected the message also
+            // returns through its own subscription, so only deliver locally when
+            // there is no real broker to avoid double-delivering to the callback.
+            if (!realReady) {
+              const listeners = broker.subs.get(t);
+              if (listeners) for (const l of [...listeners]) l(t, msg);
+            }
+            return true;
+          },
+          loop() { return true; },
+        };
+      },
+    };
+  }
+
+  /* ══════════════ COMPILE & RUN ══════════════ */
+  async compile(code) {
+    try {
+      const js = this.transpile(code);
+      const ctx = this.buildContext();
+      const rawKeys = Object.keys(ctx);
+      const rawVals = Object.values(ctx);
+      const filtered = [];
+      const reserved = new Set([
+        'await', 'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'else',
+        'enum', 'export', 'extends', 'false', 'finally', 'for', 'function', 'if', 'import', 'in', 'instanceof', 'new',
+        'null', 'return', 'super', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void', 'while', 'with', 'yield'
+      ]);
+
+      for (let i = 0; i < rawKeys.length; i += 1) {
+        const key = rawKeys[i];
+        if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) continue;
+        if (reserved.has(key)) continue;
+        filtered.push({ key, val: rawVals[i] });
       }
-    };
 
-    return {
-      setServer(host, port) {
-        self._serialLog(`[MQTT] Broker ${host}:${port}\n`, 'system');
-      },
-      setCallback(callback) { cb = callback; },
-      connect(id) {
-        const clientId = id || `ArduSim_${Math.random().toString(36).slice(2, 8)}`;
-        connected = true;
-        broker.connected = true;
-        self._serialLog(`[MQTT] Connecting as "${clientId}"...\n`, 'system');
-        tryRealConnect(clientId);
-        return true;
-      },
-      disconnect() {
-        connected = false;
-        broker.connected = false;
-        if (real) {
-          try { real.end(true); } catch (e) { /* ignore */ }
-          real = null;
-        }
-        realReady = false;
-        self._serialLog('[MQTT] Disconnected\n', 'system');
-      },
-      connected() { return connected; },
-      subscribe(topic) {
-        const t = String(topic);
-        if (!broker.subs.has(t)) broker.subs.set(t, new Set());
-        broker.subs.get(t).add(deliver);
-        self._serialLog(`[MQTT] Subscribed "${t}"\n`, 'system');
-        if (real) {
-          if (realReady) real.subscribe(ns(t));
-          else pendingSubs.add(ns(t));
-        }
-        return true;
-      },
-      unsubscribe(topic) {
-        const t = String(topic);
-        if (broker.subs.has(t)) broker.subs.get(t).delete(deliver);
-        if (real && realReady) real.unsubscribe(ns(t));
-        return true;
-      },
-      publish(topic, payload) {
-        const t = String(topic);
-        const msg = String(payload);
-        self._serialLog(`[MQTT] Publish "${t}" → ${msg}\n`, 'system');
-        if (real) {
-          try { real.publish(ns(t), msg, { qos: 0, retain: false }); } catch (e) { /* ignore */ }
-        }
-        if (!realReady) {
-          const listeners = broker.subs.get(t);
-          if (listeners) for (const l of [...listeners]) l(t, msg);
-        }
-        return true;
-      },
-      loop() { return true; }
-    };
-  }
+      const keys = filtered.map(entry => entry.key);
+      const vals = filtered.map(entry => entry.val);
 
-  /* ── Utility ── */
-  _formatSerialValue(val, fmt) {
-    if (val === undefined) return '';
-    if (fmt === 16) return Number(val).toString(16).toUpperCase();
-    if (fmt === 2) return Number(val).toString(2);
-    if (fmt === 8) return Number(val).toString(8);
-    if (typeof val === 'number' && !Number.isInteger(val)) {
-      const dec = fmt !== undefined ? fmt : 2;
-      return val.toFixed(dec);
+      // Wrap the sketch in a block so user `let`/`const` names may shadow the
+      // injected context params (e.g. a sketch declaring its own HIGH/A0).
+      // The `return` lives inside the same block, so setup/loop stay in scope.
+      const body = `{\n${js}\n\nif(typeof setup === "undefined") throw new Error("Missing setup() function. Every Arduino sketch needs a setup() function."); if(typeof loop === "undefined") throw new Error("Missing loop() function. Every Arduino sketch needs a loop() function."); return { setup, loop };\n}`;
+
+      // Try to build the function — will throw on syntax errors
+      const fn = new Function(...keys, body);
+      this._compiledFn = fn;
+      this._compiledCtx = { keys, vals, fn };
+      this._compiledJs = js;
+      return { ok: true, compiledJs: js };
+    } catch (err) {
+      const friendly = this._friendlyError(err && err.message ? err.message : String(err), err);
+      return { ok: false, error: friendly, rawError: err && err.message ? err.message : String(err) };
     }
-    return String(val);
   }
 
-  /* ── Delay Promise ── */
+  async run(code) {
+    if (this.isRunning) this.stop();
+    if (typeof code !== 'string') code = '';
+    this.simTime = 0;
+    this.pinStates = {};
+    this.pinModes = {};
+    this._delays = [];
+    this._lcdLines = ['', ''];
+    this._lcdCursor = { col: 0, row: 0 };
+    this._mqtt = { subs: new Map(), connected: false };
+    this._startRealTime = Date.now();
+    this._fpsFrames = 0;
+    this._fpsLast = Date.now();
+    this._fps = 0;
+    this._loopCount = 0;
+    this._iterSinceDelay = 0;
+
+    // Compile first
+    const result = await this.compile(code);
+    if (!result.ok) {
+      this._emitError(result.error);
+      return false;
+    }
+
+    this.isRunning = true;
+    this.isPaused = false;
+    const runId = ++this._runSeq;
+
+    const { keys, vals, fn } = this._compiledCtx;
+
+    this._serialLog('[ArduSim] Simulation started\n', 'system');
+    if (this.onStart) this.onStart();
+
+    // Start FPS ticker
+    this._fpsInterval = setInterval(() => this._tickFps(), 500);
+
+    let hadError = false;
+
+    try {
+      const { setup, loop } = fn(...vals);
+
+      // Run setup once
+      await setup();
+
+      // Run loop repeatedly
+      while (this.isRunning && runId === this._runSeq) {
+        if (this.isPaused) {
+          await new Promise(resolve => { this._resumeResolve = resolve; });
+        }
+        this._iterSinceDelay++;
+        // Infinite-loop guard: yield if no delay has been called in many iterations
+        if (this._iterSinceDelay > this._MAX_TIGHT_ITERS) {
+          this._iterSinceDelay = 0;
+          await new Promise(r => setTimeout(r, 1));
+        }
+        await loop();
+        this._loopCount++;
+        // Yield to UI thread every iteration
+        await new Promise(r => setTimeout(r, 0));
+      }
+    } catch (err) {
+      if (err && err.message !== 'SIMULATION_STOPPED') {
+        hadError = true;
+        const friendly = this._friendlyError(err.message ? err.message : String(err), err instanceof Error ? err : undefined);
+        this._emitError(friendly);
+        this._serialLog(`[Error] ${friendly}\n`, 'error');
+      }
+    } finally {
+      if (runId === this._runSeq) {
+        if (this._fpsInterval) {
+          clearInterval(this._fpsInterval);
+          this._fpsInterval = null;
+        }
+        // Release any pending pause
+        if (this._resumeResolve) {
+          const r = this._resumeResolve;
+          this._resumeResolve = null;
+          r();
+        }
+      }
+    }
+
+    if (runId === this._runSeq) {
+      this.isRunning = false;
+      this._serialLog('[ArduSim] Simulation stopped\n', 'system');
+      if (this.onStop) this.onStop();
+    }
+    return !hadError;
+  }
+
+  stop() {
+    this.isRunning = false;
+    this.isPaused = false;
+    this._runSeq++;
+    // Close any live MQTT connections
+    for (const c of this._mqttOpen) {
+      try { c.end(true); } catch (e) { /* noop */ }
+    }
+    this._mqttOpen = [];
+    this._mqtt = { subs: new Map(), connected: false };
+    // Cancel all pending delays
+    for (const d of this._delays) {
+      clearTimeout(d.id);
+      if (d.reject) d.reject(new Error('SIMULATION_STOPPED'));
+    }
+    this._delays = [];
+    if (this._resumeResolve) {
+      const r = this._resumeResolve;
+      this._resumeResolve = null;
+      r();
+    }
+    this._stopAllTones();
+  }
+
+  /* Pausable sketch delay — records start/duration so pause() can freeze it */
   _delayPromise(realMs) {
     const entry = {
       duration: Math.max(0, realMs),
@@ -2002,40 +1821,72 @@ class ArduinoSimulator {
     });
   }
 
-  /* ── Yield to UI ── */
-  async _yieldToUI() {
+  pause() {
+    this.isPaused = true;
+    // Freeze any in-flight sketch delay so pause takes effect immediately
     const now = Date.now();
-    if (now - this._lastYieldTime < this._minYieldInterval) {
-      return;
+    for (const d of this._delays) {
+      if (d.frozen) continue;
+      const remaining = Math.max(0, d.duration - (now - d.start));
+      clearTimeout(d.id);
+      d.frozen = true;
+      d.duration = remaining;
     }
-    this._lastYieldTime = now;
-    return new Promise(resolve => setTimeout(resolve, 0));
   }
 
-  /* ── Timeout Wrapper ── */
-  async _withTimeout(promise, ms, message) {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error(message)), ms)
-      )
-    ]);
+  resume() {
+    this.isPaused = false;
+    // Restart any frozen delays with their remaining time
+    const now = Date.now();
+    for (const d of this._delays) {
+      if (!d.frozen) continue;
+      d.frozen = false;
+      d.start = now;
+      d.id = setTimeout(() => {
+        const idx = this._delays.indexOf(d);
+        if (idx !== -1) this._delays.splice(idx, 1);
+        if (d.resolve) d.resolve();
+      }, Math.max(0, d.duration));
+    }
+    if (this._resumeResolve) {
+      const r = this._resumeResolve;
+      this._resumeResolve = null;
+      r();
+    }
   }
 
-  /* ── Compile Error ── */
-  _compileError(err, js) {
-    const friendly = this._friendlyError(err && err.message ? err.message : String(err), err);
-    return { ok: false, error: friendly, rawError: err && err.message ? err.message : String(err), compiledJs: js || '' };
+  setSpeed(s) {
+    const v = parseFloat(s);
+    this.speed = Number.isFinite(v) ? Math.min(100, Math.max(0.01, v)) : 1;
   }
 
-  /* ── Friendly Errors ── */
+  setBoard(board) {
+    this.board = (board === 'esp32_devkit_v1') ? 'esp32_devkit_v1' : 'arduino_uno';
+  }
+
+  /* ── FPS tracking ── */
+  _tickFps() {
+    const now = Date.now();
+    const elapsed = now - this._fpsLast;
+    if (elapsed > 0) {
+      this._fps = Math.round((this._loopCount * 1000) / elapsed);
+    }
+    this._loopCount = 0;
+    this._fpsLast = now;
+    if (this.onTick) this.onTick(this.simTime, this._fps);
+  }
+
+  /* ── Friendly error messages ── */
   _friendlyError(msg, err) {
     if (!msg) msg = 'An unknown error occurred';
     let line = '';
+    // Runtime errors carry the compiled-code line in their stack as the first
+    // "<anonymous>:N" frame. Syntax errors from `new Function` do not, and the
+    // first such frame would instead be the transpiler itself — so skip them.
     if (err && err.stack && !(err instanceof SyntaxError)) {
       const m = String(err.stack).match(/<anonymous>:(\d+)(?::\d+)?/);
       if (m) {
-        const n = parseInt(m[1], 10) - 1;
+        const n = parseInt(m[1], 10) - 1; // account for the wrapper block offset
         line = ` — line ${n > 0 ? n : 1}`;
       }
     }
@@ -2056,62 +1907,29 @@ class ArduinoSimulator {
     return msg + line;
   }
 
-  /* ── Reset State ── */
-  _resetState() {
-    this.simTime = 0;
-    this.pinStates.clear();
-    this.pinModes.clear();
-    this.serialInputBuffer = [];
-    this._delays = [];
-    this._lcdLines = ['', ''];
-    this._lcdCursor = { col: 0, row: 0 };
-    this._oledTextSize = 1;
-    this._oledTextColor = 1;
-    this._fps = 0;
-    this._fpsFrames = 0;
-    this._loopCount = 0;
-    this._iterSinceDelay = 0;
-    this._lastYieldTime = 0;
-    this._web = null;
-    this._mqtt = null;
-    this._fastled = null;
-    this._eeprom = new Uint8Array(512);
-    this._ledcChannels.clear();
-    this._softSerial.clear();
-    this._steppers.clear();
-    this._pings.clear();
-    this._neopixels.clear();
-    this._rfid.clear();
-    this._toneOscillators.clear();
-    this._toneActive.clear();
-    this._stopAllTones();
+  sendSerialInput(text) {
+    if (typeof text !== 'string') return;
+    for (const ch of text) {
+      this.serialInputBuffer.push(ch);
+    }
+    // Never let the input buffer grow without bound
+    if (this.serialInputBuffer.length > 4096) {
+      this.serialInputBuffer.splice(0, this.serialInputBuffer.length - 4096);
+    }
   }
 
-  /* ── Cleanup Execution ── */
-  _cleanupExecution() {
-    if (this._fpsInterval) {
-      clearInterval(this._fpsInterval);
-      this._fpsInterval = null;
-    }
-    if (this._resumeResolve) {
-      const r = this._resumeResolve;
-      this._resumeResolve = null;
-      r();
-    }
-    for (const d of this._delays) {
-      clearTimeout(d.id);
-      if (d.reject) d.reject(new Error('SIMULATION_STOPPED'));
-    }
-    this._delays = [];
-    this._stopAllTones();
+  setPinState(pinKey, value) {
+    if (typeof pinKey !== 'string') return;
+    this.pinStates[pinKey] = value;
+    this._emitPinChange(pinKey, value);
   }
 
-  /* ── Tone ── */
+  /* ══════════════ TONE ══════════════ */
   _initAudio() {
     if (!this._toneCtx) {
       try {
         this._toneCtx = new (window.AudioContext || window.webkitAudioContext)();
-      } catch (e) { /* ignore */ }
+      } catch (e) { }
     }
   }
 
@@ -2128,7 +1946,7 @@ class ArduinoSimulator {
       osc.connect(gain);
       gain.connect(this._toneCtx.destination);
       osc.start();
-      this._toneOscillators.set(key, { osc, gain });
+      this._toneOscillators[key] = { osc, gain };
       this._emitEvent('buzzer_on', { key, freq });
     } catch (e) {
       console.error('[ArduSim] Audio error:', e);
@@ -2136,62 +1954,41 @@ class ArduinoSimulator {
   }
 
   _stopTone(key) {
-    if (this._toneOscillators.has(key)) {
-      try { this._toneOscillators.get(key).osc.stop(); } catch (e) { /* ignore */ }
-      this._toneOscillators.delete(key);
+    if (this._toneOscillators[key]) {
+      try { this._toneOscillators[key].osc.stop(); } catch (e) { }
+      delete this._toneOscillators[key];
     }
     this._emitEvent('buzzer_off', { key });
   }
 
   _stopAllTones() {
-    for (const [key, value] of this._toneOscillators) {
-      try { value.osc.stop(); } catch (e) { /* ignore */ }
+    for (const key of Object.keys(this._toneOscillators)) {
+      try { this._toneOscillators[key].osc.stop(); } catch (e) { }
+      delete this._toneOscillators[key];
     }
-    this._toneOscillators.clear();
-    this._toneActive.clear();
+    this._toneOscillators = {};
   }
 
-  /* ── FPS ── */
-  _tickFps() {
-    const now = Date.now();
-    const elapsed = now - this._fpsLast;
-    if (elapsed > 0) {
-      this._fps = Math.round((this._loopCount * 1000) / elapsed);
-    }
-    this._loopCount = 0;
-    this._fpsLast = now;
-    if (this._callbacks.onTick) {
-      this._callbacks.onTick(this.simTime, this._fps, this._loopCount);
-    }
-  }
-
-  /* ── Emitters ── */
+  /* ══════════════ INTERNALS ══════════════ */
   _serialLog(text, type = 'data') {
-    if (this._callbacks.onSerial) {
-      this._callbacks.onSerial(text, type);
-    }
+    if (this.onSerial) this.onSerial(text, type);
   }
 
   _emitPinChange(key, val) {
+    // Reset tight-iter counter whenever a pin changes (means the sketch is doing work)
     this._iterSinceDelay = 0;
-    if (this._callbacks.onPinChange) {
-      this._callbacks.onPinChange(key, val);
-    }
+    if (this.onPinChange) this.onPinChange(key, val);
   }
 
   _emitError(msg) {
-    if (this._callbacks.onError) {
-      this._callbacks.onError(msg);
-    }
+    if (this.onError) this.onError(msg);
   }
 
   _emitEvent(type, data) {
-    if (this._callbacks.onEvent) {
-      this._callbacks.onEvent(type, data);
-    }
+    if (this.onEvent) this.onEvent(type, data);
   }
 
-  /* ── Pin Label ── */
+  /* Get human-readable pin name */
   static pinLabel(key) {
     if (!key.startsWith('pin_')) return key;
     const n = parseInt(key.replace('pin_', ''));
@@ -2205,7 +2002,14 @@ class ArduinoSimulator {
   }
 }
 
-/* ═══════════════ EXPORT ═══════════════ */
+/* ═══════════════ EXAMPLE SKETCHES ═══════════════ */
+/* ═══════════════════════════════════════════════════════════
+   EXAMPLE CIRCUITS — serialized project data loaded on the canvas
+   when an example is opened. Matches the pins of each example code.
+   ═══════════════════════════════════════════════════════════ */
+/* Examples are now loaded from the examples/ folder as individual JSON files. */
+
+/* Export */
 window.ArduinoSim = new ArduinoSimulator();
 window.EXAMPLE_SKETCHES = [];
 window.loadExamplesFromFiles = async function() {
@@ -2215,9 +2019,7 @@ window.loadExamplesFromFiles = async function() {
     try {
       const res = await fetch(`examples/${name}.json`);
       if (res.ok) sketches.push(await res.json());
-    } catch (e) {
-      console.warn(`Failed to load example: ${name}`, e);
-    }
+    } catch (e) { console.warn(`Failed to load example: ${name}`, e); }
   }
   window.EXAMPLE_SKETCHES = sketches;
 };
