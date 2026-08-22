@@ -9,6 +9,9 @@
 
 'use strict';
 
+const express = require('express');
+const app = express();
+
 const http  = require('node:http');
 const fs    = require('node:fs');
 const path  = require('node:path');
@@ -240,4 +243,12 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   console.log(`▶ ArduSim server running at http://${HOST}:${PORT}`);
   console.log(`  DB: ${DB_FILE}`);
+});
+
+
+
+
+// Pass '0.0.0.0' as the host argument
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on LAN at http://<YOUR_LOCAL_IP>:${PORT}`);
 });
