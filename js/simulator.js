@@ -789,14 +789,23 @@ class ArduinoSimulator {
         serialReadString() { const s = self.serialInputBuffer.join(''); self.serialInputBuffer = []; return s; },
         serialReadStringUntil(terminator) {
           const t = String(terminator);
-          let collected = '';
-          while (self.serialInputBuffer.length > 0) {
-            const ch = self.serialInputBuffer.shift();
-            collected += ch;
-            if (ch === t) break;
+          const currentString = self.serialInputBuffer.join('');
+          const index = currentString.indexOf(t);
+
+          if (index === -1) {
+            return '';
           }
-          return collected;
-        },
+
+          const lengthToRead = index + t.length;
+          const result = currentString.slice(0, lengthToRead);
+
+          // Clear the old buffer and store the leftover string as a single chunk
+          const leftover = currentString.slice(lengthToRead);
+          self.serialInputBuffer = leftover ? [leftover] : [];
+
+          return result;
+        }
+        ,
         serialReadBytes(count) {
           const n = Math.min(count || 1, self.serialInputBuffer.length);
           const chars = self.serialInputBuffer.splice(0, n);
@@ -2012,8 +2021,8 @@ class ArduinoSimulator {
 /* Export */
 window.ArduinoSim = new ArduinoSimulator();
 window.EXAMPLE_SKETCHES = [];
-window.loadExamplesFromFiles = async function() {
-  const files = ['blink','esp32_blink','fade','button','potentiometer','servo_sweep','traffic_light','counter','rainbow_rgb','morse','temperature','ultrasonic','esp32_fade','mqtt_esp32','lcd_i2c','oled_ssd1306','esp32_server','serial_plotter','buzzer_melody','seg7_counter','relay_control','dc_motor_speed','ldr_lamp','pir_alarm','joystick_led','esp32_ntp_lcd','ic_nand_test'];
+window.loadExamplesFromFiles = async function () {
+  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test'];
   const sketches = [];
   for (const name of files) {
     try {
