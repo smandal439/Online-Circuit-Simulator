@@ -2,7 +2,7 @@
    sw.js — Service Worker for ArduSim PWA
    ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'ardusim-v1';
+const CACHE_NAME = 'ardusim-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
