@@ -353,9 +353,9 @@ class App {
         this._triggerAutoSave();
         window.StorageManager?.markDirty();
       };
-      this.canvas.onPlacingChanged = (placing) => {
+      this.canvas.onPlacingChanged = (placing, type) => {
         document.querySelectorAll('.comp-item').forEach(item => {
-          item.classList.toggle('placing', placing);
+          item.classList.toggle('placing', placing && item.dataset.type === type);
         });
       };
       // Initial sync — if already in placing mode from a previous session
@@ -868,6 +868,7 @@ _newProject() {
         if (!def) continue;
         const item = document.createElement('button');
         item.className = 'comp-item';
+        item.dataset.type = id;
         item.title = def.desc || def.name;
         const shortDesc = (def.desc || '').length > 42 ? def.desc.slice(0, 42) + '…' : (def.desc || '');
         item.innerHTML = `<span class="comp-icon">${def.icon || '🔧'}</span><span class="comp-info"><span class="comp-name">${def.name}</span>${shortDesc ? `<span class="comp-desc">${shortDesc}</span>` : ''}</span>`;

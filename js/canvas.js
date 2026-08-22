@@ -785,7 +785,7 @@ class CircuitCanvas {
       hint.classList.remove('hidden');
     }
     // Notify app that placing mode started
-    if (this.onPlacingChanged) this.onPlacingChanged(true);
+    if (this.onPlacingChanged) this.onPlacingChanged(true, type);
   }
 
   cancelPlacing() {
