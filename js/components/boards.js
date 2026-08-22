@@ -312,7 +312,7 @@ defComp({
   id: 'esp32_devkit_v1',
   name: 'ESP32 DevKit V1',
   category: 'Boards',
-  icon: '🎛️',
+  icon: '🖲️',
   desc: 'ESP-WROOM-32 dual-core 3.3V WiFi/BLE development board',
   width: 170,
   height: 272,
