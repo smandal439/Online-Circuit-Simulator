@@ -2026,7 +2026,7 @@ window.loadExamplesFromFiles = async function () {
   const sketches = [];
   for (const name of files) {
     try {
-      const res = await fetch(`/examples/${name}.json`);
+      const res = await fetch(`/Examples/${name}.json`);
       if (res.ok) sketches.push(await res.json());
     } catch (e) { console.warn(`Failed to load example: ${name}`, e); }
   }
