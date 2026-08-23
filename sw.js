@@ -23,6 +23,7 @@ const STATIC_ASSETS = [
   '/js/serial.js',
   '/js/output.js',
   '/js/oscilloscope.js',
+  '/js/logic-analyzer.js',
   '/js/plotter.js',
   '/js/storage.js',
   '/js/api.js',

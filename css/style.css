@@ -1104,6 +1104,13 @@ body.view-serial #resizer-bottom { display: none; }
   background: #0a0e14;
 }
 
+#logic-analyzer-canvas {
+  flex: 1;
+  display: block;
+  width: 100%;
+  background: #0a0e14;
+}
+
 /* ═══════════════ PIN MONITOR ═══════════════ */
 .pin-monitor-grid {
   display: grid;

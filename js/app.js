@@ -8,6 +8,7 @@ class App {
     this.serial = null;
     this.output = null;
     this.osc = null;
+    this.la = null;
     this.plotter = null;
     this.isRunning = false;
     this._runEpoch = 0;
@@ -32,6 +33,7 @@ class App {
       this._initSerial();
       this._initOutput();
       this._initOscilloscope();
+      this._initLogicAnalyzer();
       this._initPlotter();
       this._attachSimulatorEvents();
       this._renderComponentLibrary();
@@ -215,6 +217,21 @@ class App {
     oscCh2?.addEventListener('change', (e) => this.osc?.setChannel(2, e.target.value));
     oscTimebase?.addEventListener('change', (e) => this.osc?.setTimebase(e.target.value));
     propsApply?.addEventListener('click', () => this._applyPropsModal());
+
+    // Logic Analyzer controls
+    document.getElementById('btn-la-clear')?.addEventListener('click', () => this.la?.clear());
+    document.getElementById('btn-la-pause')?.addEventListener('click', () => {
+      const btn = document.getElementById('btn-la-pause');
+      const paused = this.la?.togglePause();
+      if (btn) btn.textContent = paused ? 'Resume' : 'Pause';
+    });
+    document.getElementById('la-timebase')?.addEventListener('change', (e) => this.la?.setTimebase(e.target.value));
+    document.querySelectorAll('.la-ch-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(e.target.dataset.ch);
+        this.la?.setChannel(idx, e.target.value);
+      });
+    });
 
     // Modal close
     document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', () => this._closeModal()));
@@ -458,6 +475,7 @@ class App {
     this.sim.onPinChange = (pinKey, value) => {
       if (this.canvas) this.canvas.updateSimState(this.sim.pinStates);
       if (this.osc)    this.osc.sample(this.sim.simTime, this.sim.pinStates);
+      if (this.la)     this.la.sample(this.sim.simTime, this.sim.pinStates);
       this._updatePinMonitor();
     };
 
@@ -1517,6 +1535,13 @@ _newProject() {
     const oscCanvas = document.getElementById('oscilloscope-canvas');
     if (!oscCanvas || !window.OscilloscopeClass) return;
     this.osc = new window.OscilloscopeClass(oscCanvas);
+  }
+
+  /* ══════════════════════ LOGIC ANALYZER ══════════════════════ */
+  _initLogicAnalyzer() {
+    const laCanvas = document.getElementById('logic-analyzer-canvas');
+    if (!laCanvas || !window.LogicAnalyzerClass) return;
+    this.la = new window.LogicAnalyzerClass(laCanvas);
   }
 
   /* ══════════════════════ SERIAL PLOTTER ══════════════════════ */
