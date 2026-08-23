@@ -1580,11 +1580,22 @@ _newProject() {
 
   /* ══════════════════════ EXAMPLES ══════════════════════ */
   async _renderExamples() {
-    if (window.loadExamplesFromFiles && (!window.EXAMPLE_SKETCHES || window.EXAMPLE_SKETCHES.length === 0)) {
-      await window.loadExamplesFromFiles();
+    try {
+      if (window.loadExamplesFromFiles && (!window.EXAMPLE_SKETCHES || window.EXAMPLE_SKETCHES.length === 0)) {
+        await window.loadExamplesFromFiles();
+      }
+    } catch (e) {
+      console.error('[ArduSim] Failed to load examples:', e);
     }
     const container = document.getElementById('examples-grid');
     if (!container || !window.EXAMPLE_SKETCHES) return;
+
+    if (window.EXAMPLE_SKETCHES.length === 0) {
+      container.innerHTML = '<div class="library-empty" style="padding:24px;text-align:center;color:var(--text-muted)">No examples loaded. Check your connection and reload.</div>';
+      const empty = document.getElementById('examples-empty');
+      if (empty) empty.classList.add('hidden');
+      return;
+    }
 
     const q = (this._examplesQuery || '').toLowerCase();
     const filter = this._examplesFilter || 'all';
