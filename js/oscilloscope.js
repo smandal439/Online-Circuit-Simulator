@@ -34,7 +34,8 @@ class Oscilloscope {
     };
 
     /* Colors */
-    this.CH1_COLOR = '#00e5ff';
+    this.CH1_COLOR = '#73ff00';
+    // this.CH1_COLOR = '#00e5ff';
     this.CH2_COLOR = '#ff9800';
     this.GRID_COLOR = 'rgba(255,255,255,0.06)';
     this.GRID_MAJOR = 'rgba(255,255,255,0.12)';
