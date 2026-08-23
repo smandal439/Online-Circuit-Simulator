@@ -2277,6 +2277,101 @@ case 'push_button': {
           }
           break;
         }
+
+        /* ── MPU6050 IMU (I2C sensor — writes accel values to pin states) ── */
+        case 'mpu6050': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          // User-adjustable values are exposed via interactive props
+          inst.runtimeState.accelX = inst.props.accelX ?? 0;
+          inst.runtimeState.accelY = inst.props.accelY ?? 0;
+          inst.runtimeState.accelZ = inst.props.accelZ ?? 1024;
+          inst.runtimeState.gyroX = inst.props.gyroX ?? 0;
+          inst.runtimeState.gyroY = inst.props.gyroY ?? 0;
+          inst.runtimeState.gyroZ = inst.props.gyroZ ?? 0;
+          break;
+        }
+
+        /* ── 28BYJ-48 Stepper Motor (reads 4 digital pins, computes angle) ── */
+        case 'stepper_28byj': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const readBit = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
+          };
+          const in1 = readBit('IN1'), in2 = readBit('IN2');
+          const in3 = readBit('IN3'), in4 = readBit('IN4');
+          // Half-step sequence lookup: pattern → step delta
+          const pattern = (in1) | (in2 << 1) | (in3 << 2) | (in4 << 3);
+          const prev = inst.runtimeState._lastPattern ?? 0;
+          if (pattern !== 0 && pattern !== prev) {
+            // Simple step detection: any change = one step (5.625° / 64 gear ratio = 0.0879° per step)
+            const stepAngle = 5.625 / 64;
+            inst.runtimeState.angle = (inst.runtimeState.angle ?? 0) + stepAngle;
+          }
+          inst.runtimeState._lastPattern = pattern;
+          inst.runtimeState.active = pattern !== 0;
+          break;
+        }
+
+        /* ── WS2812B NeoPixel (reads color from props/runtimeState) ── */
+        case 'neopixel': {
+          inst.runtimeState.r = inst.props.r ?? 0;
+          inst.runtimeState.g = inst.props.g ?? 0;
+          inst.runtimeState.b = inst.props.b ?? 0;
+          inst.runtimeState.brightness = inst.props.brightness ?? 255;
+          break;
+        }
+
+        /* ── IR Obstacle Sensor (writes digital to connected pin) ── */
+        case 'ir_obstacle': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const detected = inst.props.detected ?? 0;
+          inst.runtimeState.detected = detected;
+          // Write LOW when detected (active-low like real sensor)
+          const outPn = this._getConnectedPinNum(inst.id, 'OUT');
+          if (outPn !== null) sim.pinStates[`pin_${outPn}`] = detected ? 0 : 1;
+          break;
+        }
+
+        /* ── Flex Sensor (writes analog value to connected pin) ── */
+        case 'flex_sensor': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const bend = inst.props.bend ?? 0;
+          inst.runtimeState.bend = bend;
+          const sigPn = this._getConnectedPinNum(inst.id, 'SIG');
+          if (sigPn !== null) sim.pinStates[`pin_${sigPn}`] = bend;
+          break;
+        }
+
+        /* ── NTC Thermistor (writes analog value to connected pin) ── */
+        case 'thermistor': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const temp = inst.props.temperature ?? 25;
+          inst.runtimeState.temperature = temp;
+          // Convert temperature to analog value (simplified: 0-1023 maps to -10-80°C)
+          const analogVal = Math.round(((temp + 10) / 90) * 1023);
+          const p1Pn = this._getConnectedPinNum(inst.id, 'p1');
+          if (p1Pn !== null) sim.pinStates[`pin_${p1Pn}`] = Math.max(0, Math.min(1023, analogVal));
+          break;
+        }
+
+        /* ── 1N4007 Diode (pass-through with forward voltage drop) ── */
+        case 'diode_1n4007': {
+          // Diode participates in _tracePinNet for electrical simulation
+          // Here we just track its conducting state for visual feedback
+          const anodeNet = this._tracePinNet(inst.id, 'anode');
+          const cathodeNet = this._tracePinNet(inst.id, 'cathode');
+          const hasSource = anodeNet.sources.length > 0;
+          const hasGround = cathodeNet.grounds.length > 0;
+          inst.runtimeState.conducting = hasSource && hasGround;
+          break;
+        }
       }
     }
   }
