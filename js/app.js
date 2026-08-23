@@ -186,6 +186,11 @@ class App {
       this._closeHeaderDropdowns();
       this._showModal('modal-shortcuts');
     });
+    const helpProjectGuide = get('btn-help-project-guide');
+    helpProjectGuide?.addEventListener('click', () => {
+      this._closeHeaderDropdowns();
+      window.open('ArduSim_Guide.html', '_blank');
+    });
     const guideLaunch = get('guide-launch');
     guideLaunch?.addEventListener('click', () => window.GuideManager?.close());
     const guideClose = get('guide-close');
@@ -861,7 +866,7 @@ class App {
 _newProject() {
     // Reset the canvas and editor to a fresh state
     this.canvas?.clearCanvas();
-    this.editor?.setCode('void setup() {\n  // setup code\n}\nvoid loop() {\n  // loop code\n}');
+    this.editor?.setCode('void setup() {\n   // Put your setup code here, to run once when the board starts:\n}\nvoid loop() {\n  // Put your main code here, to run repeatedly indefinitely:\n}');
     this._setProjectName('Untitled Project');
     this.output?.log('New project created', 'system');
     // Focus the editor for immediate typing
@@ -2035,6 +2040,9 @@ _newProject() {
         break;
       case 'guide':
         window.GuideManager?.open('home');
+        break;
+      case 'project-guide':
+        window.open('ArduSim_Guide.html', '_blank');
         break;
     }
   }
