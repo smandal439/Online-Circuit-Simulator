@@ -1111,6 +1111,46 @@ body.view-serial #resizer-bottom { display: none; }
   background: #0a0e14;
 }
 
+/* ── Logic Analyzer Toolbar ── */
+.la-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-panel-alt);
+  flex-shrink: 0;
+}
+.la-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.la-ch-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.la-ch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ch-color, #888);
+  flex-shrink: 0;
+  box-shadow: 0 0 4px var(--ch-color, #888);
+}
+.la-ch-group .serial-select {
+  min-width: 70px;
+}
+.la-status {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* ═══════════════ PIN MONITOR ═══════════════ */
 .pin-monitor-grid {
   display: grid;

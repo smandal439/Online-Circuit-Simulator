@@ -219,11 +219,18 @@ class App {
     propsApply?.addEventListener('click', () => this._applyPropsModal());
 
     // Logic Analyzer controls
-    document.getElementById('btn-la-clear')?.addEventListener('click', () => this.la?.clear());
+    document.getElementById('btn-la-clear')?.addEventListener('click', () => {
+      this.la?.clear();
+      const statusEl = document.getElementById('la-status');
+      if (statusEl) statusEl.textContent = 'Cleared';
+      setTimeout(() => { if (statusEl) statusEl.textContent = 'Running'; }, 1000);
+    });
     document.getElementById('btn-la-pause')?.addEventListener('click', () => {
       const btn = document.getElementById('btn-la-pause');
+      const statusEl = document.getElementById('la-status');
       const paused = this.la?.togglePause();
       if (btn) btn.textContent = paused ? 'Resume' : 'Pause';
+      if (statusEl) statusEl.textContent = paused ? 'Paused' : 'Running';
     });
     document.getElementById('la-timebase')?.addEventListener('change', (e) => this.la?.setTimebase(e.target.value));
     document.querySelectorAll('.la-ch-select').forEach(sel => {
@@ -484,6 +491,11 @@ class App {
       const fpsEl     = document.getElementById('sim-fps');
       if (simTimeEl) simTimeEl.textContent = `⏱ ${(simTime / 1000).toFixed(2)}s`;
       if (fpsEl)     fpsEl.textContent     = `${fps} FPS`;
+      const laStatus = document.getElementById('la-status');
+      if (laStatus && this.la && !this.la.paused) {
+        const samples = this.la.channels.reduce((n, ch) => n + (this.la.data[ch.pin]?.length || 0), 0);
+        laStatus.textContent = `Running · ${samples} samples`;
+      }
     };
 
     this.sim.onError = (err) => {
@@ -1542,6 +1554,8 @@ _newProject() {
     const laCanvas = document.getElementById('logic-analyzer-canvas');
     if (!laCanvas || !window.LogicAnalyzerClass) return;
     this.la = new window.LogicAnalyzerClass(laCanvas);
+    const statusEl = document.getElementById('la-status');
+    if (statusEl) statusEl.textContent = 'Ready';
   }
 
   /* ══════════════════════ SERIAL PLOTTER ══════════════════════ */
