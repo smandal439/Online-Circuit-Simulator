@@ -304,7 +304,19 @@ class LogicAnalyzer {
     const map = {
       D0: 0, D1: 1, D2: 2, D3: 3, D4: 4, D5: 5, D6: 6, D7: 7,
       D8: 8, D9: 9, D10: 10, D11: 11, D12: 12, D13: 13,
-      A0: 14, A1: 15, A2: 16, A3: 17, A4: 18, A5: 19
+      A0: 14, A1: 15, A2: 16, A3: 17, A4: 18, A5: 19,
+      // ESP32 GPIO pins
+      GPIO0: 0, GPIO1: 1, GPIO2: 2, GPIO3: 3, GPIO4: 4, GPIO5: 5,
+      GPIO6: 6, GPIO7: 7, GPIO8: 8, GPIO9: 9, GPIO10: 10, GPIO11: 11,
+      GPIO12: 12, GPIO13: 13, GPIO14: 14, GPIO15: 15, GPIO16: 16,
+      GPIO17: 17, GPIO18: 18, GPIO19: 19, GPIO20: 20, GPIO21: 21,
+      GPIO22: 22, GPIO23: 23, GPIO24: 24, GPIO25: 25, GPIO26: 26,
+      GPIO27: 27, GPIO32: 32, GPIO33: 33, GPIO34: 34, GPIO35: 35,
+      GPIO36: 36, GPIO37: 37, GPIO38: 38, GPIO39: 39,
+      // ESP32 pin aliases (D-prefix matches board labels)
+      D14: 14, D15: 15, D16: 16, D17: 17, D18: 18, D19: 19,
+      D21: 21, D22: 22, D23: 23, D25: 25, D26: 26, D27: 27,
+      D32: 32, D33: 33, D34: 34, D35: 35, D36: 36, D39: 39,
     };
     return map[name] !== undefined ? map[name] : null;
   }
