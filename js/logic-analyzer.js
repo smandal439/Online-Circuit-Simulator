@@ -14,9 +14,9 @@ class LogicAnalyzer {
     /* Channel configuration — up to 8 digital channels */
     this.channels = [
       { pin: 'D2',  label: 'CH1', color: '#00e5ff', enabled: true },
-      { pin: 'D3',  label: 'CH2', color: '#ff9800', enabled: false },
-      { pin: 'D4',  label: 'CH3', color: '#4caf50', enabled: false },
-      { pin: 'D5',  label: 'CH4', color: '#ff5722', enabled: false },
+      { pin: 'D3',  label: 'CH2', color: '#ff9800', enabled: true },
+      { pin: 'D4',  label: 'CH3', color: '#4caf50', enabled: true },
+      { pin: 'D5',  label: 'CH4', color: '#ff5722', enabled: true },
       { pin: 'D6',  label: 'CH5', color: '#ab47bc', enabled: false },
       { pin: 'D7',  label: 'CH6', color: '#ffee33', enabled: false },
       { pin: 'D8',  label: 'CH7', color: '#e91e63', enabled: false },
