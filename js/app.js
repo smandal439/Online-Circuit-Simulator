@@ -1667,7 +1667,41 @@ _newProject() {
     body.appendChild(infoBlock);
 
     const rows = [];
+    const isLED = comp.type && comp.type.startsWith('led');
+    const LED_COLORS = [
+      { name: 'Red',    hex: '#ff3333' },
+      { name: 'Green',  hex: '#33ff66' },
+      { name: 'Blue',   hex: '#3399ff' },
+      { name: 'Yellow', hex: '#ffee33' },
+      { name: 'Orange', hex: '#ff8833' },
+      { name: 'White',  hex: '#ffffff' },
+    ];
     Object.entries(comp.props || {}).forEach(([key, value]) => {
+      if (isLED && key === 'colorName') return;
+      if (isLED && key === 'color') {
+        const row = document.createElement('div');
+        row.className = 'prop-row';
+        const label = document.createElement('label');
+        label.textContent = 'LED Color';
+        label.className = 'prop-label';
+        const select = document.createElement('select');
+        select.className = 'prop-input';
+        select.name = 'color';
+        const currentColor = value;
+        LED_COLORS.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.hex;
+          opt.textContent = c.name;
+          if (c.hex === currentColor) opt.selected = true;
+          opt.style.background = c.hex;
+          opt.style.color = (c.hex === '#ffffff') ? '#000' : '#fff';
+          select.appendChild(opt);
+        });
+        row.appendChild(label);
+        row.appendChild(select);
+        rows.push(row);
+        return;
+      }
       const row   = document.createElement('div');
       row.className = 'prop-row';
       const label = document.createElement('label');
@@ -1710,12 +1744,24 @@ _newProject() {
     if (!this._propsComp) return;
     const body = document.getElementById('modal-props-body');
     if (!body) return;
+    const LED_COLORS = [
+      { name: 'Red',    hex: '#ff3333' },
+      { name: 'Green',  hex: '#33ff66' },
+      { name: 'Blue',   hex: '#3399ff' },
+      { name: 'Yellow', hex: '#ffee33' },
+      { name: 'Orange', hex: '#ff8833' },
+      { name: 'White',  hex: '#ffffff' },
+    ];
     body.querySelectorAll('.prop-input').forEach(input => {
       const key = input.name;
       let val = input.value;
       if (input.type === 'number')   val = Number(val);
       if (input.type === 'checkbox') val = input.checked;
       this._propsComp.props[key] = val;
+      if (key === 'color' && input.tagName === 'SELECT') {
+        const match = LED_COLORS.find(c => c.hex === val);
+        if (match) this._propsComp.props.colorName = match.name;
+      }
     });
     this.canvas?._onChanged?.();
     this._closeModal();

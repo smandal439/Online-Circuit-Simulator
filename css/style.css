@@ -1505,6 +1505,7 @@ body.view-serial #resizer-bottom { display: none; }
 }
 .prop-input:focus { border-color: var(--border-focus); }
 .prop-input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.prop-input option { background: var(--bg-input); color: var(--text-primary); }
 
 /* Enhanced properties modal — component description & pin config */
 .props-info { margin-bottom: 6px; }
