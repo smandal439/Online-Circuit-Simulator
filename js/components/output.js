@@ -13,8 +13,6 @@ function drawLED(ctx, inst, sim) {
     ? (inst.runtimeState.lit && brightness > 0.01)
     : (brightness > 0.02);
   const blown = !!(inst.runtimeState && inst.runtimeState.blown);
-  const time = Date.now() / 250;
-  const pulse = isOn ? 1 + Math.sin(time) * 0.08 : 1;
 
   ctx.save();
   ctx.translate(x, y);
@@ -34,7 +32,7 @@ function drawLED(ctx, inst, sim) {
 
   // 1. Ambient Volumetric Glow Halo (Breathing illumination)
   if (isOn) {
-    const glowR = (32 + brightness * 20) * pulse;
+    const glowR = 32 + brightness * 20;
     const halo = ctx.createRadialGradient(15, 30, 0, 15, 30, glowR);
     halo.addColorStop(0, hexToRgba(col, 0.55 * brightness));
     halo.addColorStop(0.3, hexToRgba(col, 0.28 * brightness));
@@ -49,7 +47,7 @@ function drawLED(ctx, inst, sim) {
   // 2. Inner glow aura with shadow
   if (isOn) {
     ctx.shadowColor = col;
-    ctx.shadowBlur = (18 + brightness * 14) * pulse;
+    ctx.shadowBlur = 18 + brightness * 14;
   }
 
   // 3. LED Bulb body
