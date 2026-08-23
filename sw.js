@@ -2,39 +2,43 @@
    sw.js — Service Worker for ArduSim PWA
    ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'ardusim-v3';
+const CACHE_NAME = 'ardusim-v4';
+
+// Compute base path dynamically so the SW works on both root domains
+// (ardusim.app) and GitHub Pages subpaths (/Online-Circuit-Simulator/).
+const BASE = self.registration.scope.replace(/\/[^/]*$/, '/');
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/css/style.css',
-  '/js/app.js',
-  '/js/canvas.js',
-  '/js/editor.js',
-  '/js/simulator.js',
-  '/js/components/base.js',
-  '/js/components/boards.js',
-  '/js/components/output.js',
-  '/js/components/input.js',
-  '/js/components/actuators.js',
-  '/js/components/sensors.js',
-  '/js/components/passive.js',
-  '/js/components/power.js',
-  '/js/components/ics.js',
-  '/js/components/new_components.js',
-  '/js/serial.js',
-  '/js/output.js',
-  '/js/oscilloscope.js',
-  '/js/logic-analyzer.js',
-  '/js/plotter.js',
-  '/js/storage.js',
-  '/js/api.js',
-  '/js/utils.js',
-  '/js/thumbnails.js',
-  '/js/guide.js',
-  '/js/sharing.js',
-  '/js/safetyChecker.js',
-  '/favicon.ico',
-];
+  '',
+  'index.html',
+  'css/style.css',
+  'js/app.js',
+  'js/canvas.js',
+  'js/editor.js',
+  'js/simulator.js',
+  'js/components/base.js',
+  'js/components/boards.js',
+  'js/components/output.js',
+  'js/components/input.js',
+  'js/components/actuators.js',
+  'js/components/sensors.js',
+  'js/components/passive.js',
+  'js/components/power.js',
+  'js/components/ics.js',
+  'js/components/new_components.js',
+  'js/serial.js',
+  'js/output.js',
+  'js/oscilloscope.js',
+  'js/logic-analyzer.js',
+  'js/plotter.js',
+  'js/storage.js',
+  'js/api.js',
+  'js/utils.js',
+  'js/thumbnails.js',
+  'js/guide.js',
+  'js/sharing.js',
+  'js/safetyChecker.js',
+  'favicon.ico',
+].map(p => BASE + p);
 
 // Install: cache static assets
 self.addEventListener('install', (e) => {
@@ -68,7 +72,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
   // API calls: network first
-  if (url.pathname.startsWith('/api/')) {
+  if (url.pathname.endsWith('/api/execute') || url.pathname.endsWith('/api/examples')) {
     e.respondWith(
       fetch(e.request).catch(() => caches.match(e.request))
     );
@@ -102,7 +106,7 @@ self.addEventListener('fetch', (e) => {
     }).catch(() => {
       // Offline fallback for navigation
       if (e.request.mode === 'navigate') {
-        return caches.match('/index.html');
+        return caches.match(BASE + 'index.html');
       }
     })
   );
