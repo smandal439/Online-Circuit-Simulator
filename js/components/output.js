@@ -114,7 +114,7 @@ defComp({
   id: 'led',
   name: 'LED (Red)',
   category: 'Output',
-  icon: '💡',
+  icon: '🔴',
   desc: 'Red light emitting diode — glows when current flows through the anode',
   width: 30,
   height: 60,
@@ -131,7 +131,7 @@ defComp({
   id: 'led_green',
   name: 'LED (Green)',
   category: 'Output',
-  icon: '💡',
+  icon: '🟢',
   desc: 'Green light emitting diode — glows when current flows through the anode',
   width: 30,
   height: 60,
@@ -148,7 +148,7 @@ defComp({
   id: 'led_blue',
   name: 'LED (Blue)',
   category: 'Output',
-  icon: '💡',
+  icon: '🔵',
   desc: 'Blue light emitting diode — glows when current flows through the anode',
   width: 30,
   height: 60,
@@ -165,7 +165,7 @@ defComp({
   id: 'led_yellow',
   name: 'LED (Yellow)',
   category: 'Output',
-  icon: '💡',
+  icon: '🟡',
   desc: 'Yellow light emitting diode — glows when current flows through the anode',
   width: 30,
   height: 60,
@@ -182,7 +182,7 @@ defComp({
   id: 'led_orange',
   name: 'LED (Orange)',
   category: 'Output',
-  icon: '💡',
+  icon: '🟠',
   desc: 'Orange light emitting diode — glows when current flows through the anode',
   width: 30,
   height: 60,
@@ -199,7 +199,7 @@ defComp({
   id: 'led_white',
   name: 'LED (White)',
   category: 'Output',
-  icon: '💡',
+  icon: '⚪',
   desc: 'White light emitting diode — glows when current flows through the anode',
   width: 30,
   height: 60,
@@ -210,6 +210,7 @@ defComp({
   ],
   draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
 });
+
 
 
 
