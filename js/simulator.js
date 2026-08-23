@@ -2022,7 +2022,7 @@ class ArduinoSimulator {
 window.ArduinoSim = new ArduinoSimulator();
 window.EXAMPLE_SKETCHES = [];
 window.loadExamplesFromFiles = async function () {
-  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test'];
+  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test'];
   const sketches = [];
   for (const name of files) {
     try {

@@ -1,0 +1,84 @@
+{
+  "id": "logic_analyzer_test",
+  "name": "Logic Analyzer Test",
+  "icon": "📟",
+  "desc": "Generates multiple digital signals at different frequencies to test the Logic Analyzer",
+  "tags": [
+    "beginner",
+    "digital",
+    "tutorial"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 250,
+        "y": 100
+      },
+      {
+        "id": "led1",
+        "type": "led",
+        "x": 100,
+        "y": 260
+      },
+      {
+        "id": "led2",
+        "type": "led_green",
+        "x": 160,
+        "y": 260
+      },
+      {
+        "id": "led3",
+        "type": "led_blue",
+        "x": 220,
+        "y": 260
+      },
+      {
+        "id": "led4",
+        "type": "led_yellow",
+        "x": 280,
+        "y": 260
+      },
+      {
+        "id": "r1",
+        "type": "resistor",
+        "x": 100,
+        "y": 340
+      },
+      {
+        "id": "r2",
+        "type": "resistor",
+        "x": 160,
+        "y": 340
+      },
+      {
+        "id": "r3",
+        "type": "resistor",
+        "x": 220,
+        "y": 340
+      },
+      {
+        "id": "r4",
+        "type": "resistor",
+        "x": 280,
+        "y": 340
+      }
+    ],
+    "wires": [
+      { "id": "w1",  "from": { "instId": "b1", "pinId": "D2" },  "to": { "instId": "led1", "pinId": "anode" } },
+      { "id": "w2",  "from": { "instId": "led1", "pinId": "cathode" }, "to": { "instId": "r1", "pinId": "p1" } },
+      { "id": "w3",  "from": { "instId": "r1", "pinId": "p2" },  "to": { "instId": "b1", "pinId": "GND1" } },
+      { "id": "w4",  "from": { "instId": "b1", "pinId": "D3" },  "to": { "instId": "led2", "pinId": "anode" } },
+      { "id": "w5",  "from": { "instId": "led2", "pinId": "cathode" }, "to": { "instId": "r2", "pinId": "p1" } },
+      { "id": "w6",  "from": { "instId": "r2", "pinId": "p2" },  "to": { "instId": "b1", "pinId": "GND1" } },
+      { "id": "w7",  "from": { "instId": "b1", "pinId": "D4" },  "to": { "instId": "led3", "pinId": "anode" } },
+      { "id": "w8",  "from": { "instId": "led3", "pinId": "cathode" }, "to": { "instId": "r3", "pinId": "p1" } },
+      { "id": "w9",  "from": { "instId": "r3", "pinId": "p2" },  "to": { "instId": "b1", "pinId": "GND1" } },
+      { "id": "w10", "from": { "instId": "b1", "pinId": "D5" },  "to": { "instId": "led4", "pinId": "anode" } },
+      { "id": "w11", "from": { "instId": "led4", "pinId": "cathode" }, "to": { "instId": "r4", "pinId": "p1" } },
+      { "id": "w12", "from": { "instId": "r4", "pinId": "p2" },  "to": { "instId": "b1", "pinId": "GND1" } }
+    ]
+  },
+  "code": "/*\n * Logic Analyzer Test\n * Generates 4 digital signals at different frequencies:\n *   D2 = 1 Hz   (500ms period)\n *   D3 = 2 Hz   (250ms period)\n *   D4 = 5 Hz   (100ms period)\n *   D5 = 10 Hz  (50ms period)\n *\n * Open the Logic Analyzer tab in the bottom panel.\n * Set CH1=D2, CH2=D3, CH3=D4, CH4=D5.\n * Press Run and observe the square waves!\n */\n\nvoid setup() {\n  pinMode(2, OUTPUT);\n  pinMode(3, OUTPUT);\n  pinMode(4, OUTPUT);\n  pinMode(5, OUTPUT);\n  Serial.println(\"Logic Analyzer Test — 4 channels\");\n}\n\nvoid loop() {\n  digitalWrite(2, HIGH);\n  digitalWrite(3, HIGH);\n  digitalWrite(4, HIGH);\n  digitalWrite(5, HIGH);\n  delay(50);\n\n  digitalWrite(5, LOW);\n  delay(50);\n\n  digitalWrite(4, LOW);\n  delay(50);\n\n  digitalWrite(3, LOW);\n  delay(50);\n\n  digitalWrite(2, LOW);\n  digitalWrite(3, HIGH);\n  digitalWrite(4, HIGH);\n  digitalWrite(5, HIGH);\n  delay(50);\n\n  digitalWrite(5, LOW);\n  delay(50);\n\n  digitalWrite(4, LOW);\n  delay(50);\n\n  digitalWrite(3, LOW);\n  delay(50);\n}\n"
+}
