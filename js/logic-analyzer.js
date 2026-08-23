@@ -88,7 +88,7 @@ class LogicAnalyzer {
       const pinNum = this._pinNameToNum(ch.pin);
       if (pinNum === null) continue;
       const raw = states[`pin_${pinNum}`] || 0;
-      const high = raw > 127; // threshold at ~50% of 255
+      const high = raw > 0; // any non-zero value is HIGH
       this.data[ch.pin].push({ t: simTime, v: high ? 1 : 0 });
       if (this.data[ch.pin].length > this.maxSamples) this.data[ch.pin].shift();
     }
