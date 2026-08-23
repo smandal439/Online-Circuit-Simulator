@@ -2,128 +2,215 @@
 'use strict';
 
 
-/*  LED  */
+/*  Shared LED draw helper — used by all coloured LED variants  */
+function drawLED(ctx, inst, sim) {
+  const { x, y } = inst;
+  const col = inst.props.color || '#ff3333';
+  const brightness = (inst.runtimeState && inst.runtimeState.brightness !== undefined)
+    ? inst.runtimeState.brightness
+    : (getInstPinState(inst, 'anode', sim) > 1 ? getInstPinState(inst, 'anode', sim) / 255 : (getInstPinState(inst, 'anode', sim) > 0.05 ? 1 : 0));
+  const isOn = (inst.runtimeState && inst.runtimeState.lit !== undefined)
+    ? (inst.runtimeState.lit && brightness > 0.01)
+    : (brightness > 0.02);
+  const blown = !!(inst.runtimeState && inst.runtimeState.blown);
+  const time = Date.now() / 250;
+  const pulse = isOn ? 1 + Math.sin(time) * 0.08 : 1;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Lead lines
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(15, 0);  ctx.lineTo(15, 18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(15, 42); ctx.lineTo(15, 60); ctx.stroke();
+
+  // Flat side (cathode indicator)
+  ctx.strokeStyle = isOn ? col : '#555';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(8, 42); ctx.lineTo(22, 42);
+  ctx.stroke();
+
+  // 1. Ambient Volumetric Glow Halo (Breathing illumination)
+  if (isOn) {
+    const glowR = (32 + brightness * 20) * pulse;
+    const halo = ctx.createRadialGradient(15, 30, 0, 15, 30, glowR);
+    halo.addColorStop(0, hexToRgba(col, 0.55 * brightness));
+    halo.addColorStop(0.3, hexToRgba(col, 0.28 * brightness));
+    halo.addColorStop(0.7, hexToRgba(col, 0.08 * brightness));
+    halo.addColorStop(1, hexToRgba(col, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(15, 30, glowR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 2. Inner glow aura with shadow
+  if (isOn) {
+    ctx.shadowColor = col;
+    ctx.shadowBlur = (18 + brightness * 14) * pulse;
+  }
+
+  // 3. LED Bulb body
+  ctx.fillStyle = isOn ? hexToRgba(col, 0.75 + 0.25 * brightness) : (blown ? 'rgba(52,52,58,0.95)' : hexToRgba(col, 0.3));
+  ctx.beginPath();
+  ctx.arc(15, 30, 13, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = isOn ? '#ffffff' : (blown ? 'rgba(30,30,34,0.9)' : hexToRgba(col, 0.5));
+  ctx.lineWidth = isOn ? 1.5 : 1;
+  ctx.stroke();
+
+  // 4. Glowing Internal Core & Die
+  if (isOn) {
+    const coreGrad = ctx.createRadialGradient(15, 29, 0, 15, 29, 9);
+    coreGrad.addColorStop(0, '#ffffff');
+    coreGrad.addColorStop(0.45, hexToRgba(col, 0.95));
+    coreGrad.addColorStop(1, hexToRgba(col, 0.3));
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.arc(15, 29, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Incandescent die center
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fillRect(13, 27, 4, 4);
+  } else {
+    ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
+    ctx.fillRect(13, 27, 4, 4);
+  }
+
+  ctx.shadowBlur = 0;
+
+  // 5. Specular 3D Glass Dome Highlight
+  const glare = ctx.createRadialGradient(11, 23, 0, 15, 28, 12);
+  glare.addColorStop(0, isOn ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)');
+  glare.addColorStop(0.5, isOn ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)');
+  glare.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = glare;
+  ctx.beginPath();
+  ctx.arc(15, 30, 13, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Top rim highlight arc
+  ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(15, 30, 11, -Math.PI * 0.75, -Math.PI * 0.25);
+  ctx.stroke();
+
+  // Polarity marks
+  ctx.fillStyle = '#aaa';
+  ctx.font = 'bold 9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('+', 7, 18);
+  ctx.fillText('−', 24, 46);
+
+  if (inst.selected) drawSelectionRect(ctx, -3, -3, 36, 66);
+  ctx.restore();
+}
+
+/* LED — Red (default) */
 defComp({
   id: 'led',
-  name: 'LED',
+  name: 'LED (Red)',
   category: 'Output',
   icon: '💡',
-  desc: 'Light emitting diode — glows when current flows through the anode',
+  desc: 'Red light emitting diode — glows when current flows through the anode',
   width: 30,
   height: 60,
   defaultProps: { color: '#ff3333', colorName: 'Red' },
   pins: [
     { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
-    { id: 'cathode', label: 'âˆ’', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
   ],
-  draw(ctx, inst, sim) {
-    const { x, y } = inst;
-    const col = inst.props.color || '#ff3333';
-    const brightness = (inst.runtimeState && inst.runtimeState.brightness !== undefined)
-      ? inst.runtimeState.brightness
-      : (getInstPinState(inst, 'anode', sim) > 1 ? getInstPinState(inst, 'anode', sim) / 255 : (getInstPinState(inst, 'anode', sim) > 0.05 ? 1 : 0));
-    const isOn = (inst.runtimeState && inst.runtimeState.lit !== undefined)
-      ? (inst.runtimeState.lit && brightness > 0.01)
-      : (brightness > 0.02);
-    const blown = !!(inst.runtimeState && inst.runtimeState.blown);
-    const overloaded = !!(inst.runtimeState && inst.runtimeState.overload) && !blown;
-    const time = Date.now() / 250;
-    const pulse = isOn ? 1 + Math.sin(time) * 0.08 : 1;
+  draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
+});
 
-    ctx.save();
-    ctx.translate(x, y);
+/* LED — Green */
+defComp({
+  id: 'led_green',
+  name: 'LED (Green)',
+  category: 'Output',
+  icon: '💡',
+  desc: 'Green light emitting diode — glows when current flows through the anode',
+  width: 30,
+  height: 60,
+  defaultProps: { color: '#33ff66', colorName: 'Green' },
+  pins: [
+    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
+});
 
-    // Lead lines
-    ctx.strokeStyle = '#888';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(15, 0);  ctx.lineTo(15, 18); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(15, 42); ctx.lineTo(15, 60); ctx.stroke();
+/* LED — Blue */
+defComp({
+  id: 'led_blue',
+  name: 'LED (Blue)',
+  category: 'Output',
+  icon: '💡',
+  desc: 'Blue light emitting diode — glows when current flows through the anode',
+  width: 30,
+  height: 60,
+  defaultProps: { color: '#3399ff', colorName: 'Blue' },
+  pins: [
+    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
+});
 
-    // Flat side (cathode indicator)
-    ctx.strokeStyle = isOn ? col : '#555';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(8, 42); ctx.lineTo(22, 42);
-    ctx.stroke();
+/* LED — Yellow */
+defComp({
+  id: 'led_yellow',
+  name: 'LED (Yellow)',
+  category: 'Output',
+  icon: '💡',
+  desc: 'Yellow light emitting diode — glows when current flows through the anode',
+  width: 30,
+  height: 60,
+  defaultProps: { color: '#ffee33', colorName: 'Yellow' },
+  pins: [
+    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
+});
 
-    // 1. Ambient Volumetric Glow Halo (Breathing illumination)
-    if (isOn) {
-      const glowR = (32 + brightness * 20) * pulse;
-      const halo = ctx.createRadialGradient(15, 30, 0, 15, 30, glowR);
-      halo.addColorStop(0, hexToRgba(col, 0.55 * brightness));
-      halo.addColorStop(0.3, hexToRgba(col, 0.28 * brightness));
-      halo.addColorStop(0.7, hexToRgba(col, 0.08 * brightness));
-      halo.addColorStop(1, hexToRgba(col, 0));
-      ctx.fillStyle = halo;
-      ctx.beginPath();
-      ctx.arc(15, 30, glowR, 0, Math.PI * 2);
-      ctx.fill();
-    }
+/* LED — Orange */
+defComp({
+  id: 'led_orange',
+  name: 'LED (Orange)',
+  category: 'Output',
+  icon: '💡',
+  desc: 'Orange light emitting diode — glows when current flows through the anode',
+  width: 30,
+  height: 60,
+  defaultProps: { color: '#ff8833', colorName: 'Orange' },
+  pins: [
+    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
+});
 
-    // 2. Inner glow aura with shadow
-    if (isOn) {
-      ctx.shadowColor = col;
-      ctx.shadowBlur = (18 + brightness * 14) * pulse;
-    }
-
-    // 3. LED Bulb body
-    ctx.fillStyle = isOn ? hexToRgba(col, 0.75 + 0.25 * brightness) : (blown ? 'rgba(52,52,58,0.95)' : hexToRgba(col, 0.3));
-    ctx.beginPath();
-    ctx.arc(15, 30, 13, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = isOn ? '#ffffff' : (blown ? 'rgba(30,30,34,0.9)' : hexToRgba(col, 0.5));
-    ctx.lineWidth = isOn ? 1.5 : 1;
-    ctx.stroke();
-
-    // 4. Glowing Internal Core & Die
-    if (isOn) {
-      const coreGrad = ctx.createRadialGradient(15, 29, 0, 15, 29, 9);
-      coreGrad.addColorStop(0, '#ffffff');
-      coreGrad.addColorStop(0.45, hexToRgba(col, 0.95));
-      coreGrad.addColorStop(1, hexToRgba(col, 0.3));
-      ctx.fillStyle = coreGrad;
-      ctx.beginPath();
-      ctx.arc(15, 29, 8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Incandescent die center
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.fillRect(13, 27, 4, 4);
-    } else {
-      ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
-      ctx.fillRect(13, 27, 4, 4);
-    }
-
-    ctx.shadowBlur = 0;
-
-    // 5. Specular 3D Glass Dome Highlight
-    const glare = ctx.createRadialGradient(11, 23, 0, 15, 28, 12);
-    glare.addColorStop(0, isOn ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)');
-    glare.addColorStop(0.5, isOn ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)');
-    glare.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = glare;
-    ctx.beginPath();
-    ctx.arc(15, 30, 13, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Top rim highlight arc
-    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(15, 30, 11, -Math.PI * 0.75, -Math.PI * 0.25);
-    ctx.stroke();
-
-    // Polarity marks
-    ctx.fillStyle = '#aaa';
-    ctx.font = 'bold 9px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('+', 7, 18);
-    ctx.fillText('âˆ’', 24, 46);
-
-    if (inst.selected) drawSelectionRect(ctx, -3, -3, 36, 66);
-    ctx.restore();
-  }
+/* LED — White */
+defComp({
+  id: 'led_white',
+  name: 'LED (White)',
+  category: 'Output',
+  icon: '💡',
+  desc: 'White light emitting diode — glows when current flows through the anode',
+  width: 30,
+  height: 60,
+  defaultProps: { color: '#ffffff', colorName: 'White' },
+  pins: [
+    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
 });
 
 

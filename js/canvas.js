@@ -1775,7 +1775,13 @@ class CircuitCanvas {
   updateSimState(pinStates) {
     for (const inst of this.components) {
       switch (inst.type) {
-        case 'led': {
+        case 'led':
+        case 'led_green':
+        case 'led_blue':
+        case 'led_yellow':
+        case 'led_orange':
+        case 'led_white':
+        {
           // 1. Trace Anode (+) to voltage sources & series resistance
           const anodeNet = this._tracePinNet(inst.id, 'anode');
           // 2. Trace Cathode (-) to Ground paths & series resistance
