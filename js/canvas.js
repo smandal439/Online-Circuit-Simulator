@@ -2499,6 +2499,24 @@ case 'push_button': {
         }
       }
 
+      // 4c. Breadboard internal connectivity
+      if (inst.type === 'breadboard') {
+        const defs = window.ArduinoComponents?.COMPONENT_DEFS;
+        const def = defs && defs['breadboard'];
+        if (def) {
+          const myGroup = window._breadboardGetGroup(current.pinId);
+          if (myGroup) {
+            for (const otherPin of def.pins) {
+              if (otherPin.id === current.pinId) continue;
+              const otherGroup = window._breadboardGetGroup(otherPin.id);
+              if (otherGroup === myGroup) {
+                queue.push({ instId: inst.id, pinId: otherPin.id, resistance: current.resistance });
+              }
+            }
+          }
+        }
+      }
+
       // 5. Traverse connected wires
       for (const wire of this.wires) {
         if (wire.from.instId === current.instId && wire.from.pinId === current.pinId) {

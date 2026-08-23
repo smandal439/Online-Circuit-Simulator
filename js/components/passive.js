@@ -115,16 +115,60 @@ defComp({
 });
 
 /* --------BREADBOARD (Realistic Half-Size / 400 Tie-Points)----------- */
+/* Generate breadboard pins: 2 per column (top/bottom of each half) + 4 power rails */
+function _genBreadboardPins() {
+  const W = 580, cols = 30, startX = 42, stepX = (W - 84) / (cols - 1);
+  const upperTopY = 55, upperBotY = 107;
+  const lowerTopY = 123, lowerBotY = 175;
+  const pins = [];
+  for (let c = 0; c < cols; c++) {
+    const hx = Math.round(startX + c * stepX);
+    const n = c + 1;
+    // Upper half: top pin (row a) and bottom pin (row e) — both are same electrical node
+    pins.push({ id: `ut${n}`, label: `${n}a`, type: PIN_TYPE.SIGNAL, x: hx, y: upperTopY, side: 'top' });
+    pins.push({ id: `ub${n}`, label: `${n}e`, type: PIN_TYPE.SIGNAL, x: hx, y: upperBotY, side: 'top' });
+    // Lower half: top pin (row f) and bottom pin (row j) — both are same electrical node
+    pins.push({ id: `lt${n}`, label: `${n}f`, type: PIN_TYPE.SIGNAL, x: hx, y: lowerTopY, side: 'bottom' });
+    pins.push({ id: `lb${n}`, label: `${n}j`, type: PIN_TYPE.SIGNAL, x: hx, y: lowerBotY, side: 'bottom' });
+  }
+  // Power rails (each rail = one electrical node)
+  pins.push({ id: 'rp', label: '+', type: PIN_TYPE.POWER, x: 30, y: 19,  side: 'top' });
+  pins.push({ id: 'rn', label: '-', type: PIN_TYPE.GND,   x: 30, y: 31,  side: 'top' });
+  pins.push({ id: 'bp', label: '+', type: PIN_TYPE.POWER, x: 30, y: 189, side: 'bottom' });
+  pins.push({ id: 'bn', label: '-', type: PIN_TYPE.GND,   x: 30, y: 201, side: 'bottom' });
+  return pins;
+}
+
+/* Breadboard internal node mapping:
+   - ut<N> and ub<N> are the SAME electrical node (column N upper half)
+   - lt<N> and lb<N> are the SAME electrical node (column N lower half)
+   - rp = entire top + rail, rn = entire top - rail
+   - bp = entire bottom + rail, bn = entire bottom - rail
+   - Upper and lower halves are NOT connected (DIP groove separation)
+*/
+function _breadboardGetGroup(pinId) {
+  if (pinId === 'rp') return 'rail_tp';
+  if (pinId === 'rn') return 'rail_tn';
+  if (pinId === 'bp') return 'rail_bp';
+  if (pinId === 'bn') return 'rail_bn';
+  // ut1..ut30, ub1..ub30 → group 'u<N>'
+  // lt1..lt30, lb1..lb30 → group 'l<N>'
+  const m = pinId.match(/^([ul])([tb])(\d+)$/);
+  if (m) return m[1] + m[3]; // e.g. 'u5', 'l12'
+  return null;
+}
+window._breadboardGetGroup = _breadboardGetGroup;
+
 defComp({
   id: 'breadboard',
   name: 'Breadboard',
   category: 'Passive',
   icon: '🟦',
-  desc: '400 tie-point solderless breadboard for prototyping',
+  desc: '400 tie-point solderless breadboard — 30 columns × 2 halves (upper a-e, lower f-j) + 4 power rails. Each column half is internally connected.',
   width: 580,
   height: 220,
   defaultProps: {},
-  pins: [], // Dynamic â€” breadboard holes
+  pins: _genBreadboardPins(),
   draw(ctx, inst, sim) {
     const { x, y, width: W, height: H } = inst;
     ctx.save();
