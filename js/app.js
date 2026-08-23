@@ -165,7 +165,10 @@ class App {
     });
     shortcutsBtn?.addEventListener('click', () => this._showModal('modal-shortcuts'));
     const homeBtn = get('btn-home');
-    homeBtn?.addEventListener('click', () => window.GuideManager?.open('home'));
+    homeBtn?.addEventListener('click', () => {
+      window.open('ArduSim_Guide.html', '_blank');
+      window.GuideManager?.open('home');
+    });
     const helpComponentsBtn = get('btn-help-components');
     helpComponentsBtn?.addEventListener('click', () => {
       this._closeHeaderDropdowns();

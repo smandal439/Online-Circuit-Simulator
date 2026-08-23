@@ -1066,6 +1066,7 @@ const GUIDE_HOME = {
     { title: 'Write the code', desc: 'Write or paste Arduino C++ in the editor — autocomplete and IntelliSense guide you.' },
     { title: 'Run & debug', desc: 'Press Run (F5) and watch your circuit react. Use the Serial Monitor, Oscilloscope and Pin Monitor to debug.' },
   ],
+  cta: 'View Full Guide →',
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1163,6 +1164,7 @@ class GuideManager {
           <button class="gh-btn gh-btn-primary" id="gh-go-sim">⚡ Launch the Simulator</button>
           <button class="gh-btn gh-btn-ghost" id="gh-go-comp">Browse Components</button>
           <button class="gh-btn gh-btn-ghost" id="gh-go-tut">Read the Tutorials</button>
+          <button class="gh-btn gh-btn-ghost" id="gh-go-guide">View Full Guide</button>
         </div>
         <div class="guide-hero-stats">
           <span><b>${compCount}+</b> components</span>
@@ -1200,6 +1202,7 @@ class GuideManager {
     bind('#gh-go-sim2', () => this.close());
     bind('#gh-go-comp', closeAnd('components'));
     bind('#gh-go-tut', closeAnd('tutorials'));
+    bind('#gh-go-guide', () => window.open('ArduSim_Guide.html', '_blank'));
   }
 
   /* ── Component reference ── */
