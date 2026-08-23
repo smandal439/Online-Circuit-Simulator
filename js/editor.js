@@ -150,11 +150,11 @@ void loop() {
         const snippets = [
           {
             label: 'setup', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
-            insertText: 'void setup() {\n\t${1:// setup code}\n}', documentation: 'Setup function — runs once at start'
+            insertText: 'void setup() {\n\t${1:// Put your setup code here, to run once when the board starts:}\n}', documentation: 'Setup function — runs once at start'
           },
           {
             label: 'loop', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
-            insertText: 'void loop() {\n\t${1:// loop code}\n}', documentation: 'Loop function — runs repeatedly'
+            insertText: 'void loop() {\n\t${1:// Put your main code here, to run repeatedly indefinitely:}\n}', documentation: 'Loop function — runs repeatedly'
           },
           {
             label: 'for', kind: monaco.languages.CompletionItemKind.Snippet, insertTextRules: 4,
