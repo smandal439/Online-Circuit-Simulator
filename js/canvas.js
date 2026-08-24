@@ -482,7 +482,7 @@ class CircuitCanvas {
     if (!def || !Array.isArray(def.interactive)) return [];
     const w = Math.max(40, def.width || 40);
     const h = def.height || 40;
-    const sliderCtrls = def.interactive.filter(c => c.type !== 'select');
+    const sliderCtrls = def.interactive.filter(c => !c.type || c.type === 'range');
     return sliderCtrls.map((ctrl, i) => ({
       x: inst.x,
       y: inst.y + h + 14 + i * 15,

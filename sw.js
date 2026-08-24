@@ -95,21 +95,21 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Static assets: cache first, network fallback
+  // Static assets: network first, cache fallback (ensures fresh files)
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      return cached || fetch(e.request).then((resp) => {
-        if (resp.ok) {
-          const clone = resp.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
-        }
-        return resp;
-      });
-    }).catch(() => {
-      // Offline fallback for navigation
-      if (e.request.mode === 'navigate') {
-        return caches.match(BASE + 'index.html');
+    fetch(e.request).then((resp) => {
+      if (resp.ok) {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
       }
+      return resp;
+    }).catch(() => {
+      return caches.match(e.request).then((cached) => {
+        if (cached) return cached;
+        if (e.request.mode === 'navigate') {
+          return caches.match(BASE + 'index.html');
+        }
+      });
     })
   );
 });

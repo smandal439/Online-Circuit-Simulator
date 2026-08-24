@@ -719,6 +719,56 @@ void loop(){
     wiring: 'Connect the GND terminal to the ground rail of your circuit.',
     code: `// Ground rails need no code.`,
   },
+
+  /* ── INSTRUMENTS ── */
+  multimeter: {
+    id: 'multimeter',
+    name: 'Digital Multimeter',
+    icon: '🔧',
+    category: 'Instruments',
+    longDesc: 'A digital multimeter that measures DC/AC voltage, resistance, continuity, and DC current between two probe points. Select the mode from the properties panel — the LCD display updates live during simulation.',
+    use: 'Measuring voltage across components, resistance of resistors, continuity of wires, and current through a series circuit. Place in parallel for voltage, in series for current.',
+    pins: {
+      probe_red: { label: 'V+', type: 'signal', desc: 'Red probe — positive measurement terminal.' },
+      probe_com: { label: 'COM', type: 'gnd', desc: 'Black probe — common / ground terminal.' },
+    },
+    props: {
+      mode: 'Measurement mode: V_DC (DC Voltage), V_AC (AC Voltage), A_DC (DC Current), RES (Resistance), CONT (Continuity).',
+    },
+    wiring: 'For voltage: connect V+ and COM in parallel across the component. For current: break the circuit and insert the DMM in series.',
+    code: `// The multimeter is a measuring instrument — no Arduino code needed.`,
+  },
+
+  func_gen: {
+    id: 'func_gen',
+    name: 'Function Generator',
+    icon: '〜',
+    category: 'Instruments',
+    longDesc: 'A dual-channel DDS function generator that outputs sine, square, triangle, sawtooth, and noise waveforms. Each channel has independent frequency, amplitude, DC offset, phase, and duty cycle controls. The scope display shows live waveforms during simulation.',
+    use: 'Signal source for testing circuits — drive LEDs, buzzers, servos, or logic circuits with configurable waveforms. CH1 and CH2 outputs are independent voltage sources.',
+    pins: {
+      ch1_out: { label: 'CH1', type: 'signal', desc: 'Channel 1 signal output.' },
+      ch1_gnd: { label: 'GND1', type: 'gnd', desc: 'Channel 1 ground.' },
+      ch2_out: { label: 'CH2', type: 'signal', desc: 'Channel 2 signal output.' },
+      ch2_gnd: { label: 'GND2', type: 'gnd', desc: 'Channel 2 ground.' },
+    },
+    props: {
+      ch1_wave: 'CH1 waveform: sine, square, triangle, sawtooth, noise.',
+      ch1_freq: 'CH1 frequency in Hz (10–3000).',
+      ch1_amp: 'CH1 peak-to-peak amplitude in volts (0.1–10).',
+      ch1_offset: 'CH1 DC offset in volts (-5 to +5).',
+      ch1_phase: 'CH1 phase in degrees (0–360).',
+      ch1_duty: 'CH1 duty cycle in percent (5–95).',
+      ch2_wave: 'CH2 waveform: sine, square, triangle, sawtooth, noise.',
+      ch2_freq: 'CH2 frequency in Hz (10–3000).',
+      ch2_amp: 'CH2 peak-to-peak amplitude in volts (0.1–10).',
+      ch2_offset: 'CH2 DC offset in volts (-5 to +5).',
+      ch2_phase: 'CH2 phase in degrees (0–360).',
+      ch2_duty: 'CH2 duty cycle in percent (5–95).',
+    },
+    wiring: 'Connect CH1 or CH2 output to your circuit input. Connect the corresponding GND to the circuit ground.',
+    code: `// The function generator is a signal source — no Arduino code needed.`,
+  },
 };
 
 /* ═══════════════════════════════════════════════════════════════
