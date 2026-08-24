@@ -44,6 +44,12 @@ defComp({
     { id:'5V',   label:'5V',   type:PIN_TYPE.POWER, x:146, y:134, side:'bottom' },
     { id:'3V3',  label:'3.3V', type:PIN_TYPE.POWER, x:160, y:134, side:'bottom' },
     { id:'RST',  label:'RST',  type:PIN_TYPE.SIGNAL,x:174, y:134, side:'bottom' },
+    //I2C PIN on right side
+    { id:'SDA',  label:'SDA',  type:PIN_TYPE.SIGNAL, x:220, y:100, side:'left' },
+    { id:'SCL',  label:'SCL',  type:PIN_TYPE.SIGNAL, x:220, y:110, side:'left' },
+    { id:'5V',   label:'5V',   type:PIN_TYPE.POWER, x:220, y:120, side:'bottom' },
+    { id:'GND3', label:'GND',  type:PIN_TYPE.GND,   x:220, y:130, side:'bottom' },
+    
   ],
   draw(ctx, inst, sim) {
     const { x, y, width: W, height: H } = inst;
@@ -114,7 +120,7 @@ defComp({
     ctx.fillText('16U2', 19, 44);
 
     // â”€â”€ ATmega328P DIP (center) â”€â”€
-    const chipX = 58, chipY = 60, chipW = 76, chipH = 32;
+    const chipX = 70, chipY = 60, chipW = 76, chipH = 32;
     ctx.fillStyle = '#0c0c0c';
     roundRect(ctx, chipX, chipY, chipW, chipH, 3);
     ctx.fill();
@@ -145,15 +151,15 @@ defComp({
 
     // â”€â”€ ICSP header (right of chip) â”€â”€
     ctx.fillStyle = '#151517';
-    roundRect(ctx, 148, 62, 20, 24, 2);
+    roundRect(ctx, 168, 62, 20, 24, 2);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 1;
     ctx.stroke();
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 2; col++) {
-        const sx = 152 + col * 8;
-        const sy = 66 + row * 7;
+        const sx = 174 + col * 8;
+        const sy = 67 + row * 7;
         ctx.fillStyle = '#c8b06a';
         ctx.beginPath(); ctx.arc(sx, sy, 2.2, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#0c0c0e';
@@ -162,7 +168,7 @@ defComp({
     }
     ctx.fillStyle = '#bfbfbf';
     ctx.font = '4.5px sans-serif';
-    ctx.fillText('ICSP', 158, 60);
+    ctx.fillText('ICSP', 178, 60);
 
     // â”€â”€ Crystal oscillator â”€â”€
     ctx.fillStyle = '#b0b0b0';
@@ -280,13 +286,15 @@ defComp({
     const topLabels   = ['D0','D1','D2','D3~','D4','D5~','D6~','D7','D8','D9~','D10~','D11~','D12','D13','GND','AREF'];
     const analogLabels = ['A0','A1','A2','A3','A4','A5'];
     const powerLabels  = ['VIN','GND','GND','5V','3.3V','RST'];
+    const i2cLabels= ['SDA','SCL','5V','GND'];
     for (let i = 0; i < 16; i++) paintPinLabel(topHoles[i], 25, topLabels[i]);
     for (let i = 0; i < 6; i++)  paintPinLabel(analogHoles[i], 120, analogLabels[i]);
     for (let i = 0; i < 6; i++)  paintPinLabel(powerHoles[i], 120, powerLabels[i]);
+    for (let i = 0; i < 4; i++)  paintPinLabel(205, 100 + i * 10, i2cLabels[i]);   
 
     // Vertical "MADE IN ITALY" on the right edge
     ctx.save();
-    ctx.translate(224, 14);
+    ctx.translate(220, 36);
     ctx.rotate(Math.PI / 2);
     ctx.font = '5px sans-serif';
     ctx.textAlign = 'left';

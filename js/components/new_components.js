@@ -165,96 +165,96 @@ defComp({
 /* ═══════════════════════════════════════════════════════════════
    28BYJ-48 Stepper Motor with ULN2003 Driver (2x Scaled: 100x100)
    ═══════════════════════════════════════════════════════════════ */
-defComp({
-  id: 'stepper_28byj',
-  name: '28BYJ-48 Stepper',
-  category: 'Actuators',
-  icon: '⚙️',
-  desc: '5V 4-phase unipolar stepper motor with ULN2003 driver. 2048 steps/rev, 5.625°/step',
+// defComp({
+//   id: 'stepper_28byj',
+//   name: '28BYJ-48 Stepper',
+//   category: 'Actuators',
+//   icon: '⚙️',
+//   desc: '5V 4-phase unipolar stepper motor with ULN2003 driver. 2048 steps/rev, 5.625°/step',
 
-  // 1. Double the component dimensions (was 50 x 50)
-  width: 100,
-  height: 100,
-  defaultProps: { angle: 0 },
-  interactive: [],
+//   // 1. Double the component dimensions (was 50 x 50)
+//   width: 100,
+//   height: 100,
+//   defaultProps: { angle: 0 },
+//   interactive: [],
 
-  // 2. Scale pin connection points (multiplied by 2)
-  pins: [
-    { id: 'IN1', label: 'IN1', type: PIN_TYPE.DIGITAL, x: 20, y: 100, side: 'bottom' },
-    { id: 'IN2', label: 'IN2', type: PIN_TYPE.DIGITAL, x: 40, y: 100, side: 'bottom' },
-    { id: 'IN3', label: 'IN3', type: PIN_TYPE.DIGITAL, x: 60, y: 100, side: 'bottom' },
-    { id: 'IN4', label: 'IN4', type: PIN_TYPE.DIGITAL, x: 80, y: 100, side: 'bottom' },
-  ],
+//   // 2. Scale pin connection points (multiplied by 2)
+//   pins: [
+//     { id: 'IN1', label: 'IN1', type: PIN_TYPE.DIGITAL, x: 20, y: 100, side: 'bottom' },
+//     { id: 'IN2', label: 'IN2', type: PIN_TYPE.DIGITAL, x: 40, y: 100, side: 'bottom' },
+//     { id: 'IN3', label: 'IN3', type: PIN_TYPE.DIGITAL, x: 60, y: 100, side: 'bottom' },
+//     { id: 'IN4', label: 'IN4', type: PIN_TYPE.DIGITAL, x: 80, y: 100, side: 'bottom' },
+//   ],
 
-  draw(ctx, inst, sim) {
-    const { x, y } = inst;
-    const angle = inst.runtimeState?.angle ?? 0;
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const angle = inst.runtimeState?.angle ?? 0;
 
-    ctx.save();
-    ctx.translate(x, y);
+//     ctx.save();
+//     ctx.translate(x, y);
 
-    // 3. Apply 2x scale to all drawing operations
-    ctx.scale(2, 2);
+//     // 3. Apply 2x scale to all drawing operations
+//     ctx.scale(2, 2);
 
-    // Motor body (cylindrical)
-    const grad = ctx.createRadialGradient(25, 20, 5, 25, 20, 22);
-    grad.addColorStop(0, '#c0c0c0');
-    grad.addColorStop(0.7, '#888');
-    grad.addColorStop(1, '#555');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(25, 20, 18, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+//     // Motor body (cylindrical)
+//     const grad = ctx.createRadialGradient(25, 20, 5, 25, 20, 22);
+//     grad.addColorStop(0, '#c0c0c0');
+//     grad.addColorStop(0.7, '#888');
+//     grad.addColorStop(1, '#555');
+//     ctx.fillStyle = grad;
+//     ctx.beginPath();
+//     ctx.arc(25, 20, 18, 0, Math.PI * 2);
+//     ctx.fill();
+//     ctx.strokeStyle = '#444';
+//     ctx.lineWidth = 1.5;
+//     ctx.stroke();
 
-    // Motor shaft
-    ctx.fillStyle = '#aaa';
-    ctx.beginPath();
-    ctx.arc(25, 20, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#666';
-    ctx.stroke();
+//     // Motor shaft
+//     ctx.fillStyle = '#aaa';
+//     ctx.beginPath();
+//     ctx.arc(25, 20, 4, 0, Math.PI * 2);
+//     ctx.fill();
+//     ctx.strokeStyle = '#666';
+//     ctx.stroke();
 
-    // Shaft indicator line
-    const rad = (angle * Math.PI) / 180;
-    ctx.strokeStyle = '#e74c3c';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(25, 20);
-    ctx.lineTo(25 + Math.cos(rad) * 14, 20 + Math.sin(rad) * 14);
-    ctx.stroke();
+//     // Shaft indicator line
+//     const rad = (angle * Math.PI) / 180;
+//     ctx.strokeStyle = '#e74c3c';
+//     ctx.lineWidth = 2;
+//     ctx.beginPath();
+//     ctx.moveTo(25, 20);
+//     ctx.lineTo(25 + Math.cos(rad) * 14, 20 + Math.sin(rad) * 14);
+//     ctx.stroke();
 
-    // Angle label
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 6px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${Math.round(angle % 360)}°`, 25, 43);
+//     // Angle label
+//     ctx.fillStyle = '#fff';
+//     ctx.font = 'bold 6px monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(`${Math.round(angle % 360)}°`, 25, 43);
 
-    // ULN2003 driver chip
-    ctx.fillStyle = '#1a1a2e';
-    roundRect(ctx, 8, 36, 34, 10, 2);
-    ctx.fill();
-    ctx.fillStyle = '#888';
-    ctx.font = '4px monospace';
-    ctx.fillText('ULN2003', 25, 43);
+//     // ULN2003 driver chip
+//     ctx.fillStyle = '#1a1a2e';
+//     roundRect(ctx, 8, 36, 34, 10, 2);
+//     ctx.fill();
+//     ctx.fillStyle = '#888';
+//     ctx.font = '4px monospace';
+//     ctx.fillText('ULN2003', 25, 43);
 
-    // Pin leads
-    const pinXs = [10, 20, 30, 40];
-    ctx.strokeStyle = '#a0a0a0';
-    ctx.lineWidth = 1.5;
-    for (const px of pinXs) {
-      ctx.beginPath();
-      ctx.moveTo(px, 46);
-      ctx.lineTo(px, 50);
-      ctx.stroke();
-    }
+//     // Pin leads
+//     const pinXs = [10, 20, 30, 40];
+//     ctx.strokeStyle = '#a0a0a0';
+//     ctx.lineWidth = 1.5;
+//     for (const px of pinXs) {
+//       ctx.beginPath();
+//       ctx.moveTo(px, 46);
+//       ctx.lineTo(px, 50);
+//       ctx.stroke();
+//     }
 
-    if (inst.selected) drawSelectionRect(ctx, 0, 0, 50, 50);
-    ctx.restore();
-  }
-});
+//     if (inst.selected) drawSelectionRect(ctx, 0, 0, 50, 50);
+//     ctx.restore();
+//   }
+// });
 
 /* ═══════════════════════════════════════════════════════════════
    WS2812B NeoPixel — Addressable RGB LED
@@ -334,6 +334,249 @@ defComp({
 //     ctx.restore();
 //   }
 // });
+
+/* -------------- 28BYJ-48 Stepper Motor + ULN2003 Driver (Realistic Design) ------------------ */
+defComp({
+  id: 'stepper_28byj',
+  name: '28BYJ-48 Stepper',
+  category: 'Actuators',
+  icon: '⚙️',
+  desc: '5V 4-phase unipolar stepper motor with ULN2003 driver (2048 steps/rev, 5.625°/step)',
+  width: 100,
+  height: 100,
+  defaultProps: { angle: 0 },
+  interactive: [],
+  pins: [
+    { id: 'IN1', label: 'IN1', type: PIN_TYPE.DIGITAL, x: 20, y: 100, side: 'bottom' },
+    { id: 'IN2', label: 'IN2', type: PIN_TYPE.DIGITAL, x: 40, y: 100, side: 'bottom' },
+    { id: 'IN3', label: 'IN3', type: PIN_TYPE.DIGITAL, x: 60, y: 100, side: 'bottom' },
+    { id: 'IN4', label: 'IN4', type: PIN_TYPE.DIGITAL, x: 80, y: 100, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const angle = inst.runtimeState?.angle ?? inst.props.angle ?? 0;
+    const rad = (angle * Math.PI) / 180;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // ==========================================
+    // 1. 28BYJ-48 MOTOR ENCLOSURE (Top Section)
+    // ==========================================
+
+    // Stamped Metal Mounting Ears (Flanges)
+    ctx.fillStyle = '#b0bec5';
+    roundRect(ctx, 8, 22, 84, 12, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#78909c';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Screw Mounting Slots on Ears
+    [[14, 28], [86, 28]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#455a64';
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, 3.5, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#cfd8dc';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    });
+
+    // Cylindrical Motor Body (Nickel-Plated Steel Sheen)
+    const motorGrad = ctx.createRadialGradient(44, 22, 3, 50, 28, 25);
+    motorGrad.addColorStop(0, '#ffffff');
+    motorGrad.addColorStop(0.35, '#cfd8dc');
+    motorGrad.addColorStop(0.75, '#90a4ae');
+    motorGrad.addColorStop(1, '#546e7a');
+    ctx.fillStyle = motorGrad;
+    ctx.beginPath();
+    ctx.arc(50, 28, 24, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Motor Outer Rim Ring
+    ctx.strokeStyle = '#455a64';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Molded Blue Wire Strain Relief Casing (Authentic 28BYJ-48 feature)
+    ctx.fillStyle = '#1565c0';
+    roundRect(ctx, 18, 6, 16, 9, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#0d47a1';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // 5 Colored Motor Wires (Blue, Pink, Yellow, Orange, Red)
+    const wireColors = ['#1e88e5', '#ec407a', '#fbc02d', '#fb8c00', '#e53935'];
+    wireColors.forEach((color, i) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(20 + i * 2.5, 2, 1.8, 5);
+    });
+
+    // Raised Bearing Collar
+    const collarGrad = ctx.createRadialGradient(48, 26, 1, 50, 28, 9);
+    collarGrad.addColorStop(0, '#e0e0e0');
+    collarGrad.addColorStop(1, '#757575');
+    ctx.fillStyle = collarGrad;
+    ctx.beginPath();
+    ctx.arc(50, 28, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#424242';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Brass D-Cut Shaft & Needle Indicator (Rotates with angle)
+    ctx.save();
+    ctx.translate(50, 28);
+    ctx.rotate(rad);
+
+    // Brass Shaft Base
+    const brassGrad = ctx.createRadialGradient(-1, -1, 1, 0, 0, 5);
+    brassGrad.addColorStop(0, '#ffe082');
+    brassGrad.addColorStop(0.6, '#ffd54f');
+    brassGrad.addColorStop(1, '#b58105');
+    ctx.fillStyle = brassGrad;
+    ctx.beginPath();
+    // Flattened D-shaft profile
+    ctx.arc(0, 0, 5, -Math.PI * 0.72, Math.PI * 0.72, false);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#8d6200';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // High-Visibility Index Pointer (Red needle + Hub pin)
+    ctx.strokeStyle = '#e53935';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(19, 0);
+    ctx.stroke();
+
+    ctx.fillStyle = '#d32f2f';
+    ctx.beginPath();
+    ctx.arc(19, 0, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Angle Overlay Tag
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+    roundRect(ctx, 33, 43, 34, 10, 3);
+    ctx.fill();
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 7px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${Math.round(((angle % 360) + 360) % 360)}°`, 50, 48);
+
+    // ==========================================
+    // 2. ULN2003 DRIVER BOARD (Bottom Section)
+    // ==========================================
+
+    // Blue FR4 Driver PCB
+    const pcbX = 8, pcbY = 56, pcbW = 84, pcbH = 34;
+    ctx.fillStyle = '#0f2744';
+    roundRect(ctx, pcbX, pcbY, pcbW, pcbH, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#1e4976';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // PCB Mounting Holes
+    [[pcbX + 4, pcbY + 4], [pcbX + pcbW - 4, pcbY + 4]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#c8a452';
+      ctx.beginPath(); ctx.arc(hx, hy, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#061322';
+      ctx.beginPath(); ctx.arc(hx, hy, 1.2, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // ULN2003A Darlington Transistor IC (SOIC-16 Package)
+    ctx.fillStyle = '#1c1c1c';
+    roundRect(ctx, pcbX + 5, pcbY + 11, 28, 12, 1);
+    ctx.fill();
+
+    // IC Pin 1 Notch & Silkscreen
+    ctx.fillStyle = '#333333';
+    ctx.beginPath(); ctx.arc(pcbX + 7.5, pcbY + 14, 0.9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.font = 'bold 5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ULN2003A', pcbX + 9.5, pcbY + 17);
+
+    // IC Gull-Wing Leads
+    ctx.fillStyle = '#b0bec5';
+    for (let p = 0; p < 6; p++) {
+      ctx.fillRect(pcbX + 8 + p * 4, pcbY + 9.5, 1.8, 1.5);
+      ctx.fillRect(pcbX + 8 + p * 4, pcbY + 23, 1.8, 1.5);
+    }
+
+    // 4-Phase Stepper Status Indicator LEDs (A, B, C, D)
+    const activePhase = Math.floor((((angle % 360) + 360) % 360) / 90) % 4;
+    for (let i = 0; i < 4; i++) {
+      const lx = pcbX + 40 + i * 10;
+      const ly = pcbY + 12;
+      const isLit = activePhase === i;
+
+      // SMD LED Body
+      ctx.fillStyle = '#212121';
+      roundRect(ctx, lx, ly, 7, 5, 1);
+      ctx.fill();
+
+      // LED Lens & Glow
+      ctx.fillStyle = isLit ? '#facc15' : '#713f12';
+      ctx.fillRect(lx + 1.5, ly + 1.2, 4, 2.6);
+
+      if (isLit) {
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.35)';
+        ctx.beginPath();
+        ctx.arc(lx + 3.5, ly + 2.5, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Phase Labels A, B, C, D
+      ctx.fillStyle = isLit ? '#fef08a' : 'rgba(255, 255, 255, 0.4)';
+      ctx.font = '4.5px "JetBrains Mono", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(['A', 'B', 'C', 'D'][i], lx + 3.5, ly + 9.5);
+    }
+
+    // Silkscreen Pin Labels (IN1..IN4)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = 'bold 5px "JetBrains Mono", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('IN1', 20, 84);
+    ctx.fillText('IN2', 40, 84);
+    ctx.fillText('IN3', 60, 84);
+    ctx.fillText('IN4', 80, 84);
+
+    // Black Header Connector Shroud
+    ctx.fillStyle = '#141414';
+    roundRect(ctx, 12, 88, 76, 4, 1);
+    ctx.fill();
+
+    // 4 Input Pin Leads (Gold Terminals)
+    const pinXs = [20, 40, 60, 80];
+    pinXs.forEach(px => {
+      // PCB Solder Pad
+      ctx.fillStyle = '#c8a452';
+      ctx.beginPath(); ctx.arc(px, 87, 1.3, 0, Math.PI * 2); ctx.fill();
+      // Gold Pin Header Lead
+      ctx.fillStyle = '#ffd066';
+      ctx.fillRect(px - 1.2, 91, 2.4, 9);
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 106, 106);
+    ctx.restore();
+  }
+});
 
 /* ═══════════════════════════════════════════════════════════════
    WS2812B NeoPixel (Enlarged 2x: 40x48)

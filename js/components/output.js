@@ -730,9 +730,9 @@ defComp({
   width: 170,
   height: 90,
   defaultProps: { address: '0x27', line1: 'Hello, I2C!    ', line2: 'Addr: 0x27      ' },
-  interactive: [
-    { field: 'address', label: 'I2C Addr', type: 'text' },
-  ],
+  // interactive: [
+  //   { field: 'address', label: 'I2C Addr', type: 'text' },
+  // ],
   pins: [
     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 50, y: 90, side: 'bottom' },
     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 70, y: 90, side: 'bottom' },
@@ -891,18 +891,113 @@ defComp({
   }
 });
 /*---------OLED 128x64 (SSD1306, I2C)--------------- */
+// defComp({
+//   id: 'oled_ssd1306',
+//   name: 'OLED 128x64 (I2C)',
+//   category: 'Output',
+//   icon: '🖥️',
+//   desc: '128x64 monochrome OLED display with SSD1306 I2C controller',
+//   width: 132,
+//   height: 76,
+//   defaultProps: { address: '0x3C' },
+//   // interactive: [
+//   //   { field: 'address', label: 'I2C Addr', type: 'text' },
+//   // ],
+//   pins: [
+//     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 36, y: 76, side: 'bottom' },
+//     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 52, y: 76, side: 'bottom' },
+//     { id: 'scl', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 68, y: 76, side: 'bottom' },
+//     { id: 'sda', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 84, y: 76, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const o = inst.runtimeState && inst.runtimeState.oled;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // PCB
+//     ctx.fillStyle = '#0e1a2a';
+//     roundRect(ctx, 0, 0, 132, 70, 4);
+//     ctx.fill();
+//     ctx.strokeStyle = '#2a4a6a';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Screen (128Ã—64 internal, rendered 1:1)
+//     ctx.fillStyle = o && o.power ? '#06121c' : '#0a1620';
+//     roundRect(ctx, 2, 2, 128, 64, 2);
+//     ctx.fill();
+
+//     if (o && o.pixels) {
+//       const lit = o.invert ? '#0a1620' : '#7fd4ff';
+//       const dim = o.invert ? '#7fd4ff' : '#0a1620';
+//       if (o.invert) {
+//         // Inverted display: full screen lit, "on" pixels carved out in dark
+//         ctx.fillStyle = dim;
+//         ctx.fillRect(2, 2, 128, 64);
+//       }
+//       ctx.fillStyle = lit;
+//       const px = o.pixels;
+//       for (let i = 0; i < px.length; i++) {
+//         if (!px[i]) continue;
+//         ctx.fillRect(i % 128, (i / 128) | 0, 1, 1);
+//       }
+//     }
+
+//     // Text layer (Adafruit_GFX setCursor(x, y) is the top-left of the text;
+//     // canvas fillText y is the baseline, so offset by the line height)
+//     if (o && o.texts) {
+//       ctx.textAlign = 'left';
+//       for (const t of o.texts) {
+//         ctx.font = `${t.size * 8}px JetBrains Mono, monospace`;
+//         ctx.fillStyle = (o.invert ? t.color === 0 : t.color === 1) ? '#7fd4ff' : '#06121c';
+//         ctx.fillText(t.text, t.x, t.y + t.size * 8);
+//       }
+//     }
+
+//     if (!o || !o.power) {
+//       // Idle splash so the component reads as an OLED even before running
+//       ctx.fillStyle = 'rgba(127,212,255,0.25)';
+//       ctx.font = '8px JetBrains Mono, monospace';
+//       ctx.textAlign = 'center';
+//       ctx.fillText('ArduSim', 66, 38);
+//     }
+
+//     // Label
+//     ctx.fillStyle = 'rgba(255,255,255,0.5)';
+//     ctx.font = '7px Inter, sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(`OLED ${inst.props.address || '0x3C'}`, 66, 68);
+
+//     // 4 I2C Pin Leads (GND, VCC, SCL, SDA)
+//     ctx.strokeStyle = '#aaaaaa';
+//     ctx.lineWidth = 1.5;
+//     [36, 52, 68, 84].forEach(px => {
+//       ctx.beginPath();
+//       ctx.moveTo(px, 70);
+//       ctx.lineTo(px, 76);
+//       ctx.stroke();
+//     });
+
+//     if (inst.selected) drawSelectionRect(ctx, -3, -3, 138, 82);
+//     ctx.restore();
+//   }
+// });
+
+/* -------------- OLED 128x64 SSD1306 (Realistic Design) ------------------ */
 defComp({
   id: 'oled_ssd1306',
   name: 'OLED 128x64 (I2C)',
   category: 'Output',
   icon: '🖥️',
-  desc: '128x64 monochrome OLED display with SSD1306 I2C controller',
+  desc: '0.96" 128x64 monochrome OLED display with SSD1306 I2C controller',
   width: 132,
   height: 76,
   defaultProps: { address: '0x3C' },
-  interactive: [
-    { field: 'address', label: 'I2C Addr', type: 'text' },
-  ],
+  // interactive: [
+  //   { field: 'address', label: 'I2C Addr', type: 'text' },
+  // ],
   pins: [
     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 36, y: 76, side: 'bottom' },
     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 52, y: 76, side: 'bottom' },
@@ -912,76 +1007,137 @@ defComp({
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const o = inst.runtimeState && inst.runtimeState.oled;
+    const powered = Boolean(o && o.power);
 
     ctx.save();
     ctx.translate(x, y);
 
-    // PCB
-    ctx.fillStyle = '#0e1a2a';
-    roundRect(ctx, 0, 0, 132, 70, 4);
+    // 1. Blue FR4 Module PCB Board
+    ctx.fillStyle = '#0a1628';
+    roundRect(ctx, 0, 0, 132, 68, 3);
     ctx.fill();
-    ctx.strokeStyle = '#2a4a6a';
+
+    // Subtle PCB copper ground plane edge
+    ctx.strokeStyle = '#183153';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Screen (128Ã—64 internal, rendered 1:1)
-    ctx.fillStyle = o && o.power ? '#06121c' : '#0a1620';
-    roundRect(ctx, 2, 2, 128, 64, 2);
+    // 4 Corner Gold-Plated Mounting Holes
+    const screwHoles = [[4, 4], [128, 4], [4, 64], [128, 64]];
+    screwHoles.forEach(([hx, hy]) => {
+      ctx.fillStyle = '#c8a452'; // Gold pad
+      ctx.beginPath(); ctx.arc(hx, hy, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#040b14'; // Drill hole
+      ctx.beginPath(); ctx.arc(hx, hy, 1.4, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // PCB Silkscreen Labels
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('0.96" OLED', 8, 65);
+
+    ctx.textAlign = 'right';
+    ctx.fillText(inst.props.address || '0x3C', 124, 65);
+
+    // 2. Ultra-Thin Protective Glass Panel Substrate
+    const glassX = 1.5, glassY = 2, glassW = 129, glassH = 55;
+    
+    // Glass Outer Shadow & Bevel
+    ctx.fillStyle = '#03070d';
+    roundRect(ctx, glassX, glassY, glassW, glassH, 1.5);
     ctx.fill();
 
+    // Glass Polished Edge Reflection Highlight
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Bottom Kapton Flex Ribbon Connector (amber ribbon peek under glass)
+    ctx.fillStyle = '#995c00';
+    ctx.fillRect(40, 56, 52, 2.5);
+    ctx.fillStyle = '#b36b00';
+    for (let rx = 42; rx < 90; rx += 3) {
+      ctx.fillRect(rx, 56, 1.2, 2.5);
+    }
+
+    // 3. Active 128x64 OLED Matrix Area
+    const screenX = 2, screenY = 3, screenW = 128, screenH = 52;
+    // Deep Infinite Pitch Black OLED Base
+    ctx.fillStyle = powered ? '#010306' : '#040810';
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+
+    // 4. Pixel & Buffer Rendering
+    const litColor = o && o.invert ? '#010306' : '#38bdf8'; // Vivid Cyan-Blue OLED Emissive
+    const dimColor = o && o.invert ? '#38bdf8' : '#010306';
+
     if (o && o.pixels) {
-      const lit = o.invert ? '#0a1620' : '#7fd4ff';
-      const dim = o.invert ? '#7fd4ff' : '#0a1620';
       if (o.invert) {
-        // Inverted display: full screen lit, "on" pixels carved out in dark
-        ctx.fillStyle = dim;
-        ctx.fillRect(2, 2, 128, 64);
+        ctx.fillStyle = dimColor;
+        ctx.fillRect(screenX, screenY, screenW, screenH);
       }
-      ctx.fillStyle = lit;
+      ctx.fillStyle = litColor;
       const px = o.pixels;
       for (let i = 0; i < px.length; i++) {
         if (!px[i]) continue;
-        ctx.fillRect(i % 128, (i / 128) | 0, 1, 1);
+        ctx.fillRect(screenX + (i % 128), screenY + ((i / 128) | 0), 1, 1);
       }
     }
 
-    // Text layer (Adafruit_GFX setCursor(x, y) is the top-left of the text;
-    // canvas fillText y is the baseline, so offset by the line height)
+    // Text Overlay Layer (Adafruit_GFX / SSD1306 driver compatibility)
     if (o && o.texts) {
       ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
       for (const t of o.texts) {
-        ctx.font = `${t.size * 8}px JetBrains Mono, monospace`;
-        ctx.fillStyle = (o.invert ? t.color === 0 : t.color === 1) ? '#7fd4ff' : '#06121c';
-        ctx.fillText(t.text, t.x, t.y + t.size * 8);
+        ctx.font = `${t.size * 8}px "JetBrains Mono", monospace`;
+        ctx.fillStyle = (o.invert ? t.color === 0 : t.color === 1) ? '#38bdf8' : '#010306';
+        ctx.fillText(t.text, screenX + t.x, screenY + t.y);
       }
     }
 
-    if (!o || !o.power) {
-      // Idle splash so the component reads as an OLED even before running
-      ctx.fillStyle = 'rgba(127,212,255,0.25)';
-      ctx.font = '8px JetBrains Mono, monospace';
+    // Glass Surface Specular Reflection Glare
+    const glareGrad = ctx.createLinearGradient(screenX, screenY, screenX + screenW, screenY + screenH);
+    glareGrad.addColorStop(0, 'rgba(255, 255, 255, 0.04)');
+    glareGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.01)');
+    glareGrad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+    ctx.fillStyle = glareGrad;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+
+    // 5. Standby Screen (When unpowered or booting)
+    if (!powered) {
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
+      ctx.font = 'bold 8px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('ArduSim', 66, 38);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('SSD1306 OLED', 66, 29);
     }
 
-    // Label
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '7px Inter, sans-serif';
+    // 6. I2C Pinout Silkscreen Labels
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = 'bold 5px "JetBrains Mono", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`OLED ${inst.props.address || '0x3C'}`, 66, 68);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('GND', 36, 62);
+    ctx.fillText('VCC', 52, 62);
+    ctx.fillText('SCL', 68, 62);
+    ctx.fillText('SDA', 84, 62);
 
-    // 4 I2C Pin Leads (GND, VCC, SCL, SDA)
-    ctx.strokeStyle = '#aaaaaa';
-    ctx.lineWidth = 1.5;
-    [36, 52, 68, 84].forEach(px => {
-      ctx.beginPath();
-      ctx.moveTo(px, 70);
-      ctx.lineTo(px, 76);
-      ctx.stroke();
+    // 7. 4-Pin Male Header Strip & Solder Terminals
+    ctx.fillStyle = '#111111';
+    roundRect(ctx, 28, 66, 64, 4, 1);
+    ctx.fill();
+
+    const pinXs = [36, 52, 68, 84];
+    pinXs.forEach(px => {
+      // Circular Gold PCB Solder Pad
+      ctx.fillStyle = '#c8a452';
+      ctx.beginPath(); ctx.arc(px, 60, 1.2, 0, Math.PI * 2); ctx.fill();
+      // Gold Contact Pin Lead
+      ctx.fillStyle = '#ffd066';
+      ctx.fillRect(px - 1, 68, 2, 8);
     });
 
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 138, 82);
     ctx.restore();
   }
 });
-
