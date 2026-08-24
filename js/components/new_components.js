@@ -19,8 +19,8 @@ defComp({
     { field: 'accelZ', label: 'AccelZ', min: -2048, max: 2047, step: 10, unit: '' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER,  x: 6,  y: 32, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND,    x: 13, y: 32, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 6, y: 32, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 13, y: 32, side: 'bottom' },
     { id: 'SCL', label: 'SCL', type: PIN_TYPE.SIGNAL, x: 22, y: 32, side: 'bottom' },
     { id: 'SDA', label: 'SDA', type: PIN_TYPE.SIGNAL, x: 29, y: 32, side: 'bottom' },
   ],
@@ -71,8 +71,93 @@ defComp({
   }
 });
 
+// /* ═══════════════════════════════════════════════════════════════
+//    28BYJ-48 Stepper Motor with ULN2003 Driver
+//    ═══════════════════════════════════════════════════════════════ */
+// defComp({
+//   id: 'stepper_28byj',
+//   name: '28BYJ-48 Stepper',
+//   category: 'Actuators',
+//   icon: '⚙️',
+//   desc: '5V 4-phase unipolar stepper motor with ULN2003 driver. 2048 steps/rev, 5.625°/step',
+//   width: 50,
+//   height: 50,
+//   defaultProps: { angle: 0 },
+//   interactive: [],
+//   pins: [
+//     { id: 'IN1', label: 'IN1', type: PIN_TYPE.DIGITAL, x: 10, y: 50, side: 'bottom' },
+//     { id: 'IN2', label: 'IN2', type: PIN_TYPE.DIGITAL, x: 20, y: 50, side: 'bottom' },
+//     { id: 'IN3', label: 'IN3', type: PIN_TYPE.DIGITAL, x: 30, y: 50, side: 'bottom' },
+//     { id: 'IN4', label: 'IN4', type: PIN_TYPE.DIGITAL, x: 40, y: 50, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const angle = inst.runtimeState?.angle ?? 0;
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // Motor body (cylindrical)
+//     const grad = ctx.createRadialGradient(25, 20, 5, 25, 20, 22);
+//     grad.addColorStop(0, '#c0c0c0');
+//     grad.addColorStop(0.7, '#888');
+//     grad.addColorStop(1, '#555');
+//     ctx.fillStyle = grad;
+//     ctx.beginPath();
+//     ctx.arc(25, 20, 18, 0, Math.PI * 2);
+//     ctx.fill();
+//     ctx.strokeStyle = '#444';
+//     ctx.lineWidth = 1.5;
+//     ctx.stroke();
+
+//     // Motor shaft
+//     ctx.fillStyle = '#aaa';
+//     ctx.beginPath();
+//     ctx.arc(25, 20, 4, 0, Math.PI * 2);
+//     ctx.fill();
+//     ctx.strokeStyle = '#666';
+//     ctx.stroke();
+
+//     // Shaft indicator line (shows rotation)
+//     const rad = (angle * Math.PI) / 180;
+//     ctx.strokeStyle = '#e74c3c';
+//     ctx.lineWidth = 2;
+//     ctx.beginPath();
+//     ctx.moveTo(25, 20);
+//     ctx.lineTo(25 + Math.cos(rad) * 14, 20 + Math.sin(rad) * 14);
+//     ctx.stroke();
+
+//     // Angle label
+//     ctx.fillStyle = '#fff';
+//     ctx.font = 'bold 6px monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(`${Math.round(angle % 360)}°`, 25, 43);
+
+//     // ULN2003 driver chip on bottom
+//     ctx.fillStyle = '#1a1a2e';
+//     roundRect(ctx, 8, 36, 34, 10, 2);
+//     ctx.fill();
+//     ctx.fillStyle = '#888';
+//     ctx.font = '4px monospace';
+//     ctx.fillText('ULN2003', 25, 43);
+
+//     // Pin leads
+//     const pinXs = [10, 20, 30, 40];
+//     ctx.strokeStyle = '#a0a0a0';
+//     ctx.lineWidth = 1.5;
+//     for (const px of pinXs) {
+//       ctx.beginPath();
+//       ctx.moveTo(px, 46);
+//       ctx.lineTo(px, 50);
+//       ctx.stroke();
+//     }
+
+//     if (inst.selected) drawSelectionRect(ctx, 0, 0, 50, 50);
+//     ctx.restore();
+//   }
+// });
+
 /* ═══════════════════════════════════════════════════════════════
-   28BYJ-48 Stepper Motor with ULN2003 Driver
+   28BYJ-48 Stepper Motor with ULN2003 Driver (2x Scaled: 100x100)
    ═══════════════════════════════════════════════════════════════ */
 defComp({
   id: 'stepper_28byj',
@@ -80,21 +165,30 @@ defComp({
   category: 'Actuators',
   icon: '⚙️',
   desc: '5V 4-phase unipolar stepper motor with ULN2003 driver. 2048 steps/rev, 5.625°/step',
-  width: 50,
-  height: 50,
+
+  // 1. Double the component dimensions (was 50 x 50)
+  width: 100,
+  height: 100,
   defaultProps: { angle: 0 },
   interactive: [],
+
+  // 2. Scale pin connection points (multiplied by 2)
   pins: [
-    { id: 'IN1', label: 'IN1', type: PIN_TYPE.DIGITAL, x: 10, y: 50, side: 'bottom' },
-    { id: 'IN2', label: 'IN2', type: PIN_TYPE.DIGITAL, x: 20, y: 50, side: 'bottom' },
-    { id: 'IN3', label: 'IN3', type: PIN_TYPE.DIGITAL, x: 30, y: 50, side: 'bottom' },
-    { id: 'IN4', label: 'IN4', type: PIN_TYPE.DIGITAL, x: 40, y: 50, side: 'bottom' },
+    { id: 'IN1', label: 'IN1', type: PIN_TYPE.DIGITAL, x: 20, y: 100, side: 'bottom' },
+    { id: 'IN2', label: 'IN2', type: PIN_TYPE.DIGITAL, x: 40, y: 100, side: 'bottom' },
+    { id: 'IN3', label: 'IN3', type: PIN_TYPE.DIGITAL, x: 60, y: 100, side: 'bottom' },
+    { id: 'IN4', label: 'IN4', type: PIN_TYPE.DIGITAL, x: 80, y: 100, side: 'bottom' },
   ],
+
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const angle = inst.runtimeState?.angle ?? 0;
+
     ctx.save();
     ctx.translate(x, y);
+
+    // 3. Apply 2x scale to all drawing operations
+    ctx.scale(2, 2);
 
     // Motor body (cylindrical)
     const grad = ctx.createRadialGradient(25, 20, 5, 25, 20, 22);
@@ -117,7 +211,7 @@ defComp({
     ctx.strokeStyle = '#666';
     ctx.stroke();
 
-    // Shaft indicator line (shows rotation)
+    // Shaft indicator line
     const rad = (angle * Math.PI) / 180;
     ctx.strokeStyle = '#e74c3c';
     ctx.lineWidth = 2;
@@ -132,7 +226,7 @@ defComp({
     ctx.textAlign = 'center';
     ctx.fillText(`${Math.round(angle % 360)}°`, 25, 43);
 
-    // ULN2003 driver chip on bottom
+    // ULN2003 driver chip
     ctx.fillStyle = '#1a1a2e';
     roundRect(ctx, 8, 36, 34, 10, 2);
     ctx.fill();
@@ -174,9 +268,9 @@ defComp({
     { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER,  x: 6,  y: 24, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 6, y: 24, side: 'bottom' },
     { id: 'DOUT', label: 'DOut', type: PIN_TYPE.DIGITAL, x: 10, y: 24, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND,   x: 14, y: 24, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 14, y: 24, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -251,8 +345,8 @@ defComp({
     { field: 'detected', label: 'Object', min: 0, max: 1, step: 1, unit: '' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER,  x: 6,  y: 40, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND,    x: 12, y: 40, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 6, y: 40, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 12, y: 40, side: 'bottom' },
     { id: 'OUT', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 18, y: 40, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
@@ -260,6 +354,8 @@ defComp({
     const detected = inst.runtimeState?.detected ?? inst.props.detected ?? 0;
     ctx.save();
     ctx.translate(x, y);
+    // 3. Apply 2x scale to all drawing operations
+    ctx.scale(4, 4);
 
     // PCB body
     ctx.fillStyle = '#1a5c1a';
@@ -336,9 +432,9 @@ defComp({
     { field: 'bend', label: 'Bend', min: 0, max: 1023, step: 1, unit: '' },
   ],
   pins: [
-    { id: 'SIG', label: 'SIG', type: PIN_TYPE.ANALOG, x: 6,  y: 20, side: 'bottom' },
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER,  x: 25, y: 20, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND,   x: 44, y: 20, side: 'bottom' },
+    { id: 'SIG', label: 'SIG', type: PIN_TYPE.ANALOG, x: 6, y: 20, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 25, y: 20, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 44, y: 20, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -408,7 +504,7 @@ defComp({
     { field: 'temperature', label: 'Temp', min: -10, max: 80, step: 1, unit: '°C' },
   ],
   pins: [
-    { id: 'p1', label: 'T1', type: PIN_TYPE.ANALOG, x: 8,  y: 30, side: 'bottom' },
+    { id: 'p1', label: 'T1', type: PIN_TYPE.ANALOG, x: 8, y: 30, side: 'bottom' },
     { id: 'p2', label: 'T2', type: PIN_TYPE.ANALOG, x: 16, y: 30, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
@@ -465,8 +561,8 @@ defComp({
   defaultProps: {},
   interactive: [],
   pins: [
-    { id: 'anode',   label: 'A',  type: PIN_TYPE.SIGNAL, x: 4,  y: 14, side: 'bottom' },
-    { id: 'cathode', label: 'K',  type: PIN_TYPE.SIGNAL, x: 36, y: 14, side: 'bottom' },
+    { id: 'anode', label: 'A', type: PIN_TYPE.SIGNAL, x: 4, y: 14, side: 'bottom' },
+    { id: 'cathode', label: 'K', type: PIN_TYPE.SIGNAL, x: 36, y: 14, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
