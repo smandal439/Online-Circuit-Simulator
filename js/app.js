@@ -20,6 +20,10 @@ class App {
     this._activeView = null;
     this._examplesQuery = '';
     this._examplesFilter = 'all';
+    this._examplesPageSize = 12;
+    this._examplesPageIndex = 0;
+    this._examplesFiltered = [];
+    this._examplesObserver = null;
     this._savedQuery = '';
   }
 
@@ -1599,7 +1603,7 @@ _newProject() {
 
     const q = (this._examplesQuery || '').toLowerCase();
     const filter = this._examplesFilter || 'all';
-    const filtered = window.EXAMPLE_SKETCHES.filter(ex => {
+    this._examplesFiltered = window.EXAMPLE_SKETCHES.filter(ex => {
       if (q && !(`${ex.name} ${ex.desc} ${(ex.tags || []).join(' ')}`).toLowerCase().includes(q)) return false;
       if (filter === 'all') return true;
       if (filter === 'display') return (ex.tags || []).some(t => t.includes('lcd') || t.includes('oled') || t === 'display');
@@ -1608,10 +1612,36 @@ _newProject() {
     });
 
     const empty = document.getElementById('examples-empty');
-    if (empty) empty.classList.toggle('hidden', filtered.length > 0);
+    if (empty) empty.classList.toggle('hidden', this._examplesFiltered.length > 0);
 
     container.innerHTML = '';
-    for (const example of filtered) {
+    this._examplesPageIndex = 0;
+    this._renderExamplesNextBatch(container);
+
+    if (this._examplesObserver) this._examplesObserver.disconnect();
+    const sentinel = container.querySelector('.examples-sentinel');
+    if (sentinel && this._examplesFiltered.length > this._examplesPageSize) {
+      this._examplesObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            this._renderExamplesNextBatch(container);
+          }
+        }
+      }, { root: container.closest('.modal-body') || null, rootMargin: '200px' });
+      this._examplesObserver.observe(sentinel);
+    }
+  }
+
+  _renderExamplesNextBatch(container) {
+    if (!container) return;
+    const start = this._examplesPageIndex * this._examplesPageSize;
+    const end = Math.min(start + this._examplesPageSize, this._examplesFiltered.length);
+    if (start >= end) return;
+
+    const sentinel = container.querySelector('.examples-sentinel');
+
+    for (let i = start; i < end; i++) {
+      const example = this._examplesFiltered[i];
       const item = document.createElement('button');
       item.className = 'example-item';
       item.type = 'button';
@@ -1628,9 +1658,26 @@ _newProject() {
         if (this.editor) this.editor.setCode(example.code || '');
         if (example.circuit && this.canvas) this._loadExampleCircuit(example.circuit);
         this._closeModal();
-        this.showToast(`${example.name} loaded`, 'success');
+        this.showToast(`${example.name} loaded`, 'success`);
       });
-      container.appendChild(item);
+      container.insertBefore(item, sentinel);
+    }
+
+    this._examplesPageIndex++;
+
+    if (!sentinel) {
+      const s = document.createElement('div');
+      s.className = 'examples-sentinel';
+      s.style.height = '1px';
+      container.appendChild(s);
+    }
+
+    const allLoaded = this._examplesPageIndex * this._examplesPageSize >= this._examplesFiltered.length;
+    const sentinelEl = container.querySelector('.examples-sentinel');
+    if (sentinelEl) sentinelEl.style.display = allLoaded ? 'none' : '';
+    if (allLoaded && this._examplesObserver) {
+      this._examplesObserver.disconnect();
+      this._examplesObserver = null;
     }
   }
 

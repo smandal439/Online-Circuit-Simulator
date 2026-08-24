@@ -2085,17 +2085,21 @@ case 'push_button': {
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
           const read = (id) => {
+            const wireTarget = this._getWireTarget(inst.id, id);
+            if (!wireTarget) return 0;
+            const other = wireTarget.inst;
+            if (other.type === 'power_5v') return 1;
+            if (other.type === 'power_gnd') return 0;
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
-          const write = (id, val) => {
-            const pn = this._getConnectedPinNum(inst.id, id);
-            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
-          };
-          write('Y1', (read('A1') & read('B1')) ? 0 : 1);
-          write('Y2', (read('A2') & read('B2')) ? 0 : 1);
-          write('Y3', (read('A3') & read('B3')) ? 0 : 1);
-          write('Y4', (read('A4') & read('B4')) ? 0 : 1);
+          const gates = [['A1','B1','Y1'],['A2','B2','Y2'],['A3','B3','Y3'],['A4','B4','Y4']];
+          for (const [a, b, y] of gates) {
+            const outVal = (read(a) & read(b)) ? 0 : 1;
+            inst.runtimeState[y] = outVal ? 255 : 0;
+            const pn = this._getConnectedPinNum(inst.id, y);
+            if (pn !== null) ps[`pin_${pn}`] = outVal ? 255 : 0;
+          }
           break;
         }
 
@@ -2104,19 +2108,23 @@ case 'push_button': {
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
           const read = (id) => {
+            const wireTarget = this._getWireTarget(inst.id, id);
+            if (!wireTarget) return 0;
+            const other = wireTarget.inst;
+            if (other.type === 'power_5v') return 1;
+            if (other.type === 'power_gnd') return 0;
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
-          const write = (id, val) => {
-            const pn = this._getConnectedPinNum(inst.id, id);
-            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
-          };
-          write('Y1', read('A1') ? 0 : 1);
-          write('Y2', read('A2') ? 0 : 1);
-          write('Y3', read('A3') ? 0 : 1);
-          write('Y4', read('A4') ? 0 : 1);
-          write('Y5', read('A5') ? 0 : 1);
-          write('Y6', read('A6') ? 0 : 1);
+          const gates = [
+            ['A1','Y1'],['A2','Y2'],['A3','Y3'],['A4','Y4'],['A5','Y5'],['A6','Y6']
+          ];
+          for (const [a, y] of gates) {
+            const outVal = read(a) ? 0 : 1;
+            inst.runtimeState[y] = outVal ? 255 : 0;
+            const pn = this._getConnectedPinNum(inst.id, y);
+            if (pn !== null) ps[`pin_${pn}`] = outVal ? 255 : 0;
+          }
           break;
         }
 
@@ -2125,17 +2133,21 @@ case 'push_button': {
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
           const read = (id) => {
+            const wireTarget = this._getWireTarget(inst.id, id);
+            if (!wireTarget) return 0;
+            const other = wireTarget.inst;
+            if (other.type === 'power_5v') return 1;
+            if (other.type === 'power_gnd') return 0;
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
-          const write = (id, val) => {
-            const pn = this._getConnectedPinNum(inst.id, id);
-            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
-          };
-          write('Y1', read('A1') & read('B1'));
-          write('Y2', read('A2') & read('B2'));
-          write('Y3', read('A3') & read('B3'));
-          write('Y4', read('A4') & read('B4'));
+          const gates = [['A1','B1','Y1'],['A2','B2','Y2'],['A3','B3','Y3'],['A4','B4','Y4']];
+          for (const [a, b, y] of gates) {
+            const outVal = read(a) & read(b);
+            inst.runtimeState[y] = outVal ? 255 : 0;
+            const pn = this._getConnectedPinNum(inst.id, y);
+            if (pn !== null) ps[`pin_${pn}`] = outVal ? 255 : 0;
+          }
           break;
         }
 
@@ -2144,17 +2156,21 @@ case 'push_button': {
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
           const read = (id) => {
+            const wireTarget = this._getWireTarget(inst.id, id);
+            if (!wireTarget) return 0;
+            const other = wireTarget.inst;
+            if (other.type === 'power_5v') return 1;
+            if (other.type === 'power_gnd') return 0;
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
-          const write = (id, val) => {
-            const pn = this._getConnectedPinNum(inst.id, id);
-            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
-          };
-          write('Y1', read('A1') | read('B1'));
-          write('Y2', read('A2') | read('B2'));
-          write('Y3', read('A3') | read('B3'));
-          write('Y4', read('A4') | read('B4'));
+          const gates = [['A1','B1','Y1'],['A2','B2','Y2'],['A3','B3','Y3'],['A4','B4','Y4']];
+          for (const [a, b, y] of gates) {
+            const outVal = read(a) | read(b);
+            inst.runtimeState[y] = outVal ? 255 : 0;
+            const pn = this._getConnectedPinNum(inst.id, y);
+            if (pn !== null) ps[`pin_${pn}`] = outVal ? 255 : 0;
+          }
           break;
         }
 
@@ -2163,6 +2179,11 @@ case 'push_button': {
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
           const read = (id) => {
+            const wireTarget = this._getWireTarget(inst.id, id);
+            if (!wireTarget) return 0;
+            const other = wireTarget.inst;
+            if (other.type === 'power_5v') return 1;
+            if (other.type === 'power_gnd') return 0;
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
@@ -2204,7 +2225,9 @@ case 'push_button': {
           inst.runtimeState.bits = output;
 
           ['QA','QB','QC','QD','QE','QF','QG','QH'].forEach((pinId, i) => {
-            write(pinId, (output >> i) & 1);
+            const bitVal = (output >> i) & 1;
+            inst.runtimeState[pinId] = bitVal ? 255 : 0;
+            write(pinId, bitVal);
           });
           break;
         }
@@ -2214,6 +2237,11 @@ case 'push_button': {
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
           const read = (id) => {
+            const wireTarget = this._getWireTarget(inst.id, id);
+            if (!wireTarget) return 0;
+            const other = wireTarget.inst;
+            if (other.type === 'power_5v') return 1;
+            if (other.type === 'power_gnd') return 0;
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
@@ -2233,7 +2261,9 @@ case 'push_button': {
           const addr = (a2 << 2) | (a1 << 1) | a0;
 
           for (let i = 0; i < 8; i++) {
-            write(`Y${i}`, (enabled && i === addr) ? 0 : 1);
+            const outVal = (enabled && i === addr) ? 0 : 1;
+            inst.runtimeState[`Y${i}`] = outVal ? 255 : 0;
+            write(`Y${i}`, outVal);
           }
           inst.runtimeState.activeOutput = enabled ? addr : -1;
           break;
@@ -2244,6 +2274,11 @@ case 'push_button': {
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
           const read = (id) => {
+            const wireTarget = this._getWireTarget(inst.id, id);
+            if (!wireTarget) return 0;
+            const other = wireTarget.inst;
+            if (other.type === 'power_5v') return 1;
+            if (other.type === 'power_gnd') return 0;
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
@@ -2263,16 +2298,22 @@ case 'push_button': {
 
           if (oe === 1) {
             for (let i = 1; i <= 8; i++) {
+              inst.runtimeState[`A${i}`] = 0;
+              inst.runtimeState[`B${i}`] = 0;
               writeVal(`A${i}`, 0);
               writeVal(`B${i}`, 0);
             }
           } else if (dir === 1) {
             for (let i = 1; i <= 8; i++) {
-              writeVal(`B${i}`, readVal(`A${i}`));
+              const val = readVal(`A${i}`);
+              inst.runtimeState[`B${i}`] = val;
+              writeVal(`B${i}`, val);
             }
           } else {
             for (let i = 1; i <= 8; i++) {
-              writeVal(`A${i}`, readVal(`B${i}`));
+              const val = readVal(`B${i}`);
+              inst.runtimeState[`A${i}`] = val;
+              writeVal(`A${i}`, val);
             }
           }
           break;
@@ -2499,6 +2540,27 @@ case 'push_button': {
         }
       }
 
+      // 4b1. Digital IC output pins act as voltage sources
+      const IC_OUTPUT_PINS = {
+        ic_74hc04: ['Y1','Y2','Y3','Y4','Y5','Y6'],
+        ic_74hc00: ['Y1','Y2','Y3','Y4'],
+        ic_74hc08: ['Y1','Y2','Y3','Y4'],
+        ic_74hc32: ['Y1','Y2','Y3','Y4'],
+        ic_74hc595: ['QA','QB','QC','QD','QE','QF','QG','QH'],
+        ic_74hc138: ['Y0','Y1','Y2','Y3','Y4','Y5','Y6','Y7'],
+        ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+      };
+      if (IC_OUTPUT_PINS[inst.type] && IC_OUTPUT_PINS[inst.type].includes(current.pinId)) {
+        const rawVal = inst.runtimeState && inst.runtimeState[current.pinId] != null
+          ? inst.runtimeState[current.pinId] : 0;
+        if (rawVal > 0) {
+          const voltage = 5.0 * (rawVal > 1 ? (rawVal / 255) : 1.0);
+          sources.push({ type: 'ic_out', voltage, rawVal, resistance: current.resistance });
+        } else {
+          grounds.push({ type: 'ic_out_low', resistance: current.resistance });
+        }
+      }
+
       // 4c. Breadboard internal connectivity
       if (inst.type === 'breadboard') {
         const defs = window.ArduinoComponents?.COMPONENT_DEFS;
@@ -2536,6 +2598,20 @@ case 'push_button': {
     }
 
     return { sources, grounds };
+  }
+
+  _getWireTarget(instId, pinId) {
+    for (const wire of this.wires) {
+      if (wire.from.instId === instId && wire.from.pinId === pinId) {
+        const inst = this.components.find(c => c.id === wire.to.instId);
+        return inst ? { inst, pinId: wire.to.pinId } : null;
+      }
+      if (wire.to.instId === instId && wire.to.pinId === pinId) {
+        const inst = this.components.find(c => c.id === wire.from.instId);
+        return inst ? { inst, pinId: wire.from.pinId } : null;
+      }
+    }
+    return null;
   }
 
   _getConnectedPinNum(instId, pinId) {
