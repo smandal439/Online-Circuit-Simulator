@@ -571,64 +571,147 @@ defComp({
 });
 
 
-
-/* --------------LCD 16x2 ------------------ */
+/* -------------- LCD 16x2 (Realistic Design) ------------------ */
 defComp({
   id: 'lcd1602',
   name: 'LCD 16×2',
   category: 'Output',
   icon: '🖥️',
-  desc: '16x2 character LCD display with parallel interface',
+  desc: '16x2 character LCD display with HD44780-compatible parallel interface',
   width: 120,
   height: 60,
   defaultProps: { line1: 'Hello, World!  ', line2: 'ArduSim v1.0   ' },
   pins: [
-    { id:'gnd',  label:'GND', type:PIN_TYPE.GND,    x:  8, y:60, side:'bottom' },
-    { id:'vcc',  label:'VCC', type:PIN_TYPE.POWER,  x: 18, y:60, side:'bottom' },
-    { id:'vo',   label:'V0',  type:PIN_TYPE.SIGNAL, x: 28, y:60, side:'bottom' },
-    { id:'rs',   label:'RS',  type:PIN_TYPE.DIGITAL,x: 38, y:60, side:'bottom' },
-    { id:'rw',   label:'R/W', type:PIN_TYPE.DIGITAL,x: 48, y:60, side:'bottom' },
-    { id:'en',   label:'EN',  type:PIN_TYPE.DIGITAL,x: 58, y:60, side:'bottom' },
-    { id:'d4',   label:'D4',  type:PIN_TYPE.DIGITAL,x: 78, y:60, side:'bottom' },
-    { id:'d5',   label:'D5',  type:PIN_TYPE.DIGITAL,x: 88, y:60, side:'bottom' },
-    { id:'d6',   label:'D6',  type:PIN_TYPE.DIGITAL,x: 98, y:60, side:'bottom' },
-    { id:'d7',   label:'D7',  type:PIN_TYPE.DIGITAL,x:108, y:60, side:'bottom' },
+    { id:'gnd',  label:'GND', type:PIN_TYPE.GND,     x:  8, y:60, side:'bottom' },
+    { id:'vcc',  label:'VCC', type:PIN_TYPE.POWER,   x: 18, y:60, side:'bottom' },
+    { id:'vo',   label:'V0',  type:PIN_TYPE.SIGNAL,  x: 28, y:60, side:'bottom' },
+    { id:'rs',   label:'RS',  type:PIN_TYPE.DIGITAL, x: 38, y:60, side:'bottom' },
+    { id:'rw',   label:'R/W', type:PIN_TYPE.DIGITAL, x: 48, y:60, side:'bottom' },
+    { id:'en',   label:'EN',  type:PIN_TYPE.DIGITAL, x: 58, y:60, side:'bottom' },
+    { id:'d4',   label:'D4',  type:PIN_TYPE.DIGITAL, x: 78, y:60, side:'bottom' },
+    { id:'d5',   label:'D5',  type:PIN_TYPE.DIGITAL, x: 88, y:60, side:'bottom' },
+    { id:'d6',   label:'D6',  type:PIN_TYPE.DIGITAL, x: 98, y:60, side:'bottom' },
+    { id:'d7',   label:'D7',  type:PIN_TYPE.DIGITAL, x:108, y:60, side:'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const line1 = (inst.runtimeState && inst.runtimeState.line1) || inst.props.line1 || '                ';
-    const line2 = (inst.runtimeState && inst.runtimeState.line2) || inst.props.line2 || '                ';
-    const powered = inst.runtimeState && inst.runtimeState.powered;
+    const line1 = ((inst.runtimeState && inst.runtimeState.line1) || inst.props.line1 || '').padEnd(16, ' ').substring(0, 16);
+    const line2 = ((inst.runtimeState && inst.runtimeState.line2) || inst.props.line2 || '').padEnd(16, ' ').substring(0, 16);
+    const powered = Boolean(inst.runtimeState && inst.runtimeState.powered);
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Frame
-    ctx.fillStyle = '#1a4a1a';
-    roundRect(ctx, 0, 0, 120, 52, 4);
+    // 1. PCB Board (FR4 dark blue/green soldermask)
+    ctx.fillStyle = '#0a3020';
+    roundRect(ctx, 0, 0, 120, 50, 3);
     ctx.fill();
-    ctx.strokeStyle = '#2d8c2d';
+
+    // PCB Corner Mounting Holes (with annular copper rings)
+    const screwHoles = [[4, 4], [116, 4], [4, 46], [116, 46]];
+    screwHoles.forEach(([hx, hy]) => {
+      ctx.fillStyle = '#c8a452'; // Gold/copper pad
+      ctx.beginPath(); ctx.arc(hx, hy, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#05180f'; // Drill hole
+      ctx.beginPath(); ctx.arc(hx, hy, 1.5, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // PCB Silkscreen Label
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '5px "JetBrains Mono", monospace';
+    ctx.fillText('1602A', 8, 48);
+
+    // 2. Metal Bezel Frame (Stamped dark anodized metal casing)
+    const bezelX = 6, bezelY = 4, bezelW = 108, bezelH = 40;
+    
+    // Outer Bezel Shadow & Base
+    ctx.fillStyle = '#1e2224';
+    roundRect(ctx, bezelX, bezelY, bezelW, bezelH, 2);
+    ctx.fill();
+
+    // Metallic Rim Highlights & Shadow (Top-left light, Bottom-right shade)
+    ctx.strokeStyle = '#3a3f44';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Screen
-    ctx.fillStyle = powered ? '#4a7a2a' : '#2a4a1a';
-    roundRect(ctx, 6, 5, 108, 42, 3);
-    ctx.fill();
+    // Bezel Locking Tabs (Realistic stamped metal tabs)
+    ctx.fillStyle = '#141719';
+    [[bezelX + 22, bezelY - 1], [bezelX + 80, bezelY - 1], [bezelX + 22, bezelY + bezelH - 2], [bezelX + 80, bezelY + bezelH - 2]].forEach(([tx, ty]) => {
+      ctx.fillRect(tx, ty, 6, 3);
+    });
 
-    // Text
-    const txColor = powered ? '#88ff88' : '#556655';
-    ctx.fillStyle = txColor;
-    ctx.font = 'bold 8px JetBrains Mono, monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(line1.substring(0, 16).padEnd(16), 9, 20);
-    ctx.fillText(line2.substring(0, 16).padEnd(16), 9, 38);
+    // 3. LCD Active Glass Area
+    const glassX = 11, glassY = 8, glassW = 98, glassH = 32;
+    
+    // Backlight/Glass Base
+    if (powered) {
+      // Classic HD44780 Yellow-Green Backlight Gradient
+      const bgGrad = ctx.createLinearGradient(glassX, glassY, glassX, glassY + glassH);
+      bgGrad.addColorStop(0, '#a2d638');
+      bgGrad.addColorStop(1, '#81b827');
+      ctx.fillStyle = bgGrad;
+    } else {
+      // Unpowered dark fluid crystal matrix
+      ctx.fillStyle = '#23301a';
+    }
+    ctx.fillRect(glassX, glassY, glassW, glassH);
 
-    // Pin leads
-    ctx.strokeStyle = '#888';
+    // Glass Inner Drop Shadow
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.lineWidth = 1;
-    [8,18,28,38,48,58,68,78,88,98,108].forEach(px => {
-      ctx.beginPath(); ctx.moveTo(px, 52); ctx.lineTo(px, 60); ctx.stroke();
+    ctx.strokeRect(glassX + 0.5, glassY + 0.5, glassW - 1, glassH - 1);
+
+    // 4. Character Matrix Cells (16x2 Grid Background)
+    const cellW = 5.2;
+    const cellH = 11.5;
+    const startX = 13;
+    const row1Y = 12;
+    const row2Y = 25.5;
+
+    // Draw unlit 5x8 character cell placeholders
+    ctx.fillStyle = powered ? 'rgba(0, 0, 0, 0.055)' : 'rgba(255, 255, 255, 0.025)';
+    for (let c = 0; c < 16; c++) {
+      ctx.fillRect(startX + c * 6, row1Y, cellW, cellH);
+      ctx.fillRect(startX + c * 6, row2Y, cellW, cellH);
+    }
+
+    // 5. Active Segment Characters
+    ctx.font = 'bold 8.5px "JetBrains Mono", "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    if (powered) {
+      // Segment shadow (subtle blur below active LCD fluid)
+      ctx.fillStyle = 'rgba(20, 35, 10, 0.25)';
+      for (let i = 0; i < 16; i++) {
+        ctx.fillText(line1[i], startX + i * 6 + 0.5, row1Y + 2.5);
+        ctx.fillText(line2[i], startX + i * 6 + 0.5, row2Y + 2.5);
+      }
+      // Crisp active segment fluid
+      ctx.fillStyle = '#11220a';
+    } else {
+      ctx.fillStyle = '#2c3d23';
+    }
+
+    for (let i = 0; i < 16; i++) {
+      ctx.fillText(line1[i], startX + i * 6, row1Y + 2);
+      ctx.fillText(line2[i], startX + i * 6, row2Y + 2);
+    }
+
+    // 6. Header Strip & Gold Pins
+    // Black plastic pin header mold
+    ctx.fillStyle = '#1c1c1c';
+    ctx.fillRect(5, 48, 110, 4);
+
+    // Pin contacts and leads
+    const pinXs = [8, 18, 28, 38, 48, 58, 78, 88, 98, 108];
+    pinXs.forEach(px => {
+      // Gold/Silver Pin Lead
+      ctx.fillStyle = '#ffd066';
+      ctx.fillRect(px - 1, 52, 2, 8);
+      // Solder point on PCB
+      ctx.fillStyle = '#d4af37';
+      ctx.beginPath(); ctx.arc(px, 50, 1.2, 0, Math.PI * 2); ctx.fill();
     });
 
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 126, 66);
@@ -637,88 +720,176 @@ defComp({
 });
 
 
-
-/*------------LCD 16x2 (I2C)-------------- */
+/* -------------- LCD 16x2 (I2C Backpack - Large Realistic Design) ------------------ */
 defComp({
   id: 'lcd1602_i2c',
   name: 'LCD 16x2 (I2C)',
   category: 'Output',
   icon: '🖥️',
-  desc: '16x2 character LCD with PCF8574 I2C adapter — uses only SDA and SCL',
-  width: 120,
-  height: 65,
+  desc: '16x2 character LCD display with integrated PCF8574 I2C daughterboard adapter (Enlarged)',
+  width: 170,
+  height: 90,
   defaultProps: { address: '0x27', line1: 'Hello, I2C!    ', line2: 'Addr: 0x27      ' },
   interactive: [
     { field: 'address', label: 'I2C Addr', type: 'text' },
   ],
   pins: [
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 35, y: 65, side: 'bottom' },
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 50, y: 65, side: 'bottom' },
-    { id: 'sda', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 65, y: 65, side: 'bottom' },
-    { id: 'scl', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 80, y: 65, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 50, y: 90, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 70, y: 90, side: 'bottom' },
+    { id: 'sda', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 90, y: 90, side: 'bottom' },
+    { id: 'scl', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 110, y: 90, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const line1 = (inst.runtimeState && inst.runtimeState.line1) || inst.props.line1 || '                ';
-    const line2 = (inst.runtimeState && inst.runtimeState.line2) || inst.props.line2 || '                ';
-    const powered = inst.runtimeState && inst.runtimeState.powered;
+    const line1 = ((inst.runtimeState && inst.runtimeState.line1) || inst.props.line1 || '').padEnd(16, ' ').substring(0, 16);
+    const line2 = ((inst.runtimeState && inst.runtimeState.line2) || inst.props.line2 || '').padEnd(16, ' ').substring(0, 16);
+    const powered = Boolean(inst.runtimeState && inst.runtimeState.powered);
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Main Green PCB Frame
-    ctx.fillStyle = '#1a4a1a';
-    roundRect(ctx, 0, 0, 120, 52, 4);
-    ctx.fill();
-    ctx.strokeStyle = '#2d8c2d';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // LCD Screen Area
-    ctx.fillStyle = powered ? '#4a7a2a' : '#2a4a1a';
-    roundRect(ctx, 6, 5, 108, 42, 3);
+    // 1. Main Display PCB (FR4 Dark Green/Blue Mask) - Enlarged
+    ctx.fillStyle = '#0a3020';
+    roundRect(ctx, 0, 0, 170, 70, 4);
     ctx.fill();
 
-    // Display Text
-    const txColor = powered ? '#88ff88' : '#556655';
-    ctx.fillStyle = txColor;
-    ctx.font = 'bold 8px JetBrains Mono, monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(line1.substring(0, 16).padEnd(16), 9, 20);
-    ctx.fillText(line2.substring(0, 16).padEnd(16), 9, 38);
-
-    // I2C Backpack Board Overlay
-    ctx.fillStyle = '#102244';
-    roundRect(ctx, 25, 52, 70, 8, 2);
-    ctx.fill();
-    ctx.strokeStyle = '#2255aa';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // PCF8574 Chip & Contrast Trimpot Detail
-    ctx.fillStyle = '#222222';
-    ctx.fillRect(30, 54, 12, 4);
-    ctx.fillStyle = '#ccaa00';
-    ctx.fillRect(82, 54, 4, 4);
-
-    // 4 I2C Pin Leads (GND, VCC, SDA, SCL)
-    const pinXs = [35, 50, 65, 80];
-    ctx.strokeStyle = '#aaaaaa';
-    ctx.lineWidth = 1.5;
-    pinXs.forEach(px => {
-      ctx.beginPath();
-      ctx.moveTo(px, 58);
-      ctx.lineTo(px, 65);
-      ctx.stroke();
+    // Corner Mounting Holes with Gold Annular Rings
+    const screwHoles = [[6, 6], [164, 6], [6, 64], [164, 64]];
+    screwHoles.forEach(([hx, hy]) => {
+      ctx.fillStyle = '#c8a452';
+      ctx.beginPath(); ctx.arc(hx, hy, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#05180f';
+      ctx.beginPath(); ctx.arc(hx, hy, 2, 0, Math.PI * 2); ctx.fill();
     });
 
-    if (inst.selected) drawSelectionRect(ctx, -3, -3, 126, 71);
+    // 2. Metal Enclosure Bezel - Enlarged & Proportional
+    const bezelX = 10, bezelY = 5, bezelW = 150, bezelH = 54;
+    ctx.fillStyle = '#1e2224';
+    roundRect(ctx, bezelX, bezelY, bezelW, bezelH, 3);
+    ctx.fill();
+
+    ctx.strokeStyle = '#3a3f44';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Stamped Metal Bezel Clamps
+    ctx.fillStyle = '#121517';
+    [[bezelX + 30, bezelY - 1], [bezelX + 114, bezelY - 1], [bezelX + 30, bezelY + bezelH - 2], [bezelX + 114, bezelY + bezelH - 2]].forEach(([tx, ty]) => {
+      ctx.fillRect(tx, ty, 8, 3.5);
+    });
+
+    // 3. LCD Active Matrix Glass (High-Contrast HD44780 Backlight)
+    const glassX = 16, glassY = 10, glassW = 138, glassH = 44;
+    if (powered) {
+      const grad = ctx.createLinearGradient(glassX, glassY, glassX, glassY + glassH);
+      grad.addColorStop(0, '#a5db3b');
+      grad.addColorStop(1, '#81b827');
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = '#23301a';
+    }
+    ctx.fillRect(glassX, glassY, glassW, glassH);
+
+    // Inner Glass Shadow
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(glassX + 0.5, glassY + 0.5, glassW - 1, glassH - 1);
+
+    // 4. Character Cells (5x8 Grid Ghost Matrix) - Scaled Up
+    const cellW = 7.5, cellH = 16, startX = 20, row1Y = 13, row2Y = 32;
+    ctx.fillStyle = powered ? 'rgba(0, 0, 0, 0.055)' : 'rgba(255, 255, 255, 0.025)';
+    for (let c = 0; c < 16; c++) {
+      ctx.fillRect(startX + c * 8.4, row1Y, cellW, cellH);
+      ctx.fillRect(startX + c * 8.4, row2Y, cellW, cellH);
+    }
+
+    // 5. Active Text Segments - Larger Readable Font
+    ctx.font = 'bold 12.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    if (powered) {
+      ctx.fillStyle = 'rgba(20, 35, 10, 0.25)';
+      for (let i = 0; i < 16; i++) {
+        ctx.fillText(line1[i], startX + i * 8.4 + 0.5, row1Y + 2);
+        ctx.fillText(line2[i], startX + i * 8.4 + 0.5, row2Y + 2);
+      }
+      ctx.fillStyle = '#11220a';
+    } else {
+      ctx.fillStyle = '#2c3d23';
+    }
+
+    for (let i = 0; i < 16; i++) {
+      ctx.fillText(line1[i], startX + i * 8.4, row1Y + 1.5);
+      ctx.fillText(line2[i], startX + i * 8.4, row2Y + 1.5);
+    }
+
+    // 6. I2C Daughterboard (Piggyback PCB - Dark Blue FR4) - Scaled & Repositioned
+    const bpX = 30, bpY = 64, bpW = 110, bpH = 20;
+    ctx.fillStyle = '#0f2744';
+    roundRect(ctx, bpX, bpY, bpW, bpH, 2.5);
+    ctx.fill();
+    ctx.strokeStyle = '#1e4878';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // PCF8574 Expander IC (SOIC Package)
+    ctx.fillStyle = '#1c1c1c';
+    ctx.fillRect(bpX + 6, bpY + 4, 18, 12);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.font = '5.5px "JetBrains Mono", monospace';
+    ctx.fillText('PCF8574', bpX + 7, bpY + 8);
+    // Pin 1 Notch/Dot
+    ctx.fillStyle = '#444';
+    ctx.beginPath(); ctx.arc(bpX + 9, bpY + 6.5, 0.8, 0, Math.PI * 2); ctx.fill();
+
+    // Contrast Trimpot (Blue casing with brass center dial)
+    ctx.fillStyle = '#1d4ed8';
+    roundRect(ctx, bpX + 90, bpY + 3, 12, 12, 1.5);
+    ctx.fill();
+    ctx.fillStyle = '#eab308';
+    ctx.beginPath(); ctx.arc(bpX + 96, bpY + 9, 3.2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#854d0e';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(bpX + 93.5, bpY + 9); ctx.lineTo(bpX + 98.5, bpY + 9);
+    ctx.moveTo(bpX + 96, bpY + 6.5); ctx.lineTo(bpX + 96, bpY + 11.5);
+    ctx.stroke();
+
+    // Backlight Jumper Cap (Black 2-pin shunt)
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(bpX + 74, bpY + 4.5, 8, 10);
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(bpX + 75.5, bpY + 3, 1.5, 1.5);
+    ctx.fillRect(bpX + 79, bpY + 3, 1.5, 1.5);
+
+    // Silkscreen Pin Labels
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = '6px "JetBrains Mono", sans-serif';
+    ctx.fillText('GND', bpX + 17, bpY + 13);
+    ctx.fillText('VCC', bpX + 37, bpY + 13);
+    ctx.fillText('SDA', bpX + 57, bpY + 13);
+    ctx.fillText('SCL', bpX + 77, bpY + 13);
+
+    // 7. 4-Pin Header Mold & Terminals
+    ctx.fillStyle = '#181818';
+    roundRect(ctx, 43, 84, 84, 6, 1);
+    ctx.fill();
+
+    const pinXs = [50, 70, 90, 110];
+    pinXs.forEach(px => {
+      // Solder Joint on Adapter PCB
+      ctx.fillStyle = '#c8a452';
+      ctx.beginPath(); ctx.arc(px, 80, 1.8, 0, Math.PI * 2); ctx.fill();
+      // Gold Pin Lead
+      ctx.fillStyle = '#ffd066';
+      ctx.fillRect(px - 1.2, 84, 2.4, 6);
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -4, -4, 178, 98);
     ctx.restore();
   }
 });
-
-
-
 /*---------OLED 128x64 (SSD1306, I2C)--------------- */
 defComp({
   id: 'oled_ssd1306',
