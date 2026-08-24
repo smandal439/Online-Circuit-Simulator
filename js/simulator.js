@@ -586,6 +586,9 @@ class ArduinoSimulator {
     js = js.replace(/_a\.delayMicroseconds\s*\(/g, 'await _a.delayMicroseconds(');
     js = js.replace(/_a\.pulseIn\s*\(/g, 'await _a.pulseIn(');
 
+    // Stepper.step() is blocking on real hardware — await the animated motion
+    js = js.replace(/(?<!await\s)_a\.stepperStep\s*\(/g, 'await _a.stepperStep(');
+
     // Auto-await calls to user-defined functions (they were transpiled to `async`,
     // so an unawaited call would assign a Promise instead of the returned value).
     for (const name of userFnNames) {
@@ -1117,22 +1120,52 @@ class ArduinoSimulator {
         },
 
         /* ══════════ Stepper ══════════ */
-        stepperNew(stepsPerRev, pin1, pin2) {
-          const id = `_stepper_${pin1}_${pin2}`;
+        stepperNew(stepsPerRev, p1, p2, p3, p4) {
+          const id = `_stepper_${p1}_${p2}`;
           self._steppers = self._steppers || {};
-          const s = { stepsPerRev, pin1, pin2, pos: 0, target: 0, speed: 1, accel: 100 };
+          const s = { stepsPerRev, pin1: p1, pin2: p2, pin3: p3, pin4: p4, pos: 0, target: 0, speed: 1, accel: 100, seqIndex: 0 };
           self._steppers[id] = s;
-          self._serialLog(`[Stepper] Created stepsPerRev=${stepsPerRev}\n`, 'system');
+          self._serialLog(`[Stepper] Created stepsPerRev=${stepsPerRev} pins=${[p1, p2, p3, p4].filter(p => p != null).join(',')}\n`, 'system');
           return { _stepperId: id };
+        },
+        /* Energize the 4 coil pins using the two-phase full-step sequence */
+        _stepperWritePins(s) {
+          const seq = [[1, 0, 1, 0], [0, 1, 1, 0], [0, 1, 0, 1], [1, 0, 0, 1]];
+          const pat = seq[((s.seqIndex % 4) + 4) % 4];
+          const pins = [s.pin1, s.pin2, s.pin3, s.pin4];
+          for (let i = 0; i < 4; i++) {
+            const p = pins[i];
+            if (p == null) continue;
+            const key = `pin_${p}`;
+            self.pinStates[key] = pat[i];
+            self._emitPinChange(key, pat[i]);
+          }
+        },
+        /* Blocking step() like the real Stepper.h — animates coil patterns at setSpeed RPM */
+        async stepperStep(obj, steps) {
+          const s = self._steppers && self._steppers[obj._stepperId];
+          const n = Math.round(Number(steps)) || 0;
+          if (!s || n === 0) return;
+          const rpm = Math.max(Math.abs(s.speed) || 1, 0.01);
+          const intervalRealMs = 60000 / ((Number(s.stepsPerRev) || 2048) * rpm);
+          const dir = n > 0 ? 1 : -1;
+          s.target = s.pos + n;
+          for (let i = 0; i < Math.abs(n); i++) {
+            if (!self.isRunning) return;
+            s.seqIndex += dir;
+            s.pos += dir;
+            this._stepperWritePins(s);
+            try {
+              await self._delayPromise(intervalRealMs / (self.speed || 1));
+            } catch (e) {
+              return; /* simulation stopped/reset */
+            }
+          }
+          self._serialLog(`[Stepper] step(${n}) → pos=${s.pos}\n`, 'system');
         },
         stepperSetSpeed(obj, rpm) {
           const s = self._steppers && self._steppers[obj._stepperId];
           if (s) s.speed = Number(rpm) || 1;
-        },
-        stepperStep(obj, steps) {
-          const s = self._steppers && self._steppers[obj._stepperId];
-          if (s) { s.pos += Number(steps) || 0; s.target = s.pos; }
-          self._serialLog(`[Stepper] step(${steps}) → pos=${s ? s.pos : 0}\n`, 'system');
         },
         stepperDistanceToGo(obj) {
           const s = self._steppers && self._steppers[obj._stepperId];
@@ -1150,7 +1183,10 @@ class ArduinoSimulator {
           const s = self._steppers && self._steppers[obj._stepperId];
           if (!s) return false;
           if (s.pos === s.target) return false;
-          s.pos += s.pos < s.target ? 1 : -1;
+          const dir = s.pos < s.target ? 1 : -1;
+          s.seqIndex += dir;
+          s.pos += dir;
+          this._stepperWritePins(s);
           return true;
         },
         stepperRunSpeed(obj) {
@@ -2022,7 +2058,7 @@ class ArduinoSimulator {
 window.ArduinoSim = new ArduinoSimulator();
 window.EXAMPLE_SKETCHES = [];
 window.loadExamplesFromFiles = async function () {
-  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test'];
+  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {

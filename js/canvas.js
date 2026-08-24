@@ -2349,13 +2349,34 @@ case 'push_button': {
           // Half-step sequence lookup: pattern → step delta
           const pattern = (in1) | (in2 << 1) | (in3 << 2) | (in4 << 3);
           const prev = inst.runtimeState._lastPattern ?? 0;
-          if (pattern !== 0 && pattern !== prev) {
-            // Simple step detection: any change = one step (5.625° / 64 gear ratio = 0.0879° per step)
-            const stepAngle = 5.625 / 64;
+          const stepAngle = 5.625 / 64;
+
+          // Preferred: track the Stepper library object's position so CW/CCW
+          // and multi-step frames are rendered exactly (delta carries sign).
+          let matched = null;
+          const pinNums = ['IN1', 'IN2', 'IN3', 'IN4']
+            .map(id => this._getConnectedPinNum(inst.id, id));
+          if (sim._steppers && pinNums.every(p => p !== null)) {
+            const want = [...new Set(pinNums)].sort((a, b) => a - b).join(',');
+            for (const k in sim._steppers) {
+              const s = sim._steppers[k];
+              const have = [...new Set([s.pin1, s.pin2, s.pin3, s.pin4].filter(p => p != null))]
+                .sort((a, b) => a - b).join(',');
+              if (have === want) { matched = s; break; }
+            }
+          }
+          if (matched) {
+            if (inst.runtimeState._lastPos !== undefined) {
+              const delta = matched.pos - inst.runtimeState._lastPos;
+              if (delta) inst.runtimeState.angle = (inst.runtimeState.angle ?? 0) + delta * stepAngle;
+            }
+            inst.runtimeState._lastPos = matched.pos;
+          } else if (pattern !== 0 && pattern !== prev) {
+            // Fallback: no Stepper object — any coil change = one step forward
             inst.runtimeState.angle = (inst.runtimeState.angle ?? 0) + stepAngle;
           }
           inst.runtimeState._lastPattern = pattern;
-          inst.runtimeState.active = pattern !== 0;
+          inst.runtimeState.active = pattern !== 0 || (!!matched && matched.pos !== matched.target);
           break;
         }
 

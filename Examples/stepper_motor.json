@@ -1,0 +1,75 @@
+{
+  "id": "stepper_motor",
+  "name": "Stepper Motor",
+  "icon": "⚙️",
+  "desc": "Rotate a 28BYJ-48 stepper motor one revolution clockwise then counter-clockwise using the Stepper library",
+  "tags": [
+    "intermediate",
+    "motor",
+    "stepper",
+    "library"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100
+      },
+      {
+        "id": "st1",
+        "type": "stepper_28byj",
+        "x": 360,
+        "y": 320
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "D8"
+        },
+        "to": {
+          "instId": "st1",
+          "pinId": "IN1"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "b1",
+          "pinId": "D9"
+        },
+        "to": {
+          "instId": "st1",
+          "pinId": "IN2"
+        }
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "b1",
+          "pinId": "D10"
+        },
+        "to": {
+          "instId": "st1",
+          "pinId": "IN3"
+        }
+      },
+      {
+        "id": "w4",
+        "from": {
+          "instId": "b1",
+          "pinId": "D11"
+        },
+        "to": {
+          "instId": "st1",
+          "pinId": "IN4"
+        }
+      }
+    ]
+  },
+  "code": "/*\n * Stepper Motor — rotate one full revolution CW, then CCW\n *\n * Wiring (28BYJ-48 via ULN2003 driver):\n *   IN1 -> D8\n *   IN2 -> D9\n *   IN3 -> D10\n *   IN4 -> D11\n *\n * Pin order note: the Stepper library energizes coils sequentially.\n * The 28BYJ-48 uses a 4-phase unipolar sequence, so pins must be\n * initialized in the order IN1, IN3, IN2, IN4 (8, 10, 9, 11)\n * rather than numerical order.\n */\n\n#include <Stepper.h>\n\n// Steps per full revolution (4-step sequence mode)\nconst int STEPS_PER_REV = 2048;\n\n// Initialize library with pin sequence: IN1, IN3, IN2, IN4\nStepper myStepper(STEPS_PER_REV, 8, 10, 9, 11);\n\nvoid setup() {\n  // Typical speed range for the 28BYJ-48 is 5 to 15 RPM\n  myStepper.setSpeed(10);\n  Serial.begin(9600);\n  Serial.println(\"Stepper motor ready.\");\n}\n\nvoid loop() {\n  // Rotate one full revolution clockwise\n  Serial.println(\"Rotating Clockwise...\");\n  myStepper.step(STEPS_PER_REV);\n  delay(1000);\n\n  // Rotate one full revolution counter-clockwise\n  Serial.println(\"Rotating Counter-Clockwise...\");\n  myStepper.step(-STEPS_PER_REV);\n  delay(1000);\n}"
+}
