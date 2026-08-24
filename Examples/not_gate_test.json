@@ -1,0 +1,194 @@
+{
+  "version": "1.1",
+  "savedAt": "2026-08-23T15:51:56.124Z",
+  "name": "not gate test",
+  "code": "void setup() {\n   // Put your setup code here, to run once when the board starts:\n}\nvoid loop() {\n  // Put your main code here, to run repeatedly indefinitely:\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "comp_1787500078866_8m9c0",
+        "type": "ic_74hc04",
+        "x": 150,
+        "y": 200,
+        "width": 90,
+        "height": 50,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "comp_1787500098142_be4kr",
+        "type": "led",
+        "x": 260,
+        "y": 215,
+        "width": 30,
+        "height": 60,
+        "props": {
+          "color": "#ff3333",
+          "colorName": "Red"
+        },
+        "runtimeState": {
+          "val": 0,
+          "lit": false,
+          "brightness": 0,
+          "current_mA": 0,
+          "overload": false,
+          "blown": false,
+          "_warnedBlown": false
+        },
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "comp_1787500145089_uae8h",
+        "type": "power_5v",
+        "x": 110,
+        "y": 180,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "comp_1787500152472_y3t6m",
+        "type": "power_gnd",
+        "x": 305,
+        "y": 275,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "comp_1787500166019_xtaio",
+        "type": "resistor",
+        "x": 310,
+        "y": 200,
+        "width": 20,
+        "height": 60,
+        "props": {
+          "value": 220,
+          "unit": "Î©"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      {
+        "id": "wire_1787500120174_j6obw",
+        "from": {
+          "instId": "comp_1787500078866_8m9c0",
+          "pinId": "Y1"
+        },
+        "to": {
+          "instId": "comp_1787500098142_be4kr",
+          "pinId": "anode"
+        },
+        "color": null,
+        "waypoints": [
+          {
+            "x": 168,
+            "y": 274
+          },
+          {
+            "x": 245,
+            "y": 274
+          },
+          {
+            "x": 245,
+            "y": 196
+          },
+          {
+            "x": 275,
+            "y": 195
+          }
+        ]
+      },
+      {
+        "id": "wire_1787500169621_bb9ag",
+        "from": {
+          "instId": "comp_1787500152472_y3t6m",
+          "pinId": "gnd"
+        },
+        "to": {
+          "instId": "comp_1787500166019_xtaio",
+          "pinId": "p2"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787500174854_3df2b",
+        "from": {
+          "instId": "comp_1787500166019_xtaio",
+          "pinId": "p1"
+        },
+        "to": {
+          "instId": "comp_1787500098142_be4kr",
+          "pinId": "cathode"
+        },
+        "color": null,
+        "waypoints": [
+          {
+            "x": 355,
+            "y": 200
+          },
+          {
+            "x": 355,
+            "y": 329
+          },
+          {
+            "x": 275,
+            "y": 330
+          }
+        ]
+      },
+      {
+        "id": "wire_1787500244597_ndkox",
+        "from": {
+          "instId": "comp_1787500078866_8m9c0",
+          "pinId": "VCC"
+        },
+        "to": {
+          "instId": "comp_1787500145089_uae8h",
+          "pinId": "vcc"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787500248233_nb4lp",
+        "from": {
+          "instId": "comp_1787500078866_8m9c0",
+          "pinId": "GND"
+        },
+        "to": {
+          "instId": "comp_1787500152472_y3t6m",
+          "pinId": "gnd"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787500258899_2cags",
+        "from": {
+          "instId": "comp_1787500078866_8m9c0",
+          "pinId": "A1"
+        },
+        "to": {
+          "instId": "comp_1787500152472_y3t6m",
+          "pinId": "gnd"
+        },
+        "color": null,
+        "waypoints": []
+      }
+    ]
+  }
+}
