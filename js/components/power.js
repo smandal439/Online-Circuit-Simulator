@@ -3,7 +3,7 @@
  */
 
 'use strict';
-/* â”€â”€â”€ Power Supply â”€â”€â”€ */
+/*--------------------------- Power Supply------------------------------------- */
 defComp({
   id: 'power_5v',
   name: '5V Power',
