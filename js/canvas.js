@@ -2479,39 +2479,34 @@ case 'push_button': {
               break;
             }
             case 'RES': {
-              const redHasGnd = hasGround(redNet);
-              const comHasGnd = hasGround(comNet);
               const redHasSrc = redNet.sources.length > 0;
               const comHasSrc = comNet.sources.length > 0;
-              const redR = getNetResistance(redNet);
-              const comR = getNetResistance(comNet);
-              const totalR = redR + comR;
 
               if (redHasSrc && comHasSrc) {
-                // Both probes connected to sources — can't measure R
                 displayText = 'Err';
                 displayUnit = '';
                 displayMode = 'Ω';
-              } else if (totalR > 0 && totalR < Infinity) {
-                let disp = totalR;
-                let pfx = '';
-                if (totalR >= 1e6) { disp = totalR / 1e6; pfx = 'M'; }
-                else if (totalR >= 1e3) { disp = totalR / 1e3; pfx = 'k'; }
-                const decimals = disp >= 100 ? 1 : 2;
-                displayText = disp.toFixed(decimals);
-                displayUnit = pfx + 'Ω';
-                displayMode = 'AUTO';
               } else {
-                displayText = 'O.L';
-                displayUnit = 'MΩ';
-                displayMode = 'AUTO';
+                const totalR = this._measureResistanceBetween(inst.id, 'probe_red', inst.id, 'probe_com');
+                if (totalR < Infinity && totalR > 0) {
+                  let disp = totalR;
+                  let pfx = '';
+                  if (totalR >= 1e6) { disp = totalR / 1e6; pfx = 'M'; }
+                  else if (totalR >= 1e3) { disp = totalR / 1e3; pfx = 'k'; }
+                  const decimals = disp >= 100 ? 1 : 2;
+                  displayText = disp.toFixed(decimals);
+                  displayUnit = pfx + 'Ω';
+                  displayMode = 'AUTO';
+                } else {
+                  displayText = 'O.L';
+                  displayUnit = 'MΩ';
+                  displayMode = 'AUTO';
+                }
               }
               break;
             }
             case 'CONT': {
-              const redR = getNetResistance(redNet);
-              const comR = getNetResistance(comNet);
-              const totalR = redR + comR;
+              const totalR = this._measureResistanceBetween(inst.id, 'probe_red', inst.id, 'probe_com');
               const threshold = 40;
               if (totalR <= threshold && totalR > 0) {
                 displayText = totalR.toFixed(1);
@@ -2719,6 +2714,102 @@ case 'push_button': {
     }
 
     return { sources, grounds };
+  }
+
+  // Measure total resistance along the shortest resistive path between two pins
+  _measureResistanceBetween(startInstId, startPinId, targetInstId, targetPinId) {
+    const queue = [{ instId: startInstId, pinId: startPinId, resistance: 0 }];
+    const visited = new Set();
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const nodeKey = `${current.instId}:${current.pinId}`;
+      if (visited.has(nodeKey)) continue;
+      visited.add(nodeKey);
+
+      // Check if we reached the target pin
+      if (current.instId === targetInstId && current.pinId === targetPinId) {
+        return current.resistance;
+      }
+
+      const inst = this.components.find(c => c.id === current.instId);
+      if (!inst) continue;
+
+      // Resistor pass-through — add resistance
+      if (inst.type === 'resistor') {
+        const rVal = Number(inst.props && inst.props.value) || 220;
+        const otherPin = current.pinId === 'p1' ? 'p2' : 'p1';
+        queue.push({ instId: inst.id, pinId: otherPin, resistance: current.resistance + rVal });
+        // Also skip past the resistor to the next connected component
+        for (const wire of this.wires) {
+          if (wire.from.instId === inst.id && wire.from.pinId === otherPin) {
+            queue.push({ instId: wire.to.instId, pinId: wire.to.pinId, resistance: current.resistance + rVal });
+          } else if (wire.to.instId === inst.id && wire.to.pinId === otherPin) {
+            queue.push({ instId: wire.from.instId, pinId: wire.from.pinId, resistance: current.resistance + rVal });
+          }
+        }
+        continue;
+      }
+
+      // Diode pass-through (forward biased only)
+      if (inst.type === 'diode_1n4007') {
+        const otherPin = current.pinId === 'anode' ? 'cathode' : 'anode';
+        queue.push({ instId: inst.id, pinId: otherPin, resistance: current.resistance + 0.7 });
+      }
+
+      // Breadboard internal connectivity
+      if (inst.type === 'breadboard') {
+        const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+        const def = defs && defs['breadboard'];
+        if (def) {
+          const myGroup = window._breadboardGetGroup(current.pinId);
+          if (myGroup) {
+            for (const otherPin of def.pins) {
+              if (otherPin.id === current.pinId) continue;
+              const otherGroup = window._breadboardGetGroup(otherPin.id);
+              if (otherGroup === myGroup) {
+                queue.push({ instId: inst.id, pinId: otherPin.id, resistance: current.resistance });
+              }
+            }
+          }
+        }
+      }
+
+      // Push button pass-through
+      if (inst.type === 'push_button') {
+        const isPressed = inst.runtimeState && inst.runtimeState.pressed;
+        if (current.pinId === 'p1') queue.push({ instId: inst.id, pinId: 'p2', resistance: current.resistance });
+        if (current.pinId === 'p2') queue.push({ instId: inst.id, pinId: 'p1', resistance: current.resistance });
+        if (current.pinId === 'p3') queue.push({ instId: inst.id, pinId: 'p4', resistance: current.resistance });
+        if (current.pinId === 'p4') queue.push({ instId: inst.id, pinId: 'p3', resistance: current.resistance });
+        if (isPressed) {
+          if (current.pinId === 'p1' || current.pinId === 'p2') {
+            queue.push({ instId: inst.id, pinId: 'p3', resistance: current.resistance });
+            queue.push({ instId: inst.id, pinId: 'p4', resistance: current.resistance });
+          } else {
+            queue.push({ instId: inst.id, pinId: 'p1', resistance: current.resistance });
+            queue.push({ instId: inst.id, pinId: 'p2', resistance: current.resistance });
+          }
+        }
+      }
+
+      // Relay pass-through
+      if (inst.type === 'relay') {
+        const relayOn = !!(inst.runtimeState && inst.runtimeState.active);
+        if (current.pinId === 'com') queue.push({ instId: inst.id, pinId: relayOn ? 'no' : 'nc', resistance: current.resistance });
+        else if (current.pinId === 'no' && relayOn) queue.push({ instId: inst.id, pinId: 'com', resistance: current.resistance });
+        else if (current.pinId === 'nc' && !relayOn) queue.push({ instId: inst.id, pinId: 'com', resistance: current.resistance });
+      }
+
+      // Traverse connected wires
+      for (const wire of this.wires) {
+        if (wire.from.instId === current.instId && wire.from.pinId === current.pinId) {
+          queue.push({ instId: wire.to.instId, pinId: wire.to.pinId, resistance: current.resistance });
+        } else if (wire.to.instId === current.instId && wire.to.pinId === current.pinId) {
+          queue.push({ instId: wire.from.instId, pinId: wire.from.pinId, resistance: current.resistance });
+        }
+      }
+    }
+    return Infinity; // no path found
   }
 
   _getWireTarget(instId, pinId) {
