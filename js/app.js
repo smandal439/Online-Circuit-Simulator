@@ -1893,6 +1893,8 @@ _newProject() {
       if (input.type === 'number')   val = Number(val);
       if (input.type === 'checkbox') val = input.checked;
       this._propsComp.props[key] = val;
+      // Sync runtimeState so draw() picks up the change immediately
+      if (this._propsComp.runtimeState) this._propsComp.runtimeState[key] = val;
       if (key === 'color' && input.tagName === 'SELECT') {
         const match = LED_COLORS.find(c => c.hex === val);
         if (match) this._propsComp.props.colorName = match.name;

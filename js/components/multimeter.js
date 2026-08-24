@@ -23,6 +23,7 @@ defComp({
     { field: 'mode', label: 'Mode', type: 'select', options: [
       { value: 'V_DC',  label: 'DC Voltage (V⎓)' },
       { value: 'V_AC',  label: 'AC Voltage (V~)' },
+      { value: 'A_DC',  label: 'DC Current (A)' },
       { value: 'RES',   label: 'Resistance (Ω)' },
       { value: 'CONT',  label: 'Continuity (🔊)' },
     ]},

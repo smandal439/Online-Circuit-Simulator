@@ -2478,6 +2478,39 @@ case 'push_button': {
               displayMode = 'AC';
               break;
             }
+            case 'A_DC': {
+              // Current mode: DMM is in series — find V source on red side, GND on COM side
+              const redHasSrc = redNet.sources.length > 0;
+              const comHasGnd = comNet.grounds.length > 0;
+
+              if (redHasSrc && comHasGnd) {
+                const best = redNet.sources.sort((a, b) => b.voltage - a.voltage)[0];
+                const voltage = best.voltage || 0;
+                const redR = best.resistance || 0;
+                const comGnd = comNet.grounds[0];
+                const comR = comGnd ? (comGnd.resistance || 0) : 0;
+                const totalR = redR + comR;
+
+                if (totalR > 0 && voltage > 0) {
+                  const amps = voltage / totalR;
+                  let disp, pfx;
+                  if (amps >= 1) { disp = amps; pfx = 'A'; }
+                  else if (amps >= 0.001) { disp = amps * 1000; pfx = 'mA'; }
+                  else { disp = amps * 1e6; pfx = 'µA'; }
+                  const decimals = disp >= 100 ? 1 : 3;
+                  displayText = disp.toFixed(decimals);
+                  displayUnit = pfx;
+                } else {
+                  displayText = '0.000';
+                  displayUnit = 'mA';
+                }
+              } else {
+                displayText = '0.000';
+                displayUnit = 'mA';
+              }
+              displayMode = 'DC';
+              break;
+            }
             case 'RES': {
               const redHasSrc = redNet.sources.length > 0;
               const comHasSrc = comNet.sources.length > 0;
