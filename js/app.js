@@ -1658,7 +1658,7 @@ _newProject() {
         if (this.editor) this.editor.setCode(example.code || '');
         if (example.circuit && this.canvas) this._loadExampleCircuit(example.circuit);
         this._closeModal();
-        this.showToast(`${example.name} loaded`, 'success`);
+        this.showToast(`${example.name} loaded`, 'success');
       });
       container.insertBefore(item, sentinel);
     }
