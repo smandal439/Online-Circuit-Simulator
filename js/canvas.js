@@ -471,7 +471,9 @@ class CircuitCanvas {
       if (!def || !Array.isArray(def.interactive) || def.interactive.length === 0) continue;
       const rects = this._getInteractiveRects(inst);
       for (let i = 0; i < rects.length; i++) {
-        this._drawSlider(ctx, inst, def.interactive[i], rects[i]);
+        const ctrl = def.interactive[i];
+        if (ctrl.type === 'select') continue; // select controls render in properties panel only
+        this._drawSlider(ctx, inst, ctrl, rects[i]);
       }
     }
   }
@@ -2411,6 +2413,125 @@ case 'push_button': {
           const hasSource = anodeNet.sources.length > 0;
           const hasGround = cathodeNet.grounds.length > 0;
           inst.runtimeState.conducting = hasSource && hasGround;
+          break;
+        }
+
+        /* ── Digital Multimeter — measures voltage / resistance / continuity ── */
+        case 'multimeter': {
+          const mode = inst.runtimeState.mode || inst.props.mode || 'V_DC';
+
+          // Helper: get best source voltage from a traced net
+          const getNetVoltage = (net) => {
+            if (!net || !net.sources || net.sources.length === 0) return 0;
+            const best = net.sources.sort((a, b) => b.voltage - a.voltage)[0];
+            return best ? best.voltage : 0;
+          };
+          // Helper: check if net has ground
+          const hasGround = (net) => net && net.grounds && net.grounds.length > 0;
+          // Helper: total resistance of a net path
+          const getNetResistance = (net) => {
+            if (!net || !net.sources || net.sources.length === 0) return Infinity;
+            const best = net.sources.sort((a, b) => b.voltage - a.voltage)[0];
+            return best ? (best.resistance || 0) : 0;
+          };
+
+          const redNet  = this._tracePinNet(inst.id, 'probe_red');
+          const comNet  = this._tracePinNet(inst.id, 'probe_com');
+
+          let displayText = '0.000';
+          let displayUnit = 'V';
+          let displayMode = 'DC';
+          let displayBeep = false;
+
+          switch (mode) {
+            case 'V_DC': {
+              const vRed = getNetVoltage(redNet);
+              const vCom = getNetVoltage(comNet);
+              const diff = vRed - vCom;
+              const absV = Math.abs(diff);
+              const sign = diff < 0 ? '-' : '';
+              let disp = absV;
+              let pfx = '';
+              if (absV >= 1e6) { disp = absV / 1e6; pfx = 'M'; }
+              else if (absV >= 1e3) { disp = absV / 1e3; pfx = 'k'; }
+              else if (absV > 0 && absV < 0.001) { disp = absV * 1e6; pfx = 'µ'; }
+              else if (absV > 0 && absV < 1) { disp = absV * 1e3; pfx = 'm'; }
+              const decimals = disp >= 100 ? 1 : 3;
+              displayText = sign + disp.toFixed(decimals);
+              displayUnit = pfx + 'V';
+              displayMode = 'DC';
+              break;
+            }
+            case 'V_AC': {
+              // Simplified: treat same as DC for simulation (AC RMS ≈ DC equivalent in this sim)
+              const vRed = getNetVoltage(redNet);
+              const vCom = getNetVoltage(comNet);
+              const rms = Math.abs(vRed - vCom);
+              let disp = rms;
+              let pfx = '';
+              if (rms >= 1e6) { disp = rms / 1e6; pfx = 'M'; }
+              else if (rms >= 1e3) { disp = rms / 1e3; pfx = 'k'; }
+              else if (rms > 0 && rms < 1) { disp = rms * 1e3; pfx = 'm'; }
+              const decimals = disp >= 100 ? 1 : 3;
+              displayText = disp.toFixed(decimals);
+              displayUnit = pfx + 'V';
+              displayMode = 'AC';
+              break;
+            }
+            case 'RES': {
+              const redHasGnd = hasGround(redNet);
+              const comHasGnd = hasGround(comNet);
+              const redHasSrc = redNet.sources.length > 0;
+              const comHasSrc = comNet.sources.length > 0;
+              const redR = getNetResistance(redNet);
+              const comR = getNetResistance(comNet);
+              const totalR = redR + comR;
+
+              if (redHasSrc && comHasSrc) {
+                // Both probes connected to sources — can't measure R
+                displayText = 'Err';
+                displayUnit = '';
+                displayMode = 'Ω';
+              } else if (totalR > 0 && totalR < Infinity) {
+                let disp = totalR;
+                let pfx = '';
+                if (totalR >= 1e6) { disp = totalR / 1e6; pfx = 'M'; }
+                else if (totalR >= 1e3) { disp = totalR / 1e3; pfx = 'k'; }
+                const decimals = disp >= 100 ? 1 : 2;
+                displayText = disp.toFixed(decimals);
+                displayUnit = pfx + 'Ω';
+                displayMode = 'AUTO';
+              } else {
+                displayText = 'O.L';
+                displayUnit = 'MΩ';
+                displayMode = 'AUTO';
+              }
+              break;
+            }
+            case 'CONT': {
+              const redR = getNetResistance(redNet);
+              const comR = getNetResistance(comNet);
+              const totalR = redR + comR;
+              const threshold = 40;
+              if (totalR <= threshold && totalR > 0) {
+                displayText = totalR.toFixed(1);
+                displayUnit = 'Ω';
+                displayBeep = true;
+              } else {
+                displayText = 'O.L';
+                displayUnit = 'Ω';
+                displayBeep = false;
+              }
+              displayMode = 'CONT';
+              break;
+            }
+          }
+
+          inst.runtimeState.displayText  = displayText;
+          inst.runtimeState.displayUnit  = displayUnit;
+          inst.runtimeState.displayMode  = displayMode;
+          inst.runtimeState.displayBeep  = displayBeep;
+          inst.runtimeState.mode         = mode;
           break;
         }
       }

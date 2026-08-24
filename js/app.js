@@ -1778,8 +1778,41 @@ _newProject() {
       { name: 'Orange', hex: '#ff8833' },
       { name: 'White',  hex: '#ffffff' },
     ];
+    // Build lookup of interactive control definitions for select rendering
+    const interactiveDefs = {};
+    if (def && def.interactive) {
+      for (const ctrl of def.interactive) {
+        if (ctrl.field) interactiveDefs[ctrl.field] = ctrl;
+      }
+    }
+
     Object.entries(comp.props || {}).forEach(([key, value]) => {
       if (isLED && key === 'colorName') return;
+
+      // Handle interactive select controls
+      const iDef = interactiveDefs[key];
+      if (iDef && iDef.type === 'select' && Array.isArray(iDef.options)) {
+        const row   = document.createElement('div');
+        row.className = 'prop-row';
+        const label = document.createElement('label');
+        label.textContent = iDef.label || key.replace(/_/g, ' ');
+        label.className = 'prop-label';
+        const select = document.createElement('select');
+        select.className = 'prop-input';
+        select.name = key;
+        iDef.options.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt.value;
+          o.textContent = opt.label;
+          if (opt.value === String(value)) o.selected = true;
+          select.appendChild(o);
+        });
+        row.appendChild(label);
+        row.appendChild(select);
+        rows.push(row);
+        return;
+      }
+
       if (isLED && key === 'color') {
         const row = document.createElement('div');
         row.className = 'prop-row';
