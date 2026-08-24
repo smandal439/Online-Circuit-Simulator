@@ -18,12 +18,7 @@ defComp({
     { field: 'accelY', label: 'AccelY', min: -2048, max: 2047, step: 10, unit: '' },
     { field: 'accelZ', label: 'AccelZ', min: -2048, max: 2047, step: 10, unit: '' },
   ],
-  pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 6, y: 32, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 13, y: 32, side: 'bottom' },
-    { id: 'SCL', label: 'SCL', type: PIN_TYPE.SIGNAL, x: 22, y: 32, side: 'bottom' },
-    { id: 'SDA', label: 'SDA', type: PIN_TYPE.SIGNAL, x: 29, y: 32, side: 'bottom' },
-  ],
+
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     ctx.save();

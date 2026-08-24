@@ -432,7 +432,7 @@ class ArduinoSimulator {
     js = js.replace(/\bAdafruit_NeoPixel\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.neopixelNew($2)');
     js = js.replace(/\b(\w+)\.show\s*\(/g, function (match, varName) {
       if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
-      return '_a.neopixelShow(' + varName + ')';
+      return '_a.neopixelShow(' + varName;
     });
     js = js.replace(/\b(\w+)\.setPixelColor\s*\(/g, function (match, varName) {
       if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
@@ -452,7 +452,7 @@ class ArduinoSimulator {
     });
     js = js.replace(/\b(\w+)\.numPixels\s*\(/g, function (match, varName) {
       if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
-      return '_a.neopixelNumPixels(' + varName + ')';
+      return '_a.neopixelNumPixels(' + varName;
     });
     js = js.replace(/\bNEO_GRB\b/g, '0x02');
     js = js.replace(/\bNEO_GRBW\b/g, '0x04');
