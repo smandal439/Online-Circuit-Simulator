@@ -57,7 +57,7 @@ class ArduinoSimulator {
 
     // 1. Handle #define macros (simple value replacement)
     const defines = {};
-    js = js.replace(/^[ \t]*#define\s+(\w+)\s+(.*?)[ \t]*$/gm, (_, name, value) => {
+    js = js.replace(/^[ \t]*#define\s+(\w+)\s+(.+?)[ \t]*(?:\/\/.*)?$/gm, (_, name, value) => {
       defines[name] = value.trim();
       return `/* #define ${name} ${value} */`;
     });
@@ -575,6 +575,7 @@ class ArduinoSimulator {
     js = js.replace(/\b(\w+)\.handleClient\s*\(/g, '_a.serverHandleClient($1, ');
 
     // LiquidCrystal
+    js = js.replace(/\b(\w+)\.begin\s*\(\s*\)/g, '_a.lcdBegin($1)');
     js = js.replace(/\b(\w+)\.begin\s*\(/g, '_a.lcdBegin($1, ');
     js = js.replace(/\b(\w+)\.setCursor\s*\(/g, '_a.lcdSetCursor($1, ');
     js = js.replace(/\b(\w+)\.print\s*\(/g, '_a.lcdPrint($1, ');
