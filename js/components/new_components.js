@@ -253,14 +253,93 @@ defComp({
 /* ═══════════════════════════════════════════════════════════════
    WS2812B NeoPixel — Addressable RGB LED
    ═══════════════════════════════════════════════════════════════ */
+// defComp({
+//   id: 'neopixel',
+//   name: 'WS2812B NeoPixel',
+//   category: 'Output',
+//   icon: '💡',
+//   desc: 'Addressable RGB LED (WS2812B). Single pixel — data pin receives color via NeoPixel library',
+//   width: 20,
+//   height: 24,
+//   defaultProps: { r: 0, g: 0, b: 0, brightness: 255 },
+//   interactive: [
+//     { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
+//     { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
+//     { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
+//   ],
+//   pins: [
+//     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 6, y: 24, side: 'bottom' },
+//     { id: 'DOUT', label: 'DOut', type: PIN_TYPE.DIGITAL, x: 10, y: 24, side: 'bottom' },
+//     { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 14, y: 24, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const rs = inst.runtimeState || {};
+//     const r = rs.r ?? inst.props.r ?? 0;
+//     const g = rs.g ?? inst.props.g ?? 0;
+//     const b = rs.b ?? inst.props.b ?? 0;
+//     const brightness = rs.brightness ?? inst.props.brightness ?? 255;
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // LED body
+//     const rgb = `rgb(${Math.round(r * brightness / 255)}, ${Math.round(g * brightness / 255)}, ${Math.round(b * brightness / 255)})`;
+//     const isOn = r > 0 || g > 0 || b > 0;
+
+//     if (isOn) {
+//       // Glow effect
+//       ctx.shadowColor = rgb;
+//       ctx.shadowBlur = 12;
+//     }
+
+//     ctx.fillStyle = isOn ? rgb : '#222';
+//     roundRect(ctx, 2, 2, 16, 16, 3);
+//     ctx.fill();
+//     ctx.shadowBlur = 0;
+
+//     // LED lens highlight
+//     ctx.fillStyle = 'rgba(255,255,255,0.15)';
+//     ctx.beginPath();
+//     ctx.arc(10, 9, 5, 0, Math.PI * 2);
+//     ctx.fill();
+
+//     // Border
+//     ctx.strokeStyle = '#555';
+//     ctx.lineWidth = 1;
+//     roundRect(ctx, 2, 2, 16, 16, 3);
+//     ctx.stroke();
+
+//     // Color label
+//     ctx.fillStyle = '#aaa';
+//     ctx.font = '4px monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(`R${r}`, 6, 22);
+//     ctx.fillText(`G${g}`, 10, 22);
+//     ctx.fillText(`B${b}`, 14, 22);
+
+//     // Pin leads
+//     ctx.strokeStyle = '#a0a0a0';
+//     ctx.lineWidth = 1.5;
+//     ctx.beginPath(); ctx.moveTo(6, 18); ctx.lineTo(6, 24); ctx.stroke();
+//     ctx.beginPath(); ctx.moveTo(10, 18); ctx.lineTo(10, 24); ctx.stroke();
+//     ctx.beginPath(); ctx.moveTo(14, 18); ctx.lineTo(14, 24); ctx.stroke();
+
+//     if (inst.selected) drawSelectionRect(ctx, 0, 0, 20, 24);
+//     ctx.restore();
+//   }
+// });
+
+/* ═══════════════════════════════════════════════════════════════
+   WS2812B NeoPixel (Enlarged 2x: 40x48)
+   ═══════════════════════════════════════════════════════════════ */
 defComp({
   id: 'neopixel',
   name: 'WS2812B NeoPixel',
   category: 'Output',
   icon: '💡',
   desc: 'Addressable RGB LED (WS2812B). Single pixel — data pin receives color via NeoPixel library',
-  width: 20,
-  height: 24,
+  width: 40,   // Scaled from 20 to 40 (2x)
+  height: 48,  // Scaled from 24 to 48 (2x)
   defaultProps: { r: 0, g: 0, b: 0, brightness: 255 },
   interactive: [
     { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
@@ -268,9 +347,10 @@ defComp({
     { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 6, y: 24, side: 'bottom' },
-    { id: 'DOUT', label: 'DOut', type: PIN_TYPE.DIGITAL, x: 10, y: 24, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 14, y: 24, side: 'bottom' },
+    // Scaled pin offsets by 2x
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 48, side: 'bottom' },
+    { id: 'DOUT', label: 'DOut', type: PIN_TYPE.DIGITAL, x: 20, y: 48, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 28, y: 48, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -279,8 +359,11 @@ defComp({
     const g = rs.g ?? inst.props.g ?? 0;
     const b = rs.b ?? inst.props.b ?? 0;
     const brightness = rs.brightness ?? inst.props.brightness ?? 255;
+    const scale = 2; // Scale factor
+
     ctx.save();
     ctx.translate(x, y);
+    ctx.scale(scale, scale); // Scales all vector drawing, fonts, and borders
 
     // LED body
     const rgb = `rgb(${Math.round(r * brightness / 255)}, ${Math.round(g * brightness / 255)}, ${Math.round(b * brightness / 255)})`;
@@ -324,6 +407,7 @@ defComp({
     ctx.beginPath(); ctx.moveTo(10, 18); ctx.lineTo(10, 24); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(14, 18); ctx.lineTo(14, 24); ctx.stroke();
 
+    // Uses base dimensions because the canvas context is already scaled
     if (inst.selected) drawSelectionRect(ctx, 0, 0, 20, 24);
     ctx.restore();
   }
