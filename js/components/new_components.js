@@ -665,90 +665,282 @@ defComp({
 /* ═══════════════════════════════════════════════════════════════
    IR Obstacle Avoidance Sensor
    ═══════════════════════════════════════════════════════════════ */
+// defComp({
+//   id: 'ir_obstacle',
+//   name: 'IR Obstacle Sensor',
+//   category: 'Sensors',
+//   icon: '👁️',
+//   desc: 'Infrared obstacle detection sensor. Digital output — LOW when obstacle detected (2-30cm range)',
+//   width: 30,
+//   height: 40,
+//   defaultProps: { detected: 0 },
+//   interactive: [
+//     { field: 'detected', label: 'Object', min: 0, max: 1, step: 1, unit: '' },
+//   ],
+//   pins: [
+//     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 6, y: 40, side: 'bottom' },
+//     { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 12, y: 40, side: 'bottom' },
+//     { id: 'OUT', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 18, y: 40, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const detected = inst.runtimeState?.detected ?? inst.props.detected ?? 0;
+//     ctx.save();
+//     ctx.translate(x, y);
+//     // 3. Apply 2x scale to all drawing operations
+//     ctx.scale(4, 4);
+
+//     // PCB body
+//     ctx.fillStyle = '#1a5c1a';
+//     roundRect(ctx, 0, 0, 24, 34, 3);
+//     ctx.fill();
+//     ctx.strokeStyle = '#2a7a2a';
+//     ctx.lineWidth = 1;
+//     roundRect(ctx, 0, 0, 24, 34, 3);
+//     ctx.stroke();
+
+//     // IR emitter (top)
+//     ctx.fillStyle = '#333';
+//     ctx.beginPath();
+//     ctx.arc(8, 8, 4, 0, Math.PI * 2);
+//     ctx.fill();
+//     ctx.fillStyle = detected ? '#ff3333' : '#661111';
+//     ctx.beginPath();
+//     ctx.arc(8, 8, 2, 0, Math.PI * 2);
+//     ctx.fill();
+//     if (detected) {
+//       ctx.shadowColor = '#ff0000';
+//       ctx.shadowBlur = 6;
+//       ctx.fill();
+//       ctx.shadowBlur = 0;
+//     }
+
+//     // IR receiver (top)
+//     ctx.fillStyle = '#222';
+//     ctx.beginPath();
+//     ctx.arc(16, 8, 4, 0, Math.PI * 2);
+//     ctx.fill();
+//     ctx.fillStyle = detected ? '#4400ff' : '#220066';
+//     ctx.beginPath();
+//     ctx.arc(16, 8, 2, 0, Math.PI * 2);
+//     ctx.fill();
+
+//     // Status LED
+//     ctx.fillStyle = detected ? '#00ff00' : '#003300';
+//     ctx.beginPath();
+//     ctx.arc(12, 20, 2, 0, Math.PI * 2);
+//     ctx.fill();
+
+//     // Label
+//     ctx.fillStyle = '#ccc';
+//     ctx.font = '4px monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(detected ? 'DETECT' : 'CLEAR', 12, 30);
+
+//     // Pin leads
+//     ctx.strokeStyle = '#a0a0a0';
+//     ctx.lineWidth = 1.5;
+//     ctx.beginPath(); ctx.moveTo(6, 34); ctx.lineTo(6, 40); ctx.stroke();
+//     ctx.beginPath(); ctx.moveTo(12, 34); ctx.lineTo(12, 40); ctx.stroke();
+//     ctx.beginPath(); ctx.moveTo(18, 34); ctx.lineTo(18, 40); ctx.stroke();
+
+//     if (inst.selected) drawSelectionRect(ctx, 0, 0, 24, 40);
+//     ctx.restore();
+//   }
+// });
+
+/* -------------- IR Obstacle Avoidance Sensor Module (Enlarged) ------------------ */
 defComp({
   id: 'ir_obstacle',
   name: 'IR Obstacle Sensor',
   category: 'Sensors',
   icon: '👁️',
-  desc: 'Infrared obstacle detection sensor. Digital output — LOW when obstacle detected (2-30cm range)',
-  width: 30,
-  height: 40,
+  desc: 'Infrared obstacle detection sensor module with LM393 comparator (Digital OUT: LOW when obstacle detected, 2–30cm range)',
+  width: 54,
+  height: 92,
   defaultProps: { detected: 0 },
   interactive: [
     { field: 'detected', label: 'Object', min: 0, max: 1, step: 1, unit: '' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 6, y: 40, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 12, y: 40, side: 'bottom' },
-    { id: 'OUT', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 18, y: 40, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER,   x: 15, y: 92, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND,     x: 27, y: 92, side: 'bottom' },
+    { id: 'OUT', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 39, y: 92, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const detected = inst.runtimeState?.detected ?? inst.props.detected ?? 0;
+    const detected = Boolean(inst.runtimeState?.detected ?? inst.props.detected ?? 0);
+
     ctx.save();
     ctx.translate(x, y);
-    // 3. Apply 2x scale to all drawing operations
-    ctx.scale(4, 4);
 
-    // PCB body
-    ctx.fillStyle = '#1a5c1a';
-    roundRect(ctx, 0, 0, 24, 34, 3);
-    ctx.fill();
-    ctx.strokeStyle = '#2a7a2a';
-    ctx.lineWidth = 1;
-    roundRect(ctx, 0, 0, 24, 34, 3);
+    // 1. Dual IR Optoelectronic Diodes (Protruding from Top)
+    // --- IR Emitter (Clear/Blue-tinted 5mm LED, Left) ---
+    // Metal Leads
+    ctx.strokeStyle = '#cfd8dc';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(13, 20); ctx.lineTo(13, 15);
+    ctx.moveTo(17, 20); ctx.lineTo(17, 15);
     ctx.stroke();
 
-    // IR emitter (top)
-    ctx.fillStyle = '#333';
+    // Emitter Bulb Base & Rim
+    ctx.fillStyle = '#b0bec5';
+    ctx.fillRect(10.5, 14, 9, 2);
+
+    // Emitter Dome
+    const emitGrad = ctx.createRadialGradient(15, 8, 1, 15, 9, 6);
+    emitGrad.addColorStop(0, detected ? '#ff8a80' : '#e1f5fe');
+    emitGrad.addColorStop(0.6, detected ? '#ff1744' : '#81d4fa');
+    emitGrad.addColorStop(1, detected ? '#b71c1c' : '#29b6f6');
+    ctx.fillStyle = emitGrad;
     ctx.beginPath();
-    ctx.arc(8, 8, 4, 0, Math.PI * 2);
+    ctx.arc(15, 9, 5, Math.PI, 0, false);
+    ctx.lineTo(20, 14);
+    ctx.lineTo(10, 14);
+    ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = detected ? '#ff3333' : '#661111';
-    ctx.beginPath();
-    ctx.arc(8, 8, 2, 0, Math.PI * 2);
-    ctx.fill();
+
     if (detected) {
-      ctx.shadowColor = '#ff0000';
-      ctx.shadowBlur = 6;
+      // Infrared Emission Glow Halo
+      ctx.fillStyle = 'rgba(255, 23, 68, 0.35)';
+      ctx.beginPath();
+      ctx.arc(15, 9, 8, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
     }
 
-    // IR receiver (top)
-    ctx.fillStyle = '#222';
+    // --- IR Photodiode Receiver (Dark Tinted 5mm Lens, Right) ---
+    // Metal Leads
+    ctx.strokeStyle = '#cfd8dc';
     ctx.beginPath();
-    ctx.arc(16, 8, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = detected ? '#4400ff' : '#220066';
+    ctx.moveTo(37, 20); ctx.lineTo(37, 15);
+    ctx.moveTo(41, 20); ctx.lineTo(41, 15);
+    ctx.stroke();
+
+    // Receiver Bulb Base
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(34.5, 14, 9, 2);
+
+    // Dark Glossy Filter Dome
+    const recvGrad = ctx.createRadialGradient(37.5, 7, 1, 39, 9, 6);
+    recvGrad.addColorStop(0, '#546e7a');
+    recvGrad.addColorStop(0.5, '#212121');
+    recvGrad.addColorStop(1, '#0a0a0a');
+    ctx.fillStyle = recvGrad;
     ctx.beginPath();
-    ctx.arc(16, 8, 2, 0, Math.PI * 2);
+    ctx.arc(39, 9, 5, Math.PI, 0, false);
+    ctx.lineTo(44, 14);
+    ctx.lineTo(34, 14);
+    ctx.closePath();
     ctx.fill();
 
-    // Status LED
-    ctx.fillStyle = detected ? '#00ff00' : '#003300';
-    ctx.beginPath();
-    ctx.arc(12, 20, 2, 0, Math.PI * 2);
+    // 2. FR4 Sensor PCB Body
+    ctx.fillStyle = '#0a3820';
+    roundRect(ctx, 3, 18, 48, 56, 3.5);
     ctx.fill();
 
-    // Label
-    ctx.fillStyle = '#ccc';
-    ctx.font = '4px monospace';
+    ctx.strokeStyle = '#185934';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // PCB Mounting Hole
+    ctx.fillStyle = '#c8a452';
+    ctx.beginPath(); ctx.arc(27, 26, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#05180f';
+    ctx.beginPath(); ctx.arc(27, 26, 1.8, 0, Math.PI * 2); ctx.fill();
+
+    // 3. Sensitivity Trimpot (Blue Cermet Potentiometer)
+    ctx.fillStyle = '#1565c0';
+    roundRect(ctx, 29, 34, 18, 16, 2);
+    ctx.fill();
+
+    // Metal Adjustment Screw Rotor
+    ctx.fillStyle = '#d4af37';
+    ctx.beginPath(); ctx.arc(38, 42, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#614800';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(35, 42); ctx.lineTo(41, 42);
+    ctx.moveTo(38, 39); ctx.lineTo(38, 45);
+    ctx.stroke();
+
+    // 4. LM393 Voltage Comparator IC
+    ctx.fillStyle = '#1e2224';
+    roundRect(ctx, 7, 34, 16, 16, 1.5);
+    ctx.fill();
+
+    // IC Pin 1 Notch & Leads
+    ctx.fillStyle = '#101010';
+    ctx.beginPath(); ctx.arc(10, 36.5, 1, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#9e9e9e';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(5.5, 36 + i * 3.5, 1.5, 1.2);
+      ctx.fillRect(23, 36 + i * 3.5, 1.5, 1.2);
+    }
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.font = 'bold 3.5px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(detected ? 'DETECT' : 'CLEAR', 12, 30);
+    ctx.fillText('LM393', 15, 43.5);
 
-    // Pin leads
-    ctx.strokeStyle = '#a0a0a0';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(6, 34); ctx.lineTo(6, 40); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(12, 34); ctx.lineTo(12, 40); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(18, 34); ctx.lineTo(18, 40); ctx.stroke();
+    // 5. Onboard SMD Indicator LEDs
+    // Power Indicator LED (PWR - Red)
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(8, 54, 5, 3.5);
+    ctx.fillStyle = '#ff1744';
+    ctx.fillRect(9, 54.8, 3, 1.9);
 
-    if (inst.selected) drawSelectionRect(ctx, 0, 0, 24, 40);
+    // Obstacle Detection LED (D-OUT - Green)
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(41, 54, 5, 3.5);
+    if (detected) {
+      ctx.fillStyle = '#00e676';
+      ctx.fillRect(42, 54.8, 3, 1.9);
+      ctx.fillStyle = 'rgba(0, 230, 118, 0.45)';
+      ctx.beginPath(); ctx.arc(43.5, 55.7, 4, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.fillStyle = '#1b5e20';
+      ctx.fillRect(42, 54.8, 3, 1.9);
+    }
+
+    // 6. Silkscreen Labels & Status Display
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = 'bold 5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(detected ? 'DETECT' : 'CLEAR', 27, 56.5);
+
+    // Pin Names Silkscreen
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.font = 'bold 4.5px "JetBrains Mono", sans-serif';
+    ctx.fillText('VCC', 15, 68);
+    ctx.fillText('GND', 27, 68);
+    ctx.fillText('OUT', 39, 68);
+
+    // 7. Male Header Socket Strip & Terminal Pins
+    ctx.fillStyle = '#1c1c1c';
+    roundRect(ctx, 8, 73, 38, 4.5, 1);
+    ctx.fill();
+
+    const pins = [15, 27, 39];
+    pins.forEach(px => {
+      // Solder Pad on PCB
+      ctx.fillStyle = '#c8a452';
+      ctx.beginPath(); ctx.arc(px, 71.5, 1.5, 0, Math.PI * 2); ctx.fill();
+
+      // Silver Lead Terminal
+      const pinGrad = ctx.createLinearGradient(px - 1, 77, px + 1, 77);
+      pinGrad.addColorStop(0, '#cfd8dc');
+      pinGrad.addColorStop(0.5, '#ffffff');
+      pinGrad.addColorStop(1, '#90a4ae');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(px - 1.2, 77.5, 2.4, 14.5);
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 60, 98);
     ctx.restore();
   }
 });
-
 /* ═══════════════════════════════════════════════════════════════
    Flex Sensor — Analog Bend Sensor
    ═══════════════════════════════════════════════════════════════ */
