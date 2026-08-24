@@ -1,9 +1,14 @@
 {
-  "version": "1.1",
-  "savedAt": "2026-08-24T10:49:42.125Z",
+  "id": "blink",  
   "name": "Blink LED",
-  "code": "/*\n * Blink — Classic Arduino example\n * Blinks the built-in LED on pin 13\n */\n\nint ledPin = LED_BUILTIN;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Blink started!\");\n}\n\nvoid loop() {\n  digitalWrite(ledPin, HIGH);\n  Serial.println(\"LED ON\");\n  delay(1000);\n\n  digitalWrite(ledPin, LOW);\n  Serial.println(\"LED OFF\");\n  delay(1000);\n}",
-  "circuit": {
+  "icon": "🔴",
+  "desc": "blink led",
+  "tags": [
+    "beginner",
+    "output",
+    "led"
+  ],  
+ "circuit": {
     "components": [
       {
         "id": "b1",
@@ -99,5 +104,6 @@
         "waypoints": []
       }
     ]
-  }
+  },  "code": "/*\n * Blink — Classic Arduino example\n * Blinks the built-in LED on pin 13\n */\n\nint ledPin = LED_BUILTIN;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Blink started!\");\n}\n\nvoid loop() {\n  digitalWrite(ledPin, HIGH);\n  Serial.println(\"LED ON\");\n  delay(1000);\n\n  digitalWrite(ledPin, LOW);\n  Serial.println(\"LED OFF\");\n  delay(1000);\n}"
+  
 }
