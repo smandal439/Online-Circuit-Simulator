@@ -2,73 +2,353 @@
 /* components/sensors.js — Sensor component definitions */
 
 /* ─── DHT11 Temperature Sensor ─── */
+// defComp({
+//   id: 'dht11',
+//   name: 'DHT11 Sensor',
+//   category: 'Sensors',
+//   icon: '🌡️',
+//   desc: 'Digital temperature and humidity sensor (0-50C, 20-80% RH)',
+//   width: 30,
+//   height: 50,
+//   defaultProps: { temperature: 25, humidity: 60 },
+//   interactive: [
+//     { field: 'temperature', label: 'Temp', min: 0, max: 50, step: 1, unit: '°C' },
+//     { field: 'humidity',    label: 'Hum',  min: 0, max: 100, step: 1, unit: '%' },
+//   ],
+//   pins: [
+//     { id: 'vcc',  label: 'VCC',  type: PIN_TYPE.POWER,   x: 6,  y: 50, side: 'bottom' },
+//     { id: 'data', label: 'DAT',  type: PIN_TYPE.DIGITAL, x: 12, y: 50, side: 'bottom' },
+//     { id: 'nc',   label: 'NC',   type: PIN_TYPE.SIGNAL,  x: 18, y: 50, side: 'bottom' },
+//     { id: 'gnd',  label: 'GND',  type: PIN_TYPE.GND,     x: 24, y: 50, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const temp = inst.props.temperature ?? 25;
+//     const hum  = inst.props.humidity ?? 60;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // Main Plastic Body
+//     ctx.fillStyle = '#1a55cc';
+//     roundRect(ctx, 2, 2, 26, 38, 3);
+//     ctx.fill();
+//     ctx.strokeStyle = '#2266ee';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Vent Grille
+//     ctx.fillStyle = '#0a2a88';
+//     for (let row = 0; row < 3; row++) {
+//       for (let col = 0; col < 4; col++) {
+//         roundRect(ctx, 5 + col * 5, 5 + row * 6, 4, 4, 1);
+//         ctx.fill();
+//       }
+//     }
+
+//     // Dynamic Sensor Readout Display
+//     ctx.fillStyle = '#ffffff';
+//     ctx.font = 'bold 5px sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(`${temp}°C`, 15, 27);
+//     ctx.fillText(`${hum}%`, 15, 34);
+
+//     // Pin Leads (Bottom)
+//     const pinXs = [6, 12, 18, 24];
+//     ctx.strokeStyle = '#a0a0a0';
+//     ctx.lineWidth = 1.5;
+//     for (const px of pinXs) {
+//       ctx.beginPath();
+//       ctx.moveTo(px, 40);
+//       ctx.lineTo(px, 50);
+//       ctx.stroke();
+//     }
+
+//     if (inst.selected) drawSelectionRect(ctx, 0, 0, 30, 50);
+//     ctx.restore();
+//   }
+// });
+
+/* -------------- DHT11 Temperature & Humidity Sensor (Enlarged) ------------------ */
+// defComp({
+//   id: 'dht11',
+//   name: 'DHT11 Sensor',
+//   category: 'Sensors',
+//   icon: '🌡️',
+//   desc: 'Digital temperature and humidity sensor (0–50°C, 20–80% RH) - Enlarged',
+//   width: 56,
+//   height: 84,
+//   defaultProps: { temperature: 25, humidity: 60 },
+//   interactive: [
+//     { field: 'temperature', label: 'Temp', min: 0, max: 50, step: 1, unit: '°C' },
+//     { field: 'humidity',    label: 'Hum',  min: 0, max: 100, step: 1, unit: '%' },
+//   ],
+//   pins: [
+//     { id: 'vcc',  label: 'VCC',  type: PIN_TYPE.POWER,   x: 13, y: 84, side: 'bottom' },
+//     { id: 'data', label: 'DAT',  type: PIN_TYPE.DIGITAL, x: 23, y: 84, side: 'bottom' },
+//     { id: 'nc',   label: 'NC',   type: PIN_TYPE.SIGNAL,  x: 33, y: 84, side: 'bottom' },
+//     { id: 'gnd',  label: 'GND',  type: PIN_TYPE.GND,     x: 43, y: 84, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const temp = inst.props.temperature ?? 25;
+//     const hum  = inst.props.humidity ?? 60;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // 1. Drop Shadow & Outer Housing Rim
+//     ctx.fillStyle = '#0d429a';
+//     roundRect(ctx, 4, 3, 48, 62, 5);
+//     ctx.fill();
+
+//     // 2. Main Blue Textured Plastic Casing
+//     const bodyGrad = ctx.createLinearGradient(4, 3, 52, 65);
+//     bodyGrad.addColorStop(0, '#2d7df8');
+//     bodyGrad.addColorStop(0.5, '#1e6be3');
+//     bodyGrad.addColorStop(1, '#1254bf');
+//     ctx.fillStyle = bodyGrad;
+//     roundRect(ctx, 5, 4, 46, 60, 4);
+//     ctx.fill();
+
+//     // Top Bevel Highlight
+//     ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+//     ctx.lineWidth = 1;
+//     ctx.beginPath();
+//     ctx.moveTo(9, 5);
+//     ctx.lineTo(47, 5);
+//     ctx.stroke();
+
+//     // 3. Sensor Vent Lattice (Perforated Grid)
+//     for (let row = 0; row < 3; row++) {
+//       for (let col = 0; col < 4; col++) {
+//         const vx = 9 + col * 10;
+//         const vy = 9 + row * 9;
+
+//         // Dark Interior Cavity
+//         ctx.fillStyle = '#081d45';
+//         roundRect(ctx, vx, vy, 7.5, 6.5, 1.5);
+//         ctx.fill();
+
+//         // Internal Sensing Element Mesh Texture
+//         ctx.fillStyle = '#10336e';
+//         ctx.fillRect(vx + 1.5, vy + 1.5, 4.5, 3.5);
+
+//         // Vent Bevel Highlight
+//         ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+//         ctx.lineWidth = 0.75;
+//         ctx.strokeRect(vx + 0.5, vy + 0.5, 6.5, 5.5);
+//       }
+//     }
+
+//     // 4. Silkscreen Product Branding
+//     ctx.fillStyle = '#ffffff';
+//     ctx.font = 'bold 7px "JetBrains Mono", sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('DHT11', 28, 42);
+
+//     // 5. Digital Live Readout Badges
+//     ctx.fillStyle = '#0a2352';
+//     roundRect(ctx, 8, 46, 40, 14, 3);
+//     ctx.fill();
+
+//     ctx.fillStyle = '#64ffda';
+//     ctx.font = 'bold 6px "JetBrains Mono", monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(`${temp}°C  ${hum}%`, 28, 55.5);
+
+//     // 6. Base Transition Molding
+//     ctx.fillStyle = '#0f3c87';
+//     ctx.fillRect(8, 64, 40, 3);
+
+//     // 7. Metallic Solder Pins & Leads
+//     const pinDefs = [
+//       { id: 'vcc',  label: 'VCC', x: 13 },
+//       { id: 'data', label: 'DAT', x: 23 },
+//       { id: 'nc',   label: 'NC',  x: 33 },
+//       { id: 'gnd',  label: 'GND', x: 43 },
+//     ];
+
+//     pinDefs.forEach(p => {
+//       // Pin Labels Silkscreen
+//       ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+//       ctx.font = 'bold 4.5px "JetBrains Mono", sans-serif';
+//       ctx.textAlign = 'center';
+//       ctx.fillText(p.label, p.x, 63);
+
+//       // Solder Collar on Base
+//       ctx.fillStyle = '#1b1b1b';
+//       ctx.fillRect(p.x - 2, 66, 4, 3);
+
+//       // Silver Metallic Pin
+//       const pinGrad = ctx.createLinearGradient(p.x - 1, 69, p.x + 1, 69);
+//       pinGrad.addColorStop(0, '#cfd8dc');
+//       pinGrad.addColorStop(0.5, '#ffffff');
+//       pinGrad.addColorStop(1, '#90a4ae');
+//       ctx.fillStyle = pinGrad;
+//       ctx.fillRect(p.x - 1.2, 69, 2.4, 15);
+//     });
+
+//     if (inst.selected) drawSelectionRect(ctx, -3, -3, 62, 90);
+//     ctx.restore();
+//   }
+// });
+
+/* -------------- DHT11 Sensor with High-Contrast On-Body Live Data Display ------------------ */
 defComp({
   id: 'dht11',
   name: 'DHT11 Sensor',
   category: 'Sensors',
   icon: '🌡️',
-  desc: 'Digital temperature and humidity sensor (0-50C, 20-80% RH)',
-  width: 30,
-  height: 50,
+  desc: 'Digital temperature and humidity sensor with real-time on-body readout',
+  width: 58,
+  height: 88,
   defaultProps: { temperature: 25, humidity: 60 },
   interactive: [
     { field: 'temperature', label: 'Temp', min: 0, max: 50, step: 1, unit: '°C' },
     { field: 'humidity',    label: 'Hum',  min: 0, max: 100, step: 1, unit: '%' },
   ],
   pins: [
-    { id: 'vcc',  label: 'VCC',  type: PIN_TYPE.POWER,   x: 6,  y: 50, side: 'bottom' },
-    { id: 'data', label: 'DAT',  type: PIN_TYPE.DIGITAL, x: 12, y: 50, side: 'bottom' },
-    { id: 'nc',   label: 'NC',   type: PIN_TYPE.SIGNAL,  x: 18, y: 50, side: 'bottom' },
-    { id: 'gnd',  label: 'GND',  type: PIN_TYPE.GND,     x: 24, y: 50, side: 'bottom' },
+    { id: 'vcc',  label: 'VCC',  type: PIN_TYPE.POWER,   x: 13, y: 88, side: 'bottom' },
+    { id: 'data', label: 'DAT',  type: PIN_TYPE.DIGITAL, x: 23, y: 88, side: 'bottom' },
+    { id: 'nc',   label: 'NC',   type: PIN_TYPE.SIGNAL,  x: 35, y: 88, side: 'bottom' },
+    { id: 'gnd',  label: 'GND',  type: PIN_TYPE.GND,     x: 45, y: 88, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const temp = inst.props.temperature ?? 25;
-    const hum  = inst.props.humidity ?? 60;
+
+    // Resolve current runtime state or fallback to props
+    const temp = (inst.runtimeState && inst.runtimeState.temperature !== undefined)
+      ? inst.runtimeState.temperature
+      : (inst.props.temperature ?? 25);
+
+    const hum = (inst.runtimeState && inst.runtimeState.humidity !== undefined)
+      ? inst.runtimeState.humidity
+      : (inst.props.humidity ?? 60);
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Main Plastic Body
-    ctx.fillStyle = '#1a55cc';
-    roundRect(ctx, 2, 2, 26, 38, 3);
+    // 1. Outer Housing Casing
+    ctx.fillStyle = '#0e4194';
+    roundRect(ctx, 3, 2, 52, 68, 5);
     ctx.fill();
-    ctx.strokeStyle = '#2266ee';
+
+    // 2. Main Blue Textured Plastic Body
+    const bodyGrad = ctx.createLinearGradient(3, 2, 55, 70);
+    bodyGrad.addColorStop(0, '#2b7cf8');
+    bodyGrad.addColorStop(0.5, '#1964d8');
+    bodyGrad.addColorStop(1, '#0e4cae');
+    ctx.fillStyle = bodyGrad;
+    roundRect(ctx, 4, 3, 50, 66, 4);
+    ctx.fill();
+
+    // Top Rim Highlight
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(8, 4);
+    ctx.lineTo(50, 4);
     ctx.stroke();
 
-    // Vent Grille
-    ctx.fillStyle = '#0a2a88';
-    for (let row = 0; row < 3; row++) {
+    // 3. Sensor Vent Lattice (Top Half)
+    for (let row = 0; row < 2; row++) {
       for (let col = 0; col < 4; col++) {
-        roundRect(ctx, 5 + col * 5, 5 + row * 6, 4, 4, 1);
+        const vx = 8 + col * 11;
+        const vy = 8 + row * 8;
+
+        // Dark Interior Cavity
+        ctx.fillStyle = '#081a3e';
+        roundRect(ctx, vx, vy, 8, 5.5, 1);
         ctx.fill();
+
+        // Mesh Texture
+        ctx.fillStyle = '#10306b';
+        ctx.fillRect(vx + 1.5, vy + 1, 5, 3.5);
       }
     }
 
-    // Dynamic Sensor Readout Display
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 5px sans-serif';
+    // 4. Silkscreen Sensor ID
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = 'bold 6.5px "JetBrains Mono", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${temp}°C`, 15, 27);
-    ctx.fillText(`${hum}%`, 15, 34);
+    ctx.fillText('DHT11 SENSOR', 29, 29);
 
-    // Pin Leads (Bottom)
-    const pinXs = [6, 12, 18, 24];
-    ctx.strokeStyle = '#a0a0a0';
-    ctx.lineWidth = 1.5;
-    for (const px of pinXs) {
-      ctx.beginPath();
-      ctx.moveTo(px, 40);
-      ctx.lineTo(px, 50);
-      ctx.stroke();
-    }
+    // 5. High-Contrast Live Data Display Window
+    // Display Screen Bezel & Background
+    ctx.fillStyle = '#060f1e';
+    roundRect(ctx, 7, 33, 44, 26, 3);
+    ctx.fill();
 
-    if (inst.selected) drawSelectionRect(ctx, 0, 0, 30, 50);
+    ctx.strokeStyle = '#00c6ff';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Temperature Badge (Row 1)
+    ctx.fillStyle = '#ff9800';
+    ctx.font = 'bold 5.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('T:', 10, 43);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${temp}°C`, 48, 44);
+
+    // Subtle Divider Line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(10, 47);
+    ctx.lineTo(48, 47);
+    ctx.stroke();
+
+    // Humidity Badge (Row 2)
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 5.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('H:', 10, 55);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${hum}%`, 48, 56);
+
+    // 6. Base Transition Molding & Silkscreen Pin Labels
+    ctx.fillStyle = '#0d367c';
+    ctx.fillRect(6, 65, 46, 4);
+
+    const pinDefs = [
+      { id: 'vcc',  label: 'VCC', x: 13 },
+      { id: 'data', label: 'DAT', x: 23 },
+      { id: 'nc',   label: 'NC',  x: 35 },
+      { id: 'gnd',  label: 'GND', x: 45 },
+    ];
+
+    pinDefs.forEach(p => {
+      // Pin Label Silkscreen
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = 'bold 4.5px "JetBrains Mono", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.label, p.x, 64);
+
+      // Pin Header Socket Collar
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(p.x - 2, 69, 4, 3);
+
+      // Metallic Pin Lead
+      const pinGrad = ctx.createLinearGradient(p.x - 1, 72, p.x + 1, 72);
+      pinGrad.addColorStop(0, '#cfd8dc');
+      pinGrad.addColorStop(0.5, '#ffffff');
+      pinGrad.addColorStop(1, '#90a4ae');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(p.x - 1.2, 72, 2.4, 16);
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 64, 94);
     ctx.restore();
   }
 });
-
 /* ─── Ultrasonic Sensor HC-SR04 ─── */
 defComp({
   id: 'hcsr04',
