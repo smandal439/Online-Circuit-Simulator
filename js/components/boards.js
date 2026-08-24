@@ -313,7 +313,7 @@ defComp({
 
 
 
-/* ──────────────────── BOARDS ──────────────────── */
+/* ──────────────────── esp32_devkit_v1 BOARDS ──────────────────── */
 defComp({
   id: 'esp32_devkit_v1',
   name: 'ESP32 DevKit V1',

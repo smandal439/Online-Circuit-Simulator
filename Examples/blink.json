@@ -1,32 +1,61 @@
 {
-  "id": "blink",
+  "version": "1.1",
+  "savedAt": "2026-08-24T10:49:42.125Z",
   "name": "Blink LED",
-  "icon": "💡",
-  "desc": "The classic Hello World of Arduino — blink an LED on pin 13",
-  "tags": [
-    "beginner",
-    "LED",
-    "digital"
-  ],
+  "code": "/*\n * Blink — Classic Arduino example\n * Blinks the built-in LED on pin 13\n */\n\nint ledPin = LED_BUILTIN;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Blink started!\");\n}\n\nvoid loop() {\n  digitalWrite(ledPin, HIGH);\n  Serial.println(\"LED ON\");\n  delay(1000);\n\n  digitalWrite(ledPin, LOW);\n  Serial.println(\"LED OFF\");\n  delay(1000);\n}",
   "circuit": {
     "components": [
       {
         "id": "b1",
         "type": "arduino_uno",
         "x": 200,
-        "y": 100
+        "y": 100,
+        "width": 230,
+        "height": 150,
+        "props": {
+          "label": "UNO"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
       },
       {
         "id": "led1",
         "type": "led",
-        "x": 120,
-        "y": 280
+        "x": 125,
+        "y": 130,
+        "width": 30,
+        "height": 60,
+        "props": {
+          "color": "#ff3333",
+          "colorName": "Red"
+        },
+        "runtimeState": {
+          "val": 0,
+          "lit": false,
+          "brightness": 0,
+          "current_mA": 0,
+          "overload": false,
+          "blown": false,
+          "_warnedBlown": false
+        },
+        "selected": false,
+        "rotation": 0
       },
       {
         "id": "r1",
         "type": "resistor",
-        "x": 120,
-        "y": 360
+        "x": 130,
+        "y": 225,
+        "width": 20,
+        "height": 60,
+        "props": {
+          "value": 220,
+          "unit": "Î©"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
       }
     ],
     "wires": [
@@ -39,7 +68,9 @@
         "to": {
           "instId": "led1",
           "pinId": "anode"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w2",
@@ -50,7 +81,9 @@
         "to": {
           "instId": "r1",
           "pinId": "p1"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w3",
@@ -61,9 +94,10 @@
         "to": {
           "instId": "b1",
           "pinId": "GND1"
-        }
+        },
+        "color": null,
+        "waypoints": []
       }
     ]
-  },
-  "code": "/*\n * Blink — Classic Arduino example\n * Blinks the built-in LED on pin 13\n */\n\nint ledPin = LED_BUILTIN;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Blink started!\");\n}\n\nvoid loop() {\n  digitalWrite(ledPin, HIGH);\n  Serial.println(\"LED ON\");\n  delay(1000);\n\n  digitalWrite(ledPin, LOW);\n  Serial.println(\"LED OFF\");\n  delay(1000);\n}"
+  }
 }
