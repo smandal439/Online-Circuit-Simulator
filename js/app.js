@@ -642,6 +642,20 @@ class App {
           }
         }
       }
+
+      // NeoPixel / FastLED strip events — map strip LEDs onto placed WS2812B
+      // components in placement order (led[0] → first neopixel, etc.)
+      if (type === 'fastled_show' && data && Array.isArray(data.leds)) {
+        const npInsts = insts.filter(i => i.type === 'neopixel');
+        const brightness = Math.max(0, Math.min(255, Number(data.brightness != null ? data.brightness : 255) || 0));
+        npInsts.forEach((inst, idx) => {
+          const led = data.leds[idx];
+          inst.runtimeState.r = led ? (Number(led.r) || 0) & 255 : 0;
+          inst.runtimeState.g = led ? (Number(led.g) || 0) & 255 : 0;
+          inst.runtimeState.b = led ? (Number(led.b) || 0) & 255 : 0;
+          inst.runtimeState.brightness = brightness;
+        });
+      }
     };
   }
 

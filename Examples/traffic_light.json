@@ -1,56 +1,113 @@
 {
-  "id": "traffic_light",
+  "version": "1.1",
+  "savedAt": "2026-08-24T09:34:16.865Z",
   "name": "Traffic Light",
-  "icon": "🚦",
-  "desc": "Simulate a traffic light with 3 LEDs",
-  "tags": [
-    "beginner",
-    "LED",
-    "multiple pins"
-  ],
+  "code": "/*\n * Traffic Light Simulator\n * Red=12, Yellow=11, Green=10\n */\n\nint redPin    = 12;\nint yellowPin = 11;\nint greenPin  = 10;\n\nvoid allOff() {\n  digitalWrite(redPin,    LOW);\n  digitalWrite(yellowPin, LOW);\n  digitalWrite(greenPin,  LOW);\n}\n\nvoid setup() {\n  pinMode(redPin,    OUTPUT);\n  pinMode(yellowPin, OUTPUT);\n  pinMode(greenPin,  OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Traffic light started\");\n}\n\nvoid loop() {\n  // Red\n  allOff();\n  digitalWrite(redPin, HIGH);\n  Serial.println(\"RED - STOP\");\n  delay(3000);\n\n  // Red + Yellow (prepare to go)\n  digitalWrite(yellowPin, HIGH);\n  delay(1000);\n\n  // Green\n  allOff();\n  digitalWrite(greenPin, HIGH);\n  Serial.println(\"GREEN - GO\");\n  delay(3000);\n\n  // Yellow\n  allOff();\n  digitalWrite(yellowPin, HIGH);\n  Serial.println(\"YELLOW - SLOW DOWN\");\n  delay(1000);\n}",
   "circuit": {
     "components": [
       {
         "id": "b1",
         "type": "arduino_uno",
-        "x": 200,
-        "y": 100
+        "x": -65,
+        "y": 285,
+        "width": 230,
+        "height": 150,
+        "props": {
+          "label": "UNO"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
       },
       {
         "id": "red",
         "type": "led",
-        "x": 340,
-        "y": 240
+        "x": 200,
+        "y": 220,
+        "width": 30,
+        "height": 60,
+        "props": {
+          "color": "#ff3333",
+          "colorName": "Red"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
       },
       {
         "id": "yel",
         "type": "led",
-        "x": 340,
-        "y": 340
+        "x": 270,
+        "y": 220,
+        "width": 30,
+        "height": 60,
+        "props": {
+          "color": "#ffee33",
+          "colorName": "Yellow"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
       },
       {
         "id": "grn",
         "type": "led",
-        "x": 340,
-        "y": 440
+        "x": 330,
+        "y": 220,
+        "width": 30,
+        "height": 60,
+        "props": {
+          "color": "#33ff66",
+          "colorName": "Green"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
       },
       {
         "id": "rr",
         "type": "resistor",
-        "x": 340,
-        "y": 320
+        "x": 205,
+        "y": 345,
+        "width": 20,
+        "height": 60,
+        "props": {
+          "value": 220,
+          "unit": "Î©"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
       },
       {
         "id": "ry",
         "type": "resistor",
-        "x": 340,
-        "y": 420
+        "x": 275,
+        "y": 345,
+        "width": 20,
+        "height": 60,
+        "props": {
+          "value": 220,
+          "unit": "Î©"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
       },
       {
         "id": "rg",
         "type": "resistor",
-        "x": 340,
-        "y": 520
+        "x": 335,
+        "y": 325,
+        "width": 20,
+        "height": 60,
+        "props": {
+          "value": 220,
+          "unit": "Î©"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
       }
     ],
     "wires": [
@@ -63,7 +120,14 @@
         "to": {
           "instId": "red",
           "pinId": "anode"
-        }
+        },
+        "color": null,
+        "waypoints": [
+          {
+            "x": 115,
+            "y": 220
+          }
+        ]
       },
       {
         "id": "w2",
@@ -74,7 +138,9 @@
         "to": {
           "instId": "rr",
           "pinId": "p1"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w3",
@@ -85,7 +151,9 @@
         "to": {
           "instId": "b1",
           "pinId": "GND1"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w4",
@@ -96,7 +164,18 @@
         "to": {
           "instId": "yel",
           "pinId": "anode"
-        }
+        },
+        "color": null,
+        "waypoints": [
+          {
+            "x": 99,
+            "y": 206
+          },
+          {
+            "x": 285,
+            "y": 205
+          }
+        ]
       },
       {
         "id": "w5",
@@ -107,7 +186,9 @@
         "to": {
           "instId": "ry",
           "pinId": "p1"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w6",
@@ -118,7 +199,9 @@
         "to": {
           "instId": "b1",
           "pinId": "GND1"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w7",
@@ -129,7 +212,18 @@
         "to": {
           "instId": "grn",
           "pinId": "anode"
-        }
+        },
+        "color": null,
+        "waypoints": [
+          {
+            "x": 85,
+            "y": 201
+          },
+          {
+            "x": 345,
+            "y": 200
+          }
+        ]
       },
       {
         "id": "w8",
@@ -140,7 +234,9 @@
         "to": {
           "instId": "rg",
           "pinId": "p1"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w9",
@@ -151,9 +247,10 @@
         "to": {
           "instId": "b1",
           "pinId": "GND1"
-        }
+        },
+        "color": null,
+        "waypoints": []
       }
     ]
-  },
-  "code": "/*\n * Traffic Light Simulator\n * Red=12, Yellow=11, Green=10\n */\n\nint redPin    = 12;\nint yellowPin = 11;\nint greenPin  = 10;\n\nvoid allOff() {\n  digitalWrite(redPin,    LOW);\n  digitalWrite(yellowPin, LOW);\n  digitalWrite(greenPin,  LOW);\n}\n\nvoid setup() {\n  pinMode(redPin,    OUTPUT);\n  pinMode(yellowPin, OUTPUT);\n  pinMode(greenPin,  OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Traffic light started\");\n}\n\nvoid loop() {\n  // Red\n  allOff();\n  digitalWrite(redPin, HIGH);\n  Serial.println(\"RED - STOP\");\n  delay(3000);\n\n  // Red + Yellow (prepare to go)\n  digitalWrite(yellowPin, HIGH);\n  delay(1000);\n\n  // Green\n  allOff();\n  digitalWrite(greenPin, HIGH);\n  Serial.println(\"GREEN - GO\");\n  delay(3000);\n\n  // Yellow\n  allOff();\n  digitalWrite(yellowPin, HIGH);\n  Serial.println(\"YELLOW - SLOW DOWN\");\n  delay(1000);\n}"
+  }
 }

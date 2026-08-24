@@ -762,14 +762,33 @@ class ArduinoSimulator {
           return props[field] !== undefined ? props[field] : -999;
         },
 
-        /* Wire (I2C) stubs */
+        /* Wire (I2C) — with MPU6050 (0x68) register emulation */
         wireBegin() { self._serialLog('[Wire] I2C begin\n', 'system'); },
-        wireRequestFrom(addr, qty) { return qty; },
-        wireBeginTransmission(addr) { },
-        wireEndTransmission() { return 0; },
-        wireWrite(val) { return 1; },
-        wireRead() { return 0; },
-        wireAvailable() { return 0; },
+        wireBeginTransmission(addr) {
+          self._wireTxAddr = Number(addr) || 0;
+        },
+        wireWrite(val) {
+          // First byte written to the MPU6050 selects the register pointer
+          if (self._wireTxAddr === 0x68) self._wireRegPtr = Number(val) & 0xFF;
+          return 1;
+        },
+        wireEndTransmission() {
+          self._wireTxAddr = null;
+          return 0;
+        },
+        wireRequestFrom(addr, qty) {
+          qty = Number(qty) || 0;
+          if ((Number(addr) || 0) === 0x68) {
+            self._wireRxQueue = self._mpuReadRegs(self._wireRegPtr ?? 0x3B, qty);
+          } else {
+            self._wireRxQueue = [];
+          }
+          return qty;
+        },
+        wireRead() {
+          return (self._wireRxQueue && self._wireRxQueue.length) ? self._wireRxQueue.shift() : 0;
+        },
+        wireAvailable() { return (self._wireRxQueue && self._wireRxQueue.length) || 0; },
 
         /* SPI stubs */
         spiBegin() { self._serialLog('[SPI] begin\n', 'system'); },
@@ -1734,6 +1753,10 @@ class ArduinoSimulator {
     this.pinStates = {};
     this.pinModes = {};
     this._delays = [];
+    this._wireTxAddr = null;
+    this._wireRegPtr = 0x3B;
+    this._wireRxQueue = [];
+    this._neopixels = {};
     this._lcdLines = ['', ''];
     this._lcdCursor = { col: 0, row: 0 };
     this._mqtt = { subs: new Map(), connected: false };
@@ -1839,6 +1862,39 @@ class ArduinoSimulator {
       r();
     }
     this._stopAllTones();
+  }
+
+  /* ══════════════ MPU6050 (0x68) register read emulation ══════════════
+     Serves Wire.requestFrom(0x68, n) starting at the register pointer set
+     by a preceding Wire.write(reg). Values come from the placed mpu6050
+     component's interactive sliders (runtimeState/props). */
+  _mpuReadRegs(start, qty) {
+    const canvas = window.CircuitCanvas;
+    let ax = 0, ay = 0, az = 0, gx = 0, gy = 0, gz = 0;
+    const inst = (canvas && Array.isArray(canvas.components))
+      ? canvas.components.find(c => c.type === 'mpu6050') : null;
+    if (inst) {
+      const rs = inst.runtimeState || {};
+      const pr = inst.props || {};
+      const rd = (f) => Math.round(Number(rs[f] !== undefined ? rs[f] : pr[f]) || 0);
+      ax = rd('accelX'); ay = rd('accelY'); az = rd('accelZ');
+      gx = rd('gyroX'); gy = rd('gyroY'); gz = rd('gyroZ');
+    }
+    const tempRaw = -3920; /* ≈ 25 °C — raw/340 + 36.53 */
+    const regs = {};
+    const put16 = (a, v) => {
+      v = Math.max(-32768, Math.min(32767, v | 0));
+      if (v < 0) v += 65536;
+      regs[a] = (v >> 8) & 0xFF;
+      regs[a + 1] = v & 0xFF;
+    };
+    put16(0x3B, ax); put16(0x3D, ay); put16(0x3F, az);   /* ACCEL_XOUT..ZOUT */
+    put16(0x41, tempRaw);                                 /* TEMP_OUT */
+    put16(0x43, gx); put16(0x45, gy); put16(0x47, gz);   /* GYRO_XOUT..ZOUT */
+    regs[0x75] = 0x68;                                    /* WHO_AM_I */
+    const out = [];
+    for (let i = 0; i < qty; i++) out.push(regs[(start + i) & 0xFF] || 0);
+    return out;
   }
 
   /* Pausable sketch delay — records start/duration so pause() can freeze it */
@@ -2058,7 +2114,7 @@ class ArduinoSimulator {
 window.ArduinoSim = new ArduinoSimulator();
 window.EXAMPLE_SKETCHES = [];
 window.loadExamplesFromFiles = async function () {
-  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test'];
+  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor', 'neopixel_color_cycle', 'mpu6050_accel', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {
