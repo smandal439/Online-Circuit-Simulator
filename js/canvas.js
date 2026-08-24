@@ -471,9 +471,7 @@ class CircuitCanvas {
       if (!def || !Array.isArray(def.interactive) || def.interactive.length === 0) continue;
       const rects = this._getInteractiveRects(inst);
       for (let i = 0; i < rects.length; i++) {
-        const ctrl = def.interactive[i];
-        if (ctrl.type === 'select') continue; // select controls render in properties panel only
-        this._drawSlider(ctx, inst, ctrl, rects[i]);
+        this._drawSlider(ctx, inst, rects[i].ctrl, rects[i]);
       }
     }
   }
@@ -484,11 +482,13 @@ class CircuitCanvas {
     if (!def || !Array.isArray(def.interactive)) return [];
     const w = Math.max(40, def.width || 40);
     const h = def.height || 40;
-    return def.interactive.map((ctrl, i) => ({
+    const sliderCtrls = def.interactive.filter(c => c.type !== 'select');
+    return sliderCtrls.map((ctrl, i) => ({
       x: inst.x,
       y: inst.y + h + 14 + i * 15,
       width: w,
       height: 9,
+      ctrl,
     }));
   }
 
@@ -557,7 +557,7 @@ class CircuitCanvas {
       for (let i = 0; i < rects.length; i++) {
         const r = rects[i];
         if (wx >= r.x - 6 && wx <= r.x + r.width + 6 && wy >= r.y - 12 && wy <= r.y + r.height + 6) {
-          return { inst, ctrl: def.interactive[i], rect: r };
+          return { inst, ctrl: r.ctrl, rect: r };
         }
       }
     }
@@ -2562,6 +2562,36 @@ case 'push_button': {
           inst.runtimeState.mode         = mode;
           break;
         }
+
+        /* ── Dual Channel Function Generator — outputs voltage waveforms ── */
+        case 'func_gen': {
+          const props = inst.props || {};
+          const sim = window.ArduinoSim;
+          const t = sim ? (sim.simTime || 0) / 1000 : 0;
+
+          const calcWave = (wave, freq, amp, offset, phaseDeg, duty) => {
+            const phaseRad = (phaseDeg || 0) * Math.PI / 180;
+            const tau = ((t * freq + phaseRad / (2 * Math.PI)) % 1 + 1) % 1;
+            const dutyFrac = (duty || 50) / 100;
+            let v = 0;
+            switch (wave) {
+              case 'sine':     v = Math.sin(2 * Math.PI * tau); break;
+              case 'square':   v = tau < dutyFrac ? 1 : -1; break;
+              case 'triangle': v = tau < dutyFrac ? -1 + 2 * (tau / dutyFrac) : 1 - 2 * ((tau - dutyFrac) / (1 - dutyFrac)); break;
+              case 'sawtooth': v = 2 * tau - 1; break;
+              case 'noise':    v = Math.sin(t * freq * 137.5) * 0.7 + Math.sin(t * freq * 239.1) * 0.3; break;
+              default:         v = Math.sin(2 * Math.PI * tau); break;
+            }
+            return offset + v * (amp / 2);
+          };
+
+          const ch1V = calcWave(props.ch1_wave || 'sine', props.ch1_freq || 440, props.ch1_amp || 5, props.ch1_offset || 0, props.ch1_phase || 0, props.ch1_duty || 50);
+          const ch2V = calcWave(props.ch2_wave || 'square', props.ch2_freq || 880, props.ch2_amp || 3, props.ch2_offset || 0, props.ch2_phase || 90, props.ch2_duty || 50);
+
+          inst.runtimeState.ch1_voltage = ch1V;
+          inst.runtimeState.ch2_voltage = ch2V;
+          break;
+        }
       }
     }
   }
@@ -2707,6 +2737,26 @@ case 'push_button': {
           sources.push({ type: 'ic_out', voltage, rawVal, resistance: current.resistance });
         } else {
           grounds.push({ type: 'ic_out_low', resistance: current.resistance });
+        }
+      }
+
+      // 4b2. Function generator output pins act as voltage sources
+      if (inst.type === 'func_gen') {
+        const rs = inst.runtimeState || {};
+        if (current.pinId === 'ch1_out') {
+          const v = rs.ch1_voltage != null ? rs.ch1_voltage : 0;
+          if (v > 0) {
+            sources.push({ type: 'func_gen', voltage: v, resistance: current.resistance });
+          } else {
+            grounds.push({ type: 'func_gen_low', resistance: current.resistance });
+          }
+        } else if (current.pinId === 'ch2_out') {
+          const v = rs.ch2_voltage != null ? rs.ch2_voltage : 0;
+          if (v > 0) {
+            sources.push({ type: 'func_gen', voltage: v, resistance: current.resistance });
+          } else {
+            grounds.push({ type: 'func_gen_low', resistance: current.resistance });
+          }
         }
       }
 

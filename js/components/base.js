@@ -208,7 +208,7 @@ const COMPONENT_CATALOG = [
   { category: 'Passive',   ids: ['resistor', 'capacitor', 'breadboard', 'diode_1n4007'] },
   { category: 'Power',     ids: ['power_5v', 'power_gnd'] },
   { category: 'Digital ICs', ids: ['ic_555', 'ic_74hc00', 'ic_74hc04', 'ic_74hc08', 'ic_74hc32', 'ic_74hc595', 'ic_74hc138', 'ic_74hc245'] },
-  { category: 'Instruments', ids: ['multimeter'] },
+  { category: 'Instruments', ids: ['multimeter', 'func_gen'] },
 ];
 
 /* Export */
