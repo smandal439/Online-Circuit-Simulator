@@ -1,0 +1,77 @@
+{
+  "version": "1.1",
+  "savedAt": "2026-08-29T10:00:00.000Z",
+  "name": "Func Gen LED Flasher",
+  "code": "/*\n * Function Generator LED Flasher\n * A function generator outputs a square wave to flash an LED.\n * CH1 (square wave) drives the LED through a resistor.\n */\n\nvoid setup() {\n  pinMode(2, INPUT);\n  Serial.begin(9600);\n  Serial.println(\"Func Gen LED Demo\");\n}\n\nvoid loop() {\n  int val = digitalRead(2);\n  if (val == HIGH) {\n    Serial.println(\"HIGH — LED on\");\n  } else {\n    Serial.println(\"LOW — LED off\");\n  }\n  delay(50);\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "fg1",
+        "type": "func_gen",
+        "x": 50,
+        "y": 80,
+        "width": 280,
+        "height": 190,
+        "props": {
+          "ch1_wave": "square",
+          "ch1_freq": 2,
+          "ch1_amp": 5,
+          "ch1_offset": 0,
+          "ch1_phase": 0,
+          "ch1_duty": 50,
+          "ch2_wave": "sine",
+          "ch2_freq": 440,
+          "ch2_amp": 3,
+          "ch2_offset": 0,
+          "ch2_phase": 90,
+          "ch2_duty": 50
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "r1",
+        "type": "resistor",
+        "x": 380,
+        "y": 120,
+        "width": 20,
+        "height": 60,
+        "props": { "value": 220 },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "led1",
+        "type": "led",
+        "x": 430,
+        "y": 100,
+        "width": 30,
+        "height": 60,
+        "props": { "color": "#ff3333", "colorName": "Red" },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "gnd1",
+        "type": "power_gnd",
+        "x": 490,
+        "y": 200,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      { "id": "w1", "from": { "instId": "fg1", "pinId": "ch1_out" }, "to": { "instId": "r1", "pinId": "p1" }, "color": "#2196F3", "waypoints": [] },
+      { "id": "w2", "from": { "instId": "r1", "pinId": "p2" }, "to": { "instId": "led1", "pinId": "anode" }, "color": null, "waypoints": [] },
+      { "id": "w3", "from": { "instId": "led1", "pinId": "cathode" }, "to": { "instId": "gnd1", "pinId": "gnd" }, "color": null, "waypoints": [] },
+      { "id": "w4", "from": { "instId": "fg1", "pinId": "ch1_gnd" }, "to": { "instId": "gnd1", "pinId": "gnd" }, "color": "#333333", "waypoints": [] }
+    ]
+  }
+}
