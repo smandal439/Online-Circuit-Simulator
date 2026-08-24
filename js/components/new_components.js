@@ -4,25 +4,37 @@
 /* ═══════════════════════════════════════════════════════════════
    MPU6050 — 6-DoF Accelerometer + Gyroscope (I2C)
    ═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   MPU6050 IMU (Enlarged 2x: 72x64)
+   ═══════════════════════════════════════════════════════════════ */
 defComp({
   id: 'mpu6050',
   name: 'MPU6050 IMU',
   category: 'Sensors',
   icon: '📐',
   desc: '6-axis Accelerometer + Gyroscope (I2C @ 0x68). Provides accel X/Y/Z ±2g and gyro X/Y/Z ±250°/s',
-  width: 36,
-  height: 32,
+  width: 72,   // Scaled from 36 to 72 (2x)
+  height: 64,  // Scaled from 32 to 64 (2x)
   defaultProps: { accelX: 0, accelY: 0, accelZ: 1024, gyroX: 0, gyroY: 0, gyroZ: 0 },
   interactive: [
     { field: 'accelX', label: 'AccelX', min: -2048, max: 2047, step: 10, unit: '' },
     { field: 'accelY', label: 'AccelY', min: -2048, max: 2047, step: 10, unit: '' },
     { field: 'accelZ', label: 'AccelZ', min: -2048, max: 2047, step: 10, unit: '' },
   ],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 64, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 26, y: 64, side: 'bottom' },
+    { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 44, y: 64, side: 'bottom' },
+    { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 58, y: 64, side: 'bottom' },
+  ],
 
   draw(ctx, inst, sim) {
     const { x, y } = inst;
+    const scale = 2; // Scale factor
+
     ctx.save();
     ctx.translate(x, y);
+    ctx.scale(scale, scale); // Scales all vector drawing, fonts, and borders
 
     // PCB body
     ctx.fillStyle = '#1a1a2e';
@@ -65,7 +77,6 @@ defComp({
     ctx.restore();
   }
 });
-
 // /* ═══════════════════════════════════════════════════════════════
 //    28BYJ-48 Stepper Motor with ULN2003 Driver
 //    ═══════════════════════════════════════════════════════════════ */
