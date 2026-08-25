@@ -25,7 +25,7 @@ a{color:#00979c}
 </head>
 <body>
 <h1>ArduSim &mdash; Complete Project Guide</h1>
-<p><strong>Version:</strong> 1.1 &nbsp;|&nbsp; <strong>Last Updated:</strong> August 2026</p>
+<p><strong>Version:</strong> 1.2 &nbsp;|&nbsp; <strong>Last Updated:</strong> August 2026</p>
 <p>This guide explains how every file in the ArduSim project works, how they connect, and how to add new components and examples without external help.</p>
 
 <h2>Table of Contents</h2>
@@ -40,6 +40,11 @@ a{color:#00979c}
 <li><a href="#simulation">How the Simulation Engine Works</a></li>
 <li><a href="#script-order">Script Load Order</a></li>
 <li><a href="#debugging">Debugging &amp; Troubleshooting</a></li>
+<li><a href="#power-components">Power Components (MB102, Bench Supply, 12V Bulb)</a></li>
+<li><a href="#graph-tracer">Electrical Graph Tracer (_tracePinNet)</a></li>
+<li><a href="#interactive-controls">Interactive Controls (Toggles, Sliders)</a></li>
+<li><a href="#relay-circuits">Relay Circuit Best Practices</a></li>
+<li><a href="#sim-internals">Simulation Internals &amp; Gotchas</a></li>
 </ol>
 
 <h2 id="overview">1. Project Overview</h2>
@@ -522,6 +527,338 @@ Canvas re-draws LED with glow effect at 60 FPS</pre>
 </ol>
 
 <div class="warn"><strong>Rule:</strong> If you add a new JS file, add its <code>&lt;script&gt;</code> tag AFTER base.js and BEFORE app.js in index.html.</div>
+
+<h2 id="power-components">11. Power Components (MB102, Bench Supply, 12V Bulb)</h2>
+
+<h3>11.1 MB102 Power Supply Module</h3>
+<p>The MB102 is a breadboard-friendly power supply module with selectable voltage rails.</p>
+<table>
+<tr><th>Pin</th><th>Side</th><th>Type</th><th>Description</th></tr>
+<tr><td><code>vcc_t</code></td><td>top</td><td>POWER</td><td>Top rail voltage output (5V or 3.3V selectable)</td></tr>
+<tr><td><code>gnd_t</code></td><td>top</td><td>POWER</td><td>Top rail ground</td></tr>
+<tr><td><code>vcc_b</code></td><td>bottom</td><td>POWER</td><td>Bottom rail voltage output</td></tr>
+<tr><td><code>gnd_b</code></td><td>bottom</td><td>POWER</td><td>Bottom rail ground</td></tr>
+<tr><td><code>aux_5v</code></td><td>left</td><td>POWER</td><td>Auxiliary 5V output</td></tr>
+<tr><td><code>aux_3v3</code></td><td>left</td><td>POWER</td><td>Auxiliary 3.3V output</td></tr>
+<tr><td><code>aux_gnd</code></td><td>left</td><td>POWER</td><td>Auxiliary ground</td></tr>
+</table>
+
+<p><strong>Interactive Controls:</strong></p>
+<ul>
+<li><strong>Power Toggle</strong> &mdash; ON/OFF switch (inline on front panel)</li>
+<li><strong>Top Rail Voltage</strong> &mdash; Dropdown: 5V / 3.3V / OFF</li>
+<li><strong>Bottom Rail Voltage</strong> &mdash; Dropdown: 3.3V / 5V / OFF</li>
+</ul>
+
+<p><strong>Simulation:</strong> When powered on, the MB102 acts as a voltage source at its output pins. The top rail outputs the selected voltage (5V or 3.3V), and the bottom rail outputs independently. Both rails share common ground.</p>
+
+<div class="tip"><strong>Usage:</strong> Connect <code>vcc_t</code> to your circuit's VCC rail and <code>gnd_t</code> to the ground rail. The MB102 is recognized by <code>_tracePinNet()</code> as a voltage source, so LEDs and other components will light up when connected correctly.</div>
+
+<h3>11.2 Benchtop DC Power Supply</h3>
+<p>A full-featured lab bench power supply with digital display, voltage/current knobs, and binding posts.</p>
+<table>
+<tr><th>Pin</th><th>Side</th><th>Type</th><th>Description</th></tr>
+<tr><td><code>POS</code></td><td>right</td><td>POWER</td><td>Positive output (0&ndash;30V adjustable)</td></tr>
+<tr><td><code>NEG</code></td><td>right</td><td>POWER</td><td>Negative output / ground</td></tr>
+</table>
+
+<p><strong>Interactive Controls (all inline on front panel):</strong></p>
+<ul>
+<li><strong>Power Toggle</strong> &mdash; Master ON/OFF switch</li>
+<li><strong>Output Toggle</strong> &mdash; Output ON/OFF (power must be on)</li>
+<li><strong>Voltage Slider</strong> &mdash; Range slider, 0&ndash;30V (displayed as rotary knob + digital readout)</li>
+<li><strong>Current Limit Slider</strong> &mdash; Range slider, 0&ndash;5A</li>
+</ul>
+
+<p><strong>Simulation:</strong></p>
+<ul>
+<li>When output is enabled, POS provides the set voltage (0&ndash;30V)</li>
+<li>Current is calculated from load resistance: <code>I = V / R_load</code></li>
+<li>Clamped to the current limit &mdash; switches to CC (Constant Current) mode when exceeded</li>
+<li>Display shows real-time voltage, current, power, and mode (CV/CC)</li>
+<li><strong>Bulbs blow above 32V</strong> (theoretically), but the 12V bulb blows at &gt;16V</li>
+</ul>
+
+<div class="warn"><strong>Important:</strong> The bench supply's <code>_tracePinNet()</code> handler does NOT use <code>continue</code> after pushing sources/grounds. This is intentional &mdash; it allows the wire-following code at the bottom of the trace loop to execute, so the trace can leave the bench supply through connected wires. Without this, the supply would appear to have zero current.</div>
+
+<h3>11.3 12V Incandescent Bulb</h3>
+<p>A realistic incandescent bulb with glass envelope, tungsten filament, and Edison screw base.</p>
+<table>
+<tr><th>Pin</th><th>Side</th><th>Type</th><th>Description</th></tr>
+<tr><td><code>anode</code></td><td>top</td><td>INPUT</td><td>Positive terminal (connect to VCC/POS)</td></tr>
+<tr><td><code>cathode</code></td><td>bottom</td><td>OUTPUT</td><td>Negative terminal (connect to GND/NEG via load)</td></tr>
+</table>
+
+<p><strong>Simulation behavior:</strong></p>
+<ul>
+<li>Brightness scales linearly with voltage (0V = off, 12V = full brightness)</li>
+<li><strong>Blows at &gt;16V</strong> &mdash; brightness drops to 0, warning logged to Output panel</li>
+<li>Requires both anode AND cathode wires connected (floating pins = off)</li>
+<li>Nominal resistance: 12&Omega; (used for current calculations)</li>
+</ul>
+
+<div class="info"><strong>Parallel bulbs:</strong> When placing multiple bulbs in parallel, both anode and cathode of each bulb must have external wires. The simulation checks for wire existence before tracing circuits to prevent false glow from internal component leakage.</div>
+
+<h3>11.4 How Voltage Sources Are Detected</h3>
+<p>The simulation engine uses <code>_tracePinNet()</code> to detect voltage sources. A component is recognized as a voltage source if its type is in this list:</p>
+<ul>
+<li><code>power_5v</code> &mdash; Fixed 5V source</li>
+<li><code>battery</code> &mdash; Configurable voltage</li>
+<li><code>power_supply</code> &mdash; Adjustable power supply</li>
+<li><code>mb102_power</code> &mdash; MB102 module (5V/3.3V selectable)</li>
+<li><code>bench_power_supply</code> &mdash; Lab bench supply (0&ndash;30V)</li>
+</ul>
+<p>When a component's anode traces to one of these sources, it receives voltage. The voltage value comes from the source's runtime state or default properties.</p>
+
+<h2 id="graph-tracer">12. Electrical Graph Tracer (_tracePinNet)</h2>
+
+<h3>12.1 How It Works</h3>
+<p><code>_tracePinNet(startInstId, startPinId, skipInternalTypes)</code> is the core function that determines electrical connectivity. It uses a <strong>breadth-first search (BFS)</strong> starting from a given pin and follows wires and component pass-throughs to find:</p>
+<ul>
+<li><strong>Sources</strong> &mdash; Voltage sources (5V, 12V, etc.)</li>
+<li><strong>Grounds</strong> &mdash; GND connections (0V references)</li>
+<li><strong>Accumulated resistance</strong> &mdash; Series resistance along the path</li>
+</ul>
+
+<h3>12.2 Trace Algorithm</h3>
+<pre>function _tracePinNet(startInstId, startPinId, skipInternalTypes) {
+  queue = [{instId: startInstId, pinId: startPinId, resistance: 0}]
+  visited = Set()
+  sources = []
+  grounds = []
+
+  while (queue not empty) {
+    current = queue.shift()
+    if already visited: skip
+    mark as visited
+
+    // 1. Check component type for sources/grounds
+    if Arduino UNO pin → push source or ground
+    if ESP32 pin → push source or ground
+    if power_5v → push 5V source
+    if power_gnd → push ground
+    if mb102_power → push source/ground based on rail settings
+    if bench_power_supply → push source/ground (NO continue!)
+    if LED/IC output → push source if HIGH, ground if LOW
+
+    // 2. Component internal pass-throughs
+    if resistor → add other pin with resistance + R
+    if push_button → add other pins (when pressed)
+    if relay → add COM↔NC or COM↔NO based on state
+    if bulb_12v → add cathode from anode ONLY (directional)
+
+    // 3. Follow connected wires
+    for each wire connected to current pin:
+      queue.push(wire.otherEnd)
+  }
+
+  return {sources, grounds}
+}</pre>
+
+<h3>12.3 Directional Pass-Throughs</h3>
+<p>Most components have bidirectional pass-throughs (current flows both ways). However, the <strong>12V bulb</strong> uses a <em>directional</em> pass-through: anode&rarr;cathode only.</p>
+
+<div class="warn"><strong>Why directional?</strong> A bidirectional bulb pass-through creates a bridge between separate circuit branches through shared power rails. Example:</div>
+
+<pre>LED cathode side (NC) → resistor → bulb cathode → (BULB INTERNAL) → bulb anode
+    → POS rail → other bulb anode → (BULB INTERNAL) → other bulb cathode
+    → resistor → relay NO side → COM → GND</pre>
+
+<p>This path exists regardless of relay state, causing both sides to always find ground. Making the pass-through directional (anode→cathode only) prevents this backward leakage.</p>
+
+<h3>12.4 The skipInternalTypes Parameter</h3>
+<p>When simulating a component, passing <code>skipInternalTypes</code> prevents the trace from entering that component type's internal pass-through:</p>
+<pre>// Bulb simulation: skip other bulbs' pass-throughs
+const anodeNet = this._tracePinNet(inst.id, 'anode', ['bulb_12v']);
+const cathodeNet = this._tracePinNet(inst.id, 'cathode', ['bulb_12v']);
+
+// Bench supply: NO skip (needs bulb pass-through for load measurement)
+const posNet = this._tracePinNet(inst.id, 'POS');</pre>
+
+<h3>12.5 Tracing from Power Supplies</h3>
+<p>Power supply components (MB102, bench supply) do NOT use <code>continue</code> after pushing sources/grounds. This is critical:</p>
+<pre>// Bench supply handler in _tracePinNet:
+if (inst.type === 'bench_power_supply') {
+  if (current.pinId === 'POS') sources.push(...)
+  if (current.pinId === 'NEG') grounds.push(...)
+  // NO continue! Wire-following at bottom must execute
+}</pre>
+<p>Without this, tracing from the supply's own POS pin would find the voltage source but never follow wires to the load, resulting in zero current.</p>
+
+<h2 id="interactive-controls">13. Interactive Controls (Toggles, Sliders)</h2>
+
+<h3>13.1 Control Types</h3>
+<table>
+<tr><th>Type</th><th>Visual</th><th>Interaction</th><th>Used By</th></tr>
+<tr><td><code>toggle</code></td><td>Switch (inline on component)</td><td>Click to flip ON/OFF</td><td>MB102 power, Bench supply power/output</td></tr>
+<tr><td><code>slider</code></td><td>Range input below component</td><td>Drag to adjust value</td><td>Bench supply voltage/current</td></tr>
+<tr><td><code>dropdown</code></td><td>Select menu</td><td>Click to choose option</td><td>MB102 rail voltage</td></tr>
+<tr><td><code>checkbox</code></td><td>Checkbox</td><td>Click to toggle</td><td>Various</td></tr>
+</table>
+
+<h3>13.2 Inline Toggle Rendering</h3>
+<p>Toggles with <code>inline: { x, y, w, h }</code> are drawn directly on the component's front panel. The hit-test region is defined by the inline coordinates:</p>
+<pre>interactive: [
+  {
+    id: 'powered',
+    label: 'POWER',
+    type: 'toggle',
+    propKey: 'powered',
+    inline: { x: 12, y: 38, w: 50, h: 20 }  // drawn on panel
+  }
+]</pre>
+<p>The <code>_hitTestInlineToggle()</code> method checks these regions separately from regular slider hit-testing.</p>
+
+<h3>13.3 Slider Rendering</h3>
+<p>Sliders are rendered below the component as HTML range inputs. The canvas tracks slider positions and updates values on drag:</p>
+<ul>
+<li><code>_getInteractiveRects()</code> &mdash; Returns bounding boxes for all interactive elements</li>
+<li><code>_drawSlider()</code> &mdash; Draws the range input below the component</li>
+<li><code>_hitTestSlider()</code> &mdash; Checks if a click lands on a slider (skips inline toggle regions)</li>
+<li><code>_updateSliderValue()</code> &mdash; Maps mouse position to value and updates component props</li>
+</ul>
+
+<h3>13.4 Adding Interactive Controls to a Component</h3>
+<pre>defComp('my_device', {
+  // ... standard properties ...
+  interactive: [
+    {
+      id: 'voltage',
+      label: 'Voltage',
+      type: 'slider',       // 'toggle' | 'slider' | 'dropdown' | 'checkbox'
+      propKey: 'voltage',   // maps to inst.props.voltage
+      min: 0, max: 30, step: 0.1, defaultValue: 12,
+      inline: null          // rendered below component (not on panel)
+    },
+    {
+      id: 'power',
+      label: 'POWER',
+      type: 'toggle',
+      propKey: 'powered',
+      inline: { x: 10, y: 40, w: 50, h: 18 }  // on-panel switch
+    }
+  ]
+});</pre>
+
+<h2 id="relay-circuits">14. Relay Circuit Best Practices</h2>
+
+<h3>14.1 Relay Pinout</h3>
+<table>
+<tr><th>Pin</th><th>Description</th></tr>
+<tr><td><code>sig</code></td><td>Control signal (connect to Arduino digital pin)</td></tr>
+<tr><td><code>vcc</code></td><td>Coil power (connect to 5V)</td></tr>
+<tr><td><code>gnd</code></td><td>Coil ground (connect to Arduino GND)</td></tr>
+<tr><td><code>com</code></td><td>Common terminal (connect to power source GND)</td></tr>
+<tr><td><code>nc</code></td><td>Normally Closed (connected to COM when relay is OFF)</td></tr>
+<tr><td><code>no</code></td><td>Normally Open (connected to COM when relay is ON)</td></tr>
+</table>
+
+<h3>14.2 How the Relay Switch Works</h3>
+<p>The relay internally connects <strong>COM</strong> to either <strong>NC</strong> or <strong>NO</strong> based on the signal pin:</p>
+<ul>
+<li><strong>Signal HIGH</strong> (relay ON): COM &harr; NO connected, NC disconnected</li>
+<li><strong>Signal LOW</strong> (relay OFF): COM &harr; NC connected, NO disconnected</li>
+</ul>
+
+<h3>14.3 Relay Tracing in _tracePinNet</h3>
+<pre>// When relay is OFF (relayOn = false):
+COM → NC (pass-through active)
+NC → COM (pass-through active)
+NO → (blocked, no pass-through)
+
+// When relay is ON (relayOn = true):
+COM → NO (pass-through active)
+NO → COM (pass-through active)
+NC → (blocked, no pass-through)</pre>
+
+<h3>14.4 Common Relay Circuit Pattern</h3>
+<pre>// Arduino controls relay coil
+D9 → relay:sig
+5V → relay:vcc
+GND → relay:gnd
+
+// Relay switches external load
+bench:NEG → relay:com      (power source ground)
+relay:nc → load1 → VCC      (load active when relay OFF)
+relay:no → load2 → VCC      (load active when relay ON)</pre>
+
+<div class="tip"><strong>Key point:</strong> The relay COM pin must be connected to the power source's ground (NEG), NOT to the Arduino's ground. The relay switches a separate high-current circuit independent of the Arduino's logic level.</div>
+
+<h3>14.5 Why LEDs Alternate but Bulbs Don't (and the fix)</h3>
+<p><strong>Problem:</strong> LEDs on relay NC/NO alternate correctly, but incandescent bulbs on the same pins glow simultaneously.</p>
+<p><strong>Root cause:</strong> Bulbs have a bidirectional internal pass-through (anode&#8596;cathode) that LEDs lack. This creates a bridge between NC and NO sides through the shared power rail:</p>
+<pre>Bulb1 cathode → (internal) → anode → POS rail → Bulb2 anode → (internal) → cathode → NO side</pre>
+<p><strong>Fix:</strong> Bulb pass-through is now directional (anode&#8594;cathode only), matching real current flow direction.</p>
+
+<h2 id="sim-internals">15. Simulation Internals &amp; Gotchas</h2>
+
+<h3>15.1 The updateSimState() Pipeline</h3>
+<p>Called every simulation tick via <code>_render()</code>:</p>
+<ol>
+<li>Update relay states from Arduino pin values</li>
+<li>Update IC outputs from input pins (74HC series, 555 timer)</li>
+<li>Update LED brightness from voltage across anode/cathode</li>
+<li>Update bulb brightness from voltage across anode/cathode</li>
+<li>Update servo angle from PWM signal</li>
+<li>Update DC motor speed from PWM signal</li>
+<li>Update sensor outputs (DHT11, HC-SR04, LDR, PIR)</li>
+<li>Update bench supply current from load resistance</li>
+<li>Update wire colors based on voltage</li>
+</ol>
+
+<h3>15.2 Standalone Power Detection</h3>
+<p>When no Arduino sketch is running, the simulator checks for standalone power components:</p>
+<pre>const standaloneTypes = new Set([
+  'power_5v', 'power_gnd', 'mb102_power',
+  'bench_power_supply', 'func_gen'
+]);
+this._hasStandalonePower = this.components.some(c => standaloneTypes.has(c.type));</pre>
+<p>If standalone power exists, <code>updateSimState({})</code> is called even without <code>ArduinoSim.isRunning</code>. This allows LEDs and bulbs to light up when connected only to bench power supplies.</p>
+
+<h3>15.3 Common Gotchas</h3>
+<table>
+<tr><th>Issue</th><th>Cause</th><th>Solution</th></tr>
+<tr><td>Component doesn't light up</td><td>Missing ground path</td><td>Ensure cathode/ground pin connects through the circuit to a GND/NEG pin</td></tr>
+<tr><td>Bulb glows with one wire</td><td>Internal pass-through leak</td><td>Both anode AND cathode must have external wires</td></tr>
+<tr><td>Both relay loads glow simultaneously</td><td>Bidirectional bulb pass-through</td><td>Use directional pass-through (anode→cathode only)</td></tr>
+<tr><td>Bench supply shows 0A</td><td>Trace can't reach ground</td><td>Ensure relay COM connects to supply NEG</td></tr>
+<tr><td>Wire shows gray</td><td>No voltage source detected</td><td>Check that the wire path leads to a recognized power component</td></tr>
+<tr><td>LED blows up at 5V</td><td>No series resistor</td><td>Add a 220&Omega; resistor between LED cathode and ground path</td></tr>
+</table>
+
+<h3>15.4 Component Resistance Model</h3>
+<p>The trace accumulates resistance as it passes through components:</p>
+<table>
+<tr><th>Component</th><th>Resistance Added</th><th>Direction</th></tr>
+<tr><td>Resistor</td><td><code>props.value</code> (default 220&Omega;)</td><td>Bidirectional</td></tr>
+<tr><td>12V Bulb</td><td>12&Omega; (nominal)</td><td>Anode &#8594; Cathode only</td></tr>
+<tr><td>Push Button</td><td>0&Omega; (short circuit when pressed)</td><td>Bidirectional</td></tr>
+<tr><td>Relay contact</td><td>0&Omega; (short circuit)</td><td>COM &#8594; NC/NO only</td></tr>
+<tr><td>Wire</td><td>0&Omega;</td><td>N/A</td></tr>
+</table>
+
+<h3>15.5 Service Worker Caching</h3>
+<p>The service worker (<code>sw.js</code>) caches all static files. When modifying JS files:</p>
+<ol>
+<li>Bump the cache version in <code>sw.js</code> (e.g., <code>ardusim-v7</code> &#8594; <code>ardusim-v8</code>)</li>
+<li>Bump the <code>?v=</code> query string in <code>index.html</code> for changed scripts</li>
+<li>Users must hard-refresh (Ctrl+Shift+R) to pick up changes</li>
+</ol>
+
+<div class="warn"><strong>Cache version bump checklist:</strong><br>
+1. <code>sw.js</code> line 5: <code>const CACHE_NAME = 'ardusim-vN'</code><br>
+2. <code>index.html</code>: <code>&lt;script src="js/canvas.js?v=YYYYMMDD-N"&gt;</code><br>
+3. Test with hard refresh before deploying</div>
+
+<h3>15.6 Adding Simulation Logic for New Components</h3>
+<p>When adding a new component that needs simulation:</p>
+<ol>
+<li>Add <code>case 'my_component':</code> in <code>updateSimState()</code> switch</li>
+<li>Use <code>_tracePinNet(inst.id, 'pinId')</code> to find voltage sources and grounds</li>
+<li>Check <code>sources.length > 0</code> and <code>grounds.length > 0</code> for complete circuit</li>
+<li>Calculate voltage from <code>sources[0].voltage</code> and resistance from accumulated values</li>
+<li>Update <code>inst.runtimeState</code> with visual state (brightness, angle, speed, etc.)</li>
+</ol>
 
 <h2 id="debugging">10. Debugging &amp; Troubleshooting</h2>
 

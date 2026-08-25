@@ -2,81 +2,203 @@
 /* components/input.js — Input component definitions */
 
 /* ─── PUSH BUTTON ─── */
+// defComp({
+//   id: 'push_button',
+//   name: 'Push Button',
+//   category: 'Input',
+//   icon: '🔘',
+//   desc: 'Momentary tactile push button — connects pins when pressed',
+//   width: 40,
+//   height: 40,
+//   defaultProps: { pressed: false, label: 'BTN' },
+//   pins: [
+//     { id: 'p1', label: '1', type: PIN_TYPE.DIGITAL, x:  8, y:  0, side: 'top' },
+//     { id: 'p2', label: '2', type: PIN_TYPE.DIGITAL, x: 32, y:  0, side: 'top' },
+//     { id: 'p3', label: '3', type: PIN_TYPE.DIGITAL, x:  8, y: 40, side: 'bottom' },
+//     { id: 'p4', label: '4', type: PIN_TYPE.DIGITAL, x: 32, y: 40, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const pressed = inst.runtimeState && inst.runtimeState.pressed;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // Pins
+//     ctx.strokeStyle = '#888';
+//     ctx.lineWidth = 1.5;
+//     [[8,0],[32,0],[8,40],[32,40]].forEach(([px,py]) => {
+//       ctx.beginPath();
+//       ctx.moveTo(px, py);
+//       ctx.lineTo(px, py < 20 ? 12 : 28);
+//       ctx.stroke();
+//     });
+
+//     // Body
+//     ctx.fillStyle = '#2a2a2a';
+//     roundRect(ctx, 4, 8, 32, 24, 4);
+//     ctx.fill();
+//     ctx.strokeStyle = '#555';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Button cap
+//     ctx.fillStyle = pressed ? '#2266aa' : '#3388cc';
+//     if (pressed) {
+//       ctx.shadowColor = '#3399ff';
+//       ctx.shadowBlur = 6;
+//     }
+//     ctx.beginPath();
+//     ctx.arc(20, 20, 8, 0, Math.PI * 2);
+//     ctx.fill();
+
+//     ctx.shadowBlur = 0;
+//     ctx.fillStyle = pressed ? '#66aaee' : '#88ccff';
+//     ctx.beginPath();
+//     ctx.arc(18, 18, 3, 0, Math.PI * 2);
+//     ctx.fill();
+
+//     // Internal connections lines
+//     ctx.strokeStyle = '#555';
+//     ctx.lineWidth = 1;
+//     ctx.beginPath(); ctx.moveTo(8, 12); ctx.lineTo(8, 28); ctx.stroke();
+//     ctx.beginPath(); ctx.moveTo(32, 12); ctx.lineTo(32, 28); ctx.stroke();
+
+//     if (pressed) {
+//       // Connected when pressed
+//       ctx.strokeStyle = '#3399ff';
+//       ctx.lineWidth = 1.5;
+//       ctx.beginPath(); ctx.moveTo(8, 20); ctx.lineTo(12, 20); ctx.stroke();
+//       ctx.beginPath(); ctx.moveTo(28, 20); ctx.lineTo(32, 20); ctx.stroke();
+//     }
+
+//     if (inst.selected) drawSelectionRect(ctx, -3, -3, 46, 46);
+//     ctx.restore();
+//   }
+// });
+'use strict';
+
+/* ═══════════════════════════════════════════════════════
+   4-Pin Tactile Push Button Component
+   ═══════════════════════════════════════════════════════ */
+
 defComp({
   id: 'push_button',
   name: 'Push Button',
   category: 'Input',
   icon: '🔘',
-  desc: 'Momentary tactile push button — connects pins when pressed',
+  desc: 'Momentary tactile push button — bridges left and right vertical rails when pressed',
   width: 40,
   height: 40,
   defaultProps: { pressed: false, label: 'BTN' },
+
   pins: [
     { id: 'p1', label: '1', type: PIN_TYPE.DIGITAL, x:  8, y:  0, side: 'top' },
     { id: 'p2', label: '2', type: PIN_TYPE.DIGITAL, x: 32, y:  0, side: 'top' },
     { id: 'p3', label: '3', type: PIN_TYPE.DIGITAL, x:  8, y: 40, side: 'bottom' },
     { id: 'p4', label: '4', type: PIN_TYPE.DIGITAL, x: 32, y: 40, side: 'bottom' },
   ],
+
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const pressed = inst.runtimeState && inst.runtimeState.pressed;
+    const pressed = !!(inst.runtimeState?.pressed || inst.props?.pressed);
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Pins
+    // ── Outer Pin Terminal Leads ──
     ctx.strokeStyle = '#888';
     ctx.lineWidth = 1.5;
-    [[8,0],[32,0],[8,40],[32,40]].forEach(([px,py]) => {
+    [[8, 0], [32, 0], [8, 40], [32, 40]].forEach(([px, py]) => {
       ctx.beginPath();
       ctx.moveTo(px, py);
-      ctx.lineTo(px, py < 20 ? 12 : 28);
+      ctx.lineTo(px, py < 20 ? 10 : 30);
       ctx.stroke();
     });
 
-    // Body
-    ctx.fillStyle = '#2a2a2a';
-    roundRect(ctx, 4, 8, 32, 24, 4);
+    // ── Main Body Housing ──
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(4, 8, 32, 24, 4);
+    } else if (typeof roundRect === 'function') {
+      roundRect(ctx, 4, 8, 32, 24, 4);
+    } else {
+      ctx.rect(4, 8, 32, 24);
+    }
     ctx.fill();
-    ctx.strokeStyle = '#555';
+    ctx.strokeStyle = '#444';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Button cap
-    ctx.fillStyle = pressed ? '#2266aa' : '#3388cc';
+    // ── Vertical Internal Side Bus Rails ──
+    // Left side rail (Pin 1 to Pin 3)
+    ctx.strokeStyle = pressed ? '#00e5ff' : '#aaa';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(8, 10); ctx.lineTo(8, 30); ctx.stroke();
+
+    // Right side rail (Pin 2 to Pin 4)
+    ctx.strokeStyle = pressed ? '#00e5ff' : '#aaa';
+    ctx.beginPath(); ctx.moveTo(32, 10); ctx.lineTo(32, 30); ctx.stroke();
+
+    // ── Internal Contact Points & Bridging Bar ──
     if (pressed) {
-      ctx.shadowColor = '#3399ff';
-      ctx.shadowBlur = 6;
-    }
-    ctx.beginPath();
-    ctx.arc(20, 20, 8, 0, Math.PI * 2);
-    ctx.fill();
+      // CLOSED STATE: Active bridge connects left rail (x=8) straight to right rail (x=32)
+      ctx.strokeStyle = '#00ffcc';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#00ffcc';
+      ctx.shadowBlur = 8;
 
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = pressed ? '#66aaee' : '#88ccff';
-    ctx.beginPath();
-    ctx.arc(18, 18, 3, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(8, 20);
+      ctx.lineTo(32, 20);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
 
-    // Internal connections lines
-    ctx.strokeStyle = '#555';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(8, 12); ctx.lineTo(8, 28); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(32, 12); ctx.lineTo(32, 28); ctx.stroke();
-
-    if (pressed) {
-      // Connected when pressed
-      ctx.strokeStyle = '#3399ff';
+      // Contact point nodes
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(8, 20, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(32, 20, 2, 0, Math.PI * 2); ctx.fill();
+    } else {
+      // OPEN STATE: Contact stubs with open central gap and suspended bridge bar above
+      ctx.strokeStyle = '#888';
       ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(8, 20); ctx.lineTo(12, 20); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(28, 20); ctx.lineTo(32, 20); ctx.stroke();
+
+      // Left terminal contact stub
+      ctx.beginPath(); ctx.moveTo(8, 20); ctx.lineTo(13, 20); ctx.stroke();
+      // Right terminal contact stub
+      ctx.beginPath(); ctx.moveTo(32, 20); ctx.lineTo(27, 20); ctx.stroke();
+
+      // Disconnected bridge bar suspended above contact gap (Open Circuit)
+      ctx.strokeStyle = '#e74c3c';
+      ctx.beginPath(); ctx.moveTo(13, 15); ctx.lineTo(27, 15); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(20, 15); ctx.lineTo(20, 11); ctx.stroke(); // Actuator stem
     }
 
-    if (inst.selected) drawSelectionRect(ctx, -3, -3, 46, 46);
+    // ── Tactile Button Center Plunger Cap ──
+    const capRadius = pressed ? 6.5 : 7.5;
+    ctx.fillStyle = pressed ? '#1b4f72' : '#2980b9';
+    ctx.beginPath();
+    ctx.arc(20, 20, capRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = pressed ? '#00e5ff' : '#5DADE2';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Specular Highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath();
+    ctx.arc(pressed ? 18.5 : 18, pressed ? 18.5 : 18, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Selection Boundary ──
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -3, -3, 46, 46);
+    }
+
     ctx.restore();
   }
 });
-
 /* ─── POTENTIOMETER ─── */
 defComp({
   id: 'potentiometer',
