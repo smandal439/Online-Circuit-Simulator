@@ -324,10 +324,10 @@ defComp({
     mode: 'CV',
   },
   interactive: [
-    { field: 'powered',       label: 'Main Power',    min: 0, max: 1, step: 1, unit: '' },
-    { field: 'outputEnabled', label: 'Output Enable', min: 0, max: 1, step: 1, unit: '' },
-    { field: 'voltageSet',    label: 'Voltage (V)',   min: 0.0, max: 32.0, step: 0.1, unit: 'V' },
-    { field: 'currentLimit',  label: 'Current (A)',   min: 0.0, max: 5.0,  step: 0.05, unit: 'A' },
+    { field: 'powered',       label: 'Power',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 78, y: 138, w: 32, h: 42 } },
+    { field: 'outputEnabled', label: 'Output',  type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 26, y: 138, w: 32, h: 42 } },
+    { field: 'voltageSet',    label: 'Voltage',  min: 0.0, max: 32.0, step: 0.1, unit: 'V' },
+    { field: 'currentLimit',  label: 'Current',  min: 0.0, max: 5.0,  step: 0.05, unit: 'A' },
   ],
   pins: [
     { id: 'POS', label: '+ (0-32V)', type: PIN_TYPE.POWER, x: 195, y: 172, side: 'bottom' },
@@ -478,44 +478,70 @@ defComp({
     drawRotaryKnob(220, 56, 'VOLTAGE', `${vSet.toFixed(1)}V`, '#00e5ff');
     drawRotaryKnob(220, 116, 'CURRENT', `${iLim.toFixed(2)}A`, '#00e676');
 
-    const outBtnGrad = ctx.createRadialGradient(40, 154, 2, 40, 154, 11);
-    outBtnGrad.addColorStop(0, isOutOn ? '#00e5ff' : '#455a64');
-    outBtnGrad.addColorStop(1, isOutOn ? '#00838f' : '#263238');
-    ctx.fillStyle = outBtnGrad;
-    ctx.beginPath(); ctx.arc(40, 154, 10, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = isOutOn ? '#80deea' : '#607d8b';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+    function drawToggleSwitch(tx, ty, tw, th, isOn, label) {
+      // Background plate
+      ctx.fillStyle = '#0e1114';
+      roundRect(ctx, tx, ty, tw, th, 3);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(80,90,100,0.4)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 6px "JetBrains Mono", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('OUTPUT', 40, 172);
+      // Track groove
+      const trackW = tw * 0.7;
+      const trackH = 8;
+      const trackX = tx + (tw - trackW) / 2;
+      const trackY = ty + th / 2 - 2;
+      ctx.fillStyle = '#080a0c';
+      roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+      ctx.fill();
 
-    ctx.fillStyle = '#121417';
-    roundRect(ctx, 80, 142, 28, 24, 2);
-    ctx.fill();
+      // Lit fill when ON
+      if (isOn) {
+        const grad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+        grad.addColorStop(0, 'rgba(0,230,118,0.2)');
+        grad.addColorStop(1, 'rgba(0,230,118,0.65)');
+        ctx.fillStyle = grad;
+        roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+        ctx.fill();
+      }
 
-    const rockerGrad = ctx.createLinearGradient(82, 144, 82, 164);
-    if (isPowered) {
-      rockerGrad.addColorStop(0, '#d32f2f');
-      rockerGrad.addColorStop(1, '#ff5252');
-    } else {
-      rockerGrad.addColorStop(0, '#5f1616');
-      rockerGrad.addColorStop(1, '#8c1d1d');
+      // Thumb
+      const thumbR = 5;
+      const thumbX = isOn ? trackX + trackW - thumbR - 1 : trackX + thumbR + 1;
+      const thumbY = trackY + trackH / 2;
+      if (isFinite(thumbX) && isFinite(thumbY)) {
+        const thumbGrad = ctx.createRadialGradient(thumbX - 1, thumbY - 1, 0.5, thumbX, thumbY, thumbR);
+        thumbGrad.addColorStop(0, isOn ? '#c8e6c9' : '#b0bec5');
+        thumbGrad.addColorStop(1, isOn ? '#2e7d32' : '#546e7a');
+        ctx.fillStyle = thumbGrad;
+        ctx.beginPath();
+        ctx.arc(thumbX, thumbY, thumbR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      }
+
+      // Status LED
+      const ledX = tx + tw / 2;
+      const ledY = ty + 5;
+      ctx.fillStyle = isOn ? '#00e676' : '#1b3a24';
+      ctx.beginPath(); ctx.arc(ledX, ledY, 2, 0, Math.PI * 2); ctx.fill();
+      if (isOn) {
+        ctx.fillStyle = 'rgba(0,230,118,0.3)';
+        ctx.beginPath(); ctx.arc(ledX, ledY, 4.5, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // Label below
+      ctx.fillStyle = isOn ? '#eceff1' : '#78909c';
+      ctx.font = 'bold 5.5px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, tx + tw / 2, ty + th - 3);
     }
-    ctx.fillStyle = rockerGrad;
-    roundRect(ctx, 83, 145, 22, 18, 1.5);
-    ctx.fill();
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 7px monospace';
-    ctx.fillText('I', 94, 152);
-    ctx.fillText('O', 94, 161);
-
-    ctx.fillStyle = '#b0bec5';
-    ctx.font = 'bold 6px "JetBrains Mono", sans-serif';
-    ctx.fillText('POWER', 94, 175);
+    drawToggleSwitch(78, 138, 32, 42, isPowered, 'POWER');
+    drawToggleSwitch(26, 138, 32, 42, isOutOn, 'OUTPUT');
 
     function drawBindingPost(bx, by, colorHex, rimColor, symbol, label) {
       ctx.fillStyle = '#14181b';

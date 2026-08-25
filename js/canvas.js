@@ -74,8 +74,13 @@ class CircuitCanvas {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Refresh active simulation states for live glowing & component updates
-    if (window.ArduinoSim && window.ArduinoSim.isRunning && window.ArduinoSim.pinStates) {
-      this.updateSimState(window.ArduinoSim.pinStates);
+    const sim = window.ArduinoSim;
+    if (sim && sim.isRunning && sim.pinStates) {
+      this.updateSimState(sim.pinStates);
+    } else if (this._hasStandalonePower) {
+      // Without a running sketch, update components that provide their own
+      // voltage (bench power supply, MB102, power_5v, function generator, etc.)
+      this.updateSimState({});
     }
 
     ctx.save();
@@ -85,7 +90,7 @@ class CircuitCanvas {
     this._drawGrid(ctx);
     this._drawWires(ctx);
     this._drawComponents(ctx);
-    this._drawInteractives(ctx);
+    try { this._drawInteractives(ctx); } catch (_e) { /* guard interactive rendering */ }
     this._drawOverlays(ctx);
 
     ctx.restore();
@@ -471,7 +476,10 @@ class CircuitCanvas {
       if (!def || !Array.isArray(def.interactive) || def.interactive.length === 0) continue;
       const rects = this._getInteractiveRects(inst);
       for (let i = 0; i < rects.length; i++) {
-        this._drawSlider(ctx, inst, rects[i].ctrl, rects[i]);
+        const r = rects[i];
+        // Skip inline toggles — they're drawn by the component's own draw()
+        if (r.ctrl.type === 'toggle' && r.ctrl.inline) continue;
+        this._drawSlider(ctx, inst, r.ctrl, r);
       }
     }
   }
@@ -480,16 +488,34 @@ class CircuitCanvas {
     const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
     const def = defs && defs[inst.type];
     if (!def || !Array.isArray(def.interactive)) return [];
-    const w = Math.max(40, def.width || 40);
+    const w = Math.max(60, def.width || 60);
     const h = def.height || 40;
-    const sliderCtrls = def.interactive.filter(c => !c.type || c.type === 'range');
-    return sliderCtrls.map((ctrl, i) => ({
-      x: inst.x,
-      y: inst.y + h + 14 + i * 15,
-      width: w,
-      height: 9,
-      ctrl,
-    }));
+    const allCtrls = def.interactive.filter(c => (!c.type || c.type === 'range' || c.type === 'toggle') && c.type !== 'select' && c.type !== 'checkbox');
+    const result = [];
+    let yOff = 16;
+
+    for (const ctrl of allCtrls) {
+      if (ctrl.type === 'toggle' && ctrl.inline) {
+        result.push({
+          x: inst.x + ctrl.inline.x,
+          y: inst.y + ctrl.inline.y,
+          width: ctrl.inline.w,
+          height: ctrl.inline.h,
+          ctrl,
+        });
+      } else {
+        const rh = 12;
+        result.push({
+          x: inst.x,
+          y: inst.y + h + yOff,
+          width: w,
+          height: rh,
+          ctrl,
+        });
+        yOff += rh + 5;
+      }
+    }
+    return result;
   }
 
   _getInteractiveValue(inst, ctrl) {
@@ -507,6 +533,8 @@ class CircuitCanvas {
   }
 
   _drawSlider(ctx, inst, ctrl, rect) {
+    if (ctrl.type === 'toggle') return this._drawToggle(ctx, inst, ctrl, rect);
+    // Default: range slider
     const value = this._getInteractiveValue(inst, ctrl);
     const range = ctrl.max - ctrl.min || 1;
     const pct = Math.max(0, Math.min(1, (value - ctrl.min) / range));
@@ -514,36 +542,112 @@ class CircuitCanvas {
     const invZ = 1 / this.zoom;
 
     ctx.save();
+
     // Label
     ctx.fillStyle = active ? 'rgba(220,240,255,0.95)' : 'rgba(160,165,175,0.8)';
-    ctx.font = `${8 * invZ}px Inter, sans-serif`;
+    ctx.font = `bold ${7.5 * invZ}px "JetBrains Mono", monospace`;
     ctx.textAlign = 'left';
-    ctx.fillText(`${ctrl.label}: ${this._formatSliderValue(value, ctrl)}${ctrl.unit || ''}`, rect.x, rect.y - 2 * invZ);
+    ctx.fillText(ctrl.label, rect.x, rect.y - 2 * invZ);
 
-    // Track
-    ctx.fillStyle = 'rgba(20,20,26,0.85)';
-    ctx.strokeStyle = active ? 'rgba(0,151,156,0.6)' : 'rgba(120,120,130,0.5)';
+    // Value badge
+    ctx.textAlign = 'right';
+    ctx.fillStyle = active ? '#00e5ff' : '#78909c';
+    ctx.fillText(this._formatSliderValue(value, ctrl) + (ctrl.unit || ''), rect.x + rect.width, rect.y - 2 * invZ);
+
+    // Track background
+    ctx.fillStyle = '#0d1114';
+    ctx.strokeStyle = active ? 'rgba(0,151,156,0.5)' : 'rgba(100,100,110,0.4)';
     ctx.lineWidth = 1;
     roundRect(ctx, rect.x, rect.y, rect.width, rect.height, rect.height / 2);
     ctx.fill();
     ctx.stroke();
 
-    // Fill
+    // Fill bar
     if (pct > 0.01) {
-      ctx.fillStyle = active ? 'rgba(0,151,156,0.8)' : 'rgba(110,110,125,0.55)';
+      const grad = ctx.createLinearGradient(rect.x, 0, rect.x + pct * rect.width, 0);
+      grad.addColorStop(0, active ? 'rgba(0,151,156,0.3)' : 'rgba(100,100,120,0.3)');
+      grad.addColorStop(1, active ? 'rgba(0,151,156,0.85)' : 'rgba(100,100,120,0.6)');
+      ctx.fillStyle = grad;
       roundRect(ctx, rect.x, rect.y, Math.max(rect.height, pct * rect.width), rect.height, rect.height / 2);
       ctx.fill();
     }
 
     // Thumb
     const tx = rect.x + pct * rect.width;
-    ctx.fillStyle = active ? '#0ee0e6' : '#c8c8d0';
-    ctx.beginPath();
-    ctx.arc(tx, rect.y + rect.height / 2, 4.5, 0, Math.PI * 2);
+    const thumbY = rect.y + rect.height / 2;
+    if (isFinite(tx) && isFinite(thumbY)) {
+      const thumbGrad = ctx.createRadialGradient(tx - 1, thumbY - 1, 1, tx, thumbY, 5);
+      thumbGrad.addColorStop(0, active ? '#b2ebf2' : '#cfd8dc');
+      thumbGrad.addColorStop(1, active ? '#00bcd4' : '#78909c');
+      ctx.fillStyle = thumbGrad;
+      ctx.beginPath();
+      ctx.arc(tx, thumbY, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  _drawToggle(ctx, inst, ctrl, rect) {
+    const value = this._getInteractiveValue(inst, ctrl);
+    const isOn = Number(value) > 0;
+    const active = !!(window.ArduinoSim && window.ArduinoSim.isRunning);
+    const invZ = 1 / this.zoom;
+    const cx = rect.x + 22;
+    const cy = rect.y + rect.height / 2;
+    const trackW = 36;
+    const trackH = 10;
+
+    ctx.save();
+
+    // Label
+    ctx.fillStyle = active ? 'rgba(220,240,255,0.95)' : 'rgba(160,165,175,0.8)';
+    ctx.font = `bold ${7.5 * invZ}px "JetBrains Mono", monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText(ctrl.label, rect.x, rect.y - 1 * invZ);
+
+    // Status badge
+    ctx.textAlign = 'right';
+    ctx.fillStyle = isOn ? (active ? '#00e676' : '#4caf50') : (active ? '#ff5252' : '#b71c1c');
+    ctx.font = `bold ${7 * invZ}px "JetBrains Mono", monospace`;
+    ctx.fillText(isOn ? 'ON' : 'OFF', rect.x + rect.width, rect.y - 1 * invZ);
+
+    // Track groove
+    ctx.fillStyle = '#0d1114';
+    ctx.strokeStyle = 'rgba(80,90,100,0.5)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, cx - trackW / 2, cy - trackH / 2, trackW, trackH, trackH / 2);
     ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 0.8;
     ctx.stroke();
+
+    // Fill arc when ON
+    if (isOn) {
+      const grad = ctx.createLinearGradient(cx - trackW / 2, 0, cx + trackW / 2, 0);
+      grad.addColorStop(0, 'rgba(0,230,118,0.25)');
+      grad.addColorStop(1, 'rgba(0,230,118,0.7)');
+      ctx.fillStyle = grad;
+      roundRect(ctx, cx - trackW / 2, cy - trackH / 2, trackW, trackH, trackH / 2);
+      ctx.fill();
+    }
+
+    // Thumb
+    const thumbX = isOn ? cx + trackW / 2 - 6 : cx - trackW / 2 + 6;
+    if (isFinite(thumbX) && isFinite(cy)) {
+      const thumbGrad = ctx.createRadialGradient(thumbX - 1, cy - 1, 1, thumbX, cy, 6);
+      thumbGrad.addColorStop(0, isOn ? '#b9f6ca' : '#cfd8dc');
+      thumbGrad.addColorStop(1, isOn ? '#00c853' : '#78909c');
+      ctx.fillStyle = thumbGrad;
+      ctx.beginPath();
+      ctx.arc(thumbX, cy, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 
@@ -556,7 +660,9 @@ class CircuitCanvas {
       const rects = this._getInteractiveRects(inst);
       for (let i = 0; i < rects.length; i++) {
         const r = rects[i];
-        if (wx >= r.x - 6 && wx <= r.x + r.width + 6 && wy >= r.y - 12 && wy <= r.y + r.height + 6) {
+        // Skip inline toggles — they are handled by _hitTestInlineToggle
+        if (r.ctrl.type === 'toggle' && r.ctrl.inline) continue;
+        if (wx >= r.x - 6 && wx <= r.x + r.width + 6 && wy >= r.y - 8 && wy <= r.y + r.height + 8) {
           return { inst, ctrl: r.ctrl, rect: r };
         }
       }
@@ -564,8 +670,38 @@ class CircuitCanvas {
     return null;
   }
 
-  _updateSliderValue(drag, wx) {
+  _hitTestInlineToggle(wx, wy) {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    if (!defs) return null;
+    for (const inst of this.components) {
+      const def = defs[inst.type];
+      if (!def || !Array.isArray(def.interactive)) continue;
+      for (const ctrl of def.interactive) {
+        if (ctrl.type !== 'toggle' || !ctrl.inline) continue;
+        const rx = inst.x + ctrl.inline.x;
+        const ry = inst.y + ctrl.inline.y;
+        const rw = ctrl.inline.w;
+        const rh = ctrl.inline.h;
+        if (wx >= rx && wx <= rx + rw && wy >= ry && wy <= ry + rh) {
+          return { inst, ctrl };
+        }
+      }
+    }
+    return null;
+  }
+
+  _updateSliderValue(drag, wx, wy) {
     const { inst, ctrl, rect } = drag;
+
+    // Toggle: click anywhere to flip
+    if (ctrl.type === 'toggle') {
+      inst.runtimeState = inst.runtimeState || {};
+      const cur = Number(inst.runtimeState[ctrl.field] ?? inst.props?.[ctrl.field] ?? ctrl.min);
+      inst.runtimeState[ctrl.field] = cur > 0 ? ctrl.min : ctrl.max;
+      return;
+    }
+
+    // Knob or range slider: drag horizontally
     const pct = Math.max(0, Math.min(1, (wx - rect.x) / rect.width));
     let value = ctrl.min + pct * (ctrl.max - ctrl.min);
     if (ctrl.step) value = Math.round(value / ctrl.step) * ctrl.step;
@@ -964,7 +1100,20 @@ class CircuitCanvas {
         this.selectedWire = null;
         this.mode = 'sliderdrag';
         this.sliderDrag = sliderHit;
-        this._updateSliderValue(sliderHit, world.x);
+        this._updateSliderValue(sliderHit, world.x, world.y);
+        return;
+      }
+
+      // Inline toggle inside a component (Power/Output switches on bench supply)
+      const inlineHit = this._hitTestInlineToggle(world.x, world.y);
+      if (inlineHit) {
+        const { inst, ctrl } = inlineHit;
+        inst.runtimeState = inst.runtimeState || {};
+        const cur = Number(inst.runtimeState[ctrl.field] ?? inst.props?.[ctrl.field] ?? ctrl.min);
+        inst.runtimeState[ctrl.field] = cur > 0 ? ctrl.min : ctrl.max;
+        this._selectAll(false);
+        inst.selected = true;
+        this.selected = inst;
         return;
       }
 
@@ -1065,7 +1214,7 @@ class CircuitCanvas {
     }
 
     if (this.mode === 'sliderdrag' && this.sliderDrag) {
-      this._updateSliderValue(this.sliderDrag, world.x);
+      this._updateSliderValue(this.sliderDrag, world.x, world.y);
       return;
     }
 
@@ -1593,6 +1742,9 @@ class CircuitCanvas {
     const wireEl = document.getElementById('canvas-wire-count');
     if (compEl) compEl.textContent = `${this.components.length} component${this.components.length !== 1 ? 's' : ''}`;
     if (wireEl) wireEl.textContent = `${this.wires.length} wire${this.wires.length !== 1 ? 's' : ''}`;
+    // Detect standalone power sources so DMM/function-gen update without running Arduino sketch
+    const standaloneTypes = new Set(['power_5v', 'power_gnd', 'mb102_power', 'bench_power_supply', 'func_gen']);
+    this._hasStandalonePower = this.components.some(c => standaloneTypes.has(c.type));
     if (this.onCompChanged) this.onCompChanged();
   }
 
