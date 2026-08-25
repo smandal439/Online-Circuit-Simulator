@@ -2019,19 +2019,23 @@ class CircuitCanvas {
           break;
         }
         case 'bulb_12v': {
+          const anodeHasWire = this.wires.some(w =>
+            (w.from.instId === inst.id && w.from.pinId === 'anode') ||
+            (w.to.instId === inst.id && w.to.pinId === 'anode')
+          );
           const cathodeHasWire = this.wires.some(w =>
             (w.from.instId === inst.id && w.from.pinId === 'cathode') ||
             (w.to.instId === inst.id && w.to.pinId === 'cathode')
           );
-          if (!cathodeHasWire) {
+          if (!anodeHasWire || !cathodeHasWire) {
             inst.runtimeState.brightness = 0;
             inst.runtimeState.blown = false;
             inst.runtimeState._warnedBlown = false;
             break;
           }
 
-          const anodeNet = this._tracePinNet(inst.id, 'anode');
-          const cathodeNet = this._tracePinNet(inst.id, 'cathode');
+          const anodeNet = this._tracePinNet(inst.id, 'anode', ['bulb_12v']);
+          const cathodeNet = this._tracePinNet(inst.id, 'cathode', ['bulb_12v']);
 
           const hasGround = cathodeNet.grounds.length > 0;
           const bestSource = anodeNet.sources.sort((a, b) => b.voltage - a.voltage)[0] || null;
@@ -2869,11 +2873,12 @@ case 'push_button': {
   }
 
   // Electrical graph network tracer: traverses wires and series components to discover sources & ground nodes
-  _tracePinNet(startInstId, startPinId) {
+  _tracePinNet(startInstId, startPinId, skipInternalTypes) {
     const queue = [{ instId: startInstId, pinId: startPinId, resistance: 0 }];
     const visited = new Set();
     const sources = [];
     const grounds = [];
+    skipInternalTypes = skipInternalTypes || [];
 
     while (queue.length > 0) {
       const current = queue.shift();
@@ -3000,14 +3005,17 @@ case 'push_button': {
         });
       }
 
-      // 3b. 12V Bulb internal pass-through (anode <-> cathode, ~12Ω nominal)
-      if (inst.type === 'bulb_12v') {
-        const otherPin = current.pinId === 'anode' ? 'cathode' : 'anode';
-        queue.push({
-          instId: inst.id,
-          pinId: otherPin,
-          resistance: current.resistance + 12,
-        });
+      // 3b. 12V Bulb internal pass-through (anode -> cathode only, ~12Ω nominal)
+      // Directional: only allows trace in forward current direction (anode→cathode)
+      // to prevent cross-circuit leakage through shared rails
+      if (inst.type === 'bulb_12v' && !skipInternalTypes.includes('bulb_12v')) {
+        if (current.pinId === 'anode') {
+          queue.push({
+            instId: inst.id,
+            pinId: 'cathode',
+            resistance: current.resistance + 12,
+          });
+        }
       }
 
       // 4. Push Button internal pass-through
