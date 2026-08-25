@@ -201,7 +201,7 @@ function getComponentPins(inst) {
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
   { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
-  { category: 'Output',    ids: ['led', 'led_green', 'led_blue', 'led_yellow', 'led_orange', 'led_white', 'multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel'] },
+  { category: 'Output',    ids: ['led', 'led_green', 'led_blue', 'led_yellow', 'led_orange', 'led_white', 'multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel', 'bulb_12v'] },
   { category: 'Input',     ids: ['push_button', 'potentiometer', 'joystick'] },
   { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay', 'stepper_28byj'] },
   { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir', 'mpu6050', 'ir_obstacle', 'flex_sensor', 'thermistor'] },

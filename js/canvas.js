@@ -2018,6 +2018,46 @@ class CircuitCanvas {
           }
           break;
         }
+        case 'bulb_12v': {
+          const anodeNet = this._tracePinNet(inst.id, 'anode');
+          const cathodeNet = this._tracePinNet(inst.id, 'cathode');
+
+          const hasGround = cathodeNet.grounds.length > 0;
+          const bestSource = anodeNet.sources.sort((a, b) => b.voltage - a.voltage)[0] || null;
+
+          if (!hasGround || !bestSource || bestSource.voltage <= 0) {
+            inst.runtimeState.brightness = 0;
+            inst.runtimeState.blown = false;
+            inst.runtimeState._warnedBlown = false;
+          } else {
+            const bestGround = cathodeNet.grounds.sort((a, b) => a.resistance - b.resistance)[0];
+            const rTotal = Math.max(1, (bestSource.resistance || 0) + (bestGround.resistance || 0));
+            const vSource = bestSource.voltage;
+
+            // 12V incandescent: brightness scales linearly with voltage up to 12V
+            const normBrightness = Math.max(0, Math.min(1.0, vSource / 12.0));
+            inst.runtimeState.brightness = normBrightness;
+
+            // Blow if voltage exceeds 16V (over-voltage)
+            if (vSource > 16) {
+              inst.runtimeState.blown = true;
+              inst.runtimeState.brightness = 0;
+              if (!inst.runtimeState._warnedBlown) {
+                inst.runtimeState._warnedBlown = true;
+                if (window.OutputPanel) {
+                  window.OutputPanel.log(
+                    `12V Bulb (${inst.id}) has blown! Applied voltage: ${vSource.toFixed(1)}V exceeds maximum rating.`,
+                    'warn'
+                  );
+                }
+              }
+            } else {
+              inst.runtimeState.blown = false;
+              inst.runtimeState._warnedBlown = false;
+            }
+          }
+          break;
+        }
         case 'rgb_led': {
           // Cathode must be connected to GND
           const cathodeNet = this._tracePinNet(inst.id, 'gnd');
@@ -2050,6 +2090,54 @@ class CircuitCanvas {
             inst.runtimeState.red = inst.runtimeState.r;
             inst.runtimeState.green = inst.runtimeState.g;
             inst.runtimeState.blue = inst.runtimeState.b;
+          }
+          break;
+        }
+        case 'bench_power_supply': {
+          const bsPowered = Boolean(inst.runtimeState?.powered ?? inst.props?.powered ?? 1);
+          const bsOutOn = bsPowered && Boolean(inst.runtimeState?.outputEnabled ?? inst.props?.outputEnabled ?? 1);
+          const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props?.voltageSet ?? 12.0);
+          const iLim = Number(inst.runtimeState?.currentLimit ?? inst.props?.currentLimit ?? 2.5);
+
+          if (bsOutOn && vSet > 0) {
+            // Trace from POS pin through load to find ground path
+            const posNet = this._tracePinNet(inst.id, 'POS');
+            const gndNet = this._tracePinNet(inst.id, 'NEG');
+
+            const posGrounds = posNet.grounds;
+            const posSources = posNet.sources;
+
+            if (posGrounds.length > 0) {
+              const bestGnd = posGrounds.sort((a, b) => a.resistance - b.resistance)[0];
+              const loadR = bestGnd.resistance || 0.1;
+              let iAct = vSet / Math.max(0.1, loadR);
+
+              if (iAct > iLim) {
+                iAct = iLim;
+                inst.runtimeState.mode = 'CC';
+              } else {
+                inst.runtimeState.mode = 'CV';
+              }
+              inst.runtimeState.actualCurrent = Math.round(iAct * 1000) / 1000;
+            } else if (posSources.length <= 1) {
+              // Only our own source found, no path to ground = open circuit
+              inst.runtimeState.actualCurrent = 0;
+              inst.runtimeState.mode = 'CV';
+            } else {
+              inst.runtimeState.actualCurrent = 0;
+              inst.runtimeState.mode = 'CV';
+            }
+          } else {
+            inst.runtimeState.actualCurrent = 0;
+            inst.runtimeState.mode = 'CV';
+          }
+          break;
+        }
+        case 'mb102_power': {
+          const mbPowered = Boolean(inst.runtimeState?.powered ?? inst.props?.powered ?? 1);
+          if (mbPowered) {
+            // MB102 is always CV mode with fixed regulators
+            inst.runtimeState.mode = 'CV';
           }
           break;
         }
@@ -2897,6 +2985,16 @@ case 'push_button': {
           instId: inst.id,
           pinId: otherPin,
           resistance: current.resistance + rVal,
+        });
+      }
+
+      // 3b. 12V Bulb internal pass-through (anode <-> cathode, ~12Ω nominal)
+      if (inst.type === 'bulb_12v') {
+        const otherPin = current.pinId === 'anode' ? 'cathode' : 'anode';
+        queue.push({
+          instId: inst.id,
+          pinId: otherPin,
+          resistance: current.resistance + 12,
         });
       }
 

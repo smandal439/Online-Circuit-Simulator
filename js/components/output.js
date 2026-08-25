@@ -1039,3 +1039,177 @@ defComp({
     ctx.restore();
   }
 });
+
+/* ═══════════════════════════════════════════════════════
+   12V Incandescent Bulb — glows warm amber when powered
+   ═══════════════════════════════════════════════════════ */
+defComp({
+  id: 'bulb_12v',
+  name: '12V Incandescent Bulb',
+  category: 'Output',
+  icon: '💡',
+  desc: '12V miniature incandescent bulb (w3x16d) — glows warm amber when connected to a voltage source with complete ground path',
+  width: 40,
+  height: 80,
+  defaultProps: {},
+  pins: [
+    { id: 'anode',   label: '+', type: PIN_TYPE.POWER, x: 20, y: 0,  side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND,   x: 20, y: 80, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const brightness = (inst.runtimeState && inst.runtimeState.brightness !== undefined)
+      ? inst.runtimeState.brightness
+      : 0;
+    const isOn = brightness > 0.02;
+    const blown = !!(inst.runtimeState && inst.runtimeState.blown);
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Lead wires
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(20, 18); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(20, 62); ctx.lineTo(20, 80); ctx.stroke();
+
+    // ── Edison Screw Base (Brass) ──
+    const baseGrad = ctx.createLinearGradient(12, 52, 28, 62);
+    baseGrad.addColorStop(0, '#b8860b');
+    baseGrad.addColorStop(0.3, '#daa520');
+    baseGrad.addColorStop(0.7, '#cd9b1d');
+    baseGrad.addColorStop(1, '#8b6914');
+    ctx.fillStyle = baseGrad;
+    roundRect(ctx, 12, 52, 16, 12, 2);
+    ctx.fill();
+
+    // Thread grooves on base
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 0.6;
+    for (let ty = 54; ty < 63; ty += 2.5) {
+      ctx.beginPath(); ctx.moveTo(13, ty); ctx.lineTo(27, ty); ctx.stroke();
+    }
+
+    // Base bottom contact (insulator + tip)
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, 15, 63, 10, 3, 1);
+    ctx.fill();
+    ctx.fillStyle = '#c0c0c0';
+    ctx.beginPath(); ctx.arc(20, 66, 2, 0, Math.PI * 2); ctx.fill();
+
+    // ── Glass Envelope (Pear / A19 shape) ──
+    // Outer glass shell
+    const glassGrad = ctx.createLinearGradient(8, 18, 32, 52);
+    glassGrad.addColorStop(0, isOn ? 'rgba(255,240,200,0.15)' : 'rgba(200,210,220,0.12)');
+    glassGrad.addColorStop(0.5, isOn ? 'rgba(255,230,170,0.08)' : 'rgba(180,190,200,0.06)');
+    glassGrad.addColorStop(1, isOn ? 'rgba(255,220,140,0.05)' : 'rgba(160,170,180,0.04)');
+    ctx.fillStyle = glassGrad;
+    ctx.beginPath();
+    ctx.moveTo(14, 52);
+    ctx.quadraticCurveTo(14, 42, 12, 35);
+    ctx.quadraticCurveTo(8, 22, 20, 18);
+    ctx.quadraticCurveTo(32, 22, 28, 35);
+    ctx.quadraticCurveTo(26, 42, 26, 52);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glass rim
+    ctx.strokeStyle = isOn ? 'rgba(255,240,200,0.5)' : 'rgba(180,190,200,0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // ── Warm Glow Halo (volumetric light) ──
+    if (isOn) {
+      const glowR = 36 + brightness * 18;
+      const halo = ctx.createRadialGradient(20, 36, 0, 20, 36, glowR);
+      halo.addColorStop(0, 'rgba(255, 200, 80, ' + (0.5 * brightness) + ')');
+      halo.addColorStop(0.25, 'rgba(255, 170, 50, ' + (0.3 * brightness) + ')');
+      halo.addColorStop(0.6, 'rgba(255, 140, 30, ' + (0.1 * brightness) + ')');
+      halo.addColorStop(1, 'rgba(255, 120, 20, 0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(20, 36, glowR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ── Filament Support Wires ──
+    ctx.strokeStyle = isOn ? '#c0a060' : '#888';
+    ctx.lineWidth = 0.8;
+    // Left support
+    ctx.beginPath(); ctx.moveTo(17, 52); ctx.lineTo(16, 38); ctx.lineTo(14, 34); ctx.stroke();
+    // Right support
+    ctx.beginPath(); ctx.moveTo(23, 52); ctx.lineTo(24, 38); ctx.lineTo(26, 34); ctx.stroke();
+
+    // ── Tungsten Filament (coiled wire) ──
+    if (isOn) {
+      // Filament glow
+      const filGrad = ctx.createLinearGradient(14, 33, 26, 33);
+      filGrad.addColorStop(0, 'rgba(255, 255, 220, ' + (0.95 * brightness) + ')');
+      filGrad.addColorStop(0.3, 'rgba(255, 200, 100, ' + (0.85 * brightness) + ')');
+      filGrad.addColorStop(0.5, 'rgba(255, 255, 240, ' + (1.0 * brightness) + ')');
+      filGrad.addColorStop(0.7, 'rgba(255, 200, 100, ' + (0.85 * brightness) + ')');
+      filGrad.addColorStop(1, 'rgba(255, 255, 220, ' + (0.95 * brightness) + ')');
+      ctx.strokeStyle = filGrad;
+      ctx.lineWidth = 1.8;
+      ctx.shadowColor = 'rgba(255, 200, 80, ' + (0.9 * brightness) + ')';
+      ctx.shadowBlur = 8 + brightness * 10;
+    } else {
+      ctx.strokeStyle = blown ? '#555' : '#999';
+      ctx.lineWidth = 1;
+      ctx.shadowBlur = 0;
+    }
+
+    // Coiled filament path
+    ctx.beginPath();
+    ctx.moveTo(14, 34);
+    const coils = 6;
+    const coilW = 12 / coils;
+    for (let i = 0; i < coils; i++) {
+      const cx = 15 + i * coilW;
+      ctx.lineTo(cx + coilW * 0.25, 31);
+      ctx.lineTo(cx + coilW * 0.75, 37);
+    }
+    ctx.lineTo(26, 34);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // ── Inner Glass Fill Glow ──
+    if (isOn) {
+      const innerGlow = ctx.createRadialGradient(20, 36, 2, 20, 36, 18);
+      innerGlow.addColorStop(0, 'rgba(255, 220, 120, ' + (0.35 * brightness) + ')');
+      innerGlow.addColorStop(0.6, 'rgba(255, 180, 60, ' + (0.12 * brightness) + ')');
+      innerGlow.addColorStop(1, 'rgba(255, 150, 30, 0)');
+      ctx.fillStyle = innerGlow;
+      ctx.beginPath();
+      ctx.arc(20, 36, 18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ── Specular Glass Highlight ──
+    const glare = ctx.createRadialGradient(16, 26, 0, 20, 34, 16);
+    glare.addColorStop(0, isOn ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)');
+    glare.addColorStop(0.4, isOn ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)');
+    glare.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glare;
+    ctx.beginPath();
+    ctx.arc(20, 36, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Top rim highlight
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(20, 32, 10, -Math.PI * 0.8, -Math.PI * 0.2);
+    ctx.stroke();
+
+    // Polarity marks
+    ctx.fillStyle = '#aaa';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('+', 10, 14);
+    ctx.fillText('\u2212', 30, 76);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, -3, 46, 86);
+    ctx.restore();
+  }
+});
