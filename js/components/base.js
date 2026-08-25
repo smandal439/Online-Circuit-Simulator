@@ -206,7 +206,7 @@ const COMPONENT_CATALOG = [
   { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay', 'stepper_28byj'] },
   { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir', 'mpu6050', 'ir_obstacle', 'flex_sensor', 'thermistor'] },
   { category: 'Passive',   ids: ['resistor', 'capacitor', 'breadboard', 'diode_1n4007'] },
-  { category: 'Power',     ids: ['power_5v', 'power_gnd', 'mb102_power'] },
+  { category: 'Power',     ids: ['power_5v', 'power_gnd', 'mb102_power', 'bench_power_supply'] },
   { category: 'Digital ICs', ids: ['ic_555', 'ic_74hc00', 'ic_74hc04', 'ic_74hc08', 'ic_74hc32', 'ic_74hc595', 'ic_74hc138', 'ic_74hc245'] },
   { category: 'Instruments', ids: ['multimeter', 'func_gen'] },
 ];

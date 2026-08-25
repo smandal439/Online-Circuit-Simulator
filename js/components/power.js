@@ -305,3 +305,250 @@ defComp({
     ctx.restore();
   }
 });
+
+/* -------------- Programmable Benchtop DC Power Supply (0–32V / 0–5A) ------------------ */
+defComp({
+  id: 'bench_power_supply',
+  name: 'Benchtop Power Supply',
+  category: 'Power',
+  icon: '🎛️',
+  desc: 'Precision adjustable 0–32V / 0–5A DC benchtop power supply with digital LED readout, Constant Voltage (CV) / Constant Current (CC) modes, and 4mm banana binding posts',
+  width: 270,
+  height: 200,
+  defaultProps: {
+    powered: 1,
+    outputEnabled: 1,
+    voltageSet: 12.0,
+    currentLimit: 2.5,
+    actualCurrent: 0.0,
+    mode: 'CV',
+  },
+  interactive: [
+    { field: 'powered',       label: 'Main Power',    min: 0, max: 1, step: 1, unit: '' },
+    { field: 'outputEnabled', label: 'Output Enable', min: 0, max: 1, step: 1, unit: '' },
+    { field: 'voltageSet',    label: 'Voltage (V)',   min: 0.0, max: 32.0, step: 0.1, unit: 'V' },
+    { field: 'currentLimit',  label: 'Current (A)',   min: 0.0, max: 5.0,  step: 0.05, unit: 'A' },
+  ],
+  pins: [
+    { id: 'POS', label: '+ (0-32V)', type: PIN_TYPE.POWER, x: 195, y: 172, side: 'bottom' },
+    { id: 'GND', label: 'EARTH ⏚',   type: PIN_TYPE.GND,   x: 222, y: 172, side: 'bottom' },
+    { id: 'NEG', label: '- (GND)',   type: PIN_TYPE.GND,   x: 249, y: 172, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const isPowered = Boolean(inst.runtimeState?.powered ?? inst.props.powered ?? 1);
+    const isOutOn = isPowered && Boolean(inst.runtimeState?.outputEnabled ?? inst.props.outputEnabled ?? 1);
+    const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props.voltageSet ?? 12.0);
+    const iLim = Number(inst.runtimeState?.currentLimit ?? inst.props.currentLimit ?? 2.5);
+    const iAct = isOutOn ? Number(inst.runtimeState?.actualCurrent ?? inst.props.actualCurrent ?? 0.0) : 0.0;
+    const mode = inst.runtimeState?.mode ?? inst.props.mode ?? 'CV';
+    const pOut = isOutOn ? vSet * iAct : 0.0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    ctx.fillStyle = '#1c2024';
+    roundRect(ctx, 0, 0, 270, 200, 8);
+    ctx.fill();
+
+    const panelGrad = ctx.createLinearGradient(0, 4, 0, 196);
+    panelGrad.addColorStop(0, '#32383e');
+    panelGrad.addColorStop(0.3, '#262b30');
+    panelGrad.addColorStop(1, '#1e2226');
+    ctx.fillStyle = panelGrad;
+    roundRect(ctx, 4, 4, 262, 192, 6);
+    ctx.fill();
+
+    ctx.fillStyle = '#0f1214';
+    roundRect(ctx, 8, 2, 26, 4, 1); ctx.fill();
+    roundRect(ctx, 236, 2, 26, 4, 1); ctx.fill();
+    roundRect(ctx, 8, 194, 26, 4, 1); ctx.fill();
+    roundRect(ctx, 236, 194, 26, 4, 1); ctx.fill();
+
+    ctx.fillStyle = '#eceff1';
+    ctx.font = 'bold 9px "JetBrains Mono", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('DC POWER SUPPLY', 14, 18);
+
+    ctx.fillStyle = '#78909c';
+    ctx.font = 'bold 7px "JetBrains Mono", monospace';
+    ctx.fillText('DPS-3205 PRO • 32V / 5A', 14, 28);
+
+    ctx.fillStyle = '#121518';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(190 + i * 16, 14, 11, 2.5);
+    }
+
+    ctx.fillStyle = '#0a0d0f';
+    roundRect(ctx, 12, 34, 160, 96, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#455a64';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    if (isPowered) {
+      ctx.font = 'bold 24px "JetBrains Mono", monospace';
+      ctx.textAlign = 'right';
+
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.06)';
+      ctx.fillText('88.88', 115, 68);
+      ctx.fillStyle = 'rgba(0, 230, 118, 0.06)';
+      ctx.fillText('8.888', 115, 98);
+      ctx.fillStyle = 'rgba(255, 171, 0, 0.06)';
+      ctx.font = 'bold 15px "JetBrains Mono", monospace';
+      ctx.fillText('888.8', 115, 122);
+
+      ctx.fillStyle = isOutOn ? '#00e5ff' : '#0097a7';
+      ctx.font = 'bold 24px "JetBrains Mono", monospace';
+      ctx.fillText(vSet.toFixed(2).padStart(5, '0'), 115, 68);
+
+      ctx.fillStyle = isOutOn ? '#00e676' : '#2e7d32';
+      ctx.fillText(iAct.toFixed(3), 115, 98);
+
+      ctx.fillStyle = isOutOn ? '#ffab00' : '#c67c00';
+      ctx.font = 'bold 15px "JetBrains Mono", monospace';
+      ctx.fillText(pOut.toFixed(2).padStart(5, '0'), 115, 122);
+
+      ctx.font = 'bold 13px "JetBrains Mono", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#00e5ff'; ctx.fillText('V', 122, 66);
+      ctx.fillStyle = '#00e676'; ctx.fillText('A', 122, 96);
+      ctx.font = 'bold 10px "JetBrains Mono", sans-serif';
+      ctx.fillStyle = '#ffab00'; ctx.fillText('W', 122, 121);
+
+      const isCV = mode === 'CV' && isOutOn;
+      ctx.fillStyle = isCV ? '#00e676' : '#1b3a24';
+      ctx.beginPath(); ctx.arc(148, 50, 3, 0, Math.PI * 2); ctx.fill();
+      if (isCV) { ctx.fillStyle = 'rgba(0, 230, 118, 0.4)'; ctx.beginPath(); ctx.arc(148, 50, 6, 0, Math.PI * 2); ctx.fill(); }
+      ctx.font = 'bold 6.5px "JetBrains Mono", sans-serif';
+      ctx.fillStyle = isCV ? '#ffffff' : '#546e7a';
+      ctx.fillText('CV', 154, 52);
+
+      const isCC = mode === 'CC' && isOutOn;
+      ctx.fillStyle = isCC ? '#ff1744' : '#3a141a';
+      ctx.beginPath(); ctx.arc(148, 64, 3, 0, Math.PI * 2); ctx.fill();
+      if (isCC) { ctx.fillStyle = 'rgba(255, 23, 68, 0.4)'; ctx.beginPath(); ctx.arc(148, 64, 6, 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = isCC ? '#ffffff' : '#546e7a';
+      ctx.fillText('CC', 154, 66);
+
+      ctx.fillStyle = isOutOn ? '#29b6f6' : '#132836';
+      ctx.beginPath(); ctx.arc(148, 78, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = isOutOn ? '#ffffff' : '#546e7a';
+      ctx.fillText('ON', 154, 80);
+    } else {
+      ctx.fillStyle = '#1a2327';
+      ctx.font = 'bold 11px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('— STANDBY —', 92, 85);
+    }
+
+    function drawRotaryKnob(kx, ky, label, valueText, accentColor) {
+      ctx.fillStyle = '#181b1e';
+      ctx.beginPath(); ctx.arc(kx, ky, 19, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = '#37474f';
+      ctx.lineWidth = 1;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+        ctx.beginPath();
+        ctx.moveTo(kx + Math.cos(a) * 16, ky + Math.sin(a) * 16);
+        ctx.lineTo(kx + Math.cos(a) * 19, ky + Math.sin(a) * 19);
+        ctx.stroke();
+      }
+
+      const knobGrad = ctx.createRadialGradient(kx - 4, ky - 4, 1, kx, ky, 15);
+      knobGrad.addColorStop(0, '#cfd8dc');
+      knobGrad.addColorStop(0.5, '#90a4ae');
+      knobGrad.addColorStop(1, '#455a64');
+      ctx.fillStyle = knobGrad;
+      ctx.beginPath(); ctx.arc(kx, ky, 15, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = accentColor;
+      ctx.beginPath(); ctx.arc(kx + 9, ky - 6, 2, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#b0bec5';
+      ctx.font = 'bold 7.5px "JetBrains Mono", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, kx, ky + 28);
+
+      ctx.fillStyle = accentColor;
+      ctx.font = 'bold 7px "JetBrains Mono", monospace';
+      ctx.fillText(valueText, kx, ky - 23);
+    }
+
+    drawRotaryKnob(220, 56, 'VOLTAGE', `${vSet.toFixed(1)}V`, '#00e5ff');
+    drawRotaryKnob(220, 116, 'CURRENT', `${iLim.toFixed(2)}A`, '#00e676');
+
+    const outBtnGrad = ctx.createRadialGradient(40, 154, 2, 40, 154, 11);
+    outBtnGrad.addColorStop(0, isOutOn ? '#00e5ff' : '#455a64');
+    outBtnGrad.addColorStop(1, isOutOn ? '#00838f' : '#263238');
+    ctx.fillStyle = outBtnGrad;
+    ctx.beginPath(); ctx.arc(40, 154, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = isOutOn ? '#80deea' : '#607d8b';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 6px "JetBrains Mono", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('OUTPUT', 40, 172);
+
+    ctx.fillStyle = '#121417';
+    roundRect(ctx, 80, 142, 28, 24, 2);
+    ctx.fill();
+
+    const rockerGrad = ctx.createLinearGradient(82, 144, 82, 164);
+    if (isPowered) {
+      rockerGrad.addColorStop(0, '#d32f2f');
+      rockerGrad.addColorStop(1, '#ff5252');
+    } else {
+      rockerGrad.addColorStop(0, '#5f1616');
+      rockerGrad.addColorStop(1, '#8c1d1d');
+    }
+    ctx.fillStyle = rockerGrad;
+    roundRect(ctx, 83, 145, 22, 18, 1.5);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 7px monospace';
+    ctx.fillText('I', 94, 152);
+    ctx.fillText('O', 94, 161);
+
+    ctx.fillStyle = '#b0bec5';
+    ctx.font = 'bold 6px "JetBrains Mono", sans-serif';
+    ctx.fillText('POWER', 94, 175);
+
+    function drawBindingPost(bx, by, colorHex, rimColor, symbol, label) {
+      ctx.fillStyle = '#14181b';
+      ctx.beginPath(); ctx.arc(bx, by, 11, 0, Math.PI * 2); ctx.fill();
+
+      const postGrad = ctx.createRadialGradient(bx - 3, by - 3, 2, bx, by, 9);
+      postGrad.addColorStop(0, rimColor);
+      postGrad.addColorStop(0.7, colorHex);
+      postGrad.addColorStop(1, '#0d1012');
+      ctx.fillStyle = postGrad;
+      ctx.beginPath(); ctx.arc(bx, by, 9, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#d4af37';
+      ctx.beginPath(); ctx.arc(bx, by, 4.5, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#08080a';
+      ctx.beginPath(); ctx.arc(bx, by, 2.8, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#eceff1';
+      ctx.font = 'bold 10px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(symbol, bx, by + 18);
+
+      ctx.fillStyle = '#78909c';
+      ctx.font = 'bold 5.5px "JetBrains Mono", sans-serif';
+      ctx.fillText(label, bx, by - 14);
+    }
+
+    drawBindingPost(195, 154, '#d50000', '#ff5252', '+', 'POS');
+    drawBindingPost(222, 154, '#2e7d32', '#00e676', '⏚', 'EARTH');
+    drawBindingPost(249, 154, '#212121', '#546e7a', '−', 'NEG');
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 274, 204);
+    ctx.restore();
+  }
+});
