@@ -2698,6 +2698,45 @@ case 'push_button': {
         continue;
       }
 
+      // 2b. MB102 Breadboard Power Supply
+      if (inst.type === 'mb102_power') {
+        const mbPowered = Boolean(inst.runtimeState?.powered ?? inst.props?.powered ?? 1);
+        const topV = inst.props?.topVoltage ?? '5V';
+        const botV = inst.props?.bottomVoltage ?? '3.3V';
+        const voltageMap = { '5V': 5.0, '3.3V': 3.3, 'OFF': 0 };
+
+        if (mbPowered) {
+          if ((current.pinId === 'vcc_t' || current.pinId === 'aux_5v') && voltageMap[topV] > 0) {
+            sources.push({ type: topV, voltage: voltageMap[topV], rawVal: 255, resistance: current.resistance });
+          }
+          if (current.pinId === 'aux_3v3' && voltageMap[botV] > 0) {
+            sources.push({ type: '3.3V', voltage: 3.3, rawVal: 168, resistance: current.resistance });
+          }
+          if (current.pinId === 'vcc_b' && voltageMap[botV] > 0) {
+            sources.push({ type: botV, voltage: voltageMap[botV], rawVal: 168, resistance: current.resistance });
+          }
+        }
+        if (current.pinId === 'gnd_t' || current.pinId === 'gnd_b' || current.pinId === 'aux_gnd') {
+          grounds.push({ type: 'gnd', instId: inst.id, pinId: current.pinId, resistance: current.resistance });
+        }
+        continue;
+      }
+
+      // 2c. Benchtop DC Power Supply
+      if (inst.type === 'bench_power_supply') {
+        const bsPowered = Boolean(inst.runtimeState?.powered ?? inst.props?.powered ?? 1);
+        const bsOutOn = bsPowered && Boolean(inst.runtimeState?.outputEnabled ?? inst.props?.outputEnabled ?? 1);
+        const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props?.voltageSet ?? 12.0);
+
+        if (current.pinId === 'POS' && bsOutOn && vSet > 0) {
+          sources.push({ type: 'bench_v', voltage: vSet, rawVal: 255, resistance: current.resistance });
+        }
+        if (current.pinId === 'GND' || current.pinId === 'NEG') {
+          grounds.push({ type: 'gnd', instId: inst.id, pinId: current.pinId, resistance: current.resistance });
+        }
+        continue;
+      }
+
       // 3. Resistor internal pass-through (p1 <-> p2)
       if (inst.type === 'resistor') {
         const rVal = Number(inst.props.value) || 220;
