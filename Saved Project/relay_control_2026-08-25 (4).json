@@ -1,13 +1,8 @@
 {
-  "id": "relay_control",
+  "version": "1.1",
+  "savedAt": "2026-08-25T18:18:20.051Z",
   "name": "Relay Control",
-  "icon": "⚡",
-  "desc": "Toggle a relay on pin 9 — the LED (on the NO contact) lights when the coil is energized",
-  "tags": [
-    "beginner",
-    "relay",
-    "output"
-  ],
+  "code": "/*\n * Relay Control — energize the coil on D9\n * The LED connected to the relay's NO contact turns on\n * when the relay is active.\n */\n\nint relayPin = 9;\n\nvoid setup() {\n  pinMode(relayPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Relay example started\");\n}\n\nvoid loop() {\n  digitalWrite(relayPin, HIGH);\n  Serial.println(\"Relay ON\");\n  delay(1000);\n\n  digitalWrite(relayPin, LOW);\n  Serial.println(\"Relay OFF\");\n  delay(1000);\n}",
   "circuit": {
     "components": [
       {
@@ -373,6 +368,5 @@
         "waypoints": []
       }
     ]
-  },
-  "code": "/*\n * Relay Control — energize the coil on D9\n * The LED connected to the relay's NO contact turns on\n * when the relay is active.\n */\n\nint relayPin = 9;\n\nvoid setup() {\n  pinMode(relayPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Relay example started\");\n}\n\nvoid loop() {\n  digitalWrite(relayPin, HIGH);\n  Serial.println(\"Relay ON\");\n  delay(1000);\n\n  digitalWrite(relayPin, LOW);\n  Serial.println(\"Relay OFF\");\n  delay(1000);\n}"
   }
+}
