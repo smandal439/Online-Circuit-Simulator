@@ -2019,6 +2019,17 @@ class CircuitCanvas {
           break;
         }
         case 'bulb_12v': {
+          const cathodeHasWire = this.wires.some(w =>
+            (w.from.instId === inst.id && w.from.pinId === 'cathode') ||
+            (w.to.instId === inst.id && w.to.pinId === 'cathode')
+          );
+          if (!cathodeHasWire) {
+            inst.runtimeState.brightness = 0;
+            inst.runtimeState.blown = false;
+            inst.runtimeState._warnedBlown = false;
+            break;
+          }
+
           const anodeNet = this._tracePinNet(inst.id, 'anode');
           const cathodeNet = this._tracePinNet(inst.id, 'cathode');
 
@@ -2974,7 +2985,8 @@ case 'push_button': {
         if (current.pinId === 'GND' || current.pinId === 'NEG') {
           grounds.push({ type: 'gnd', instId: inst.id, pinId: current.pinId, resistance: current.resistance });
         }
-        continue;
+        // Do NOT continue — let wire-following at bottom of loop execute
+        // so the trace can leave the bench_supply through connected wires
       }
 
       // 3. Resistor internal pass-through (p1 <-> p2)

@@ -1,0 +1,169 @@
+{
+  "version": "1.1",
+  "savedAt": "2026-08-25T17:51:07.503Z",
+  "name": "Relay Control",
+  "code": "/*\n * Relay Control — energize the coil on D9\n * The LED connected to the relay's NO contact turns on\n * when the relay is active.\n */\n\nint relayPin = 9;\n\nvoid setup() {\n  pinMode(relayPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"Relay example started\");\n}\n\nvoid loop() {\n  digitalWrite(relayPin, HIGH);\n  Serial.println(\"Relay ON\");\n  delay(1000);\n\n  digitalWrite(relayPin, LOW);\n  Serial.println(\"Relay OFF\");\n  delay(1000);\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 155,
+        "y": 85,
+        "width": 230,
+        "height": 150,
+        "props": {
+          "label": "UNO"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "rly",
+        "type": "relay",
+        "x": 135,
+        "y": 300,
+        "width": 90,
+        "height": 50,
+        "props": {
+          "label": "RELAY"
+        },
+        "runtimeState": {
+          "active": false
+        },
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "comp_1787679993586_676bz",
+        "type": "bench_power_supply",
+        "x": -140,
+        "y": 80,
+        "width": 270,
+        "height": 200,
+        "props": {
+          "powered": 1,
+          "outputEnabled": 1,
+          "voltageSet": 12,
+          "currentLimit": 2.5,
+          "actualCurrent": 0,
+          "mode": "CV"
+        },
+        "runtimeState": {
+          "actualCurrent": 0,
+          "mode": "CV",
+          "voltageSet": 12.600000000000001,
+          "currentLimit": 5
+        },
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "comp_1787680007668_pk88s",
+        "type": "bulb_12v",
+        "x": 320,
+        "y": 275,
+        "width": 40,
+        "height": 80,
+        "props": {},
+        "runtimeState": {
+          "brightness": 0,
+          "blown": false,
+          "_warnedBlown": false
+        },
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "D9"
+        },
+        "to": {
+          "instId": "rly",
+          "pinId": "sig"
+        },
+        "color": null,
+        "waypoints": [
+          {
+            "x": 291,
+            "y": 374
+          },
+          {
+            "x": 171,
+            "y": 374
+          }
+        ]
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "b1",
+          "pinId": "5V"
+        },
+        "to": {
+          "instId": "rly",
+          "pinId": "vcc"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "rly",
+          "pinId": "gnd"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "GND1"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787680053787_3ppmw",
+        "from": {
+          "instId": "rly",
+          "pinId": "no"
+        },
+        "to": {
+          "instId": "comp_1787680007668_pk88s",
+          "pinId": "anode"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787680078246_ua7ld",
+        "from": {
+          "instId": "comp_1787679993586_676bz",
+          "pinId": "NEG"
+        },
+        "to": {
+          "instId": "comp_1787680007668_pk88s",
+          "pinId": "cathode"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787680223652_bur6o",
+        "from": {
+          "instId": "comp_1787679993586_676bz",
+          "pinId": "POS"
+        },
+        "to": {
+          "instId": "rly",
+          "pinId": "com"
+        },
+        "color": null,
+        "waypoints": []
+      }
+    ]
+  }
+}
