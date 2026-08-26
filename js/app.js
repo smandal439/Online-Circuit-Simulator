@@ -257,13 +257,17 @@ class App {
     document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', () => {
       if (btn.dataset.modal === 'modal-remote-overlay') {
         document.getElementById('modal-remote-overlay')?.classList.add('hidden');
+        document.getElementById('modal-remote')?.classList.remove('active');
       } else {
         this._closeModal();
       }
     }));
     // Close remote modal on overlay click
     document.getElementById('modal-remote-overlay')?.addEventListener('click', (e) => {
-      if (e.target.id === 'modal-remote-overlay') e.target.classList.add('hidden');
+      if (e.target.id === 'modal-remote-overlay') {
+        e.target.classList.add('hidden');
+        document.getElementById('modal-remote')?.classList.remove('active');
+      }
     });
     document.querySelectorAll('[data-modal]').forEach(btn => btn.addEventListener('click', () => this._closeModal()));
     modalOverlay?.addEventListener('click', (e) => { if (e.target === modalOverlay) this._closeModal(); });
@@ -1284,9 +1288,10 @@ _newProject() {
 
   _showRemoteModal() {
     const overlay = document.getElementById('modal-remote-overlay');
+    const modal = document.getElementById('modal-remote');
     const idle = document.getElementById('remote-idle');
     const active = document.getElementById('remote-active');
-    if (!overlay) return;
+    if (!overlay || !modal) return;
 
     const sim = this.sim;
     if (sim && sim.isRunning && sim.sessionId) {
@@ -1306,6 +1311,7 @@ _newProject() {
     }
 
     overlay.classList.remove('hidden');
+    modal.classList.add('active');
 
     // Copy session button
     const copySessionBtn = document.getElementById('btn-copy-session');
