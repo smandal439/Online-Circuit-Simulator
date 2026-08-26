@@ -201,7 +201,18 @@ function getComponentPins(inst) {
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
   { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
-  { category: 'Output',    ids: ['led', 'led_green', 'led_blue', 'led_yellow', 'led_orange', 'led_white', 'multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel', 'bulb_12v'] },
+  { category: 'Output',    ids: ['multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel', 'bulb_12v'],
+    dropdown: { id: 'led', label: 'LED', icon: '💡', desc: 'Light Emitting Diode',
+      variants: [
+        { id: 'led',         name: 'Red LED',    color: '#ff3333', icon: '🔴' },
+        { id: 'led_green',   name: 'Green LED',  color: '#33ff33', icon: '🟢' },
+        { id: 'led_blue',    name: 'Blue LED',   color: '#3366ff', icon: '🔵' },
+        { id: 'led_yellow',  name: 'Yellow LED', color: '#ffff33', icon: '🟡' },
+        { id: 'led_orange',  name: 'Orange LED', color: '#ff9933', icon: '🟠' },
+        { id: 'led_white',   name: 'White LED',  color: '#ffffff', icon: '⚪' },
+      ]
+    }
+  },
   { category: 'Input',     ids: ['push_button', 'potentiometer', 'joystick'] },
   { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay', 'stepper_28byj'] },
   { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir', 'mpu6050', 'ir_obstacle', 'flex_sensor', 'thermistor'] },

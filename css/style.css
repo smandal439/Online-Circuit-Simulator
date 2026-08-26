@@ -820,6 +820,48 @@ body.view-serial #resizer-bottom { display: none; }
   text-overflow: ellipsis;
 }
 
+/* Dropdown component group (e.g., LED variants) */
+.comp-dropdown { position: relative; }
+.comp-dropdown-arrow {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+  transition: transform var(--trans-fast);
+}
+.comp-dropdown.open .comp-dropdown-arrow { transform: rotate(180deg); }
+.comp-dropdown-menu {
+  position: relative;
+  margin: 0 6px 4px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.comp-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  color: var(--text-primary);
+  font-size: 12px;
+  transition: background var(--trans-fast);
+}
+.comp-dropdown-item:hover { background: var(--bg-hover); }
+.comp-dropdown-item .comp-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+}
+.comp-dropdown-item .comp-name { font-size: 11px; }
+
 /* Tooltip that appears on hover over comp-item descriptions */
 .comp-tooltip {
   position: absolute;

@@ -926,6 +926,52 @@ _newProject() {
       title.textContent = group.category;
       section.appendChild(title);
 
+      // Render dropdown group (e.g., LED variants)
+      if (group.dropdown) {
+        const dd = group.dropdown;
+        const item = document.createElement('button');
+        item.className = 'comp-item comp-dropdown';
+        item.dataset.type = dd.id;
+        item.title = dd.desc || dd.label;
+        item.innerHTML = `<span class="comp-icon">${dd.icon || '🔧'}</span><span class="comp-info"><span class="comp-name">${dd.label}</span><span class="comp-desc">${dd.desc || ''}</span></span><span class="comp-dropdown-arrow">▾</span>`;
+
+        const menu = document.createElement('div');
+        menu.className = 'comp-dropdown-menu';
+        menu.style.display = 'none';
+
+        for (const v of dd.variants) {
+          const vdef = defs[v.id];
+          const btn = document.createElement('button');
+          btn.className = 'comp-dropdown-item';
+          btn.dataset.type = v.id;
+          btn.innerHTML = `<span class="comp-icon">${v.icon}</span><span class="comp-info"><span class="comp-name">${v.name}</span>${vdef ? `<span class="comp-desc">${vdef.desc || ''}</span>` : ''}</span>`;
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.style.display = 'none';
+            item.classList.remove('open');
+            if (this.canvas) {
+              this.canvas.startPlacing(v.id);
+              this.showToast(`${v.name} selected — click on canvas to place`, 'info');
+            }
+          });
+          menu.appendChild(btn);
+        }
+
+        item.addEventListener('click', () => {
+          const isOpen = menu.style.display !== 'none';
+          // Close all other dropdowns first
+          document.querySelectorAll('.comp-dropdown-menu').forEach(m => m.style.display = 'none');
+          document.querySelectorAll('.comp-dropdown.open').forEach(i => i.classList.remove('open'));
+          if (!isOpen) {
+            menu.style.display = 'block';
+            item.classList.add('open');
+          }
+        });
+
+        section.appendChild(item);
+        section.appendChild(menu);
+      }
+
       for (const id of group.ids) {
         const def = defs[id];
         if (!def) continue;
@@ -959,17 +1005,34 @@ _newProject() {
       }
       container.appendChild(section);
     }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.comp-dropdown') && !e.target.closest('.comp-dropdown-menu')) {
+        document.querySelectorAll('.comp-dropdown-menu').forEach(m => m.style.display = 'none');
+        document.querySelectorAll('.comp-dropdown.open').forEach(i => i.classList.remove('open'));
+      }
+    });
   }
 
   _filterComponents(term) {
     const query = (term || '').toLowerCase();
-    document.querySelectorAll('.comp-item').forEach(item => {
+    // Filter regular comp-items
+    document.querySelectorAll('.comp-item:not(.comp-dropdown)').forEach(item => {
       const name = item.textContent.toLowerCase();
       item.style.display = name.includes(query) ? '' : 'none';
     });
+    // Filter dropdown variant items
+    document.querySelectorAll('.comp-dropdown-item').forEach(item => {
+      const name = item.textContent.toLowerCase();
+      item.style.display = name.includes(query) ? '' : 'none';
+    });
+    // Show/hide groups based on visible items
     document.querySelectorAll('.comp-group').forEach(group => {
-      const visible = Array.from(group.querySelectorAll('.comp-item')).some(item => item.style.display !== 'none');
-      group.style.display = visible ? '' : 'none';
+      const hasVisibleItems = Array.from(group.querySelectorAll('.comp-item:not(.comp-dropdown)')).some(item => item.style.display !== 'none');
+      const hasVisibleDropdowns = Array.from(group.querySelectorAll('.comp-dropdown-item')).some(item => item.style.display !== 'none');
+      const hasVisibleDropdown = group.querySelector('.comp-dropdown') && hasVisibleDropdowns;
+      group.style.display = (hasVisibleItems || hasVisibleDropdown) ? '' : 'none';
     });
   }
 
