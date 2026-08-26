@@ -1576,6 +1576,7 @@ class ArduinoSimulator {
         // Unique per-session suffix so a shared public broker doesn't clash
         // with other users running the same example.
         const session = Math.random().toString(36).slice(2, 7);
+        self.sessionId = session;
         const ns = (topic) => `${topic}/${session}`;
         const bare = (topic) => (String(topic).endsWith(`/${session}`)
           ? String(topic).slice(0, -(session.length + 1))

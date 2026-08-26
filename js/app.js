@@ -25,6 +25,7 @@ class App {
     this._examplesFiltered = [];
     this._examplesObserver = null;
     this._savedQuery = '';
+    this.remote = null;
   }
 
   init() {
@@ -43,6 +44,7 @@ class App {
       this._renderComponentLibrary();
       this._renderExamples();
       this._initBoardSelector();
+      this.remote = new RemoteControl();
       window.GuideManager?.bind?.();
       this._restoreProject();
       this._setupBeforeUnloadGuard();
@@ -175,6 +177,8 @@ class App {
       window.open('ArduSim_Guide.html', '_blank');
       window.GuideManager?.open('home');
     });
+    const remoteBtn = get('btn-remote');
+    remoteBtn?.addEventListener('click', () => this._showRemoteModal());
     const helpComponentsBtn = get('btn-help-components');
     helpComponentsBtn?.addEventListener('click', () => {
       this._closeHeaderDropdowns();
@@ -250,7 +254,17 @@ class App {
     });
 
     // Modal close
-    document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', () => this._closeModal()));
+    document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', () => {
+      if (btn.dataset.modal === 'modal-remote-overlay') {
+        document.getElementById('modal-remote-overlay')?.classList.add('hidden');
+      } else {
+        this._closeModal();
+      }
+    }));
+    // Close remote modal on overlay click
+    document.getElementById('modal-remote-overlay')?.addEventListener('click', (e) => {
+      if (e.target.id === 'modal-remote-overlay') e.target.classList.add('hidden');
+    });
     document.querySelectorAll('[data-modal]').forEach(btn => btn.addEventListener('click', () => this._closeModal()));
     modalOverlay?.addEventListener('click', (e) => { if (e.target === modalOverlay) this._closeModal(); });
 
@@ -481,6 +495,8 @@ class App {
       const suppressed = type === 'data' && this.serial?.isBaudMismatched();
       this.serial?.receive(text, type);
       if (!suppressed) this.plotter?.addSerial(text);
+      // Send serial output to remote clients
+      if (this.remote && type === 'data') this.remote.publishSerial(text);
     };
 
     this.sim.onStart = () => {
@@ -489,6 +505,10 @@ class App {
       this._updateCompileStatus('Running');
       this._updateStatus('Simulation running');
       this.output?.log('Compile OK — running simulation', 'success');
+      // Start remote control bridge
+      if (this.remote && this.sim.sessionId) {
+        this.remote.start(this.sim.sessionId);
+      }
     };
 
     this.sim.onPinChange = (pinKey, value) => {
@@ -496,6 +516,8 @@ class App {
       if (this.osc)    this.osc.sample(this.sim.simTime, this.sim.pinStates);
       if (this.la)     this.la.sample(this.sim.simTime, this.sim.pinStates);
       this._updatePinMonitor();
+      // Broadcast pin change to remote clients
+      if (this.remote) this.remote.publishPinChange(pinKey, value);
     };
 
     this.sim.onTick = (simTime, fps) => {
@@ -527,6 +549,8 @@ class App {
       this._updateStatus('Stopped');
       const simDot = document.getElementById('sim-dot');
       if (simDot) simDot.classList.remove('running');
+      // Stop remote control bridge
+      if (this.remote) this.remote.stop();
     };
 
     this.sim.onEvent = (type, data) => {
@@ -1256,6 +1280,46 @@ _newProject() {
     overlay.classList.remove('hidden');
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     modal.classList.add('active');
+  }
+
+  _showRemoteModal() {
+    const overlay = document.getElementById('modal-remote-overlay');
+    const idle = document.getElementById('remote-idle');
+    const active = document.getElementById('remote-active');
+    if (!overlay) return;
+
+    const sim = this.sim;
+    if (sim && sim.isRunning && sim.sessionId) {
+      // Simulation is running — show session code
+      idle?.classList.add('hidden');
+      active?.classList.remove('hidden');
+      const host = window.location.hostname || '127.0.0.1';
+      const port = window.location.port || '3000';
+      const sessionInput = document.getElementById('remote-session-id');
+      const urlInput = document.getElementById('remote-url');
+      if (sessionInput) sessionInput.value = sim.sessionId;
+      if (urlInput) urlInput.value = `http://${host}:${port}/remote?session=${sim.sessionId}`;
+    } else {
+      // Not running — show idle message
+      idle?.classList.remove('hidden');
+      active?.classList.add('hidden');
+    }
+
+    overlay.classList.remove('hidden');
+
+    // Copy session button
+    const copySessionBtn = document.getElementById('btn-copy-session');
+    copySessionBtn?.addEventListener('click', () => {
+      const input = document.getElementById('remote-session-id');
+      if (input) { navigator.clipboard?.writeText(input.value); this.showToast('Session code copied', 'success'); }
+    }, { once: true });
+
+    // Copy URL button
+    const copyUrlBtn = document.getElementById('btn-copy-url');
+    copyUrlBtn?.addEventListener('click', () => {
+      const input = document.getElementById('remote-url');
+      if (input) { navigator.clipboard?.writeText(input.value); this.showToast('URL copied', 'success'); }
+    }, { once: true });
   }
 
   _closeModal() {

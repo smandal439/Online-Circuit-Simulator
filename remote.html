@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ArduSim Remote</title>
+    <link rel="stylesheet" href="css/remote.css">
+    <script>window.require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+</head>
+<body>
+    <header class="top-bar">
+        <span class="logo">ArduSim Remote</span>
+        <span class="conn-status" id="conn-status">Disconnected</span>
+    </header>
+
+    <main>
+        <!-- Session Connect -->
+        <section class="connect-section" id="connect-section">
+            <label for="session-id">Session ID</label>
+            <div class="connect-row">
+                <input type="text" id="session-id" placeholder="e.g. x7k2m" maxlength="10" autocomplete="off" spellcheck="false">
+                <button id="btn-connect" class="btn btn-accent">Connect</button>
+            </div>
+            <span class="hint" id="connect-hint">Enter the session ID shown in the simulator</span>
+        </section>
+
+        <!-- Pin Control (hidden until connected) -->
+        <div id="control-panel" class="hidden">
+            <!-- Digital Pins -->
+            <section class="pin-section">
+                <h3 class="section-title">Digital Pins</h3>
+                <div class="pin-grid" id="digital-pins"></div>
+            </section>
+
+            <!-- Analog / PWM Pins -->
+            <section class="pin-section">
+                <h3 class="section-title">Analog / PWM Pins</h3>
+                <div class="pin-grid" id="analog-pins"></div>
+            </section>
+
+            <!-- Serial Monitor -->
+            <section class="serial-section">
+                <h3 class="section-title">Serial Monitor</h3>
+                <div class="serial-output" id="serial-output">
+                    <div class="serial-empty">Waiting for serial data...</div>
+                </div>
+                <div class="serial-input-row">
+                    <input type="text" id="serial-text" placeholder="Type message..." autocomplete="off">
+                    <button id="btn-send" class="btn btn-accent btn-sm">Send</button>
+                </div>
+            </section>
+
+            <!-- Status Bar -->
+            <footer class="status-bar">
+                <span id="pin-count">0 pins updated</span>
+                <button id="btn-disconnect" class="btn btn-ghost btn-sm">Disconnect</button>
+            </footer>
+        </div>
+    </main>
+
+    <script src="js/remote.js"></script>
+</body>
+</html>

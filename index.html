@@ -214,6 +214,12 @@
                     class="hidden">
                     <path
                         d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 1 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708" />
+                </svg> </button>
+            <div class="hdr-divider"></div> <!-- Remote Control --> <button class="hdr-btn hdr-btn-icon" id="btn-remote"
+                title="Remote Control — control from your phone"> <svg width="16" height="16" viewBox="0 0 16 16"
+                    fill="currentColor">
+                    <path
+                        d="M4.5 1a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2a.5.5 0 0 1 .5-.5M8 3.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5M4.5 8a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2a.5.5 0 0 1 .5-.5M8 8.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2a.5.5 0 0 1 .5-.5m-3-3a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2a.5.5 0 0 1 .5-.5M8 3.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5M5 8H3a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-.5" />
                 </svg> </button> <!-- Keyboard shortcuts -->
             <!-- <button class="hdr-btn hdr-btn-icon" id="btn-shortcuts"
                 title="Keyboard Shortcuts"> <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -683,6 +689,38 @@
             <div class="modal-footer"> <button class="hdr-btn hdr-btn-run" id="btn-props-apply">Apply</button> <button
                     class="hdr-btn hdr-btn-ghost" data-modal="modal-props">Cancel</button> </div>
         </div>
+    </div> <!-- Remote Control Modal -->
+    <div class="modal-overlay hidden" id="modal-remote-overlay" tabindex="-1">
+        <div class="modal modal-sm" id="modal-remote" role="dialog" aria-modal="true"
+            aria-labelledby="modal-remote-title">
+            <div class="modal-header">
+                <h2 id="modal-remote-title">Remote Control</h2> <button class="modal-close"
+                    data-modal="modal-remote-overlay" aria-label="Close">✕</button>
+            </div>
+            <div class="modal-body" id="modal-remote-body">
+                <div id="remote-idle">
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">Start the simulation first, then use this code on your phone to control pins remotely.</p>
+                    <p style="color:var(--text-muted);font-size:12px;">The simulator connects to a public MQTT broker. Your phone opens a web page that also connects to the same broker — no app install needed.</p>
+                </div>
+                <div id="remote-active" class="hidden">
+                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Session Code</label>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;">
+                        <input type="text" id="remote-session-id" readonly
+                            style="flex:1;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-family:var(--font-mono);font-size:20px;letter-spacing:3px;text-align:center;font-weight:700;">
+                        <button class="hdr-btn hdr-btn-ghost" id="btn-copy-session" title="Copy to clipboard"
+                            style="padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;">Copy</button>
+                    </div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Remote URL</label>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;">
+                        <input type="text" id="remote-url" readonly
+                            style="flex:1;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-family:var(--font-mono);font-size:11px;letter-spacing:0;">
+                        <button class="hdr-btn hdr-btn-ghost" id="btn-copy-url" title="Copy URL"
+                            style="padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;">Copy</button>
+                    </div>
+                    <p style="color:var(--text-muted);font-size:11px;">Open this URL on your phone's browser. Both devices must be on the same network.</p>
+                </div>
+            </div>
+        </div>
     </div> <!-- ════════════════ GUIDE OVERLAY (Home / Components / Tutorials) ════════════════ -->
     <div class="guide-overlay hidden" id="guide-overlay" role="dialog" aria-modal="true" aria-label="Help & Guide">
         <div class="guide-shell">
@@ -882,7 +920,7 @@
     <script src="js/components/new_components.js?v=20260825-2"></script>
     <script src="js/components/multimeter.js?v=20260825-2"></script>
     <script src="js/components/function_generator.js?v=20260825-2"></script>
-    <script src="js/simulator.js?v=20260823-5"></script>
+    <script src="js/simulator.js?v=20260826-1"></script>
     <script src="js/canvas.js?v=20260826-3"></script>
     <script src="js/serial.js?v=20260825-1"></script>
     <script src="js/output.js?v=20260825-1"></script>
@@ -894,7 +932,8 @@
     <script src="js/editor.js?v=20260826-4"></script>
     <script src="js/thumbnails.js?v=20260825-1"></script>
     <script src="js/guide.js?v=20260821-1"></script>
-    <script src="js/app.js?v=20260826-2"></script>
+    <script src="js/app.js?v=20260826-3"></script>
+    <script src="js/remote-control.js?v=20260826-1"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

@@ -1,0 +1,88 @@
+{
+  "id": "remote_servo_control",
+  "name": "Remote Servo Control",
+  "icon": "📱",
+  "desc": "Control a servo motor angle from your phone using the Remote Control feature",
+  "tags": [
+    "intermediate",
+    "actuator",
+    "servo",
+    "remote"
+  ],
+  "code": "/*\n * Remote Servo Control\n *\n * Control a servo motor from your phone!\n * Use the A0 slider on the remote to\n * set the servo angle (0-180 degrees).\n *\n * How to use:\n * 1. Run this sketch\n * 2. Click the Remote button (phone icon)\n * 3. Open the URL on your phone\n * 4. Slide A0 to control servo angle\n */\n\n#include <Servo.h>\n\nServo myServo;\nint servoPin = 9;\n\nvoid setup() {\n  Serial.begin(9600);\n  myServo.attach(servoPin);\n  myServo.write(90);\n  Serial.println(\"Servo ready!\");\n  Serial.println(\"Slide A0 to control angle.\");\n}\n\nvoid loop() {\n  int val = analogRead(A0);\n  int angle = map(val, 0, 1023, 0, 180);\n  myServo.write(angle);\n  delay(50);\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100,
+        "width": 230,
+        "height": 150,
+        "props": {
+          "label": "UNO"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "servo1",
+        "type": "servo",
+        "x": 350,
+        "y": 140,
+        "width": 50,
+        "height": 60,
+        "props": {
+          "label": "Servo"
+        },
+        "runtimeState": {
+          "angle": 90
+        },
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "D9"
+        },
+        "to": {
+          "instId": "servo1",
+          "pinId": "signal"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "b1",
+          "pinId": "5V"
+        },
+        "to": {
+          "instId": "servo1",
+          "pinId": "vcc"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "b1",
+          "pinId": "GND1"
+        },
+        "to": {
+          "instId": "servo1",
+          "pinId": "gnd"
+        },
+        "color": null,
+        "waypoints": []
+      }
+    ]
+  }
+}

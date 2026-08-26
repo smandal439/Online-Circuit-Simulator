@@ -55,6 +55,13 @@
 - **Instant URL Sharing**: Unicode-safe base64 project encoding for sharing circuits via a single link.
 - **Progressive Web App (PWA)**: Installable as a standalone desktop or mobile web application.
 
+### 📱 Remote Control (Phone Control)
+- **Control from Your Phone**: Toggle digital pins, adjust analog sliders, and send serial messages from your phone.
+- **No App Install Required**: Opens in any mobile browser — uses MQTT over WebSocket for real-time communication.
+- **Session-Based**: Each simulation gets a unique session code. Share the URL with anyone on the same network.
+- **Full Pin Control**: Toggle D0-D13, adjust A0-A5 (0-1023), control PWM pins D3/D5/D6/D9/D10/D11 (0-255).
+- **Serial Communication**: Send text to the Arduino's Serial input from your phone.
+
 ---
 
 ## 🧭 Interface Guide
@@ -71,6 +78,7 @@ A clean, compact toolbar keeps everything within reach without cluttering the wo
 | **File ▾** (dropdown) | **New**, **Save**, **Download**, **Load**, **Saved Projects**, and **Share**. |
 | **View ▾** (dropdown) | Focus the **Code** editor, **Circuit** canvas, or **Serial** monitor. |
 | **Theme & Shortcuts** | Toggle dark/light theme and view the keyboard reference. |
+| **Remote** (phone icon) | Open remote control modal — shows session code and URL for phone access. |
 
 > The **File** and **View** menus are dropdowns that collapse secondary actions, keeping the header short and the canvas maximized. Menus close on outside click or <kbd>ESC</kbd>.
 
@@ -108,10 +116,46 @@ A clean, compact toolbar keeps everything within reach without cluttering the wo
 
 ## 📦 Component Library
 
-- **Boards**: Arduino Uno R3 (ATmega328P)
-- **Outputs**: Standard LED (Red, Green, Blue, Yellow, White), RGB LED, 16x2 LCD Display (HD44780/I2C), Piezo Buzzer, Micro Servo Motor (SG90)
-- **Inputs**: Push Button, Potentiometer (Rotary Angle Sensor), DHT11 Temperature & Humidity Sensor, Ultrasonic Distance Sensor (HC-SR04)
-- **Passives & Power**: Resistors (custom resistance), 5V Power Supply, Ground (GND) Rail, Breadboard mini
+- **Boards**: Arduino Uno R3 (ATmega328P), ESP32 DevKit V1
+- **Outputs**: Standard LED (Red, Green, Blue, Yellow, Orange, White), RGB LED, Multi-LED Array, 16x2 LCD Display (HD44780/I2C), OLED Display (SSD1306), Piezo Buzzer, 7-Segment Display, NeoPixel Strip, 12V Bulb
+- **Inputs**: Push Button, Potentiometer (Rotary Angle Sensor), Joystick
+- **Actuators**: Micro Servo Motor (SG90), DC Motor, Relay Module, Stepper Motor (28BYJ-48)
+- **Sensors**: DHT11 Temperature & Humidity, HC-SR04 Ultrasonic, LDR Light Sensor, PIR Motion, MPU6050 Accelerometer/Gyro, IR Obstacle, Flex Sensor, Thermistor
+- **Passives & Power**: Resistors (custom resistance), Capacitors, Diode (1N4007), Breadboard, 5V Power Supply, Ground (GND) Rail, MB102 Power Supply, Bench Power Supply
+- **Digital ICs**: 555 Timer, 74HC00 (NAND), 74HC04 (NOT), 74HC08 (AND), 74HC32 (OR), 74HC595 (Shift Register), 74HC138 (Decoder), 74HC245 (Buffer)
+- **Instruments**: Multimeter, Function Generator
+
+---
+
+## 📱 Remote Control
+
+Control your simulated Arduino circuit from your phone! No app install required.
+
+### Quick Start
+1. Build your circuit and write your Arduino sketch
+2. Click **Run** to start the simulation
+3. Click the **Remote button** (phone icon) in the header
+4. Copy the URL and open it on your phone
+5. Toggle digital pins, adjust analog sliders, and send serial messages
+
+### How It Works
+The simulator and phone communicate through a public MQTT broker (HiveMQ) over WebSocket. Each simulation gets a unique session code so multiple users don't interfere with each other.
+
+```
+Phone (browser)  ←→  HiveMQ Broker  ←→  Simulator (browser)
+```
+
+### Phone Interface
+- **Digital Pins (D0-D13)**: Tap to toggle HIGH/LOW
+- **Analog Pins (A0-A5)**: Slide to set value 0-1023
+- **PWM Pins (D3,D5,D6,D9,D0,D11)**: Slide to set duty cycle 0-255
+- **Serial Monitor**: Send text to Arduino's Serial input
+
+### Example Projects
+- **Remote Control LEDs**: Toggle 4 LEDs from your phone
+- **Remote Servo Control**: Use A0 slider to control servo angle
+
+> See the **Examples** panel in the simulator for these projects.
 
 ---
 
@@ -131,11 +175,13 @@ No build step or Node.js environment is required. You can host this static web a
 
 ```
 ├── index.html          # Application shell & layout
-├── css/style.css       # Styling, themes, and responsive rules
+├── remote.html         # Phone remote control page
+├── css/
+│   ├── style.css       # Main styling, themes, and responsive rules
+│   └── remote.css      # Phone remote control styles
 ├── js/
 │   ├── app.js          # Core app logic, UI bindings, dropdowns
 │   ├── canvas.js       # Circuit canvas, wiring, pan/zoom
-│   ├── components.js   # Component library definitions
 │   ├── simulator.js    # Arduino code transpilation & execution
 │   ├── editor.js       # Monaco editor integration
 │   ├── serial.js       # Serial monitor
@@ -143,9 +189,13 @@ No build step or Node.js environment is required. You can host this static web a
 │   ├── plotter.js      # Serial plotter
 │   ├── output.js       # Compile & debug output
 │   ├── storage.js      # localStorage persistence & file IO
-│   ├── sharing.js      # URL-based project sharing
-│   ├── safetyChecker.js# Infinite-loop protection
+│   ├── remote-control.js # Simulator-side MQTT bridge for remote control
+│   ├── remote.js       # Phone-side MQTT client
+│   ├── components/     # Component definitions (boards, LEDs, sensors, etc.)
 │   └── utils.js        # Shared helpers
+├── Examples/           # Example project JSON files
+├── server.js           # Node.js backend (optional, for saved projects)
+├── sw.js               # Service worker for PWA
 └── manifest.json       # PWA manifest
 ```
 

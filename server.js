@@ -236,6 +236,16 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 404, { error: 'Unknown API route' });
   }
 
+  // Remote control page
+  if (pathname === '/remote') {
+    const remotePath = path.join(ROOT, 'remote.html');
+    return fs.readFile(remotePath, (err, data) => {
+      if (err) return sendJson(res, 404, { error: 'Not found' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(data);
+    });
+  }
+
   // Static files
   return serveStatic(req, res, pathname);
 });
