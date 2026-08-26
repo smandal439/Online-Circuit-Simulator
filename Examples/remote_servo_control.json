@@ -1,35 +1,28 @@
 {
   "id": "remote_servo_control",
-  "name": "Remote Servo Control",
+  "name": "Remote Servo Control (ESP32)",
   "icon": "📱",
-  "desc": "Control a servo motor angle from your phone using the Remote Control feature",
+  "desc": "Control a servo motor angle from your phone using ESP32 and Remote Control feature",
   "tags": [
     "intermediate",
     "actuator",
     "servo",
-    "remote"
+    "remote",
+    "esp32"
   ],
-  "code": "/*\n * Remote Servo Control\n *\n * Control a servo motor from your phone!\n * Use the A0 slider on the remote to\n * set the servo angle (0-180 degrees).\n *\n * How to use:\n * 1. Run this sketch\n * 2. Click the Remote button (phone icon)\n * 3. Open the URL on your phone\n * 4. Slide A0 to control servo angle\n */\n\n#include <Servo.h>\n\nServo myServo;\nint servoPin = 9;\n\nvoid setup() {\n  Serial.begin(9600);\n  myServo.attach(servoPin);\n  myServo.write(90);\n  Serial.println(\"Servo ready!\");\n  Serial.println(\"Slide A0 to control angle.\");\n}\n\nvoid loop() {\n  int val = analogRead(A0);\n  int angle = map(val, 0, 1023, 0, 180);\n  myServo.write(angle);\n  delay(50);\n}",
+  "code": "/*\n * Remote Servo Control (ESP32)\n *\n * Control a servo motor from your phone!\n * Use the D35 slider on the remote to\n * set the servo angle (0-180 degrees).\n *\n * How to use:\n * 1. Run this sketch\n * 2. Click the Remote button (phone icon)\n * 3. Open the URL on your phone\n * 4. Slide D35 to control servo angle\n */\n\n#include <Servo.h>\n\nServo myServo;\nint servoPin = 13;\n\nvoid setup() {\n  Serial.begin(115200);\n  myServo.attach(servoPin);\n  myServo.write(90);\n  Serial.println(\"ESP32 Servo ready!\");\n  Serial.println(\"Slide D35 to control angle.\");\n}\n\nvoid loop() {\n  int val = analogRead(35);\n  int angle = map(val, 0, 4095, 0, 180);\n  myServo.write(angle);\n  delay(50);\n}",
   "circuit": {
     "components": [
       {
         "id": "b1",
-        "type": "arduino_uno",
-        "x": 200,
-        "y": 100,
-        "width": 230,
-        "height": 150,
-        "props": {
-          "label": "UNO"
-        },
-        "runtimeState": {},
-        "selected": false,
-        "rotation": 0
+        "type": "esp32_devkit_v1",
+        "x": 100,
+        "y": 80
       },
       {
         "id": "servo1",
         "type": "servo",
-        "x": 350,
+        "x": 320,
         "y": 140,
         "width": 50,
         "height": 60,
@@ -48,7 +41,7 @@
         "id": "w1",
         "from": {
           "instId": "b1",
-          "pinId": "D9"
+          "pinId": "D13"
         },
         "to": {
           "instId": "servo1",
@@ -61,7 +54,7 @@
         "id": "w2",
         "from": {
           "instId": "b1",
-          "pinId": "5V"
+          "pinId": "3V3"
         },
         "to": {
           "instId": "servo1",

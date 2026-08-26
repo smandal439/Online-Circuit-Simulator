@@ -1,36 +1,29 @@
 {
   "id": "remote_control_leds",
-  "name": "Remote Control LEDs",
+  "name": "Remote Control LEDs (ESP32)",
   "icon": "📱",
-  "desc": "Control LEDs from your phone using the Remote Control feature",
+  "desc": "Control 4 LEDs from your phone using ESP32 and Remote Control feature",
   "tags": [
     "intermediate",
     "output",
     "led",
-    "remote"
+    "remote",
+    "esp32"
   ],
-  "code": "/*\n * Remote Control LEDs\n * \n * Use the Remote Control feature to toggle\n * these 4 LEDs from your phone!\n *\n * How to use:\n * 1. Run this sketch\n * 2. Click the Remote button (phone icon) in the header\n * 3. Open the URL on your phone\n * 4. Toggle D2-D5 to control the LEDs\n */\n\nint ledPins[] = {2, 3, 4, 5};\nint ledCount = 4;\n\nvoid setup() {\n  Serial.begin(9600);\n  for (int i = 0; i < ledCount; i++) {\n    pinMode(ledPins[i], OUTPUT);\n    digitalWrite(ledPins[i], LOW);\n  }\n  Serial.println(\"Remote Control LEDs ready!\");\n  Serial.println(\"Toggle D2-D5 from your phone.\");\n}\n\nvoid loop() {\n  // Read pin states and update LEDs\n  for (int i = 0; i < ledCount; i++) {\n    int val = digitalRead(ledPins[i]);\n    digitalWrite(ledPins[i], val);\n  }\n  delay(50);\n}",
+  "code": "/*\n * Remote Control LEDs (ESP32)\n * \n * Use the Remote Control feature to toggle\n * these 4 LEDs from your phone!\n *\n * How to use:\n * 1. Run this sketch\n * 2. Click the Remote button (phone icon) in the header\n * 3. Open the URL on your phone\n * 4. Toggle D2, D4, D5, D12 to control the LEDs\n */\n\nint ledPins[] = {2, 4, 5, 12};\nint ledCount = 4;\n\nvoid setup() {\n  Serial.begin(115200);\n  for (int i = 0; i < ledCount; i++) {\n    pinMode(ledPins[i], OUTPUT);\n    digitalWrite(ledPins[i], LOW);\n  }\n  Serial.println(\"ESP32 Remote Control LEDs ready!\");\n  Serial.println(\"Toggle D2, D4, D5, D12 from your phone.\");\n}\n\nvoid loop() {\n  // Read pin states and update LEDs\n  for (int i = 0; i < ledCount; i++) {\n    int val = digitalRead(ledPins[i]);\n    digitalWrite(ledPins[i], val);\n  }\n  delay(50);\n}",
   "circuit": {
     "components": [
       {
         "id": "b1",
-        "type": "arduino_uno",
-        "x": 200,
-        "y": 100,
-        "width": 230,
-        "height": 150,
-        "props": {
-          "label": "UNO"
-        },
-        "runtimeState": {},
-        "selected": false,
-        "rotation": 0
+        "type": "esp32_devkit_v1",
+        "x": 150,
+        "y": 80
       },
       {
         "id": "led1",
         "type": "led",
-        "x": 100,
-        "y": 130,
+        "x": 30,
+        "y": 120,
         "width": 30,
         "height": 60,
         "props": {
@@ -44,8 +37,8 @@
       {
         "id": "led2",
         "type": "led_green",
-        "x": 160,
-        "y": 130,
+        "x": 80,
+        "y": 120,
         "width": 30,
         "height": 60,
         "props": {
@@ -59,8 +52,8 @@
       {
         "id": "led3",
         "type": "led_blue",
-        "x": 220,
-        "y": 130,
+        "x": 130,
+        "y": 120,
         "width": 30,
         "height": 60,
         "props": {
@@ -74,8 +67,8 @@
       {
         "id": "led4",
         "type": "led_yellow",
-        "x": 280,
-        "y": 130,
+        "x": 180,
+        "y": 120,
         "width": 30,
         "height": 60,
         "props": {
@@ -89,8 +82,8 @@
       {
         "id": "r1",
         "type": "resistor",
-        "x": 105,
-        "y": 225,
+        "x": 35,
+        "y": 215,
         "width": 20,
         "height": 60,
         "props": {
@@ -104,8 +97,8 @@
       {
         "id": "r2",
         "type": "resistor",
-        "x": 165,
-        "y": 225,
+        "x": 85,
+        "y": 215,
         "width": 20,
         "height": 60,
         "props": {
@@ -119,8 +112,8 @@
       {
         "id": "r3",
         "type": "resistor",
-        "x": 225,
-        "y": 225,
+        "x": 135,
+        "y": 215,
         "width": 20,
         "height": 60,
         "props": {
@@ -134,8 +127,8 @@
       {
         "id": "r4",
         "type": "resistor",
-        "x": 285,
-        "y": 225,
+        "x": 185,
+        "y": 215,
         "width": 20,
         "height": 60,
         "props": {
@@ -191,7 +184,7 @@
         "id": "w4",
         "from": {
           "instId": "b1",
-          "pinId": "D3"
+          "pinId": "D4"
         },
         "to": {
           "instId": "led2",
@@ -230,7 +223,7 @@
         "id": "w7",
         "from": {
           "instId": "b1",
-          "pinId": "D4"
+          "pinId": "D5"
         },
         "to": {
           "instId": "led3",
@@ -269,7 +262,7 @@
         "id": "w10",
         "from": {
           "instId": "b1",
-          "pinId": "D5"
+          "pinId": "D12"
         },
         "to": {
           "instId": "led4",
