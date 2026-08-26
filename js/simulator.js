@@ -1769,6 +1769,8 @@ class ArduinoSimulator {
     this._fps = 0;
     this._loopCount = 0;
     this._iterSinceDelay = 0;
+    // Generate session ID for remote control (every run)
+    this.sessionId = Math.random().toString(36).slice(2, 7);
 
     // Compile first
     const result = await this.compile(code);
@@ -1806,9 +1808,6 @@ class ArduinoSimulator {
         // Infinite-loop guard: yield if no delay has been called in many iterations
         if (this._iterSinceDelay > this._MAX_TIGHT_ITERS) {
     this._iterSinceDelay = 0;
-
-    // Generate session ID for remote control (every run)
-    this.sessionId = Math.random().toString(36).slice(2, 7);
           await new Promise(r => setTimeout(r, 1));
         }
         await loop();
