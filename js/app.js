@@ -333,9 +333,12 @@ class App {
 
     // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-      // Don't intercept when user is typing in an input
+      // Don't intercept when user is typing in an input or code editor
       const tag = document.activeElement?.tagName;
-      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+      const inInput = tag === 'INPUT' || tag === 'TEXTAREA'
+        || document.activeElement?.isContentEditable
+        || document.activeElement?.closest?.('.monaco-editor')
+        || document.activeElement?.closest?.('#editor-container');
 
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
         e.preventDefault();

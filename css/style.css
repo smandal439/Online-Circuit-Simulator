@@ -751,10 +751,10 @@ body.view-serial #resizer-bottom { display: none; }
 .components-container::-webkit-scrollbar-track { background: transparent; }
 .components-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-.comp-category {
+.comp-group {
   padding: 6px 10px 4px;
 }
-.comp-category-label {
+.comp-group-title {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;

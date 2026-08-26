@@ -12,7 +12,7 @@ defComp({
   desc: 'Fixed value resistor with color band marking',
   width: 20,
   height: 60,
-  defaultProps: { value: 220, unit: 'Î©' },
+  defaultProps: { value: 220, unit: 'Ω' },
   pins: [
     { id: 'p1', label: '1', type: PIN_TYPE.SIGNAL, x: 10, y:  0, side: 'top' },
     { id: 'p2', label: '2', type: PIN_TYPE.SIGNAL, x: 10, y: 60, side: 'bottom' },
@@ -78,7 +78,7 @@ defComp({
   desc: 'Electrolytic capacitor — stores electrical charge between two plates',
   width: 20,
   height: 60,
-  defaultProps: { value: 100, unit: 'ÂµF' },
+  defaultProps: { value: 100, unit: 'µF' },
   pins: [
     { id: 'pos', label: '+', type: PIN_TYPE.SIGNAL, x: 10, y:  0, side: 'top' },
     { id: 'neg', label: 'âˆ’', type: PIN_TYPE.GND,    x: 10, y: 60, side: 'bottom' },

@@ -727,20 +727,23 @@ void loop() {
    * Update the theme toggle button UI
    */
   updateThemeButtonUI(theme) {
-    const btn = document.getElementById('theme-toggle');
+    const btn = document.getElementById('btn-theme');
     if (!btn) return;
 
     if (theme === 'arduino-light') {
       btn.innerHTML = '🌙';
       btn.title = 'Switch to Dark Theme';
-      btn.className = 'theme-toggle light-mode';
+      btn.classList.add('light-mode');
+      btn.classList.remove('dark-mode');
     } else {
       btn.innerHTML = '☀️';
       btn.title = 'Switch to Light Theme';
-      btn.className = 'theme-toggle dark-mode';
+      btn.classList.add('dark-mode');
+      btn.classList.remove('light-mode');
     }
 
-    document.body.className = theme === 'arduino-light' ? 'light-theme' : 'dark-theme';
+    document.body.classList.toggle('light-theme', theme === 'arduino-light');
+    document.body.classList.toggle('dark-theme', theme !== 'arduino-light');
   },
 
   /**
@@ -853,15 +856,3 @@ void loop() {
 };
 
 window.EditorManager = EditorManager;
-
-// Initialize theme toggle button when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  const themeToggleBtn = document.getElementById('theme-toggle');
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
-      if (window.EditorManager) {
-        window.EditorManager.toggleTheme();
-      }
-    });
-  }
-});

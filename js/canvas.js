@@ -15,6 +15,7 @@ class CircuitCanvas {
     this.wires        = [];  // { id, from:{instId,pinId}, to:{instId,pinId}, color, waypoints:[] }
     this.selected     = null;
     this.selectedWire = null;
+    this._hasStandalonePower = false;
 
     /* Viewport */
     this.panX  = 0;
@@ -158,7 +159,7 @@ class CircuitCanvas {
         ctx.translate(-cx, -cy);
       }
 
-      def.draw(ctx, { ...inst }, sim.isRunning ? sim : null);
+      def.draw(ctx, { ...inst }, sim?.isRunning ? sim : null);
 
       // Draw pins
       if (this.zoom >= 0.5) {
@@ -393,7 +394,7 @@ class CircuitCanvas {
         color = wire.color;
       } else {
         const pinKey = this._getPinKey(wire.from.instId, wire.from.pinId);
-        const val = sim.isRunning ? (sim.pinStates[pinKey] || 0) : 0;
+      const val = sim?.isRunning ? (sim.pinStates[pinKey] || 0) : 0;
         const pinType = this._getPinType(wire.from.instId, wire.from.pinId);
         if (pinType === 'gnd')   color = '#444';
         else if (pinType === 'power') color = '#994444';
@@ -865,6 +866,8 @@ class CircuitCanvas {
       type: orig.type,
       x: orig.x + offset,
       y: orig.y + offset,
+      width: def ? def.width : orig.width,
+      height: def ? def.height : orig.height,
       props: JSON.parse(JSON.stringify(orig.props || (def ? def.defaultProps : {}))),
       runtimeState: {},
       selected: true,
@@ -888,12 +891,15 @@ class CircuitCanvas {
   paste() {
     if (!this._clipboard) return;
     const orig = this._clipboard;
+    const def = window.ArduinoComponents.COMPONENT_DEFS[orig.type];
     const offset = this.GRID * 2;
     const copy = {
       id: `${orig.type}_${Date.now()}`,
       type: orig.type,
       x: orig.x + offset,
       y: orig.y + offset,
+      width: def ? def.width : orig.width,
+      height: def ? def.height : orig.height,
       props: JSON.parse(JSON.stringify(orig.props || {})),
       runtimeState: {},
       selected: true,
@@ -1435,7 +1441,10 @@ class CircuitCanvas {
     if (t && typeof t.closest === 'function' && t.closest('#editor-container')) return;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
 
-    if (e.key === 'Delete' || e.key === 'Backspace') { this.deleteSelected(); }
+    // Prevent repeated actions when key is held down (for single-press actions)
+    if (e.repeat && !e.ctrlKey && !e.metaKey) return;
+
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); this.deleteSelected(); }
     if (e.key === 'r' || e.key === 'R') { this.rotateSelected(); }
     if (e.key === 'Escape') {
       if (this.mode === 'placing') this.cancelPlacing();
@@ -2123,8 +2132,14 @@ class CircuitCanvas {
             const posSources = posNet.sources;
 
             if (posGrounds.length > 0) {
-              const bestGnd = posGrounds.sort((a, b) => a.resistance - b.resistance)[0];
-              const loadR = bestGnd.resistance || 0.1;
+              // Calculate parallel resistance from ALL ground paths
+              // 1/R_total = 1/R1 + 1/R2 + ... + 1/Rn
+              let invRSum = 0;
+              for (const g of posGrounds) {
+                const r = Math.max(0.1, g.resistance || 0.1);
+                invRSum += 1 / r;
+              }
+              const loadR = invRSum > 0 ? 1 / invRSum : 999999;
               let iAct = vSet / Math.max(0.1, loadR);
 
               if (iAct > iLim) {
@@ -2883,11 +2898,20 @@ case 'push_button': {
     while (queue.length > 0) {
       const current = queue.shift();
       const nodeKey = `${current.instId}:${current.pinId}`;
-      if (visited.has(nodeKey)) continue;
-      visited.add(nodeKey);
 
       const inst = this.components.find(c => c.id === current.instId);
       if (!inst) continue;
+
+      // Allow ground pins to be re-visited (for parallel path resistance calculation)
+      // but don't trace further from them
+      const isGroundPin = this._isGroundPin(inst, current.pinId);
+      if (isGroundPin) {
+        grounds.push({ type: 'gnd', instId: inst.id, pinId: current.pinId, resistance: current.resistance });
+        continue;
+      }
+
+      if (visited.has(nodeKey)) continue;
+      visited.add(nodeKey);
 
       // 1. Arduino Uno Pins
       if (inst.type === 'arduino_uno') {
@@ -3127,6 +3151,44 @@ case 'push_button': {
     }
 
     return { sources, grounds };
+  }
+
+  // Quick check if a pin is a ground-type pin (for parallel path re-visiting)
+  _isGroundPin(inst, pinId) {
+    if (inst.type === 'arduino_uno') {
+      return pinId === 'GND1' || pinId === 'GND2' || pinId === 'GND_D' || pinId === 'GND';
+    }
+    if (inst.type === 'esp32_devkit_v1') {
+      return pinId === 'GND1' || pinId === 'GND2' || pinId === 'GND';
+    }
+    if (inst.type === 'power_gnd') return true;
+    if (inst.type === 'bench_power_supply') return pinId === 'NEG' || pinId === 'GND';
+    if (inst.type === 'mb102_power') return pinId === 'gnd_t' || pinId === 'gnd_b' || pinId === 'aux_gnd';
+    if (inst.type === 'battery') return pinId === 'neg';
+    // Arduino digital pin LOW acts as ground
+    if (inst.type === 'arduino_uno' || inst.type === 'esp32_devkit_v1') {
+      const pinNum = this._pinToNumber(pinId);
+      if (pinNum != null) {
+        const sim = window.ArduinoSim;
+        const rawVal = sim && sim.pinStates ? (sim.pinStates[`pin_${pinNum}`] || 0) : 0;
+        if (rawVal === 0) return true;
+      }
+    }
+    // IC output LOW acts as ground
+    const IC_OUTPUT_PINS = {
+      ic_74hc04: ['Y1','Y2','Y3','Y4','Y5','Y6'],
+      ic_74hc00: ['Y1','Y2','Y3','Y4'],
+      ic_74hc08: ['Y1','Y2','Y3','Y4'],
+      ic_74hc32: ['Y1','Y2','Y3','Y4'],
+      ic_74hc595: ['QA','QB','QC','QD','QE','QF','QG','QH'],
+      ic_74hc138: ['Y0','Y1','Y2','Y3','Y4','Y5','Y6','Y7'],
+      ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+    };
+    if (IC_OUTPUT_PINS[inst.type] && IC_OUTPUT_PINS[inst.type].includes(pinId)) {
+      const rawVal = inst.runtimeState && inst.runtimeState[pinId] != null ? inst.runtimeState[pinId] : 0;
+      if (rawVal === 0) return true;
+    }
+    return false;
   }
 
   // Measure total resistance along the shortest resistive path between two pins

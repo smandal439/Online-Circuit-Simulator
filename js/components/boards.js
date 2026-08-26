@@ -45,10 +45,10 @@ defComp({
     { id:'3V3',  label:'3.3V', type:PIN_TYPE.POWER, x:160, y:134, side:'bottom' },
     { id:'RST',  label:'RST',  type:PIN_TYPE.SIGNAL,x:174, y:134, side:'bottom' },
     //I2C PIN on right side
-    { id:'SDA',  label:'SDA',  type:PIN_TYPE.SIGNAL, x:220, y:100, side:'left' },
-    { id:'SCL',  label:'SCL',  type:PIN_TYPE.SIGNAL, x:220, y:110, side:'left' },
-    { id:'5V',   label:'5V',   type:PIN_TYPE.POWER, x:220, y:120, side:'bottom' },
-    { id:'GND3', label:'GND',  type:PIN_TYPE.GND,   x:220, y:130, side:'bottom' },
+    { id:'SDA',  label:'SDA',  type:PIN_TYPE.SIGNAL, x:220, y:100, side:'right' },
+    { id:'SCL',  label:'SCL',  type:PIN_TYPE.SIGNAL, x:220, y:110, side:'right' },
+    { id:'5V2',  label:'5V',   type:PIN_TYPE.POWER, x:220, y:120, side:'right' },
+    { id:'GND3', label:'GND',  type:PIN_TYPE.GND,   x:220, y:130, side:'right' },
     
   ],
   draw(ctx, inst, sim) {

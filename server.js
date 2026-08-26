@@ -244,8 +244,3 @@ server.listen(PORT, HOST, () => {
   console.log(`▶ ArduSim server running at http://${HOST}:${PORT}`);
   console.log(`  DB: ${DB_FILE}`);
 });
-
-// Pass '0.0.0.0' as the host argument
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on LAN at http://<YOUR_LOCAL_IP>:${PORT}`);
-});
