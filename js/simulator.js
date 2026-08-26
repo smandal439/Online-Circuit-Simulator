@@ -1575,7 +1575,8 @@ class ArduinoSimulator {
         const broker = (self._mqtt = self._mqtt || { subs: new Map(), connected: false });
         // Unique per-session suffix so a shared public broker doesn't clash
         // with other users running the same example.
-        const session = Math.random().toString(36).slice(2, 7);
+        // Reuse existing session ID (set in run()) or generate new one
+        const session = self.sessionId || Math.random().toString(36).slice(2, 7);
         self.sessionId = session;
         const ns = (topic) => `${topic}/${session}`;
         const bare = (topic) => (String(topic).endsWith(`/${session}`)
@@ -1804,7 +1805,10 @@ class ArduinoSimulator {
         this._iterSinceDelay++;
         // Infinite-loop guard: yield if no delay has been called in many iterations
         if (this._iterSinceDelay > this._MAX_TIGHT_ITERS) {
-          this._iterSinceDelay = 0;
+    this._iterSinceDelay = 0;
+
+    // Generate session ID for remote control (every run)
+    this.sessionId = Math.random().toString(36).slice(2, 7);
           await new Promise(r => setTimeout(r, 1));
         }
         await loop();
