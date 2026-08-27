@@ -1,0 +1,29 @@
+{
+  "version": "1.1",
+  "name": "AND Gate - 74HC08 on Breadboard",
+  "code": "/*\n * 74HC08 Quad AND Gate Test\n * Two buttons on D2, D3 control inputs A1, B1 of gate 1.\n * Output Y1 drives an LED.\n *\n * AND Truth Table:  Y = A & B\n *   A=0, B=0  ->  Y=0  (LED OFF)\n *   A=0, B=1  ->  Y=0  (LED OFF)\n *   A=1, B=0  ->  Y=0  (LED OFF)\n *   A=1, B=1  ->  Y=1  (LED ON)\n */\n\nint pinA = 2;\nint pinB = 3;\nint ledPin = 13;\n\nvoid setup() {\n  pinMode(pinA, INPUT_PULLUP);\n  pinMode(pinB, INPUT_PULLUP);\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"AND gate test ready\");\n}\n\nvoid loop() {\n  int a = digitalRead(pinA);\n  int b = digitalRead(pinB);\n  int logicA = (a == LOW) ? 1 : 0;\n  int logicB = (b == LOW) ? 1 : 0;\n  int andOut = logicA & logicB;\n  digitalWrite(ledPin, andOut ? HIGH : LOW);\n  Serial.print(\"A=\");\n  Serial.print(logicA);\n  Serial.print(\" B=\");\n  Serial.print(logicB);\n  Serial.print(\" -> Y=\");\n  Serial.println(andOut ? \"1 (ON)\" : \"0 (OFF)\");\n  delay(100);\n}",
+  "circuit": {
+    "components": [
+      { "id": "brd1", "type": "breadboard", "x": 50, "y": 120 },
+      { "id": "b1", "type": "arduino_uno", "x": 450, "y": 50 },
+      { "id": "ic1", "type": "ic_74hc08", "x": 220, "y": 180 },
+      { "id": "btn1", "type": "push_button", "x": 80, "y": 310 },
+      { "id": "btn2", "type": "push_button", "x": 220, "y": 310 },
+      { "id": "led1", "type": "led", "x": 400, "y": 240 },
+      { "id": "r1", "type": "resistor", "x": 400, "y": 320 }
+    ],
+    "wires": [
+      { "id": "pw1", "from": { "instId": "b1", "pinId": "5V" },  "to": { "instId": "ic1", "pinId": "VCC" } },
+      { "id": "pw2", "from": { "instId": "b1", "pinId": "GND1" }, "to": { "instId": "ic1", "pinId": "GND" } },
+      { "id": "i1",  "from": { "instId": "b1", "pinId": "D2" },  "to": { "instId": "btn1", "pinId": "p1" } },
+      { "id": "i2",  "from": { "instId": "btn1", "pinId": "p3" }, "to": { "instId": "b1", "pinId": "GND1" } },
+      { "id": "i3",  "from": { "instId": "b1", "pinId": "D2" },  "to": { "instId": "ic1", "pinId": "A1" } },
+      { "id": "i4",  "from": { "instId": "b1", "pinId": "D3" },  "to": { "instId": "btn2", "pinId": "p1" } },
+      { "id": "i5",  "from": { "instId": "btn2", "pinId": "p3" }, "to": { "instId": "b1", "pinId": "GND1" } },
+      { "id": "i6",  "from": { "instId": "b1", "pinId": "D3" },  "to": { "instId": "ic1", "pinId": "B1" } },
+      { "id": "o1",  "from": { "instId": "ic1", "pinId": "Y1" }, "to": { "instId": "led1", "pinId": "anode" } },
+      { "id": "o2",  "from": { "instId": "led1", "pinId": "cathode" }, "to": { "instId": "r1", "pinId": "p1" } },
+      { "id": "o3",  "from": { "instId": "r1", "pinId": "p2" }, "to": { "instId": "b1", "pinId": "GND1" } }
+    ]
+  }
+}
