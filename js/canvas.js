@@ -1159,7 +1159,7 @@ class CircuitCanvas {
         this._selectAll(false);
         inst.selected = true;
         this.selected = inst;
-        this.requestRender();
+        this._render();
         return;
       }
 
