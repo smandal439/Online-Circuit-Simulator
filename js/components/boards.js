@@ -54,7 +54,7 @@ defComp({
   draw(ctx, inst, sim) {
     const { x, y, width: W, height: H } = inst;
 
-    // â”€â”€ PCB body â”€â”€
+    /*-------------------------------PCB body-------------------------*/
     ctx.save();
     ctx.translate(x, y);
 
@@ -69,13 +69,13 @@ defComp({
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // â”€â”€ Silkscreen frame â”€â”€
+    // -------------------------- Silkscreen frame -------------------------
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1;
     roundRect(ctx, 5, 5, W - 10, H - 10, 6);
     ctx.stroke();
 
-    // â”€â”€ Subtle copper traces â”€â”€
+    // ---------------------- Subtle copper traces ----------------------------
     ctx.strokeStyle = 'rgba(170,220,150,0.10)';
     ctx.lineWidth = 1;
     for (let i = 0; i < 12; i++) {
@@ -91,7 +91,7 @@ defComp({
       ctx.stroke();
     }
 
-    // â”€â”€ USB Type-B connector (left edge) â”€â”€
+    // -------------------- USB Type-B connector (left edge) -------------------------
     ctx.fillStyle = '#7f8c8d';
     roundRect(ctx, -16, 32, 18, 26, 3);
     ctx.fill();
@@ -102,7 +102,7 @@ defComp({
     roundRect(ctx, -10, 42, 9, 5, 1);
     ctx.fill();
 
-    // â”€â”€ 16U2 USB-serial chip (top-left) â”€â”€
+    // ------------------ 16U2 USB-serial chip (top-left) --------------------------
     ctx.fillStyle = '#101010';
     roundRect(ctx, 10, 34, 18, 16, 2);
     ctx.fill();

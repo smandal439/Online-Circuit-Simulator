@@ -2884,7 +2884,7 @@ class CircuitCanvas {
           break;
         }
 
-        case 'lm35': {
+        case 'lm35_sensor': {
           const outPin = this._getConnectedPinNum(inst.id, 'out') ?? this._getConnectedPinNum(inst.id, 'vout');
           if (outPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
             // Temperature in °C (default 25°C)
@@ -2965,7 +2965,7 @@ class CircuitCanvas {
         const pinId = current.pinId;
         if (pinId === 'GND1' || pinId === 'GND2' || pinId === 'GND_D' || pinId === 'GND') {
           grounds.push({ type: 'gnd', instId: inst.id, pinId, resistance: current.resistance });
-        } else if (pinId === '5V' || pinId === 'VIN') {
+        } else if (pinId === '5V' || pinId === 'VIN'||pinId === '5V2') {
           sources.push({ type: '5v', voltage: 5.0, rawVal: 255, resistance: current.resistance });
         } else if (pinId === '3V3') {
           sources.push({ type: '3v3', voltage: 3.3, rawVal: 168, resistance: current.resistance });
