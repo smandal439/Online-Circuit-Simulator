@@ -2285,7 +2285,24 @@ class CircuitCanvas {
           const sigPin = this._getConnectedPinNum(inst.id, 'sig');
           const sigOn = sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates
             ? !!window.ArduinoSim.pinStates[`pin_${sigPin}`] : false;
+          const wasActive = inst.runtimeState.active;
           inst.runtimeState.active = sigOn;
+          // Tick sound on state change
+          if (wasActive !== undefined && wasActive !== sigOn) {
+            try {
+              const ctx = new (window.AudioContext || window.webkitAudioContext)();
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'square';
+              osc.frequency.value = 1200;
+              gain.gain.value = 0.15;
+              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start();
+              osc.stop(ctx.currentTime + 0.05);
+            } catch (e) {}
+          }
           break;
         }
         case 'dc_motor': {
