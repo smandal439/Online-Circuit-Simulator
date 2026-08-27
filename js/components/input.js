@@ -388,7 +388,7 @@ defComp({
   width: 140,
   height: 160,
   defaultProps: {
-    pressedKey: null, // Active key character, e.g., '1', 'A', '#'
+    pressedKey: null,
   },
   pins: [
     { id: 'R1', label: 'R1', type: PIN_TYPE.DIGITAL, x: 20,  y: 160, side: 'bottom' },
@@ -446,10 +446,11 @@ defComp({
 
         // Matrix Pin Short Circuit Simulation Logic
         if (isPressed && sim) {
-          const rPinId = inst.pins[`R${row + 1}`].id;
-          const cPinId = inst.pins[`C${col + 1}`].id;
-          // Connect row and column net to simulate physical button switch press
-          sim.connectPins(rPinId, cPinId);
+          const rPinDef = (inst.pins || []).find(p => p.id === `R${row + 1}`);
+          const cPinDef = (inst.pins || []).find(p => p.id === `C${col + 1}`);
+          if (rPinDef && cPinDef) {
+            sim.connectPins(rPinDef.id, cPinDef.id);
+          }
         }
 
         // Button Surface Base

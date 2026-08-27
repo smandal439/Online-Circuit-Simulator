@@ -691,6 +691,31 @@ class CircuitCanvas {
     return null;
   }
 
+  _hitTestKeypadButton(wx, wy) {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    if (!defs) return null;
+    const keyMap = [
+      ['1','2','3','A'],
+      ['4','5','6','B'],
+      ['7','8','9','C'],
+      ['*','0','#','D']
+    ];
+    const btnW = 24, btnH = 20, startX = 14, startY = 14, gapX = 6, gapY = 6;
+    for (const inst of this.components) {
+      if (inst.type !== 'keypad_4x4') continue;
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 4; col++) {
+          const kx = inst.x + startX + col * (btnW + gapX);
+          const ky = inst.y + startY + row * (btnH + gapY);
+          if (wx >= kx && wx <= kx + btnW && wy >= ky && wy <= ky + btnH) {
+            return { inst, key: keyMap[row][col] };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   _updateSliderValue(drag, wx, wy) {
     const { inst, ctrl, rect } = drag;
 
@@ -1120,6 +1145,21 @@ class CircuitCanvas {
         this._selectAll(false);
         inst.selected = true;
         this.selected = inst;
+        return;
+      }
+
+      // Keypad button click
+      const keypadHit = this._hitTestKeypadButton(world.x, world.y);
+      if (keypadHit) {
+        const { inst, key } = keypadHit;
+        const cur = inst.runtimeState?.pressedKey ?? inst.props?.pressedKey ?? null;
+        const newKey = (cur === key) ? null : key;
+        inst.runtimeState = inst.runtimeState || {};
+        inst.runtimeState.pressedKey = newKey;
+        this._selectAll(false);
+        inst.selected = true;
+        this.selected = inst;
+        this.requestRender();
         return;
       }
 
