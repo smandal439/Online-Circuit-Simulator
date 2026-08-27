@@ -2249,11 +2249,12 @@ class CircuitCanvas {
             const val = inst.runtimeState.value !== undefined ? inst.runtimeState.value : (inst.props.value || 512);
             const maxVal = inst.props.maxValue || 1023;
             const ratio = Math.max(0, Math.min(1, val / maxVal));
-            // Resistive divider: output = source * ratio
+            // Resistive divider: wiper voltage = source voltage * ratio
+            // Convert to 10-bit ADC (0-1023) to match analogRead() range
             const outVoltage = src.voltage * ratio;
-            const outRaw = Math.round((src.rawVal || 255) * ratio);
+            const adcVal = Math.round((outVoltage / 5.0) * 1023);
             if (window.ArduinoSim && window.ArduinoSim.pinStates) {
-              window.ArduinoSim.pinStates[`pin_${wiperPin}`] = outRaw;
+              window.ArduinoSim.pinStates[`pin_${wiperPin}`] = adcVal;
             }
           }
           break;
