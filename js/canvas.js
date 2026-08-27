@@ -6,29 +6,29 @@
 
 class CircuitCanvas {
   constructor(canvasEl, wrapperEl) {
-    this.canvas   = canvasEl;
-    this.wrapper  = wrapperEl;
-    this.ctx      = canvasEl.getContext('2d');
+    this.canvas = canvasEl;
+    this.wrapper = wrapperEl;
+    this.ctx = canvasEl.getContext('2d');
 
     /* State */
-    this.components   = [];  // { id, type, x, y, props, runtimeState, selected, rotation }
-    this.wires        = [];  // { id, from:{instId,pinId}, to:{instId,pinId}, color, waypoints:[] }
-    this.selected     = null;
+    this.components = [];  // { id, type, x, y, props, runtimeState, selected, rotation }
+    this.wires = [];  // { id, from:{instId,pinId}, to:{instId,pinId}, color, waypoints:[] }
+    this.selected = null;
     this.selectedWire = null;
     this._hasStandalonePower = false;
 
     /* Viewport */
-    this.panX  = 0;
-    this.panY  = 0;
-    this.zoom  = 1;
-    this.GRID  = 5;
+    this.panX = 0;
+    this.panY = 0;
+    this.zoom = 1;
+    this.GRID = 5;
 
     /* Interaction state machine */
-    this.mode         = 'idle';   // idle | dragging | panning | wiring | placing | wiredrag
-    this.dragging     = null;     // { inst, offsetX, offsetY }
-    this.wiringFrom   = null;     // { inst, pin, wx, wy }
-    this.wireMouse    = null;     // { x, y } world coords
-    this.placingType  = null;
+    this.mode = 'idle';   // idle | dragging | panning | wiring | placing | wiredrag
+    this.dragging = null;     // { inst, offsetX, offsetY }
+    this.wiringFrom = null;     // { inst, pin, wx, wy }
+    this.wireMouse = null;     // { x, y } world coords
+    this.placingType = null;
     this._wireOffsets = {};       // wireId -> {hx, hy} routing hint for wire reshape
     this.draggingWire = null;     // { wireId, segIdx } — which wire segment is being dragged
     this.placingMouse = null;
@@ -47,21 +47,21 @@ class CircuitCanvas {
     this._rafId = requestAnimationFrame(() => this._render());
 
     /* Callbacks */
-    this.onWireChanged  = null;
-    this.onCompChanged  = null;
-    this.onPinClick     = null;  // (inst, pin) when user clicks a pin
-    this.onContextMenu  = null;
+    this.onWireChanged = null;
+    this.onCompChanged = null;
+    this.onPinClick = null;  // (inst, pin) when user clicks a pin
+    this.onContextMenu = null;
 
     /* Pin tooltip */
     this.tooltipEl = null;
-    this._tipKey  = null;
+    this._tipKey = null;
   }
 
   /* ══════════════ RESIZE ══════════════ */
   _resize() {
     const w = this.wrapper.clientWidth;
     const h = this.wrapper.clientHeight;
-    this.canvas.width  = w;
+    this.canvas.width = w;
     this.canvas.height = h;
     if (this.panX === 0 && this.panY === 0) {
       this.panX = w / 2 - 200;
@@ -193,7 +193,7 @@ class CircuitCanvas {
       // Check if wired
       const isWired = this.wires.some(w =>
         (w.from.instId === inst.id && w.from.pinId === pin.id) ||
-        (w.to.instId   === inst.id && w.to.pinId   === pin.id)
+        (w.to.instId === inst.id && w.to.pinId === pin.id)
       );
 
       // Get pin state
@@ -202,9 +202,9 @@ class CircuitCanvas {
 
       // Pin color
       let pinColor;
-      if (pin.type === 'gnd')    pinColor = '#666';
+      if (pin.type === 'gnd') pinColor = '#666';
       else if (pin.type === 'power') pinColor = '#cc3333';
-      else if (pin.type === 'pwm')   pinColor = val > 0 ? `rgba(188,140,255,${0.4 + val/255*0.6})` : '#555';
+      else if (pin.type === 'pwm') pinColor = val > 0 ? `rgba(188,140,255,${0.4 + val / 255 * 0.6})` : '#555';
       else if (pin.type === 'analog') pinColor = '#e8c840';
       else pinColor = val > 0 ? '#ff5555' : '#3388cc';
 
@@ -259,7 +259,7 @@ class CircuitCanvas {
       const w = def.width || 40, h = def.height || 40;
       side = pin.y < h * 0.5 ? 'top' : (pin.y > h * 0.5 ? 'bottom' : (pin.x < w * 0.5 ? 'left' : 'right'));
     }
-    const dirs = { top: {x: 0, y: -1}, bottom: {x: 0, y: 1}, left: {x: -1, y: 0}, right: {x: 1, y: 0} };
+    const dirs = { top: { x: 0, y: -1 }, bottom: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
     let d = dirs[side] || { x: 0, y: 1 };
     const rot = (inst.rotation || 0) % 4;
     for (let i = 0; i < rot; i++) d = { x: -d.y, y: d.x }; // rotate 90° clockwise
@@ -291,7 +291,7 @@ class CircuitCanvas {
       } else {
         const r0 = q[i] / p[i];
         if (p[i] < 0) { if (r0 > tmax) return false; if (r0 > tmin) tmin = r0; }
-        else          { if (r0 < tmin) return false; if (r0 < tmax) tmax = r0; }
+        else { if (r0 < tmin) return false; if (r0 < tmax) tmax = r0; }
       }
     }
     return tmin <= tmax;
@@ -354,9 +354,9 @@ class CircuitCanvas {
     for (const cand of candidates) {
       const sc = this._scorePath(cand);
       if (!bestScore ||
-          sc.penalty < bestScore.penalty ||
-          (sc.penalty === bestScore.penalty && sc.bends < bestScore.bends) ||
-          (sc.penalty === bestScore.penalty && sc.bends === bestScore.bends && sc.len < bestScore.len)) {
+        sc.penalty < bestScore.penalty ||
+        (sc.penalty === bestScore.penalty && sc.bends < bestScore.bends) ||
+        (sc.penalty === bestScore.penalty && sc.bends === bestScore.bends && sc.len < bestScore.len)) {
         best = cand;
         bestScore = sc;
       }
@@ -394,11 +394,11 @@ class CircuitCanvas {
         color = wire.color;
       } else {
         const pinKey = this._getPinKey(wire.from.instId, wire.from.pinId);
-      const val = sim?.isRunning ? (sim.pinStates[pinKey] || 0) : 0;
+        const val = sim?.isRunning ? (sim.pinStates[pinKey] || 0) : 0;
         const pinType = this._getPinType(wire.from.instId, wire.from.pinId);
-        if (pinType === 'gnd')   color = '#444';
+        if (pinType === 'gnd') color = '#444';
         else if (pinType === 'power') color = '#994444';
-        else if (val > 1 && val <= 255) color = `rgba(247,201,72,${0.6 + val/255*0.4})`;
+        else if (val > 1 && val <= 255) color = `rgba(247,201,72,${0.6 + val / 255 * 0.4})`;
         else color = val > 0 ? '#cc3333' : '#2266aa';
       }
 
@@ -736,16 +736,16 @@ class CircuitCanvas {
     const wy = Number.isFinite(Number(worldY)) ? Number(worldY) : 0;
 
     const inst = {
-      id:           `comp_${Date.now()}_${Math.random().toString(36).substr(2,5)}`,
+      id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       type,
-      x:            this._snap(wx - def.width / 2),
-      y:            this._snap(wy - def.height / 2),
-      width:        def.width,
-      height:       def.height,
-      props:        { ...(def.defaultProps || {}) },
+      x: this._snap(wx - def.width / 2),
+      y: this._snap(wy - def.height / 2),
+      width: def.width,
+      height: def.height,
+      props: { ...(def.defaultProps || {}) },
       runtimeState: {},
-      selected:     false,
-      rotation:     0,
+      selected: false,
+      rotation: 0,
     };
 
     this._pushHistory();
@@ -777,7 +777,7 @@ class CircuitCanvas {
     const wire = {
       id: `wire_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       from: { instId: fromInstId, pinId: fromPinId },
-      to:   { instId: toInstId,   pinId: toPinId },
+      to: { instId: toInstId, pinId: toPinId },
       color: color || null,
       waypoints: Array.isArray(waypoints) ? waypoints.map(wp => ({ x: wp.x, y: wp.y })) : []
     };
@@ -949,18 +949,18 @@ class CircuitCanvas {
   _bindEvents() {
     const canvas = this.canvas;
 
-    canvas.addEventListener('mousedown',  e => this._onMouseDown(e));
-    canvas.addEventListener('mousemove',  e => this._onMouseMove(e));
-    canvas.addEventListener('mouseup',    e => this._onMouseUp(e));
-    canvas.addEventListener('wheel',      e => this._onWheel(e), { passive: false });
-    canvas.addEventListener('dblclick',   e => this._onDblClick(e));
-    canvas.addEventListener('contextmenu',e => this._onContextMenu(e));
+    canvas.addEventListener('mousedown', e => this._onMouseDown(e));
+    canvas.addEventListener('mousemove', e => this._onMouseMove(e));
+    canvas.addEventListener('mouseup', e => this._onMouseUp(e));
+    canvas.addEventListener('wheel', e => this._onWheel(e), { passive: false });
+    canvas.addEventListener('dblclick', e => this._onDblClick(e));
+    canvas.addEventListener('contextmenu', e => this._onContextMenu(e));
     canvas.addEventListener('mouseleave', () => this._hidePinTooltip());
 
     // Touch events for mobile
-    canvas.addEventListener('touchstart',  e => this._onTouchStart(e), { passive: false });
-    canvas.addEventListener('touchmove',   e => this._onTouchMove(e), { passive: false });
-    canvas.addEventListener('touchend',    e => this._onTouchEnd(e), { passive: false });
+    canvas.addEventListener('touchstart', e => this._onTouchStart(e), { passive: false });
+    canvas.addEventListener('touchmove', e => this._onTouchMove(e), { passive: false });
+    canvas.addEventListener('touchend', e => this._onTouchEnd(e), { passive: false });
 
     document.addEventListener('keydown', e => this._onKeyDown(e));
     document.addEventListener('mouseup', () => { if (this.mode === 'panning') this.mode = 'idle'; });
@@ -1252,7 +1252,7 @@ class CircuitCanvas {
         const a = initPts[segIdx];
         const b = initPts[segIdx + 1];
         const isHoriz = Math.abs(a.y - b.y) <= 2;
-        const isVert  = Math.abs(a.x - b.x) <= 2;
+        const isVert = Math.abs(a.x - b.x) <= 2;
 
         if (isHoriz) {
           if (initPts.length === 2) {
@@ -1505,11 +1505,11 @@ class CircuitCanvas {
   _pinTypeLabel(type) {
     const map = {
       digital: 'Digital I/O',
-      pwm:     'PWM (Digital)',
-      analog:  'Analog In (A/D)',
-      power:   'Power',
-      gnd:     'Ground',
-      signal:  'Signal',
+      pwm: 'PWM (Digital)',
+      analog: 'Analog In (A/D)',
+      power: 'Power',
+      gnd: 'Ground',
+      signal: 'Signal',
     };
     return map[type] || type;
   }
@@ -1569,7 +1569,7 @@ class CircuitCanvas {
         }
       }
       if (inst.type === 'esp32_devkit_v1') {
-        const espAliases = { VP:36, VN:39, TX0:1, RX0:3, EN:0 };
+        const espAliases = { VP: 36, VN: 39, TX0: 1, RX0: 3, EN: 0 };
         if (pin.id in espAliases || /^D\d+$/.test(pin.id)) {
           addRow('GPIO', pinNum);
         }
@@ -1592,10 +1592,10 @@ class CircuitCanvas {
     const pad = 14;
     el.classList.remove('hidden');
     el.style.left = `${e.clientX + pad}px`;
-    el.style.top  = `${e.clientY + pad}px`;
+    el.style.top = `${e.clientY + pad}px`;
     const r = el.getBoundingClientRect();
-    if (r.right > window.innerWidth - 8)  el.style.left = `${Math.max(8, e.clientX - r.width - pad)}px`;
-    if (r.bottom > window.innerHeight - 8) el.style.top  = `${Math.max(8, e.clientY - r.height - pad)}px`;
+    if (r.right > window.innerWidth - 8) el.style.left = `${Math.max(8, e.clientX - r.width - pad)}px`;
+    if (r.bottom > window.innerHeight - 8) el.style.top = `${Math.max(8, e.clientY - r.height - pad)}px`;
   }
 
   _hidePinTooltip() {
@@ -1609,7 +1609,7 @@ class CircuitCanvas {
       const def = COMPONENT_DEFS[inst.type];
       if (!def) continue;
       if (wx >= inst.x && wx <= inst.x + def.width &&
-          wy >= inst.y && wy <= inst.y + def.height) {
+        wy >= inst.y && wy <= inst.y + def.height) {
         return inst;
       }
     }
@@ -1655,9 +1655,9 @@ class CircuitCanvas {
 
   _distToSegment(px, py, x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
-    const t = Math.max(0, Math.min(1, ((px-x1)*dx + (py-y1)*dy) / (dx*dx + dy*dy || 1)));
-    const nx = x1 + t*dx, ny = y1 + t*dy;
-    return Math.sqrt((px-nx)**2 + (py-ny)**2);
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy || 1)));
+    const nx = x1 + t * dx, ny = y1 + t * dy;
+    return Math.sqrt((px - nx) ** 2 + (py - ny) ** 2);
   }
 
   /* ══════════════ UTILITIES ══════════════ */
@@ -1698,12 +1698,12 @@ class CircuitCanvas {
   }
 
   _pinToNumber(pinId) {
-    const analogMap = { A0:14, A1:15, A2:16, A3:17, A4:18, A5:19 };
+    const analogMap = { A0: 14, A1: 15, A2: 16, A3: 17, A4: 18, A5: 19 };
     if (pinId in analogMap) return analogMap[pinId];
     // ESP32 DevKit V1 pin aliases
-    const esp32Map = { VP:36, VN:39, TX0:1, RX0:3, EN:0 };
+    const esp32Map = { VP: 36, VN: 39, TX0: 1, RX0: 3, EN: 0 };
     if (pinId in esp32Map) return esp32Map[pinId];
-    const n = parseInt(pinId.replace(/[^0-9]/g,''));
+    const n = parseInt(pinId.replace(/[^0-9]/g, ''));
     return isNaN(n) ? 0 : n;
   }
 
@@ -1787,7 +1787,7 @@ class CircuitCanvas {
     this._updateZoomDisplay();
   }
 
-  zoomIn()  { this.zoom = Math.min(4, this.zoom * 1.2); this._updateZoomDisplay(); }
+  zoomIn() { this.zoom = Math.min(4, this.zoom * 1.2); this._updateZoomDisplay(); }
   zoomOut() { this.zoom = Math.max(0.1, this.zoom / 1.2); this._updateZoomDisplay(); }
 
   /* ══════════════ HISTORY ══════════════ */
@@ -1825,7 +1825,7 @@ class CircuitCanvas {
       this.selected = null;
       this.selectedWire = null;
       this._onChanged();
-    } catch(e) {}
+    } catch (e) { }
   }
 
   /* ══════════════ SERIALIZE ══════════════ */
@@ -1874,7 +1874,7 @@ class CircuitCanvas {
       .map(w => ({
         id: String(w.id || `wire_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
         from: { instId: String(w.from.instId), pinId: String(w.from.pinId) },
-        to:   { instId: String(w.to.instId),   pinId: String(w.to.pinId) },
+        to: { instId: String(w.to.instId), pinId: String(w.to.pinId) },
         color: (typeof w.color === 'string' && w.color.length > 0) ? w.color : null,
         waypoints: Array.isArray(w.waypoints)
           ? w.waypoints.filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y)).map(p => ({ x: Number(p.x), y: Number(p.y) }))
@@ -1907,7 +1907,7 @@ class CircuitCanvas {
     try {
       // Render to a temp canvas with white background
       const tmp = document.createElement('canvas');
-      tmp.width  = this.canvas.width;
+      tmp.width = this.canvas.width;
       tmp.height = this.canvas.height;
       const tc = tmp.getContext('2d');
       tc.fillStyle = '#0d1117';
@@ -1944,89 +1944,89 @@ class CircuitCanvas {
         case 'led_yellow':
         case 'led_orange':
         case 'led_white':
-        {
-          // 1. Trace Anode (+) to voltage sources & series resistance
-          const anodeNet = this._tracePinNet(inst.id, 'anode');
-          // 2. Trace Cathode (-) to Ground paths & series resistance
-          const cathodeNet = this._tracePinNet(inst.id, 'cathode');
+          {
+            // 1. Trace Anode (+) to voltage sources & series resistance
+            const anodeNet = this._tracePinNet(inst.id, 'anode');
+            // 2. Trace Cathode (-) to Ground paths & series resistance
+            const cathodeNet = this._tracePinNet(inst.id, 'cathode');
 
-          const hasGround = cathodeNet.grounds.length > 0;
-          const bestSource = anodeNet.sources.sort((a, b) => b.voltage - a.voltage)[0] || null;
+            const hasGround = cathodeNet.grounds.length > 0;
+            const bestSource = anodeNet.sources.sort((a, b) => b.voltage - a.voltage)[0] || null;
 
-          if (!hasGround || !bestSource || bestSource.voltage <= 0) {
-            // No complete circuit: missing ground or missing voltage source -> OFF
-            inst.runtimeState.val = 0;
-            inst.runtimeState.lit = false;
-            inst.runtimeState.brightness = 0;
-            inst.runtimeState.current_mA = 0;
-            inst.runtimeState.overload = false;
-            inst.runtimeState.blown = false;
-            inst.runtimeState._warnedBlown = false;
-          } else {
-            // Complete circuit! Calculate total resistance (anode path + cathode path + Arduino pin resistance)
-            const bestGround = cathodeNet.grounds.sort((a, b) => a.resistance - b.resistance)[0];
-            const rTotal = Math.max(10, (bestSource.resistance || 0) + (bestGround.resistance || 0) + 25);
-            const vSource = bestSource.voltage; // e.g. 5.0V or PWM duty cycle
-            const vf = 2.0; // typical LED forward voltage drop (V)
-            const rawVal = bestSource.rawVal;
-
-            // PWM (analogWrite, value 2–254 on a digital pin): brightness follows the
-            // duty cycle directly so fades are clearly visible, even below Vf.
-            const isPWM = bestSource.type === 'digital' && rawVal > 1 && rawVal < 255;
-
-            if (isPWM) {
-              const frac = rawVal / 255;
-              // Slight perceptual ease so the eye sees a smooth ramp
-              const normBrightness = Math.max(0, Math.min(1.0, Math.pow(frac, 0.8)));
-              inst.runtimeState.val = rawVal;
-              inst.runtimeState.lit = normBrightness > 0.02;
-              inst.runtimeState.brightness = normBrightness;
-              inst.runtimeState.current_mA = vSource >= vf ? ((vSource - vf) / rTotal) * 1000 : 0;
-            } else if (vSource < vf) {
+            if (!hasGround || !bestSource || bestSource.voltage <= 0) {
+              // No complete circuit: missing ground or missing voltage source -> OFF
               inst.runtimeState.val = 0;
               inst.runtimeState.lit = false;
               inst.runtimeState.brightness = 0;
               inst.runtimeState.current_mA = 0;
-            } else {
-              // Current in mA: I = (V_source - Vf) / R_total * 1000
-              const i_mA = ((vSource - vf) / rTotal) * 1000;
-              inst.runtimeState.current_mA = i_mA;
-
-              // LED nominal full brightness is ~15mA (standard 220 ohm resistor gives ~12.2mA -> ~0.93)
-              // Human perceptual brightness response: (I / 14mA)^0.55
-              const normBrightness = Math.max(0, Math.min(1.0, Math.pow(i_mA / 14.0, 0.55)));
-
-              inst.runtimeState.val = rawVal;
-              inst.runtimeState.lit = normBrightness > 0.02;
-              inst.runtimeState.brightness = normBrightness;
-            }
-
-            // ── Overload / failure detection ──
-            // A standard LED is rated for ~20 mA. Above 20 mA it's stressed (warning),
-            // above 40 mA (e.g. connected straight to 5V without a resistor) it "blows".
-            const iLed = inst.runtimeState.current_mA || 0;
-            inst.runtimeState.overload = iLed > 20;
-            inst.runtimeState.blown = iLed > 40;
-
-            if (inst.runtimeState.blown) {
-              inst.runtimeState.lit = false;
-              inst.runtimeState.brightness = 0;
-              inst.runtimeState.val = 0;
-              if (!inst.runtimeState._warnedBlown) {
-                inst.runtimeState._warnedBlown = true;
-                if (window.OutputPanel) {
-                  window.OutputPanel.log(
-                    `LED (${inst.id}) is over-current (~${Math.round(iLed)} mA) without a current-limiting resistor and has blown! Add a 220Ω resistor in series.`,
-                    'warn'
-                  );
-                }
-              }
-            } else {
+              inst.runtimeState.overload = false;
+              inst.runtimeState.blown = false;
               inst.runtimeState._warnedBlown = false;
+            } else {
+              // Complete circuit! Calculate total resistance (anode path + cathode path + Arduino pin resistance)
+              const bestGround = cathodeNet.grounds.sort((a, b) => a.resistance - b.resistance)[0];
+              const rTotal = Math.max(10, (bestSource.resistance || 0) + (bestGround.resistance || 0) + 25);
+              const vSource = bestSource.voltage; // e.g. 5.0V or PWM duty cycle
+              const vf = 2.0; // typical LED forward voltage drop (V)
+              const rawVal = bestSource.rawVal;
+
+              // PWM (analogWrite, value 2–254 on a digital pin): brightness follows the
+              // duty cycle directly so fades are clearly visible, even below Vf.
+              const isPWM = bestSource.type === 'digital' && rawVal > 1 && rawVal < 255;
+
+              if (isPWM) {
+                const frac = rawVal / 255;
+                // Slight perceptual ease so the eye sees a smooth ramp
+                const normBrightness = Math.max(0, Math.min(1.0, Math.pow(frac, 0.8)));
+                inst.runtimeState.val = rawVal;
+                inst.runtimeState.lit = normBrightness > 0.02;
+                inst.runtimeState.brightness = normBrightness;
+                inst.runtimeState.current_mA = vSource >= vf ? ((vSource - vf) / rTotal) * 1000 : 0;
+              } else if (vSource < vf) {
+                inst.runtimeState.val = 0;
+                inst.runtimeState.lit = false;
+                inst.runtimeState.brightness = 0;
+                inst.runtimeState.current_mA = 0;
+              } else {
+                // Current in mA: I = (V_source - Vf) / R_total * 1000
+                const i_mA = ((vSource - vf) / rTotal) * 1000;
+                inst.runtimeState.current_mA = i_mA;
+
+                // LED nominal full brightness is ~15mA (standard 220 ohm resistor gives ~12.2mA -> ~0.93)
+                // Human perceptual brightness response: (I / 14mA)^0.55
+                const normBrightness = Math.max(0, Math.min(1.0, Math.pow(i_mA / 14.0, 0.55)));
+
+                inst.runtimeState.val = rawVal;
+                inst.runtimeState.lit = normBrightness > 0.02;
+                inst.runtimeState.brightness = normBrightness;
+              }
+
+              // ── Overload / failure detection ──
+              // A standard LED is rated for ~20 mA. Above 20 mA it's stressed (warning),
+              // above 40 mA (e.g. connected straight to 5V without a resistor) it "blows".
+              const iLed = inst.runtimeState.current_mA || 0;
+              inst.runtimeState.overload = iLed > 20;
+              inst.runtimeState.blown = iLed > 40;
+
+              if (inst.runtimeState.blown) {
+                inst.runtimeState.lit = false;
+                inst.runtimeState.brightness = 0;
+                inst.runtimeState.val = 0;
+                if (!inst.runtimeState._warnedBlown) {
+                  inst.runtimeState._warnedBlown = true;
+                  if (window.OutputPanel) {
+                    window.OutputPanel.log(
+                      `LED (${inst.id}) is over-current (~${Math.round(iLed)} mA) without a current-limiting resistor and has blown! Add a 220Ω resistor in series.`,
+                      'warn'
+                    );
+                  }
+                }
+              } else {
+                inst.runtimeState._warnedBlown = false;
+              }
             }
+            break;
           }
-          break;
-        }
         case 'bulb_12v': {
           const anodeHasWire = this.wires.some(w =>
             (w.from.instId === inst.id && w.from.pinId === 'anode') ||
@@ -2180,8 +2180,8 @@ class CircuitCanvas {
           break;
         }
         case 'seg7': {
-          const segPins = ['segA','segB','segC','segD','segE','segF','segG','dp'];
-          const segKeys = ['A','B','C','D','E','F','G','DP'];
+          const segPins = ['segA', 'segB', 'segC', 'segD', 'segE', 'segF', 'segG', 'dp'];
+          const segKeys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'DP'];
           const segments = {};
           segPins.forEach((pinId, i) => {
             const pinNum = this._getConnectedPinNum(inst.id, pinId);
@@ -2204,19 +2204,19 @@ class CircuitCanvas {
           }
           break;
         }
-case 'push_button': {
-  const pressed = inst.runtimeState.pressed;
-  const p1 = this._getConnectedPinNum(inst.id, 'p1');
-  const p3 = this._getConnectedPinNum(inst.id, 'p3');
-  if (p1 !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
-    if (pressed) {
-      window.ArduinoSim.pinStates[`pin_${p1}`] = 0; // pressed → connects to GND → LOW
-    } else {
-      window.ArduinoSim.pinStates[`pin_${p1}`] = 1; // not pressed → INPUT_PULLUP → HIGH
-    }
-  }
-  break;
-}
+        case 'push_button': {
+          const pressed = inst.runtimeState.pressed;
+          const p1 = this._getConnectedPinNum(inst.id, 'p1');
+          const p3 = this._getConnectedPinNum(inst.id, 'p3');
+          if (p1 !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+            if (pressed) {
+              window.ArduinoSim.pinStates[`pin_${p1}`] = 0; // pressed → connects to GND → LOW
+            } else {
+              window.ArduinoSim.pinStates[`pin_${p1}`] = 1; // not pressed → INPUT_PULLUP → HIGH
+            }
+          }
+          break;
+        }
         case 'servo': {
           const sigNet = this._tracePinNet(inst.id, 'signal');
           const source = sigNet.sources[0];
@@ -2365,7 +2365,7 @@ case 'push_button': {
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
-          const gates = [['A1','B1','Y1'],['A2','B2','Y2'],['A3','B3','Y3'],['A4','B4','Y4']];
+          const gates = [['A1', 'B1', 'Y1'], ['A2', 'B2', 'Y2'], ['A3', 'B3', 'Y3'], ['A4', 'B4', 'Y4']];
           for (const [a, b, y] of gates) {
             const outVal = (read(a) & read(b)) ? 0 : 1;
             inst.runtimeState[y] = outVal ? 255 : 0;
@@ -2389,7 +2389,7 @@ case 'push_button': {
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
           const gates = [
-            ['A1','Y1'],['A2','Y2'],['A3','Y3'],['A4','Y4'],['A5','Y5'],['A6','Y6']
+            ['A1', 'Y1'], ['A2', 'Y2'], ['A3', 'Y3'], ['A4', 'Y4'], ['A5', 'Y5'], ['A6', 'Y6']
           ];
           for (const [a, y] of gates) {
             const outVal = read(a) ? 0 : 1;
@@ -2413,7 +2413,7 @@ case 'push_button': {
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
-          const gates = [['A1','B1','Y1'],['A2','B2','Y2'],['A3','B3','Y3'],['A4','B4','Y4']];
+          const gates = [['A1', 'B1', 'Y1'], ['A2', 'B2', 'Y2'], ['A3', 'B3', 'Y3'], ['A4', 'B4', 'Y4']];
           for (const [a, b, y] of gates) {
             const outVal = read(a) & read(b);
             inst.runtimeState[y] = outVal ? 255 : 0;
@@ -2436,7 +2436,7 @@ case 'push_button': {
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
           };
-          const gates = [['A1','B1','Y1'],['A2','B2','Y2'],['A3','B3','Y3'],['A4','B4','Y4']];
+          const gates = [['A1', 'B1', 'Y1'], ['A2', 'B2', 'Y2'], ['A3', 'B3', 'Y3'], ['A4', 'B4', 'Y4']];
           for (const [a, b, y] of gates) {
             const outVal = read(a) | read(b);
             inst.runtimeState[y] = outVal ? 255 : 0;
@@ -2496,7 +2496,7 @@ case 'push_button': {
           const output = outputActive ? inst.runtimeState._latchReg : 0;
           inst.runtimeState.bits = output;
 
-          ['QA','QB','QC','QD','QE','QF','QG','QH'].forEach((pinId, i) => {
+          ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'].forEach((pinId, i) => {
             const bitVal = (output >> i) & 1;
             inst.runtimeState[pinId] = bitVal ? 255 : 0;
             write(pinId, bitVal);
@@ -2726,8 +2726,8 @@ case 'push_button': {
             return best ? (best.resistance || 0) : 0;
           };
 
-          const redNet  = this._tracePinNet(inst.id, 'probe_red');
-          const comNet  = this._tracePinNet(inst.id, 'probe_com');
+          const redNet = this._tracePinNet(inst.id, 'probe_red');
+          const comNet = this._tracePinNet(inst.id, 'probe_com');
 
           let displayText = '0.000';
           let displayUnit = 'V';
@@ -2846,11 +2846,11 @@ case 'push_button': {
             }
           }
 
-          inst.runtimeState.displayText  = displayText;
-          inst.runtimeState.displayUnit  = displayUnit;
-          inst.runtimeState.displayMode  = displayMode;
-          inst.runtimeState.displayBeep  = displayBeep;
-          inst.runtimeState.mode         = mode;
+          inst.runtimeState.displayText = displayText;
+          inst.runtimeState.displayUnit = displayUnit;
+          inst.runtimeState.displayMode = displayMode;
+          inst.runtimeState.displayBeep = displayBeep;
+          inst.runtimeState.mode = mode;
           break;
         }
 
@@ -2866,12 +2866,12 @@ case 'push_button': {
             const dutyFrac = (duty || 50) / 100;
             let v = 0;
             switch (wave) {
-              case 'sine':     v = Math.sin(2 * Math.PI * tau); break;
-              case 'square':   v = tau < dutyFrac ? 1 : -1; break;
+              case 'sine': v = Math.sin(2 * Math.PI * tau); break;
+              case 'square': v = tau < dutyFrac ? 1 : -1; break;
               case 'triangle': v = tau < dutyFrac ? -1 + 2 * (tau / dutyFrac) : 1 - 2 * ((tau - dutyFrac) / (1 - dutyFrac)); break;
               case 'sawtooth': v = 2 * tau - 1; break;
-              case 'noise':    v = Math.sin(t * freq * 137.5) * 0.7 + Math.sin(t * freq * 239.1) * 0.3; break;
-              default:         v = Math.sin(2 * Math.PI * tau); break;
+              case 'noise': v = Math.sin(t * freq * 137.5) * 0.7 + Math.sin(t * freq * 239.1) * 0.3; break;
+              default: v = Math.sin(2 * Math.PI * tau); break;
             }
             return offset + v * (amp / 2);
           };
@@ -2881,6 +2881,53 @@ case 'push_button': {
 
           inst.runtimeState.ch1_voltage = ch1V;
           inst.runtimeState.ch2_voltage = ch2V;
+          break;
+        }
+
+        case 'lm35': {
+          const outPin = this._getConnectedPinNum(inst.id, 'out') ?? this._getConnectedPinNum(inst.id, 'vout');
+          if (outPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+            // Temperature in °C (default 25°C)
+            const temp = inst.runtimeState.temp !== undefined 
+              ? inst.runtimeState.temp 
+              : (inst.props.temp ?? 25);
+
+            // LM35 outputs 10mV/°C (0.01V/°C). Map to 10-bit ADC (0-1023) based on a 5.0V VREF:
+            const voltage = Math.max(0, temp * 0.01);
+            const adcVal = Math.max(0, Math.min(1023, Math.round((voltage / 5.0) * 1023)));
+
+            window.ArduinoSim.pinStates[`pin_${outPin}`] = adcVal;
+          }
+          break;
+        }
+
+        case 'keypad': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+
+          const rows = ['r1', 'r2', 'r3', 'r4'];
+          const cols = ['c1', 'c2', 'c3', 'c4'];
+          
+          // Get current pressed key state: { row: 0..3, col: 0..3 }
+          const activeKey = inst.runtimeState.activeKey || inst.props.activeKey || null;
+
+          if (activeKey && activeKey.row !== undefined && activeKey.col !== undefined) {
+            const rPin = this._getConnectedPinNum(inst.id, rows[activeKey.row]);
+            const cPin = this._getConnectedPinNum(inst.id, cols[activeKey.col]);
+
+            if (rPin !== null && cPin !== null) {
+              const rState = sim.pinStates[`pin_${rPin}`] ?? 1;
+              const cState = sim.pinStates[`pin_${cPin}`] ?? 1;
+
+              // Matrix keypad logic: pressing a key connects the row & column.
+              // When the microcontroller scans by pulling a Row LOW, the Column pin goes LOW.
+              if (rState === 0) {
+                sim.pinStates[`pin_${cPin}`] = 0;
+              } else if (cState === 0) {
+                sim.pinStates[`pin_${rPin}`] = 0;
+              }
+            }
+          }
           break;
         }
       }
@@ -3075,13 +3122,13 @@ case 'push_button': {
 
       // 4b1. Digital IC output pins act as voltage sources
       const IC_OUTPUT_PINS = {
-        ic_74hc04: ['Y1','Y2','Y3','Y4','Y5','Y6'],
-        ic_74hc00: ['Y1','Y2','Y3','Y4'],
-        ic_74hc08: ['Y1','Y2','Y3','Y4'],
-        ic_74hc32: ['Y1','Y2','Y3','Y4'],
-        ic_74hc595: ['QA','QB','QC','QD','QE','QF','QG','QH'],
-        ic_74hc138: ['Y0','Y1','Y2','Y3','Y4','Y5','Y6','Y7'],
-        ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+        ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
+        ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
+        ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
+        ic_74hc32: ['Y1', 'Y2', 'Y3', 'Y4'],
+        ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
+        ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
+        ic_74hc245: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'],
       };
       if (IC_OUTPUT_PINS[inst.type] && IC_OUTPUT_PINS[inst.type].includes(current.pinId)) {
         const rawVal = inst.runtimeState && inst.runtimeState[current.pinId] != null
@@ -3176,13 +3223,13 @@ case 'push_button': {
     }
     // IC output LOW acts as ground
     const IC_OUTPUT_PINS = {
-      ic_74hc04: ['Y1','Y2','Y3','Y4','Y5','Y6'],
-      ic_74hc00: ['Y1','Y2','Y3','Y4'],
-      ic_74hc08: ['Y1','Y2','Y3','Y4'],
-      ic_74hc32: ['Y1','Y2','Y3','Y4'],
-      ic_74hc595: ['QA','QB','QC','QD','QE','QF','QG','QH'],
-      ic_74hc138: ['Y0','Y1','Y2','Y3','Y4','Y5','Y6','Y7'],
-      ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+      ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
+      ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc32: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
+      ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
+      ic_74hc245: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'],
     };
     if (IC_OUTPUT_PINS[inst.type] && IC_OUTPUT_PINS[inst.type].includes(pinId)) {
       const rawVal = inst.runtimeState && inst.runtimeState[pinId] != null ? inst.runtimeState[pinId] : 0;
@@ -3306,10 +3353,10 @@ case 'push_button': {
       let otherInstId, otherPinId;
       if (wire.from.instId === instId && wire.from.pinId === pinId) {
         otherInstId = wire.to.instId;
-        otherPinId  = wire.to.pinId;
+        otherPinId = wire.to.pinId;
       } else if (wire.to.instId === instId && wire.to.pinId === pinId) {
         otherInstId = wire.from.instId;
-        otherPinId  = wire.from.pinId;
+        otherPinId = wire.from.pinId;
       } else continue;
 
       const otherInst = this.components.find(c => c.id === otherInstId);

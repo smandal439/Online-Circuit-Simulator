@@ -9,11 +9,11 @@
 /* ── Pin type → human readable label ── */
 const GUIDE_PIN_TYPE_LABELS = {
   digital: 'Digital',
-  analog:  'Analog',
-  power:   'Power',
-  gnd:     'Ground',
-  pwm:     'PWM',
-  signal:  'Signal',
+  analog: 'Analog',
+  power: 'Power',
+  gnd: 'Ground',
+  pwm: 'PWM',
+  signal: 'Signal',
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -34,14 +34,14 @@ const GUIDE_COMPONENTS = {
     use: 'The brain of your circuit. Connect output components (LEDs, buzzers, servos, displays) to its digital pins and read input components (buttons, sensors, potentiometers) from its digital or analog pins.',
     pins: {
       'D0–D13': { label: 'D0–D13', type: 'digital', desc: 'Digital I/O pins. D0 (RX) and D1 (TX) double as the serial port. PWM capable pins are D3, D5, D6, D9, D10 and D11.' },
-      'D13':     { label: 'D13', type: 'digital', desc: 'Also drives the built-in "L" LED (LED_BUILTIN).' },
-      'A0–A5':   { label: 'A0–A5', type: 'analog', desc: 'Analog input pins (10-bit, 0–1023). A4 (SDA) and A5 (SCL) also serve the I2C bus.' },
-      '5V':      { label: '5V', type: 'power', desc: '5 V regulated output for powering external components.' },
-      '3V3':     { label: '3.3V', type: 'power', desc: '3.3 V regulated output for low-voltage modules (OLED, ESP sensors).' },
-      'VIN':     { label: 'VIN', type: 'power', desc: 'Input voltage to the board (7–12 V via barrel jack).' },
-      'GND':     { label: 'GND', type: 'gnd', desc: 'Common ground — every component must share this reference.' },
-      'AREF':    { label: 'AREF', type: 'signal', desc: 'External analog reference voltage (advanced use).' },
-      'RST':     { label: 'RST', type: 'signal', desc: 'Reset line — pulling it low restarts the sketch.' },
+      'D13': { label: 'D13', type: 'digital', desc: 'Also drives the built-in "L" LED (LED_BUILTIN).' },
+      'A0–A5': { label: 'A0–A5', type: 'analog', desc: 'Analog input pins (10-bit, 0–1023). A4 (SDA) and A5 (SCL) also serve the I2C bus.' },
+      '5V': { label: '5V', type: 'power', desc: '5 V regulated output for powering external components.' },
+      '3V3': { label: '3.3V', type: 'power', desc: '3.3 V regulated output for low-voltage modules (OLED, ESP sensors).' },
+      'VIN': { label: 'VIN', type: 'power', desc: 'Input voltage to the board (7–12 V via barrel jack).' },
+      'GND': { label: 'GND', type: 'gnd', desc: 'Common ground — every component must share this reference.' },
+      'AREF': { label: 'AREF', type: 'signal', desc: 'External analog reference voltage (advanced use).' },
+      'RST': { label: 'RST', type: 'signal', desc: 'Reset line — pulling it low restarts the sketch.' },
     },
     props: { label: 'Board label shown on the canvas.' },
     wiring: 'Place the board, then wire every other component back to it: outputs to digital pins, sensors to analog pins, and always connect a GND rail.',
@@ -55,6 +55,7 @@ void loop() {
   digitalWrite(13, LOW);
   delay(500);
 }`,
+
     exampleId: 'blink',
   },
 
@@ -67,24 +68,24 @@ void loop() {
     longDesc: 'The ESP32 DevKit V1 is a dual-core 240 MHz Wi-Fi + Bluetooth development board built around the ESP-WROOM-32 module. It works at 3.3 V logic and exposes 30 pins on two headers. GPIO2 drives the on-board blue LED (LED_BUILTIN). Great for connected / wireless projects.',
     use: 'A powerful alternative to the Uno. Use it for Wi-Fi, Bluetooth, dual-core code and projects that need more RAM. Many GPIOs support analog input and PWM output at the same time.',
     pins: {
-      'VP / VN':    { label: 'VP / VN', type: 'analog', desc: 'Analog inputs 36 and 39 — no internal pull-up.' },
-      'D34 / D35':  { label: 'D34 / D35', type: 'analog', desc: 'Analog input only (no output capability).' },
-      'D32, D33':   { label: 'D32 / D33', type: 'analog', desc: 'Analog + digital + DAC output.' },
-      'D25, D26':   { label: 'D25 / D26', type: 'analog', desc: 'Analog + digital + DAC output.' },
-      'D27, D14':   { label: 'D27 / D14', type: 'pwm', desc: 'Digital + PWM output.' },
-      'D12, D13':   { label: 'D12 / D13', type: 'pwm', desc: 'Digital + PWM output.' },
-      'D23, D22':   { label: 'D23 / D22', type: 'pwm', desc: 'Digital + PWM. D22 is the I2C clock (SCL).' },
-      'D21':        { label: 'D21', type: 'pwm', desc: 'Digital + PWM. Also the I2C data line (SDA).' },
-      'D19, D18':   { label: 'D19 / D18', type: 'pwm', desc: 'Digital + PWM output.' },
-      'D5, D17':    { label: 'D5 / D17', type: 'pwm', desc: 'Digital + PWM output.' },
-      'D16, D4':    { label: 'D16 / D4', type: 'pwm', desc: 'Digital + PWM output.' },
-      'D2':         { label: 'D2', type: 'pwm', desc: 'Digital + PWM. GPIO2 = LED_BUILTIN (on-board blue LED).' },
-      'D15':        { label: 'D15', type: 'pwm', desc: 'Digital + PWM output.' },
-      'TX0 / RX0':  { label: 'TX0 / RX0', type: 'signal', desc: 'Default UART serial pins (GPIO1 / GPIO3).' },
-      'EN':         { label: 'EN', type: 'signal', desc: 'Enable / reset pin.' },
-      '3V3':        { label: '3V3', type: 'power', desc: '3.3 V power rail.' },
-      'VIN':        { label: 'VIN', type: 'power', desc: '5 V USB / power input.' },
-      'GND':        { label: 'GND', type: 'gnd', desc: 'Common ground.' },
+      'VP / VN': { label: 'VP / VN', type: 'analog', desc: 'Analog inputs 36 and 39 — no internal pull-up.' },
+      'D34 / D35': { label: 'D34 / D35', type: 'analog', desc: 'Analog input only (no output capability).' },
+      'D32, D33': { label: 'D32 / D33', type: 'analog', desc: 'Analog + digital + DAC output.' },
+      'D25, D26': { label: 'D25 / D26', type: 'analog', desc: 'Analog + digital + DAC output.' },
+      'D27, D14': { label: 'D27 / D14', type: 'pwm', desc: 'Digital + PWM output.' },
+      'D12, D13': { label: 'D12 / D13', type: 'pwm', desc: 'Digital + PWM output.' },
+      'D23, D22': { label: 'D23 / D22', type: 'pwm', desc: 'Digital + PWM. D22 is the I2C clock (SCL).' },
+      'D21': { label: 'D21', type: 'pwm', desc: 'Digital + PWM. Also the I2C data line (SDA).' },
+      'D19, D18': { label: 'D19 / D18', type: 'pwm', desc: 'Digital + PWM output.' },
+      'D5, D17': { label: 'D5 / D17', type: 'pwm', desc: 'Digital + PWM output.' },
+      'D16, D4': { label: 'D16 / D4', type: 'pwm', desc: 'Digital + PWM output.' },
+      'D2': { label: 'D2', type: 'pwm', desc: 'Digital + PWM. GPIO2 = LED_BUILTIN (on-board blue LED).' },
+      'D15': { label: 'D15', type: 'pwm', desc: 'Digital + PWM output.' },
+      'TX0 / RX0': { label: 'TX0 / RX0', type: 'signal', desc: 'Default UART serial pins (GPIO1 / GPIO3).' },
+      'EN': { label: 'EN', type: 'signal', desc: 'Enable / reset pin.' },
+      '3V3': { label: '3V3', type: 'power', desc: '3.3 V power rail.' },
+      'VIN': { label: 'VIN', type: 'power', desc: '5 V USB / power input.' },
+      'GND': { label: 'GND', type: 'gnd', desc: 'Common ground.' },
     },
     props: { label: 'Board label shown on the canvas.' },
     wiring: 'Place the board and wire outputs to GPIO pins, sensors to ADC-capable pins (VP/VN/D32–D35). Remember to power modules from 3V3, not 5V.',
@@ -110,7 +111,7 @@ void loop() {
     longDesc: 'A Light Emitting Diode that glows when current flows from the anode to the cathode. An LED has polarity — the longer leg is the anode (+). Always use a current-limiting resistor (typically 220 Ω) in series so the LED is not destroyed.',
     use: 'The universal "Hello World" output. Light an LED with digitalWrite(), fade it with analogWrite() on a PWM pin, or use it as an activity indicator.',
     pins: {
-      anode:   { label: '+', type: 'pwm', desc: 'Anode (long leg). Connect to a digital pin through a resistor. Accepts HIGH/LOW or PWM (0–255).' },
+      anode: { label: '+', type: 'pwm', desc: 'Anode (long leg). Connect to a digital pin through a resistor. Accepts HIGH/LOW or PWM (0–255).' },
       cathode: { label: '−', type: 'gnd', desc: 'Cathode (short leg, flat side). Connect to GND.' },
     },
     props: {
@@ -142,7 +143,7 @@ void loop() {
       led_y: { label: 'Y', type: 'digital', desc: 'Yellow LED drive pin.' },
       led_g: { label: 'G', type: 'digital', desc: 'Green LED drive pin.' },
       led_b: { label: 'B', type: 'digital', desc: 'Blue LED drive pin.' },
-      gnd:   { label: '−', type: 'gnd', desc: 'Common cathode — connect to GND.' },
+      gnd: { label: '−', type: 'gnd', desc: 'Common cathode — connect to GND.' },
     },
     props: {},
     wiring: 'R → D10, Y → D11, G → D12, B → D13 ; GND → GND.',
@@ -166,10 +167,10 @@ void loop() {
     longDesc: 'A single LED package containing a red, green and blue die. By mixing the three channels with PWM you can produce almost any colour. This variant is a common-cathode LED — the shared pin goes to ground.',
     use: 'Full-colour lighting, mood lamps, colour-mixing demos. Each channel is driven from a PWM pin via analogWrite().',
     pins: {
-      red:   { label: 'R', type: 'pwm', desc: 'Red channel anode — PWM (0–255).' },
+      red: { label: 'R', type: 'pwm', desc: 'Red channel anode — PWM (0–255).' },
       green: { label: 'G', type: 'pwm', desc: 'Green channel anode — PWM (0–255).' },
-      blue:  { label: 'B', type: 'pwm', desc: 'Blue channel anode — PWM (0–255).' },
-      gnd:   { label: '−', type: 'gnd', desc: 'Common cathode — connect to GND.' },
+      blue: { label: 'B', type: 'pwm', desc: 'Blue channel anode — PWM (0–255).' },
+      gnd: { label: '−', type: 'gnd', desc: 'Common cathode — connect to GND.' },
     },
     props: {},
     wiring: 'R → D9, G → D10, B → D11 (PWM pins) ; GND → GND.',
@@ -227,8 +228,8 @@ void loop() {
       segE: { label: 'E', type: 'digital', desc: 'Bottom-left vertical segment.' },
       segF: { label: 'F', type: 'digital', desc: 'Top-left vertical segment.' },
       segG: { label: 'G', type: 'digital', desc: 'Middle horizontal segment.' },
-      dp:   { label: 'DP', type: 'digital', desc: 'Decimal point segment.' },
-      com:  { label: 'COM', type: 'power', desc: 'Common pin — connect to GND (common cathode) or 5V (common anode).' },
+      dp: { label: 'DP', type: 'digital', desc: 'Decimal point segment.' },
+      com: { label: 'COM', type: 'power', desc: 'Common pin — connect to GND (common cathode) or 5V (common anode).' },
     },
     props: { commonAnode: 'true if the display is common-anode (COM to +5V).' },
     wiring: 'A→D2, B→D3, C→D4, D→D5, E→D6, F→D7, G→D8 ; COM → GND.',
@@ -255,14 +256,14 @@ void loop(){
     pins: {
       gnd: { label: 'GND', type: 'gnd', desc: 'Ground.' },
       vcc: { label: 'VCC', type: 'power', desc: '5 V power.' },
-      vo:  { label: 'V0', type: 'signal', desc: 'Contrast control (usually a potentiometer).' },
-      rs:  { label: 'RS', type: 'digital', desc: 'Register select — command vs. data.' },
-      rw:  { label: 'R/W', type: 'digital', desc: 'Read/Write — tie to GND for write-only.' },
-      en:  { label: 'EN', type: 'digital', desc: 'Enable pulse — latches the data.' },
-      d4:  { label: 'D4', type: 'digital', desc: 'Data line 4 (4-bit mode).' },
-      d5:  { label: 'D5', type: 'digital', desc: 'Data line 5 (4-bit mode).' },
-      d6:  { label: 'D6', type: 'digital', desc: 'Data line 6 (4-bit mode).' },
-      d7:  { label: 'D7', type: 'digital', desc: 'Data line 7 (4-bit mode).' },
+      vo: { label: 'V0', type: 'signal', desc: 'Contrast control (usually a potentiometer).' },
+      rs: { label: 'RS', type: 'digital', desc: 'Register select — command vs. data.' },
+      rw: { label: 'R/W', type: 'digital', desc: 'Read/Write — tie to GND for write-only.' },
+      en: { label: 'EN', type: 'digital', desc: 'Enable pulse — latches the data.' },
+      d4: { label: 'D4', type: 'digital', desc: 'Data line 4 (4-bit mode).' },
+      d5: { label: 'D5', type: 'digital', desc: 'Data line 5 (4-bit mode).' },
+      d6: { label: 'D6', type: 'digital', desc: 'Data line 6 (4-bit mode).' },
+      d7: { label: 'D7', type: 'digital', desc: 'Data line 7 (4-bit mode).' },
     },
     props: {
       line1: 'Default text on the first row.',
@@ -387,9 +388,9 @@ void loop(){
     longDesc: 'A 10 kΩ variable resistor (rotary knob). The wiper picks a voltage between VCC and GND, giving a smooth 0–1023 analog value. In the simulator, drag the knob (or use the property panel) to change the value while the simulation runs.',
     use: 'Volume controls, brightness dimmers, position sensors. Connect the wiper to an analog input and read with analogRead().',
     pins: {
-      vcc:   { label: 'VCC', type: 'power', desc: 'Connect to 5 V (or 3.3 V).' },
+      vcc: { label: 'VCC', type: 'power', desc: 'Connect to 5 V (or 3.3 V).' },
       wiper: { label: 'OUT', type: 'analog', desc: 'Variable output — connect to an analog input (A0–A5).' },
-      gnd:   { label: 'GND', type: 'gnd', desc: 'Connect to GND.' },
+      gnd: { label: 'GND', type: 'gnd', desc: 'Connect to GND.' },
     },
     props: {
       value: 'Current wiper position (0–1023).',
@@ -418,9 +419,9 @@ void loop(){
     pins: {
       gnd: { label: 'GND', type: 'gnd', desc: 'Ground.' },
       vcc: { label: 'VCC', type: 'power', desc: '5 V power.' },
-      x:   { label: 'X', type: 'analog', desc: 'X-axis analog output — connect to A0.' },
-      y:   { label: 'Y', type: 'analog', desc: 'Y-axis analog output — connect to A1.' },
-      sw:  { label: 'SW', type: 'digital', desc: 'Push button output (LOW when pressed).' },
+      x: { label: 'X', type: 'analog', desc: 'X-axis analog output — connect to A0.' },
+      y: { label: 'Y', type: 'analog', desc: 'Y-axis analog output — connect to A1.' },
+      sw: { label: 'SW', type: 'digital', desc: 'Push button output (LOW when pressed).' },
     },
     props: {
       x: 'X-axis position (0–1023).',
@@ -441,6 +442,55 @@ void loop(){
     exampleId: 'joystick_led',
   },
 
+  keypad: {
+    id: 'keypad',
+    name: '4\u00d74 Matrix Keypad',
+    icon: '\u2328\ufe0f',
+    category: 'Input',
+    longDesc: 'A 16-button matrix keypad organized into 4 rows and 4 columns. Pressing a key creates a contact between its row and column lines, allowing 16 inputs using only 8 digital pins.',
+    use: 'PIN/passcode entry, menu navigation, numerical input panels. Driven using the Arduino Keypad library.',
+    pins: {
+      r1: { label: 'R1', type: 'digital', desc: 'Row 1 output/input scan pin.' },
+      r2: { label: 'R2', type: 'digital', desc: 'Row 2 output/input scan pin.' },
+      r3: { label: 'R3', type: 'digital', desc: 'Row 3 output/input scan pin.' },
+      r4: { label: 'R4', type: 'digital', desc: 'Row 4 output/input scan pin.' },
+      c1: { label: 'C1', type: 'digital', desc: 'Column 1 scan pin.' },
+      c2: { label: 'C2', type: 'digital', desc: 'Column 2 scan pin.' },
+      c3: { label: 'C3', type: 'digital', desc: 'Column 3 scan pin.' },
+      c4: { label: 'C4', type: 'digital', desc: 'Column 4 scan pin.' },
+    },
+    props: {
+      activeKey: 'Active key coordinate state { row, col } when pressed.',
+    },
+    wiring: 'R1\u2013R4 \u2192 D9\u2013D6, C1\u2013C4 \u2192 D5\u2013D2.',
+    code: `#include <Keypad.h>
+
+const byte ROWS = 4;
+const byte COLS = 4;
+char keys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {9, 8, 7, 6};
+byte colPins[COLS] = {5, 4, 3, 2};
+
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  char key = keypad.getKey();
+  if (key) {
+    Serial.print("Key Pressed: ");
+    Serial.println(key);
+  }
+}`,
+  },
+
   /* ── ACTUATORS ── */
   servo: {
     id: 'servo',
@@ -451,8 +501,8 @@ void loop(){
     use: 'Robotics, pan/tilt heads, gauges, automation. One signal wire + power and ground is all it needs.',
     pins: {
       signal: { label: 'SIG', type: 'pwm', desc: 'Control signal — connect to a PWM-capable pin (D9/D10 on Uno).' },
-      vcc:    { label: '+', type: 'power', desc: 'Power — 5 V.' },
-      gnd:    { label: '−', type: 'gnd', desc: 'Ground.' },
+      vcc: { label: '+', type: 'power', desc: 'Power — 5 V.' },
+      gnd: { label: '−', type: 'gnd', desc: 'Ground.' },
     },
     props: {
       angle: 'Target angle (0–180°).',
@@ -478,7 +528,7 @@ void loop(){
     longDesc: 'A brushed DC motor whose speed follows the PWM duty cycle applied to its input pin — 0 stops it, 255 is full speed. The shaft and fan spin proportionally to the PWM value so you can see speed at a glance.',
     use: 'Fans, wheels, pumps. Drive it from a PWM pin; pair with a transistor or motor driver in real hardware to handle the current.',
     pins: {
-      in:  { label: 'IN', type: 'pwm', desc: 'Speed input — PWM (0–255).' },
+      in: { label: 'IN', type: 'pwm', desc: 'Speed input — PWM (0–255).' },
       gnd: { label: 'GND', type: 'gnd', desc: 'Ground.' },
     },
     props: { label: 'Motor label shown on the canvas.' },
@@ -505,8 +555,8 @@ void loop(){
       gnd: { label: 'GND', type: 'gnd', desc: 'Ground.' },
       sig: { label: 'IN', type: 'digital', desc: 'Control signal — drives the coil.' },
       com: { label: 'COM', type: 'signal', desc: 'Common contact of the switched circuit.' },
-      no:  { label: 'NO', type: 'signal', desc: 'Normally-open contact — connects to COM when energised.' },
-      nc:  { label: 'NC', type: 'signal', desc: 'Normally-closed contact — connected to COM when idle.' },
+      no: { label: 'NO', type: 'signal', desc: 'Normally-open contact — connects to COM when energised.' },
+      nc: { label: 'NC', type: 'signal', desc: 'Normally-closed contact — connected to COM when idle.' },
     },
     props: { label: 'Relay label shown on the canvas.' },
     wiring: 'VCC→5V, GND→GND, IN→D9, 5V→COM, NO→LED anode.',
@@ -531,10 +581,10 @@ void loop(){
     longDesc: 'A digital temperature and humidity sensor. It reports 0–50 °C temperature and 20–90 % relative humidity over a single data wire using a custom one-wire protocol (the DHT library handles it). Adjust the simulated values live from the property panel.',
     use: 'Weather stations, greenhouses, climate logging. Read temperature and humidity with the DHT library and print them to the Serial Monitor.',
     pins: {
-      vcc:  { label: 'VCC', type: 'power', desc: '3.3 V / 5 V power.' },
+      vcc: { label: 'VCC', type: 'power', desc: '3.3 V / 5 V power.' },
       data: { label: 'DAT', type: 'digital', desc: 'One-wire data signal — connect to a digital pin.' },
-      nc:   { label: 'NC', type: 'signal', desc: 'Not connected.' },
-      gnd:  { label: 'GND', type: 'gnd', desc: 'Ground.' },
+      nc: { label: 'NC', type: 'signal', desc: 'Not connected.' },
+      gnd: { label: 'GND', type: 'gnd', desc: 'Ground.' },
     },
     props: {
       temperature: 'Simulated temperature in °C (0–50).',
@@ -565,10 +615,10 @@ void loop(){
     longDesc: 'An ultrasonic distance sensor that measures 2–400 cm. Send a 10 µs HIGH pulse on TRIG; the ECHO pin then stays HIGH for a duration proportional to the distance. Distance (cm) = echoTime(µs) / 58.',
     use: 'Obstacle avoidance, parking sensors, tank level gauges. Set the simulated distance from the property panel and read it with pulseIn().',
     pins: {
-      vcc:  { label: 'VCC', type: 'power', desc: '5 V power.' },
+      vcc: { label: 'VCC', type: 'power', desc: '5 V power.' },
       trig: { label: 'TRIG', type: 'digital', desc: 'Trigger — send a 10 µs HIGH pulse to start a measurement.' },
       echo: { label: 'ECHO', type: 'digital', desc: 'Echo — returns HIGH for the flight time of the ping.' },
-      gnd:  { label: 'GND', type: 'gnd', desc: 'Ground.' },
+      gnd: { label: 'GND', type: 'gnd', desc: 'Ground.' },
     },
     props: { distance: 'Simulated object distance in cm (2–400).' },
     wiring: 'VCC→5V, TRIG→D7, ECHO→D8, GND→GND.',
@@ -597,7 +647,7 @@ void loop(){
     use: 'Automatic night lights, light meters, camera exposure. Read the light level on an analog pin.',
     pins: {
       vcc: { label: 'VCC', type: 'power', desc: '5 V power.' },
-      a:   { label: 'A', type: 'analog', desc: 'Analog output (0–1023) — connect to A0.' },
+      a: { label: 'A', type: 'analog', desc: 'Analog output (0–1023) — connect to A0.' },
       gnd: { label: 'GND', type: 'gnd', desc: 'Ground.' },
     },
     props: { light: 'Simulated light level (0–1023, higher = brighter).' },
@@ -640,6 +690,36 @@ void loop(){
   delay(100);
 }`,
     exampleId: 'pir_alarm',
+  },
+
+  lm35: {
+    id: 'lm35',
+    name: 'LM35 Temperature Sensor',
+    icon: '🌡️',
+    category: 'Sensors',
+    longDesc: 'A precision analog centigrade temperature sensor. Output voltage is linearly proportional to Celsius temperature at 10 mV/\u00b0C, eliminating the need for complex calibration code.',
+    use: 'Measuring ambient temperature. Read the output pin with analogRead() and scale the voltage value to calculate degrees Celsius.',
+    pins: {
+      vcc: { label: 'VCC', type: 'power', desc: 'Power supply \u2014 5 V.' },
+      out: { label: 'OUT', type: 'analog', desc: 'Analog voltage output (10 mV/\u00b0C) \u2014 connect to A0\u2013A5.' },
+      gnd: { label: 'GND', type: 'gnd', desc: 'Ground.' },
+    },
+    props: {
+      temp: 'Simulated ambient temperature in \u00b0C (default 25\u00b0C).',
+    },
+    wiring: 'VCC\u21925V, OUT\u2192A0, GND\u2192GND.',
+    code: `void setup() {
+  Serial.begin(9600);
+}
+void loop() {
+  int adcVal = analogRead(A0);
+  float voltage = adcVal * (5.0 / 1023.0);
+  float tempC = voltage * 100.0; // 10 mV per \u00b0C
+  Serial.print("Temperature: ");
+  Serial.print(tempC);
+  Serial.println(" C");
+  delay(1000);
+}`,
   },
 
   /* ── PASSIVES ── */
@@ -1594,14 +1674,14 @@ class GuideManager {
     ta.style.opacity = '0';
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy'); } catch (e) {}
+    try { document.execCommand('copy'); } catch (e) { }
     document.body.removeChild(ta);
     done();
   }
 
   /* ── helpers ── */
   _esc(s) {
-    return String(s == null ? '' : s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+    return String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
   }
 
   _cap(s) {
