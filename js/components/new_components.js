@@ -1153,10 +1153,911 @@ defComp({
 });
 
 /* ═══════════════════════════════════════════════════════════════
+   BME280 / BMP280 — Precision Environment Sensor (I2C)
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'bme280',
+  name: 'BME280 Sensor',
+  category: 'Sensors',
+  icon: '🌡️',
+  desc: 'BME280 precision barometric pressure, temperature, and humidity sensor (I2C @ 0x76)',
+  width: 56,
+  height: 72,
+  defaultProps: { temperature: 25, humidity: 50, pressure: 1013 },
+  interactive: [
+    { field: 'temperature', label: 'Temp', min: -40, max: 85, step: 0.1, unit: '°C' },
+    { field: 'humidity', label: 'Hum', min: 0, max: 100, step: 1, unit: '%' },
+    { field: 'pressure', label: 'hPa', min: 300, max: 1100, step: 1, unit: 'hPa' },
+  ],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 72, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 72, side: 'bottom' },
+    { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 36, y: 72, side: 'bottom' },
+    { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 48, y: 72, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const temp = inst.runtimeState?.temperature ?? inst.props.temperature ?? 25;
+    const hum = inst.runtimeState?.humidity ?? inst.props.humidity ?? 50;
+    const pres = inst.runtimeState?.pressure ?? inst.props.pressure ?? 1013;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB body
+    ctx.fillStyle = '#1a1a2e';
+    roundRect(ctx, 0, 0, 56, 60, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#333355';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // BME280 chip
+    ctx.fillStyle = '#111';
+    roundRect(ctx, 12, 8, 32, 20, 2);
+    ctx.fill();
+    ctx.fillStyle = '#666';
+    ctx.font = 'bold 5px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('BME280', 28, 18);
+
+    // Sensor hole
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(28, 36, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(28, 36, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Live data display
+    ctx.fillStyle = '#0a0a1a';
+    roundRect(ctx, 4, 44, 48, 14, 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff9800';
+    ctx.font = 'bold 4px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('T:', 6, 50);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 5px monospace';
+    ctx.fillText(`${temp.toFixed(1)}°C`, 14, 50);
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 4px monospace';
+    ctx.fillText('H:', 6, 56);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`${hum}%`, 14, 56);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [8, 20, 36, 48].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 60); ctx.lineTo(px, 72); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 60, 76);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   VL53L0X — Time-of-Flight Laser Distance Sensor (I2C)
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'vl53l0x',
+  name: 'VL53L0X ToF Sensor',
+  category: 'Sensors',
+  icon: '📏',
+  desc: 'VL53L0X laser Time-of-Flight distance sensor (I2C @ 0x29). Millimetre accuracy, 200cm range',
+  width: 50,
+  height: 60,
+  defaultProps: { distance: 100 },
+  interactive: [
+    { field: 'distance', label: 'Dist', min: 0, max: 2000, step: 1, unit: 'mm' },
+  ],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 60, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 60, side: 'bottom' },
+    { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 32, y: 60, side: 'bottom' },
+    { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 44, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const dist = inst.runtimeState?.distance ?? inst.props.distance ?? 100;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB body
+    ctx.fillStyle = '#1a1a2e';
+    roundRect(ctx, 0, 0, 50, 48, 4);
+    ctx.fill();
+
+    // Laser emitter (left)
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(14, 14, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = dist > 0 ? '#ff3333' : '#331111';
+    ctx.beginPath();
+    ctx.arc(14, 14, 3, 0, Math.PI * 2);
+    ctx.fill();
+    if (dist > 0 && dist < 200) {
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Laser receiver (right)
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(36, 14, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(36, 14, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // VL53L0X chip
+    ctx.fillStyle = '#111';
+    roundRect(ctx, 10, 24, 30, 12, 2);
+    ctx.fill();
+    ctx.fillStyle = '#666';
+    ctx.font = 'bold 4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('VL53L0X', 25, 32);
+
+    // Distance display
+    ctx.fillStyle = '#0a0a1a';
+    roundRect(ctx, 4, 38, 42, 8, 2);
+    ctx.fill();
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${dist}mm`, 25, 44);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [8, 20, 32, 44].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 48); ctx.lineTo(px, 60); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 54, 64);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   RC522 — 13.56MHz RFID Reader (SPI)
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'rc522',
+  name: 'RC522 RFID Reader',
+  category: 'Sensors',
+  icon: '💳',
+  desc: 'RC522 13.56MHz RFID tag reader (SPI). For access control and security gate simulations',
+  width: 60,
+  height: 80,
+  defaultProps: { tagPresent: false, uid: '00:00:00:00' },
+  interactive: [
+    { field: 'tagPresent', label: 'Tag', min: 0, max: 1, step: 1, unit: '' },
+  ],
+  pins: [
+    { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 6, y: 80, side: 'bottom' },
+    { id: 'SCK', label: 'SCK', type: PIN_TYPE.DIGITAL, x: 16, y: 80, side: 'bottom' },
+    { id: 'MOSI', label: 'MOSI', type: PIN_TYPE.DIGITAL, x: 26, y: 80, side: 'bottom' },
+    { id: 'MISO', label: 'MISO', type: PIN_TYPE.DIGITAL, x: 36, y: 80, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 46, y: 80, side: 'bottom' },
+    { id: 'RST', label: 'RST', type: PIN_TYPE.DIGITAL, x: 8, y: 0, side: 'top' },
+    { id: '3V3', label: '3V3', type: PIN_TYPE.POWER, x: 24, y: 0, side: 'top' },
+    { id: 'IRQ', label: 'IRQ', type: PIN_TYPE.DIGITAL, x: 40, y: 0, side: 'top' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const tagPresent = inst.runtimeState?.tagPresent ?? inst.props.tagPresent ?? false;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB body
+    ctx.fillStyle = '#0a2463';
+    roundRect(ctx, 0, 8, 60, 64, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#1e3a8a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Antenna coil (circular traces)
+    ctx.strokeStyle = '#c8a452';
+    ctx.lineWidth = 1.5;
+    for (let r = 12; r <= 26; r += 4) {
+      ctx.beginPath();
+      ctx.arc(30, 36, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // RC522 chip
+    ctx.fillStyle = '#111';
+    roundRect(ctx, 18, 28, 24, 16, 2);
+    ctx.fill();
+    ctx.fillStyle = '#666';
+    ctx.font = 'bold 4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('RC522', 30, 38);
+
+    // Status LED
+    ctx.fillStyle = tagPresent ? '#00ff00' : '#003300';
+    ctx.beginPath();
+    ctx.arc(50, 16, 3, 0, Math.PI * 2);
+    ctx.fill();
+    if (tagPresent) {
+      ctx.shadowColor = '#00ff00';
+      ctx.shadowBlur = 6;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Tag indicator
+    ctx.fillStyle = '#0a0a1a';
+    roundRect(ctx, 8, 52, 44, 10, 2);
+    ctx.fill();
+    ctx.fillStyle = tagPresent ? '#00ff88' : '#666';
+    ctx.font = 'bold 5px monospace';
+    ctx.fillText(tagPresent ? 'TAG DETECTED' : 'NO TAG', 30, 59);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [6, 16, 26, 36, 46].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 72); ctx.lineTo(px, 80); ctx.stroke();
+    });
+    [8, 24, 40].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 8); ctx.lineTo(px, 0); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -4, 64, 88);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   TSOP4838 — IR Receiver (38kHz NEC/RC5)
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'ir_receiver',
+  name: 'IR Receiver TSOP4838',
+  category: 'Sensors',
+  icon: '📡',
+  desc: 'TSOP4838 38kHz IR receiver module. Decodes NEC/RC5 infrared remote control signals',
+  width: 30,
+  height: 50,
+  defaultProps: { code: 0, decoding: false },
+  interactive: [
+    { field: 'code', label: 'Code', min: 0, max: 65535, step: 1, unit: '' },
+  ],
+  pins: [
+    { id: 'OUT', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 6, y: 50, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 15, y: 50, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 24, y: 50, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const decoding = inst.runtimeState?.decoding ?? inst.props.decoding ?? false;
+    const code = inst.runtimeState?.code ?? inst.props.code ?? 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Body
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, 2, 4, 26, 36, 3);
+    ctx.fill();
+
+    // IR lens
+    const lensGrad = ctx.createRadialGradient(15, 16, 2, 15, 16, 10);
+    lensGrad.addColorStop(0, '#333');
+    lensGrad.addColorStop(1, '#111');
+    ctx.fillStyle = lensGrad;
+    ctx.beginPath();
+    ctx.arc(15, 16, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Receiving element
+    ctx.fillStyle = decoding ? '#ff0000' : '#440000';
+    ctx.beginPath();
+    ctx.arc(15, 16, 4, 0, Math.PI * 2);
+    ctx.fill();
+    if (decoding) {
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Label
+    ctx.fillStyle = '#888';
+    ctx.font = 'bold 4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('TSOP', 15, 32);
+    ctx.fillText('4838', 15, 37);
+
+    // Code display
+    if (code > 0) {
+      ctx.fillStyle = '#0a0a1a';
+      roundRect(ctx, 0, 42, 30, 6, 1);
+      ctx.fill();
+      ctx.fillStyle = '#00ff88';
+      ctx.font = 'bold 4px monospace';
+      ctx.fillText(`0x${code.toString(16).toUpperCase().padStart(4, '0')}`, 15, 47);
+    }
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [6, 15, 24].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 40); ctx.lineTo(px, 50); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, 0, 0, 30, 52);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   MAX7219 — 8x8 LED Matrix Display (SPI)
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'max7219',
+  name: 'MAX7219 LED Matrix',
+  category: 'Output',
+  icon: '🔲',
+  desc: 'MAX7219 8x8 LED matrix display driver (SPI). Daisy-chainable for scrolling text and animations',
+  width: 80,
+  height: 100,
+  defaultProps: { pattern: 0 },
+  interactive: [],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 100, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 22, y: 100, side: 'bottom' },
+    { id: 'DIN', label: 'DIN', type: PIN_TYPE.DIGITAL, x: 36, y: 100, side: 'bottom' },
+    { id: 'CS', label: 'CS', type: PIN_TYPE.DIGITAL, x: 50, y: 100, side: 'bottom' },
+    { id: 'CLK', label: 'CLK', type: PIN_TYPE.DIGITAL, x: 64, y: 100, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const pattern = inst.runtimeState?.pattern ?? inst.props.pattern ?? 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB body
+    ctx.fillStyle = '#1a1a2e';
+    roundRect(ctx, 0, 0, 80, 88, 4);
+    ctx.fill();
+
+    // 8x8 LED matrix
+    ctx.fillStyle = '#0a0a0a';
+    roundRect(ctx, 8, 8, 64, 64, 2);
+    ctx.fill();
+
+    // LED grid
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const bit = (pattern >> (row * 8 + col)) & 1;
+        const lx = 12 + col * 7.5;
+        const ly = 12 + row * 7.5;
+        ctx.fillStyle = bit ? '#ff3333' : '#1a0a0a';
+        ctx.fillRect(lx, ly, 6, 6);
+        if (bit) {
+          ctx.shadowColor = '#ff0000';
+          ctx.shadowBlur = 3;
+          ctx.fillRect(lx, ly, 6, 6);
+          ctx.shadowBlur = 0;
+        }
+      }
+    }
+
+    // MAX7219 chip
+    ctx.fillStyle = '#111';
+    roundRect(ctx, 24, 76, 32, 8, 1);
+    ctx.fill();
+    ctx.fillStyle = '#666';
+    ctx.font = 'bold 4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('MAX7219', 40, 81);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [8, 22, 36, 50, 64].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 88); ctx.lineTo(px, 100); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 84, 104);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   ILI9341 — 2.4" TFT Display (SPI)
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'ili9341',
+  name: 'ILI9341 TFT Display',
+  category: 'Output',
+  icon: '🖥️',
+  desc: 'ILI9341 2.4" 240x320 TFT LCD display (SPI). Full-color with Adafruit_GFX support',
+  width: 80,
+  height: 110,
+  defaultProps: { color: 0x0000 },
+  interactive: [],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 110, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 110, side: 'bottom' },
+    { id: 'CS', label: 'CS', type: PIN_TYPE.DIGITAL, x: 32, y: 110, side: 'bottom' },
+    { id: 'DC', label: 'DC', type: PIN_TYPE.DIGITAL, x: 44, y: 110, side: 'bottom' },
+    { id: 'MOSI', label: 'MOSI', type: PIN_TYPE.DIGITAL, x: 56, y: 110, side: 'bottom' },
+    { id: 'SCK', label: 'SCK', type: PIN_TYPE.DIGITAL, x: 68, y: 110, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const color = inst.runtimeState?.color ?? inst.props.color ?? 0x0000;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Display bezel
+    ctx.fillStyle = '#222';
+    roundRect(ctx, 0, 0, 80, 96, 4);
+    ctx.fill();
+
+    // Screen
+    const r = (color >> 16) & 0xFF;
+    const g = (color >> 8) & 0xFF;
+    const b = color & 0xFF;
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillRect(6, 6, 68, 74);
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(6, 6, 68, 74);
+
+    // Touch panel border
+    ctx.fillStyle = '#333';
+    roundRect(ctx, 4, 82, 72, 10, 2);
+    ctx.fill();
+    ctx.fillStyle = '#888';
+    ctx.font = 'bold 5px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ILI9341 240x320', 40, 89);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [8, 20, 32, 44, 56, 68].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 96); ctx.lineTo(px, 110); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 84, 114);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   L298N — Dual H-Bridge Motor Driver
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'l298n',
+  name: 'L298N Motor Driver',
+  category: 'Actuators',
+  icon: '🔌',
+  desc: 'L298N dual H-bridge motor driver. Controls direction and PWM speed for two DC motors',
+  width: 100,
+  height: 80,
+  defaultProps: {},
+  pins: [
+    { id: 'IN1', label: 'IN1', type: PIN_TYPE.DIGITAL, x: 10, y: 80, side: 'bottom' },
+    { id: 'IN2', label: 'IN2', type: PIN_TYPE.DIGITAL, x: 26, y: 80, side: 'bottom' },
+    { id: 'IN3', label: 'IN3', type: PIN_TYPE.DIGITAL, x: 42, y: 80, side: 'bottom' },
+    { id: 'IN4', label: 'IN4', type: PIN_TYPE.DIGITAL, x: 58, y: 80, side: 'bottom' },
+    { id: 'ENA', label: 'ENA', type: PIN_TYPE.PWM, x: 74, y: 80, side: 'bottom' },
+    { id: 'ENB', label: 'ENB', type: PIN_TYPE.PWM, x: 90, y: 80, side: 'bottom' },
+    { id: 'OUT1', label: 'M1+', type: PIN_TYPE.SIGNAL, x: 10, y: 0, side: 'top' },
+    { id: 'OUT2', label: 'M1-', type: PIN_TYPE.SIGNAL, x: 30, y: 0, side: 'top' },
+    { id: 'OUT3', label: 'M2+', type: PIN_TYPE.SIGNAL, x: 70, y: 0, side: 'top' },
+    { id: 'OUT4', label: 'M2-', type: PIN_TYPE.SIGNAL, x: 90, y: 0, side: 'top' },
+    { id: 'VS', label: 'VS', type: PIN_TYPE.POWER, x: 50, y: 0, side: 'top' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 50, y: 80, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB body
+    ctx.fillStyle = '#0a3d0a';
+    roundRect(ctx, 0, 8, 100, 64, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#1a5c1a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // L298N heatsink
+    ctx.fillStyle = '#333';
+    roundRect(ctx, 30, 16, 40, 24, 2);
+    ctx.fill();
+    ctx.fillStyle = '#555';
+    ctx.font = 'bold 5px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('L298N', 50, 30);
+
+    // Motor output terminals
+    ctx.fillStyle = '#c8a452';
+    [[15, 12], [35, 12], [65, 12], [85, 12]].forEach(([tx, ty]) => {
+      ctx.beginPath();
+      ctx.arc(tx, ty, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Status LEDs
+    ctx.fillStyle = '#00ff00';
+    ctx.beginPath(); ctx.arc(10, 50, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath(); ctx.arc(20, 50, 2, 0, Math.PI * 2); ctx.fill();
+
+    // Labels
+    ctx.fillStyle = '#aaa';
+    ctx.font = 'bold 4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('MOTOR A', 22, 60);
+    ctx.fillText('MOTOR B', 78, 60);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [10, 26, 42, 58, 74, 90].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 72); ctx.lineTo(px, 80); ctx.stroke();
+    });
+    [10, 30, 50, 70, 90].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 8); ctx.lineTo(px, 0); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -4, 104, 88);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Continuous Rotation Servo
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'servo_continuous',
+  name: 'Cont. Rotation Servo',
+  category: 'Actuators',
+  icon: '⚙️',
+  desc: 'Continuous rotation servo motor. Variable speed control in both directions (not 0-180° positioning)',
+  width: 60,
+  height: 50,
+  defaultProps: { speed: 0 },
+  interactive: [
+    { field: 'speed', label: 'Speed', min: -100, max: 100, step: 1, unit: '%' },
+  ],
+  pins: [
+    { id: 'signal', label: 'SIG', type: PIN_TYPE.PWM, x: 8, y: 50, side: 'bottom' },
+    { id: 'vcc', label: '+', type: PIN_TYPE.POWER, x: 25, y: 50, side: 'bottom' },
+    { id: 'gnd', label: '−', type: PIN_TYPE.GND, x: 42, y: 50, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const speed = inst.runtimeState?.speed ?? inst.props.speed ?? 0;
+    const rotation = Date.now() * speed * 0.01;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Leads
+    ctx.strokeStyle = '#f5c842';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(8, 50); ctx.lineTo(8, 44); ctx.stroke();
+    ctx.strokeStyle = '#cc3333';
+    ctx.beginPath(); ctx.moveTo(25, 50); ctx.lineTo(25, 44); ctx.stroke();
+    ctx.strokeStyle = '#333';
+    ctx.beginPath(); ctx.moveTo(42, 50); ctx.lineTo(42, 44); ctx.stroke();
+
+    // Body
+    const bodyGrad = ctx.createLinearGradient(0, 5, 60, 45);
+    bodyGrad.addColorStop(0, '#3a3a3a');
+    bodyGrad.addColorStop(1, '#1a1a1a');
+    ctx.fillStyle = bodyGrad;
+    roundRect(ctx, 0, 5, 60, 40, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Gear hub
+    ctx.fillStyle = '#555';
+    ctx.beginPath(); ctx.arc(30, 22, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(30, 22, 7, 0, Math.PI * 2); ctx.fill();
+
+    // Rotating arm
+    ctx.save();
+    ctx.translate(30, 22);
+    ctx.rotate(rotation);
+    ctx.fillStyle = '#aaa';
+    roundRect(ctx, -4, -20, 8, 22, 3);
+    ctx.fill();
+    ctx.fillStyle = '#ccc';
+    ctx.beginPath(); ctx.arc(0, -18, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // Center hub
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.arc(30, 22, 4, 0, Math.PI * 2); ctx.fill();
+
+    // Speed display
+    ctx.fillStyle = '#aaa';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'center';
+    const dir = speed > 0 ? 'CW' : speed < 0 ? 'CCW' : 'STOP';
+    ctx.fillText(`${Math.abs(speed)}% ${dir}`, 30, 42);
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 2, 66, 55);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   EC11 Rotary Encoder with Push Button
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'rotary_encoder',
+  name: 'Rotary Encoder EC11',
+  category: 'Input',
+  icon: '🎛️',
+  desc: 'EC11 rotary encoder with push button. Infinite rotation with quadrature output (A, B) + switch',
+  width: 40,
+  height: 50,
+  defaultProps: { position: 0, pressed: false },
+  interactive: [
+    { field: 'position', label: 'Pos', min: -100, max: 100, step: 1, unit: '' },
+  ],
+  pins: [
+    { id: 'A', label: 'A', type: PIN_TYPE.DIGITAL, x: 6, y: 50, side: 'bottom' },
+    { id: 'B', label: 'B', type: PIN_TYPE.DIGITAL, x: 16, y: 50, side: 'bottom' },
+    { id: 'SW', label: 'SW', type: PIN_TYPE.DIGITAL, x: 26, y: 50, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 36, y: 50, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const pressed = inst.runtimeState?.pressed ?? inst.props.pressed ?? false;
+    const position = inst.runtimeState?.position ?? inst.props.position ?? 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Shaft
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(20, 18, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#aaa';
+    ctx.beginPath(); ctx.arc(20, 18, 5, 0, Math.PI * 2); ctx.fill();
+
+    // Knob
+    ctx.fillStyle = pressed ? '#333' : '#444';
+    ctx.beginPath(); ctx.arc(20, 18, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Knob indicator
+    const angle = (position * 3.6) * Math.PI / 180;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(20, 18);
+    ctx.lineTo(20 + Math.cos(angle) * 10, 18 + Math.sin(angle) * 10);
+    ctx.stroke();
+
+    // Position display
+    ctx.fillStyle = '#0a0a1a';
+    roundRect(ctx, 2, 34, 36, 10, 2);
+    ctx.fill();
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${position}`, 20, 42);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [6, 16, 26, 36].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 44); ctx.lineTo(px, 50); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 44, 54);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   DIP Switch Bank (8-position)
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'dip_switch',
+  name: 'DIP Switch 8-Pos',
+  category: 'Input',
+  icon: '🎚️',
+  desc: '8-position DIP switch bank. Multi-position toggle for hardware settings and binary input',
+  width: 70,
+  height: 30,
+  defaultProps: { switches: 0 },
+  interactive: [
+    { field: 'switches', label: 'Value', min: 0, max: 255, step: 1, unit: '' },
+  ],
+  pins: [
+    { id: '1', label: '1', type: PIN_TYPE.DIGITAL, x: 6, y: 30, side: 'bottom' },
+    { id: '2', label: '2', type: PIN_TYPE.DIGITAL, x: 14, y: 30, side: 'bottom' },
+    { id: '3', label: '3', type: PIN_TYPE.DIGITAL, x: 22, y: 30, side: 'bottom' },
+    { id: '4', label: '4', type: PIN_TYPE.DIGITAL, x: 30, y: 30, side: 'bottom' },
+    { id: '5', label: '5', type: PIN_TYPE.DIGITAL, x: 38, y: 30, side: 'bottom' },
+    { id: '6', label: '6', type: PIN_TYPE.DIGITAL, x: 46, y: 30, side: 'bottom' },
+    { id: '7', label: '7', type: PIN_TYPE.DIGITAL, x: 54, y: 30, side: 'bottom' },
+    { id: '8', label: '8', type: PIN_TYPE.DIGITAL, x: 62, y: 30, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const switches = inst.runtimeState?.switches ?? inst.props.switches ?? 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Body
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, 0, 2, 70, 22, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Switches
+    for (let i = 0; i < 8; i++) {
+      const isOn = (switches >> i) & 1;
+      const sx = 6 + i * 8;
+
+      // Switch housing
+      ctx.fillStyle = '#333';
+      roundRect(ctx, sx - 2, 6, 6, 12, 1);
+      ctx.fill();
+
+      // Switch toggle
+      ctx.fillStyle = isOn ? '#00cc00' : '#cc0000';
+      ctx.fillRect(sx - 1, isOn ? 7 : 13, 4, 5);
+
+      // Label
+      ctx.fillStyle = '#888';
+      ctx.font = '4px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${i + 1}`, sx + 1, 22);
+    }
+
+    // Binary value display
+    ctx.fillStyle = '#0a0a1a';
+    roundRect(ctx, 18, 24, 34, 5, 1);
+    ctx.fill();
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(switches.toString(2).padStart(8, '0'), 35, 28);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 8; i++) {
+      const px = 6 + i * 8;
+      ctx.beginPath(); ctx.moveTo(px, 24); ctx.lineTo(px, 30); ctx.stroke();
+    }
+
+    if (inst.selected) drawSelectionRect(ctx, -2, 0, 74, 32);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   HC-05 Bluetooth Module (UART)
+   ═══════════════════════════════════════════════════════════════ */
+defComp({
+  id: 'hc05',
+  name: 'HC-05 Bluetooth',
+  category: 'Sensors',
+  icon: '📶',
+  desc: 'HC-05 serial-to-Bluetooth transceiver module (UART). For mobile app communication',
+  width: 50,
+  height: 70,
+  defaultProps: { connected: false, rxData: '' },
+  interactive: [
+    { field: 'connected', label: 'Conn', min: 0, max: 1, step: 1, unit: '' },
+  ],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 70, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 70, side: 'bottom' },
+    { id: 'TXD', label: 'TXD', type: PIN_TYPE.DIGITAL, x: 32, y: 70, side: 'bottom' },
+    { id: 'RXD', label: 'RXD', type: PIN_TYPE.DIGITAL, x: 44, y: 70, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const connected = inst.runtimeState?.connected ?? inst.props.connected ?? false;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB body
+    ctx.fillStyle = '#0a2463';
+    roundRect(ctx, 0, 0, 50, 58, 4);
+    ctx.fill();
+
+    // Bluetooth antenna
+    ctx.strokeStyle = '#c8a452';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(40, 8);
+    ctx.lineTo(40, 20);
+    ctx.quadraticCurveTo(40, 28, 32, 28);
+    ctx.stroke();
+
+    // HC-05 chip
+    ctx.fillStyle = '#111';
+    roundRect(ctx, 8, 12, 24, 16, 2);
+    ctx.fill();
+    ctx.fillStyle = '#666';
+    ctx.font = 'bold 4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('HC-05', 20, 22);
+
+    // Status LED
+    ctx.fillStyle = connected ? '#00ff00' : '#ff0000';
+    ctx.beginPath();
+    ctx.arc(40, 36, 3, 0, Math.PI * 2);
+    ctx.fill();
+    if (connected) {
+      ctx.shadowColor = '#00ff00';
+      ctx.shadowBlur = 6;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Connection status
+    ctx.fillStyle = '#0a0a1a';
+    roundRect(ctx, 4, 40, 42, 12, 2);
+    ctx.fill();
+    ctx.fillStyle = connected ? '#00ff88' : '#ff4444';
+    ctx.font = 'bold 5px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(connected ? 'CONNECTED' : 'PAIRING...', 25, 48);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [8, 20, 32, 44].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 58); ctx.lineTo(px, 70); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 54, 74);
+    ctx.restore();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
    Export all new component IDs for canvas.js registration
    ═══════════════════════════════════════════════════════════════ */
 window.NEW_COMPONENT_IDS = [
   'mpu6050', 'stepper_28byj', 'neopixel',
   'ir_obstacle', 'flex_sensor', 'thermistor',
-  'diode_1n4007'
+  'diode_1n4007',
+  'bme280', 'vl53l0x', 'rc522', 'ir_receiver',
+  'max7219', 'ili9341',
+  'l298n', 'servo_continuous',
+  'rotary_encoder', 'dip_switch', 'hc05'
 ];
