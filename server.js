@@ -22,7 +22,8 @@ const ROOT      = __dirname;
 const DATA_DIR  = path.join(ROOT, 'data');
 const DB_FILE   = path.join(DATA_DIR, 'ardusim.db');
 const PORT      = Number(process.env.PORT) || 3000;
-const HOST      = process.env.HOST || '127.0.0.1';
+// const HOST      = process.env.HOST || '127.0.0.1';
+const HOST = '0.0.0.0'; 
 const MAX_BODY  = 2 * 1024 * 1024; // 2 MB request limit
 
 /* ── SQLite storage ── */
@@ -254,3 +255,4 @@ server.listen(PORT, HOST, () => {
   console.log(`▶ ArduSim server running at http://${HOST}:${PORT}`);
   console.log(`  DB: ${DB_FILE}`);
 });
+

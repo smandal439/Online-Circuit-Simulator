@@ -1734,6 +1734,12 @@ _newProject() {
 
   /* ══════════════════════ EXAMPLES ══════════════════════ */
   async _renderExamples() {
+    const container = document.getElementById('examples-grid');
+    if (!container) return;
+
+    // Show spinner while loading
+    container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--text-muted)"><div class="loading-spinner" style="width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px"></div><span style="font-size:13px">Loading examples...</span></div>';
+
     try {
       if (window.loadExamplesFromFiles && (!window.EXAMPLE_SKETCHES || window.EXAMPLE_SKETCHES.length === 0)) {
         await window.loadExamplesFromFiles();
@@ -1741,8 +1747,6 @@ _newProject() {
     } catch (e) {
       console.error('[ArduSim] Failed to load examples:', e);
     }
-    const container = document.getElementById('examples-grid');
-    if (!container || !window.EXAMPLE_SKETCHES) return;
 
     if (window.EXAMPLE_SKETCHES.length === 0) {
       container.innerHTML = '<div class="library-empty" style="padding:24px;text-align:center;color:var(--text-muted)">No examples loaded. Check your connection and reload.</div>';

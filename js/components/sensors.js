@@ -357,3 +357,106 @@ defComp({
     ctx.restore();
   }
 });
+
+
+/* -------------- LM35 Precision Centigrade Temperature Sensor (TO-92) ------------------ */
+defComp({
+  id: 'lm35_sensor',
+  name: 'LM35 Temp Sensor',
+  category: 'Sensors',
+  icon: '🌡️',
+  desc: 'Precision centigrade temperature sensor producing 10mV/°C linear analog output voltage (250mV at 25°C)',
+  width: 60,
+  height: 80,
+  defaultProps: { temp: 25 },
+  interactive: [
+    { field: 'temp', label: 'Temperature', min: -40, max: 125, step: 1, unit: '°C' },
+  ],
+  pins: [
+    { id: 'VCC', label: 'VCC (+5V)', type: PIN_TYPE.POWER,  x: 15, y: 80, side: 'bottom' },
+    { id: 'OUT', label: 'VOUT',     type: PIN_TYPE.ANALOG, x: 30, y: 80, side: 'bottom' },
+    { id: 'GND', label: 'GND',      type: PIN_TYPE.GND,    x: 45, y: 80, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const temp = Number(inst.runtimeState?.temp ?? inst.props.temp ?? 25);
+    
+    // Voltage scale factor: 10 mV / °C (0.01 V / °C)
+    const vOut = temp * 0.01;
+
+    // Update analog voltage on OUT pin for solver engine
+    if (sim && inst.pins.OUT) {
+      sim.setPinVoltage(inst.pins.OUT.id, vOut);
+    }
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // 1. TO-92 Metallic Lead Pins
+    const pinXs = [15, 30, 45];
+    pinXs.forEach(px => {
+      const pinGrad = ctx.createLinearGradient(px - 1.2, 38, px + 1.2, 38);
+      pinGrad.addColorStop(0, '#90a4ae');
+      pinGrad.addColorStop(0.5, '#ffffff');
+      pinGrad.addColorStop(1, '#607d8b');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(px - 1.2, 38, 2.4, 42);
+    });
+
+    // 2. TO-92 Molded Plastic Body
+    const bodyGrad = ctx.createLinearGradient(0, 5, 0, 40);
+    bodyGrad.addColorStop(0, '#455a64');
+    bodyGrad.addColorStop(0.3, '#263238');
+    bodyGrad.addColorStop(1, '#101214');
+    ctx.fillStyle = bodyGrad;
+
+    ctx.beginPath();
+    ctx.moveTo(8, 38);
+    ctx.lineTo(52, 38);
+    ctx.arcTo(56, 38, 56, 5, 4);
+    ctx.arcTo(56, 5, 4, 5, 18);
+    ctx.arcTo(4, 5, 4, 38, 4);
+    ctx.arcTo(4, 38, 8, 38, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#546e7a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Flat Front Face Bevel Line
+    ctx.fillStyle = '#1c2024';
+    roundRect(ctx, 10, 32, 40, 6, 1);
+    ctx.fill();
+
+    // 3. Temperature Thermal Color Indicator LED
+    // Normalizes -40°C (Blue) to 125°C (Red)
+    const tRatio = Math.min(1, Math.max(0, (temp + 40) / 165));
+    const r = Math.round(tRatio * 255);
+    const b = Math.round((1 - tRatio) * 255);
+    ctx.fillStyle = `rgb(${r}, 40, ${b})`;
+    ctx.beginPath();
+    ctx.arc(30, 15, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. Laser-Etched Silkscreen Markings
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.font = 'bold 5.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('LM35', 30, 23);
+    ctx.font = 'bold 4px "JetBrains Mono", monospace';
+    ctx.fillText('DZ', 30, 29);
+
+    // 5. Real-Time Telemetry Readout
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 6px "JetBrains Mono", monospace';
+    ctx.fillText(`${temp}°C`, 30, 47);
+
+    ctx.fillStyle = '#ffc107';
+    ctx.font = 'bold 5px "JetBrains Mono", monospace';
+    ctx.fillText(`${(vOut * 1000).toFixed(0)}mV`, 30, 55);
+
+    if (inst.selected) drawSelectionRect(ctx, 0, 0, 60, 80);
+    ctx.restore();
+  }
+});

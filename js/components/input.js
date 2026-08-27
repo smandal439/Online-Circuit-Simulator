@@ -376,3 +376,144 @@ defComp({
     ctx.restore();
   }
 });
+
+
+/* -------------- 4x4 Matrix Membrane Keypad ------------------ */
+defComp({
+  id: 'keypad_4x4',
+  name: '4x4 Matrix Keypad',
+  category: 'Input',
+  icon: '⌨️',
+  desc: '16-button matrix keypad with 8-pin interface (4 Row pins, 4 Column pins) for microcontroller scanning',
+  width: 140,
+  height: 160,
+  defaultProps: {
+    pressedKey: null, // Active key character, e.g., '1', 'A', '#'
+  },
+  pins: [
+    { id: 'R1', label: 'R1', type: PIN_TYPE.DIGITAL, x: 20,  y: 160, side: 'bottom' },
+    { id: 'R2', label: 'R2', type: PIN_TYPE.DIGITAL, x: 34,  y: 160, side: 'bottom' },
+    { id: 'R3', label: 'R3', type: PIN_TYPE.DIGITAL, x: 48,  y: 160, side: 'bottom' },
+    { id: 'R4', label: 'R4', type: PIN_TYPE.DIGITAL, x: 62,  y: 160, side: 'bottom' },
+    { id: 'C1', label: 'C1', type: PIN_TYPE.DIGITAL, x: 78,  y: 160, side: 'bottom' },
+    { id: 'C2', label: 'C2', type: PIN_TYPE.DIGITAL, x: 92,  y: 160, side: 'bottom' },
+    { id: 'C3', label: 'C3', type: PIN_TYPE.DIGITAL, x: 106, y: 160, side: 'bottom' },
+    { id: 'C4', label: 'C4', type: PIN_TYPE.DIGITAL, x: 120, y: 160, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const pressedKey = inst.runtimeState?.pressedKey ?? inst.props.pressedKey ?? null;
+
+    const keys = [
+      ['1', '2', '3', 'A'],
+      ['4', '5', '6', 'B'],
+      ['7', '8', '9', 'C'],
+      ['*', '0', '#', 'D']
+    ];
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // 1. Black Flexible Polymer Membrane Backing Sheet
+    ctx.fillStyle = '#181a1b';
+    roundRect(ctx, 4, 4, 132, 142, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#2d3135';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Graphic Outline Bevel Frame
+    ctx.strokeStyle = '#ffd54f';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, 8, 8, 124, 114, 4);
+    ctx.stroke();
+
+    // 2. Render 4x4 Keypad Buttons
+    const btnW = 24;
+    const btnH = 20;
+    const startX = 14;
+    const startY = 14;
+    const gapX = 6;
+    const gapY = 6;
+
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const keyChar = keys[row][col];
+        const kx = startX + col * (btnW + gapX);
+        const ky = startY + row * (btnH + gapY);
+        const isPressed = (pressedKey === keyChar);
+        const isLetter = ['A', 'B', 'C', 'D'].includes(keyChar);
+
+        // Matrix Pin Short Circuit Simulation Logic
+        if (isPressed && sim) {
+          const rPinId = inst.pins[`R${row + 1}`].id;
+          const cPinId = inst.pins[`C${col + 1}`].id;
+          // Connect row and column net to simulate physical button switch press
+          sim.connectPins(rPinId, cPinId);
+        }
+
+        // Button Surface Base
+        const btnGrad = ctx.createLinearGradient(kx, ky, kx, ky + btnH);
+        if (isPressed) {
+          btnGrad.addColorStop(0, '#ffa000');
+          btnGrad.addColorStop(1, '#ff6f00');
+        } else if (isLetter) {
+          btnGrad.addColorStop(0, '#37474f');
+          btnGrad.addColorStop(1, '#212121');
+        } else {
+          btnGrad.addColorStop(0, '#424242');
+          btnGrad.addColorStop(1, '#1c1c1c');
+        }
+
+        ctx.fillStyle = btnGrad;
+        roundRect(ctx, kx, ky, btnW, btnH, 3);
+        ctx.fill();
+
+        // Key Border Highlight & Inset Shadow
+        ctx.strokeStyle = isPressed ? '#ffe082' : (isLetter ? '#78909c' : '#616161');
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // Key Characters / Legend Printing
+        ctx.fillStyle = isPressed ? '#000000' : (isLetter ? '#ffb74d' : '#ffffff');
+        ctx.font = 'bold 10px "JetBrains Mono", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(keyChar, kx + btnW / 2, ky + btnH / 2 + 3.5);
+      }
+    }
+
+    // 3. Ribbon Cable Escape Connector Tail
+    ctx.fillStyle = '#101213';
+    ctx.fillRect(12, 122, 116, 16);
+
+    // Flex cable trace silkscreen lines
+    ctx.strokeStyle = '#c8a452';
+    ctx.lineWidth = 0.8;
+    const pinXs = [20, 34, 48, 62, 78, 92, 106, 120];
+    pinXs.forEach(px => {
+      ctx.beginPath();
+      ctx.moveTo(px, 122);
+      ctx.lineTo(px, 148);
+      ctx.stroke();
+    });
+
+    // Silkscreen Pin Labels
+    ctx.fillStyle = '#b0bec5';
+    ctx.font = 'bold 5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ['R1', 'R2', 'R3', 'R4', 'C1', 'C2', 'C3', 'C4'].forEach((lbl, idx) => {
+      ctx.fillText(lbl, pinXs[idx], 130);
+    });
+
+    // Bottom Solder Pad Headers
+    pinXs.forEach(px => {
+      ctx.fillStyle = '#c8a452';
+      ctx.beginPath(); ctx.arc(px, 150, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0f1112';
+      ctx.beginPath(); ctx.arc(px, 150, 1, 0, Math.PI * 2); ctx.fill();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, 0, 0, 140, 160);
+    ctx.restore();
+  }
+});
