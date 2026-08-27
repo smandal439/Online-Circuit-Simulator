@@ -669,14 +669,16 @@ class ArduinoSimulator {
                 if (colIdx >= 0) break;
               }
               if (colIdx < 0) continue;
-              // Find which row the pressed key is on
-              let pressedRow = -1;
+              // Find which row and column the pressed key is on
+              let pressedRow = -1, pressedCol = -1;
               for (let r = 0; r < 4; r++) {
                 for (let c = 0; c < 4; c++) {
-                  if (keyMap[r][c] === pressedKey) pressedRow = r;
+                  if (keyMap[r][c] === pressedKey) { pressedRow = r; pressedCol = c; }
                 }
               }
-              if (pressedRow < 0) continue;
+              if (pressedRow < 0 || pressedCol < 0) continue;
+              // Only respond if the scanned column matches the pressed key's column
+              if (colIdx !== pressedCol) return 1;
               // Check if that row pin is currently LOW
               const rPinId = 'R' + (pressedRow + 1);
               for (const w of canvas.wires) {
