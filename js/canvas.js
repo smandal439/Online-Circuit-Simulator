@@ -2941,7 +2941,7 @@ class CircuitCanvas {
           break;
         }
 
-        case 'keypad': {
+        case 'keypad_4x4': {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
 
