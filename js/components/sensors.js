@@ -384,11 +384,6 @@ defComp({
     // Voltage scale factor: 10 mV / °C (0.01 V / °C)
     const vOut = temp * 0.01;
 
-    // Update analog voltage on OUT pin for solver engine
-    if (sim && inst.pins.OUT) {
-      sim.setPinVoltage(inst.pins.OUT.id, vOut);
-    }
-
     ctx.save();
     ctx.translate(x, y);
 
