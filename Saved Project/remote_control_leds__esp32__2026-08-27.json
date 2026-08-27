@@ -1,15 +1,7 @@
 {
-  "id": "remote_control_leds",
+  "version": "1.1",
+  "savedAt": "2026-08-27T10:06:38.009Z",
   "name": "Remote Control LEDs (ESP32)",
-  "icon": "📱",
-  "desc": "Control 4 LEDs from your phone using ESP32 and Remote Control feature",
-  "tags": [
-    "intermediate",
-    "output",
-    "led",
-    "remote",
-    "esp32"
-  ],
   "code": "/*\n * Remote Control LEDs (ESP32)\n * \n * Use the Remote Control feature to toggle\n * these 4 LEDs from your phone!\n *\n * How to use:\n * 1. Run this sketch\n * 2. Click the Remote button (phone icon) in the header\n * 3. Open the URL on your phone\n * 4. Toggle D2, D4, D5, D12 to control the LEDs\n */\n\nint ledPins[] = {2, 4, 5, 12};\nint ledCount = 4;\n\nvoid setup() {\n  Serial.begin(115200);\n  for (int i = 0; i < ledCount; i++) {\n    pinMode(ledPins[i], OUTPUT);\n    digitalWrite(ledPins[i], LOW);\n  }\n  Serial.println(\"ESP32 Remote Control LEDs ready!\");\n  Serial.println(\"Toggle D2, D4, D5, D12 from your phone.\");\n}\n\nvoid loop() {\n  // Read pin states and update LEDs\n  for (int i = 0; i < ledCount; i++) {\n    int val = digitalRead(ledPins[i]);\n    digitalWrite(ledPins[i], val);\n  }\n  delay(50);\n}",
   "circuit": {
     "components": [
