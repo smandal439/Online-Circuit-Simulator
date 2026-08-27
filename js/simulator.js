@@ -632,10 +632,9 @@ class ArduinoSimulator {
         },
         digitalRead(pin) {
           const key = `pin_${pin}`;
-          // Check if button connected and pressed
           const state = self.pinStates[key];
           if (self.pinModes[key] === 'INPUT_PULLUP') {
-            return state !== undefined ? (state ? 0 : 1) : 1;
+            return state !== undefined ? state : 1;
           }
           return state || 0;
         },
