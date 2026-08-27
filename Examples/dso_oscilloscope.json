@@ -1,0 +1,61 @@
+{
+  "id": "dso_oscilloscope",
+  "name": "DSO Oscilloscope",
+  "icon": "∿",
+  "desc": "Connect a function generator to the 4-channel DSO oscilloscope to visualize waveforms in real time",
+  "tags": [
+    "intermediate",
+    "instrument",
+    "oscilloscope",
+    "dso",
+    "signal",
+    "waveform"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 100,
+        "y": 100
+      },
+      {
+        "id": "fgen1",
+        "type": "func_gen",
+        "x": 300,
+        "y": 100
+      },
+      {
+        "id": "dso1",
+        "type": "dso_4ch",
+        "x": 100,
+        "y": 320
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "instId": "fgen1",
+          "pinId": "ch1_out"
+        },
+        "to": {
+          "instId": "dso1",
+          "pinId": "ch1_in"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "fgen1",
+          "pinId": "ch1_gnd"
+        },
+        "to": {
+          "instId": "dso1",
+          "pinId": "gnd"
+        }
+      }
+    ]
+  },
+  "code": "/*\n * DSO Oscilloscope — visualize a signal on the 4-channel DSO.\n *\n * This example connects a function generator output to DSO CH1.\n * No Arduino code needed — just wires and instruments.\n *\n * The DSO component samples voltages from its CH1–CH4 pins\n * and displays the waveform on screen.\n */\n\nvoid setup() {\n  Serial.println(\"DSO Oscilloscope Demo\");\n  Serial.println(\"Connect Function Generator CH1 → DSO CH1\");\n}\n\nvoid loop() {\n  delay(1000);\n}"
+}

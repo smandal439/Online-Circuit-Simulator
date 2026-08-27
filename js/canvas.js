@@ -150,6 +150,10 @@ class CircuitCanvas {
       const def = COMPONENT_DEFS[inst.type];
       if (!def) continue;
 
+      if (typeof def.step === 'function') {
+        def.step(inst, sim?.isRunning ? sim : null);
+      }
+
       ctx.save();
       if (inst.rotation) {
         const cx = inst.x + def.width / 2;
