@@ -1,0 +1,150 @@
+{
+  "id": "keypad_interfacing",
+  "name": "Keypad Interfacing",
+  "icon": "⌨️",
+  "desc": "Read 4x4 matrix keypad input and print pressed keys to Serial Monitor",
+  "tags": [
+    "intermediate",
+    "input",
+    "keypad"
+  ],
+  "code": "#include <Keypad.h>\nconst byte ROWS = 4;\nconst byte COLS = 4;\nchar keys[ROWS][COLS] = {\n  {'1','2','3','A'},\n  {'4','5','6','B'},\n  {'7','8','9','C'},\n  {'*','0','#','D'}\n};\nbyte rowPins[ROWS] = {0,1,2,3};\nbyte colPins[COLS] = {4,5,6,7};\nKeypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);\n\nvoid setup() { \n  Serial.begin(9600); \n }\n\nvoid loop() {\n  char key = keypad.getKey();\n  if (key) { Serial.println(key); }\n}\n",
+  "circuit": {
+    "components": [
+      {
+        "id": "comp_1787827977430_3grd3",
+        "type": "keypad_4x4",
+        "x": 80,
+        "y": -230,
+        "width": 140,
+        "height": 160,
+        "props": {
+          "pressedKey": null
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "comp_1787828034961_26mbv",
+        "type": "arduino_uno",
+        "x": 45,
+        "y": -20,
+        "width": 230,
+        "height": 150,
+        "props": {
+          "label": "UNO"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      {
+        "id": "wire_1787828088762_ctmw7",
+        "from": {
+          "instId": "comp_1787827977430_3grd3",
+          "pinId": "R1"
+        },
+        "to": {
+          "instId": "comp_1787828034961_26mbv",
+          "pinId": "D0"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787828090560_kypf6",
+        "from": {
+          "instId": "comp_1787827977430_3grd3",
+          "pinId": "R2"
+        },
+        "to": {
+          "instId": "comp_1787828034961_26mbv",
+          "pinId": "D1"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787828092262_c10rf",
+        "from": {
+          "instId": "comp_1787827977430_3grd3",
+          "pinId": "R3"
+        },
+        "to": {
+          "instId": "comp_1787828034961_26mbv",
+          "pinId": "D2"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787828094298_bdg17",
+        "from": {
+          "instId": "comp_1787827977430_3grd3",
+          "pinId": "R4"
+        },
+        "to": {
+          "instId": "comp_1787828034961_26mbv",
+          "pinId": "D3"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787828099740_evhse",
+        "from": {
+          "instId": "comp_1787827977430_3grd3",
+          "pinId": "C1"
+        },
+        "to": {
+          "instId": "comp_1787828034961_26mbv",
+          "pinId": "D4"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787828102573_ict3r",
+        "from": {
+          "instId": "comp_1787827977430_3grd3",
+          "pinId": "C2"
+        },
+        "to": {
+          "instId": "comp_1787828034961_26mbv",
+          "pinId": "D5"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787828105784_uuvz1",
+        "from": {
+          "instId": "comp_1787827977430_3grd3",
+          "pinId": "C3"
+        },
+        "to": {
+          "instId": "comp_1787828034961_26mbv",
+          "pinId": "D6"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787828107789_tlc8p",
+        "from": {
+          "instId": "comp_1787827977430_3grd3",
+          "pinId": "C4"
+        },
+        "to": {
+          "instId": "comp_1787828034961_26mbv",
+          "pinId": "D7"
+        },
+        "color": null,
+        "waypoints": []
+      }
+    ]
+  }
+}
