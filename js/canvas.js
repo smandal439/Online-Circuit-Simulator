@@ -1148,18 +1148,23 @@ class CircuitCanvas {
         return;
       }
 
-      // Keypad button click
+      // Keypad button click — press on click, auto-release after 150ms
       const keypadHit = this._hitTestKeypadButton(world.x, world.y);
       if (keypadHit) {
         const { inst, key } = keypadHit;
-        const cur = inst.runtimeState?.pressedKey ?? inst.props?.pressedKey ?? null;
-        const newKey = (cur === key) ? null : key;
         inst.runtimeState = inst.runtimeState || {};
-        inst.runtimeState.pressedKey = newKey;
+        // Clear any pending release timer
+        if (inst.runtimeState._keyReleaseTimer) clearTimeout(inst.runtimeState._keyReleaseTimer);
+        inst.runtimeState.pressedKey = key;
         this._selectAll(false);
         inst.selected = true;
         this.selected = inst;
         this._render();
+        // Auto-release after 150ms
+        inst.runtimeState._keyReleaseTimer = setTimeout(() => {
+          inst.runtimeState.pressedKey = null;
+          this._render();
+        }, 150);
         return;
       }
 
