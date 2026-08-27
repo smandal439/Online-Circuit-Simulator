@@ -1,0 +1,88 @@
+{
+  "id": "lm35_temperature",
+  "name": "LM35 Temperature Sensor",
+  "icon": "🌡️",
+  "desc": "Read temperature from LM35 sensor and display in Celsius & Fahrenheit",
+  "tags": [
+    "beginner",
+    "sensor",
+    "lm35",
+    "temperature"
+  ],
+  "code": "const int sensorPin = A5;\r\n\r\nvoid setup() {\r\n  Serial.begin(115200);\r\n}\r\n\r\nvoid loop() {\r\n  int sensorValue = analogRead(sensorPin);\r\n  \r\n  float temperatureCelsius = (sensorValue * 500.0) / 1023.0;\r\n  float temperatureFahrenheit = (temperatureCelsius * 1.8) + 32.0;\r\n\r\n  Serial.print(\"Temperature: \");\r\n  Serial.print(temperatureCelsius);\r\n  Serial.print(\" °C  |  \");\r\n  Serial.print(temperatureFahrenheit);\r\n  Serial.println(\" °F\");\r\n\r\n  delay(1000);\r\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "comp_1787826805002_k02zx",
+        "type": "arduino_uno",
+        "x": -75,
+        "y": -25,
+        "width": 230,
+        "height": 150,
+        "props": {
+          "label": "UNO"
+        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "comp_1787827101296_ppqvb",
+        "type": "lm35_sensor",
+        "x": 230,
+        "y": -40,
+        "width": 60,
+        "height": 80,
+        "props": {
+          "temp": 25
+        },
+        "runtimeState": {
+          "temp": 40
+        },
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      {
+        "id": "wire_1787827107550_qy4e0",
+        "from": {
+          "instId": "comp_1787827101296_ppqvb",
+          "pinId": "VCC"
+        },
+        "to": {
+          "instId": "comp_1787826805002_k02zx",
+          "pinId": "5V2"
+        },
+        "color": "#F44336",
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787827109731_txau8",
+        "from": {
+          "instId": "comp_1787826805002_k02zx",
+          "pinId": "GND3"
+        },
+        "to": {
+          "instId": "comp_1787827101296_ppqvb",
+          "pinId": "GND"
+        },
+        "color": "#424242",
+        "waypoints": []
+      },
+      {
+        "id": "wire_1787827119318_u41pm",
+        "from": {
+          "instId": "comp_1787826805002_k02zx",
+          "pinId": "A5"
+        },
+        "to": {
+          "instId": "comp_1787827101296_ppqvb",
+          "pinId": "OUT"
+        },
+        "color": "#FFC107",
+        "waypoints": []
+      }
+    ]
+  }
+}
