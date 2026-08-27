@@ -2947,39 +2947,7 @@ class CircuitCanvas {
         }
 
         case 'keypad_4x4': {
-          const sim = window.ArduinoSim;
-          if (!sim || !sim.pinStates) break;
-
-          const keyMap = [
-            ['1','2','3','A'],
-            ['4','5','6','B'],
-            ['7','8','9','C'],
-            ['*','0','#','D']
-          ];
-
-          // Read pressedKey character from runtimeState or props
-          const pressedKey = inst.runtimeState?.pressedKey ?? inst.props?.pressedKey ?? null;
-
-          if (pressedKey) {
-            // Find row/col of the pressed key
-            let kr = -1, kc = -1;
-            for (let r = 0; r < 4; r++) {
-              for (let c = 0; c < 4; c++) {
-                if (keyMap[r][c] === pressedKey) { kr = r; kc = c; }
-              }
-            }
-            if (kr >= 0 && kc >= 0) {
-              const rPin = this._getConnectedPinNum(inst.id, 'R' + (kr + 1));
-              const cPin = this._getConnectedPinNum(inst.id, 'C' + (kc + 1));
-
-              if (rPin !== null && cPin !== null) {
-                const rState = sim.pinStates[`pin_${rPin}`] ?? 1;
-                if (rState === 0) {
-                  sim.pinStates[`pin_${cPin}`] = 0;
-                }
-              }
-            }
-          }
+          // Keypad column state is computed live in digitalRead() — no cached update needed.
           break;
         }
       }

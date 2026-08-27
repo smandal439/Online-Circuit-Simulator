@@ -444,14 +444,7 @@ defComp({
         const isPressed = (pressedKey === keyChar);
         const isLetter = ['A', 'B', 'C', 'D'].includes(keyChar);
 
-        // Matrix Pin Short Circuit Simulation Logic
-        if (isPressed && sim) {
-          const rPinDef = (inst.pins || []).find(p => p.id === `R${row + 1}`);
-          const cPinDef = (inst.pins || []).find(p => p.id === `C${col + 1}`);
-          if (rPinDef && cPinDef) {
-            sim.connectPins(rPinDef.id, cPinDef.id);
-          }
-        }
+        // (Keypad column state is computed live in simulator digitalRead)
 
         // Button Surface Base
         const btnGrad = ctx.createLinearGradient(kx, ky, kx, ky + btnH);

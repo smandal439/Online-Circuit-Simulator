@@ -632,6 +632,76 @@ class ArduinoSimulator {
         },
         digitalRead(pin) {
           const key = `pin_${pin}`;
+
+          // Live keypad column detection: compute column state on-read
+          // based on current row pin states, so each scan row gets correct values.
+          const canvas = window.CircuitCanvas;
+          if (canvas && canvas.components && canvas.wires) {
+            const keyMap = [
+              ['1','2','3','A'],
+              ['4','5','6','B'],
+              ['7','8','9','C'],
+              ['*','0','#','D']
+            ];
+            for (const inst of canvas.components) {
+              if (inst.type !== 'keypad_4x4') continue;
+              const pressedKey = inst.runtimeState?.pressedKey ?? inst.props?.pressedKey ?? null;
+              if (!pressedKey) continue;
+              // Find which column pin of this keypad is connected to the Arduino pin being read
+              let colIdx = -1;
+              for (let c = 0; c < 4; c++) {
+                const cPinId = 'C' + (c + 1);
+                for (const w of canvas.wires) {
+                  let arduinoPinNum = null;
+                  if (w.from.instId === inst.id && w.from.pinId === cPinId) {
+                    const other = canvas.components.find(ci => ci.id === w.to.instId);
+                    if (other && (other.type === 'arduino_uno' || other.type === 'esp32_devkit_v1')) {
+                      arduinoPinNum = canvas._pinToNumber(w.to.pinId);
+                    }
+                  } else if (w.to.instId === inst.id && w.to.pinId === cPinId) {
+                    const other = canvas.components.find(ci => ci.id === w.from.instId);
+                    if (other && (other.type === 'arduino_uno' || other.type === 'esp32_devkit_v1')) {
+                      arduinoPinNum = canvas._pinToNumber(w.from.pinId);
+                    }
+                  }
+                  if (arduinoPinNum === pin) { colIdx = c; break; }
+                }
+                if (colIdx >= 0) break;
+              }
+              if (colIdx < 0) continue;
+              // Find which row the pressed key is on
+              let pressedRow = -1;
+              for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                  if (keyMap[r][c] === pressedKey) pressedRow = r;
+                }
+              }
+              if (pressedRow < 0) continue;
+              // Check if that row pin is currently LOW
+              const rPinId = 'R' + (pressedRow + 1);
+              for (const w of canvas.wires) {
+                let rPinNum = null;
+                if (w.from.instId === inst.id && w.from.pinId === rPinId) {
+                  const other = canvas.components.find(ci => ci.id === w.to.instId);
+                  if (other && (other.type === 'arduino_uno' || other.type === 'esp32_devkit_v1')) {
+                    rPinNum = canvas._pinToNumber(w.to.pinId);
+                  }
+                } else if (w.to.instId === inst.id && w.to.pinId === rPinId) {
+                  const other = canvas.components.find(ci => ci.id === w.from.instId);
+                  if (other && (other.type === 'arduino_uno' || other.type === 'esp32_devkit_v1')) {
+                    rPinNum = canvas._pinToNumber(w.from.pinId);
+                  }
+                }
+                if (rPinNum !== null) {
+                  const rState = self.pinStates[`pin_${rPinNum}`];
+                  if (rState === 0) return 0;
+                  break;
+                }
+              }
+              return 1;
+            }
+          }
+
           const state = self.pinStates[key];
           if (self.pinModes[key] === 'INPUT_PULLUP') {
             return state !== undefined ? state : 1;
