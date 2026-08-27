@@ -2945,26 +2945,33 @@ class CircuitCanvas {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
 
-          const rows = ['r1', 'r2', 'r3', 'r4'];
-          const cols = ['c1', 'c2', 'c3', 'c4'];
-          
-          // Get current pressed key state: { row: 0..3, col: 0..3 }
-          const activeKey = inst.runtimeState.activeKey || inst.props.activeKey || null;
+          const keyMap = [
+            ['1','2','3','A'],
+            ['4','5','6','B'],
+            ['7','8','9','C'],
+            ['*','0','#','D']
+          ];
 
-          if (activeKey && activeKey.row !== undefined && activeKey.col !== undefined) {
-            const rPin = this._getConnectedPinNum(inst.id, rows[activeKey.row]);
-            const cPin = this._getConnectedPinNum(inst.id, cols[activeKey.col]);
+          // Read pressedKey character from runtimeState or props
+          const pressedKey = inst.runtimeState?.pressedKey ?? inst.props?.pressedKey ?? null;
 
-            if (rPin !== null && cPin !== null) {
-              const rState = sim.pinStates[`pin_${rPin}`] ?? 1;
-              const cState = sim.pinStates[`pin_${cPin}`] ?? 1;
+          if (pressedKey) {
+            // Find row/col of the pressed key
+            let kr = -1, kc = -1;
+            for (let r = 0; r < 4; r++) {
+              for (let c = 0; c < 4; c++) {
+                if (keyMap[r][c] === pressedKey) { kr = r; kc = c; }
+              }
+            }
+            if (kr >= 0 && kc >= 0) {
+              const rPin = this._getConnectedPinNum(inst.id, 'R' + (kr + 1));
+              const cPin = this._getConnectedPinNum(inst.id, 'C' + (kc + 1));
 
-              // Matrix keypad logic: pressing a key connects the row & column.
-              // When the microcontroller scans by pulling a Row LOW, the Column pin goes LOW.
-              if (rState === 0) {
-                sim.pinStates[`pin_${cPin}`] = 0;
-              } else if (cState === 0) {
-                sim.pinStates[`pin_${rPin}`] = 0;
+              if (rPin !== null && cPin !== null) {
+                const rState = sim.pinStates[`pin_${rPin}`] ?? 1;
+                if (rState === 0) {
+                  sim.pinStates[`pin_${cPin}`] = 0;
+                }
               }
             }
           }
