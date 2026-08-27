@@ -2885,7 +2885,7 @@ class CircuitCanvas {
         }
 
         case 'lm35_sensor': {
-          const outPin = this._getConnectedPinNum(inst.id, 'out') ?? this._getConnectedPinNum(inst.id, 'vout');
+          const outPin = this._getConnectedPinNum(inst.id, 'OUT');
           if (outPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
             // Temperature in °C (default 25°C)
             const temp = inst.runtimeState.temp !== undefined 
