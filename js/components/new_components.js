@@ -763,8 +763,8 @@ defComp({
     { field: 'detected', label: 'Object', min: 0, max: 1, step: 1, unit: '' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER,   x: 15, y: 92, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND,     x: 27, y: 92, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 15, y: 92, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 27, y: 92, side: 'bottom' },
     { id: 'OUT', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 39, y: 92, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
@@ -1155,6 +1155,94 @@ defComp({
 /* ═══════════════════════════════════════════════════════════════
    BME280 / BMP280 — Precision Environment Sensor (I2C)
    ═══════════════════════════════════════════════════════════════ */
+// defComp({
+//   id: 'bme280',
+//   name: 'BME280 Sensor',
+//   category: 'Sensors',
+//   icon: '🌡️',
+//   desc: 'BME280 precision barometric pressure, temperature, and humidity sensor (I2C @ 0x76)',
+//   width: 56,
+//   height: 72,
+//   defaultProps: { temperature: 25, humidity: 50, pressure: 1013 },
+//   interactive: [
+//     { field: 'temperature', label: 'Temp', min: -40, max: 85, step: 0.1, unit: '°C' },
+//     { field: 'humidity', label: 'Hum', min: 0, max: 100, step: 1, unit: '%' },
+//     { field: 'pressure', label: 'hPa', min: 300, max: 1100, step: 1, unit: 'hPa' },
+//   ],
+//   pins: [
+//     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 72, side: 'bottom' },
+//     { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 72, side: 'bottom' },
+//     { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 36, y: 72, side: 'bottom' },
+//     { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 48, y: 72, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const temp = inst.runtimeState?.temperature ?? inst.props.temperature ?? 25;
+//     const hum = inst.runtimeState?.humidity ?? inst.props.humidity ?? 50;
+//     const pres = inst.runtimeState?.pressure ?? inst.props.pressure ?? 1013;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // PCB body
+//     ctx.fillStyle = '#1a1a2e';
+//     roundRect(ctx, 0, 0, 56, 60, 4);
+//     ctx.fill();
+//     ctx.strokeStyle = '#333355';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // BME280 chip
+//     ctx.fillStyle = '#111';
+//     roundRect(ctx, 12, 8, 32, 20, 2);
+//     ctx.fill();
+//     ctx.fillStyle = '#666';
+//     ctx.font = 'bold 5px monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('BME280', 28, 18);
+
+//     // Sensor hole
+//     ctx.fillStyle = '#333';
+//     ctx.beginPath();
+//     ctx.arc(28, 36, 6, 0, Math.PI * 2);
+//     ctx.fill();
+//     ctx.fillStyle = '#222';
+//     ctx.beginPath();
+//     ctx.arc(28, 36, 4, 0, Math.PI * 2);
+//     ctx.fill();
+
+//     // Live data display
+//     ctx.fillStyle = '#0a0a1a';
+//     roundRect(ctx, 4, 44, 48, 14, 2);
+//     ctx.fill();
+//     ctx.fillStyle = '#ff9800';
+//     ctx.font = 'bold 4px monospace';
+//     ctx.textAlign = 'left';
+//     ctx.fillText('T:', 6, 50);
+//     ctx.fillStyle = '#fff';
+//     ctx.font = 'bold 5px monospace';
+//     ctx.fillText(`${temp.toFixed(1)}°C`, 14, 50);
+//     ctx.fillStyle = '#00e5ff';
+//     ctx.font = 'bold 4px monospace';
+//     ctx.fillText('H:', 6, 56);
+//     ctx.fillStyle = '#fff';
+//     ctx.fillText(`${hum}%`, 14, 56);
+
+//     // Pin leads
+//     ctx.strokeStyle = '#a0a0a0';
+//     ctx.lineWidth = 1.5;
+//     [8, 20, 36, 48].forEach(px => {
+//       ctx.beginPath(); ctx.moveTo(px, 60); ctx.lineTo(px, 72); ctx.stroke();
+//     });
+
+//     if (inst.selected) drawSelectionRect(ctx, -2, -2, 60, 76);
+//     ctx.restore();
+//   }
+// });
+
+/* ═══════════════════════════════════════════════════════════════
+   BME280 / BMP280 — Precision Environment Sensor (I2C @ 0x76)
+   ═══════════════════════════════════════════════════════════════ */
 defComp({
   id: 'bme280',
   name: 'BME280 Sensor',
@@ -1162,80 +1250,152 @@ defComp({
   icon: '🌡️',
   desc: 'BME280 precision barometric pressure, temperature, and humidity sensor (I2C @ 0x76)',
   width: 56,
-  height: 72,
+  height: 76,
   defaultProps: { temperature: 25, humidity: 50, pressure: 1013 },
   interactive: [
     { field: 'temperature', label: 'Temp', min: -40, max: 85, step: 0.1, unit: '°C' },
     { field: 'humidity', label: 'Hum', min: 0, max: 100, step: 1, unit: '%' },
-    { field: 'pressure', label: 'hPa', min: 300, max: 1100, step: 1, unit: 'hPa' },
+    { field: 'pressure', label: 'Press', min: 300, max: 1100, step: 1, unit: 'hPa' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 72, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 72, side: 'bottom' },
-    { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 36, y: 72, side: 'bottom' },
-    { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 48, y: 72, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 10, y: 76, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 22, y: 76, side: 'bottom' },
+    { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 34, y: 76, side: 'bottom' },
+    { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 46, y: 76, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const temp = inst.runtimeState?.temperature ?? inst.props.temperature ?? 25;
     const hum = inst.runtimeState?.humidity ?? inst.props.humidity ?? 50;
     const pres = inst.runtimeState?.pressure ?? inst.props.pressure ?? 1013;
+    const isPowered = sim?.isRunning ? (inst.runtimeState?.powered ?? true) : false;
 
     ctx.save();
     ctx.translate(x, y);
 
-    // PCB body
-    ctx.fillStyle = '#1a1a2e';
-    roundRect(ctx, 0, 0, 56, 60, 4);
+    // 1. Purple PCB Body (Classic GY-BME280 Breakout)
+    ctx.fillStyle = '#2d1448';
+    roundRect(ctx, 0, 0, 56, 64, 5);
     ctx.fill();
-    ctx.strokeStyle = '#333355';
+    ctx.strokeStyle = '#c5a059'; // Gold edge trim
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // BME280 chip
-    ctx.fillStyle = '#111';
-    roundRect(ctx, 12, 8, 32, 20, 2);
-    ctx.fill();
-    ctx.fillStyle = '#666';
-    ctx.font = 'bold 5px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('BME280', 28, 18);
-
-    // Sensor hole
-    ctx.fillStyle = '#333';
+    // 2. Mounting Hole
+    ctx.fillStyle = '#12071f';
     ctx.beginPath();
-    ctx.arc(28, 36, 6, 0, Math.PI * 2);
+    ctx.arc(28, 7, 3.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#222';
+    ctx.strokeStyle = '#c5a059';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // 3. Metallic BME280 Sensor Package
+    const sensorGrad = ctx.createLinearGradient(18, 14, 38, 28);
+    sensorGrad.addColorStop(0, '#e0e0e0');
+    sensorGrad.addColorStop(0.5, '#9e9e9e');
+    sensorGrad.addColorStop(1, '#616161');
+    ctx.fillStyle = sensorGrad;
+    roundRect(ctx, 18, 14, 20, 14, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#424242';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // Sensor Vent Hole
+    ctx.fillStyle = '#1a1a1a';
     ctx.beginPath();
-    ctx.arc(28, 36, 4, 0, Math.PI * 2);
+    ctx.arc(22, 18, 1.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Live data display
-    ctx.fillStyle = '#0a0a1a';
-    roundRect(ctx, 4, 44, 48, 14, 2);
+    // 4. Power LED Indicator
+    ctx.fillStyle = isPowered ? '#00ff66' : '#225533';
+    ctx.beginPath();
+    ctx.arc(8, 14, 1.5, 0, Math.PI * 2);
     ctx.fill();
+    if (isPowered) {
+      ctx.shadowColor = '#00ff66';
+      ctx.shadowBlur = 4;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // 5. Digital Readout Display Screen
+    ctx.fillStyle = '#050b14';
+    roundRect(ctx, 4, 31, 48, 20, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Live Readout Text (T, H, P)
+    ctx.textAlign = 'left';
+    
+    // Temp
     ctx.fillStyle = '#ff9800';
     ctx.font = 'bold 4px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('T:', 6, 50);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 5px monospace';
-    ctx.fillText(`${temp.toFixed(1)}°C`, 14, 50);
+    ctx.fillText('T:', 6, 37);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${temp.toFixed(1)}°C`, 14, 37);
+
+    // Humidity
     ctx.fillStyle = '#00e5ff';
     ctx.font = 'bold 4px monospace';
-    ctx.fillText('H:', 6, 56);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(`${hum}%`, 14, 56);
+    ctx.fillText('H:', 6, 43);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${Math.round(hum)}%`, 14, 43);
 
-    // Pin leads
-    ctx.strokeStyle = '#a0a0a0';
-    ctx.lineWidth = 1.5;
-    [8, 20, 36, 48].forEach(px => {
-      ctx.beginPath(); ctx.moveTo(px, 60); ctx.lineTo(px, 72); ctx.stroke();
+    // Pressure
+    ctx.fillStyle = '#b388ff';
+    ctx.font = 'bold 4px monospace';
+    ctx.fillText('P:', 6, 49);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${Math.round(pres)}hPa`, 14, 49);
+
+    // 6. Silkscreen Pin Labels
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 4.5px sans-serif';
+    ctx.textAlign = 'center';
+    const pinLabels = ['VCC', 'GND', 'SCL', 'SDA'];
+    const pinXs = [10, 22, 34, 46];
+
+    pinXs.forEach((px, idx) => {
+      ctx.fillText(pinLabels[idx], px, 58);
+
+      // Gold Solder Pads
+      ctx.fillStyle = '#d4af37';
+      ctx.beginPath();
+      ctx.arc(px, 62, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hole
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.arc(px, 62, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pin Leads extending to 76
+      ctx.strokeStyle = '#d4d4d4';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(px, 64);
+      ctx.lineTo(px, 76);
+      ctx.stroke();
+
+      // Pin Header Metallic Highlight
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(px - 0.5, 64);
+      ctx.lineTo(px - 0.5, 76);
+      ctx.stroke();
     });
 
-    if (inst.selected) drawSelectionRect(ctx, -2, -2, 60, 76);
+    // Selection Highlight Box
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -2, -2, 60, 80);
+    }
+
     ctx.restore();
   }
 });

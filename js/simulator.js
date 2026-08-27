@@ -100,7 +100,7 @@ class ArduinoSimulator {
     // PubSubClient client(espClient);  →  let client = new PubSubClient(espClient);
     // WebServer server(80);  →  let server = new WebServer(80);
     // Adafruit_SSD1306 display(128, 64, &Wire, -1);  →  let display = new Adafruit_SSD1306(128, 64, Wire, -1);
-    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
+    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|SimpleBME280)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
 
     // C++ passes I2C objects by reference: `&Wire` is invalid JS. Strip the `&`
     // only inside Adafruit_SSD1306 constructors to avoid breaking `a & b`.
@@ -574,6 +574,13 @@ class ArduinoSimulator {
     js = js.replace(/\b(\w+)\.arg\s*\(/g, '_a.serverArg($1, ');
     js = js.replace(/\b(\w+)\.handleClient\s*\(/g, '_a.serverHandleClient($1, ');
 
+    // SimpleBME280 library — map before generic `.begin` / `.read` rules
+    js = js.replace(/\b(\w+)\.begin\s*\(\s*\)\s*;/g, '_a.bme280Begin($1);');
+    js = js.replace(/\b(\w+)\.readTemperature\s*\(\s*\)/g, '_a.bme280ReadTemp($1)');
+    js = js.replace(/\b(\w+)\.readHumidity\s*\(\s*\)/g, '_a.bme280ReadHum($1)');
+    js = js.replace(/\b(\w+)\.readPressure\s*\(\s*\)/g, '_a.bme280ReadPres($1)');
+    js = js.replace(/\b(\w+)\.readAltitude\s*\(([^)]+)\)/g, '_a.bme280ReadAlt($1, $2)');
+
     // LiquidCrystal
     js = js.replace(/\b(\w+)\.begin\s*\(\s*\)/g, '_a.lcdBegin($1)');
     js = js.replace(/\b(\w+)\.begin\s*\(/g, '_a.lcdBegin($1, ');
@@ -866,6 +873,31 @@ class ArduinoSimulator {
         spiBegin() { self._serialLog('[SPI] begin\n', 'system'); },
         spiTransfer(val) { return 0; },
         spiEnd() { },
+
+        /* SimpleBME280 library stubs */
+        bme280Begin: function (obj) { return true; },
+        bme280ReadTemp: function (obj) {
+          var inst = self._bme280FindInst();
+          if (!inst) return 25;
+          return (inst.runtimeState && inst.runtimeState.temperature !== undefined) ? inst.runtimeState.temperature : (inst.props ? inst.props.temperature : 25);
+        },
+        bme280ReadHum: function (obj) {
+          var inst = self._bme280FindInst();
+          if (!inst) return 50;
+          return (inst.runtimeState && inst.runtimeState.humidity !== undefined) ? inst.runtimeState.humidity : (inst.props ? inst.props.humidity : 50);
+        },
+        bme280ReadPres: function (obj) {
+          var inst = self._bme280FindInst();
+          var hpa = 1013.25;
+          if (inst) {
+            hpa = (inst.runtimeState && inst.runtimeState.pressure !== undefined) ? inst.runtimeState.pressure : (inst.props ? inst.props.pressure : 1013.25);
+          }
+          return hpa * 100;
+        },
+        bme280ReadAlt: function (obj, seaLevel) {
+          var pres = self._bme280ReadPres(obj) / 100.0;
+          return 44330.0 * (1.0 - Math.pow(pres / (seaLevel || 1013.25), 0.1903));
+        },
 
         /* EEPROM */
         eepromRead(addr) { return self._eeprom[addr & 511] || 0; },
@@ -1573,6 +1605,7 @@ class ArduinoSimulator {
           noBlink() { }, cursor() { }, noCursor() { }, createChar() { },
         };
       },
+      SimpleBME280: function () { return {}; },
       /* OLED 128×64 (SSD1306, I2C) — Adafruit_SSD1306 library stub.
          Text/setCursor calls are transpiled to _a.lcd* and dispatched here via
          the __oled tag; the remaining GFX drawing calls emit oled_draw events. */
@@ -2184,6 +2217,24 @@ class ArduinoSimulator {
     if (pinNum !== null) return this.pinStates[`pin_${pinNum}`] || 0;
     return this.pinStates[`${inst.id}_${pinId}`] || 0;
   }
+
+  _bme280FindInst() {
+    if (!window.CircuitCanvas) return null;
+    var comps = window.CircuitCanvas.components || [];
+    for (var i = 0; i < comps.length; i++) {
+      if (comps[i].type === 'bme280') return comps[i];
+    }
+    return null;
+  }
+
+  _bme280ReadPres(obj) {
+    var inst = this._bme280FindInst();
+    var hpa = 1013.25;
+    if (inst) {
+      hpa = (inst.runtimeState && inst.runtimeState.pressure !== undefined) ? inst.runtimeState.pressure : (inst.props ? inst.props.pressure : 1013.25);
+    }
+    return hpa * 100;
+  }
 }
 
 /* ═══════════════ EXAMPLE SKETCHES ═══════════════ */
@@ -2197,7 +2248,7 @@ class ArduinoSimulator {
 window.ArduinoSim = new ArduinoSimulator();
 window.EXAMPLE_SKETCHES = [];
 window.loadExamplesFromFiles = async function () {
-  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor', 'neopixel_color_cycle', 'mpu6050_accel', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test','temperature_LCD','dmm_current','dmm_resistance','dmm_voltage','func_gen_dual','func_gen_led','remote_control_leds','remote_servo_control','lm35_temperature','keypad_interfacing','bme280_weather','bmp280_altitude','dso_oscilloscope'];
+  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor', 'neopixel_color_cycle', 'mpu6050_accel', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test','temperature_LCD','dmm_current','dmm_resistance','dmm_voltage','func_gen_dual','func_gen_led','remote_control_leds','remote_servo_control','lm35_temperature','keypad_interfacing','bme280_weather','bmp280_altitude','dso_oscilloscope','simplebme280_basic','simplebme280_altitude'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {
