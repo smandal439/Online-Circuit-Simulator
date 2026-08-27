@@ -2241,10 +2241,19 @@ class CircuitCanvas {
         }
         case 'potentiometer': {
           const wiperPin = this._getConnectedPinNum(inst.id, 'wiper');
-          if (wiperPin !== null) {
+          const vccNet = this._tracePinNet(inst.id, 'vcc');
+          const gndNet = this._tracePinNet(inst.id, 'gnd');
+          const hasGnd = gndNet.grounds.length > 0;
+          if (wiperPin !== null && vccNet.sources.length > 0 && hasGnd) {
+            const src = vccNet.sources[0];
             const val = inst.runtimeState.value !== undefined ? inst.runtimeState.value : (inst.props.value || 512);
+            const maxVal = inst.props.maxValue || 1023;
+            const ratio = Math.max(0, Math.min(1, val / maxVal));
+            // Resistive divider: output = source * ratio
+            const outVoltage = src.voltage * ratio;
+            const outRaw = Math.round((src.rawVal || 255) * ratio);
             if (window.ArduinoSim && window.ArduinoSim.pinStates) {
-              window.ArduinoSim.pinStates[`pin_${wiperPin}`] = val;
+              window.ArduinoSim.pinStates[`pin_${wiperPin}`] = outRaw;
             }
           }
           break;
