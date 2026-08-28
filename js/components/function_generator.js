@@ -16,16 +16,7 @@ defComp({
   },
 
   interactive: [
-    { field: 'ch1_freq',   label: 'CH1 Freq',   min: 10,  max: 3000, step: 1,  unit: 'Hz' },
-    { field: 'ch1_amp',    label: 'CH1 Amp',    min: 0.1, max: 10,   step: 0.1, unit: 'V' },
-    { field: 'ch1_offset', label: 'CH1 Off',    min: -5,  max: 5,    step: 0.1, unit: 'V' },
-    { field: 'ch1_phase',  label: 'CH1 Phs',    min: 0,   max: 360,  step: 1,  unit: '°' },
-    { field: 'ch1_duty',   label: 'CH1 Duty',   min: 5,   max: 95,   step: 1,  unit: '%' },
-    { field: 'ch2_freq',   label: 'CH2 Freq',   min: 10,  max: 3000, step: 1,  unit: 'Hz' },
-    { field: 'ch2_amp',    label: 'CH2 Amp',    min: 0.1, max: 10,   step: 0.1, unit: 'V' },
-    { field: 'ch2_offset', label: 'CH2 Off',    min: -5,  max: 5,    step: 0.1, unit: 'V' },
-    { field: 'ch2_phase',  label: 'CH2 Phs',    min: 0,   max: 360,  step: 1,  unit: '°' },
-    { field: 'ch2_duty',   label: 'CH2 Duty',   min: 5,   max: 95,   step: 1,  unit: '%' },
+    
     { field: 'ch1_wave', label: 'CH1 Wave', type: 'select', options: [
       { value: 'sine',     label: 'Sine' },
       { value: 'square',   label: 'Square' },

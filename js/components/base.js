@@ -202,7 +202,7 @@ function getComponentPins(inst) {
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
   { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
-  { category: 'Output',    ids: ['multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel', 'neopixel_strip', 'neopixel_ring', 'bulb_12v'],
+  { category: 'Output',    ids: ['multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel', 'neopixel_strip', 'neopixel_ring', 'bulb_12v', 'max7219', 'ili9341'],
     dropdown: { id: 'led', label: 'LED', icon: '💡', desc: 'Light Emitting Diode',
       variants: [
         { id: 'led',         name: 'Red LED',    color: '#ff3333', icon: '🔴' },
@@ -214,9 +214,9 @@ const COMPONENT_CATALOG = [
       ]
     }
   },
-  { category: 'Input',     ids: ['push_button', 'potentiometer', 'joystick', 'keypad_4x4'] },
-  { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay', 'stepper_28byj'] },
-  { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir', 'mpu6050', 'ir_obstacle', 'flex_sensor', 'thermistor', 'lm35_sensor', 'bme280'] },
+  { category: 'Input',     ids: ['push_button', 'potentiometer', 'joystick', 'keypad_4x4', 'rotary_encoder', 'dip_switch'] },
+  { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay', 'stepper_28byj', 'l298n', 'servo_continuous'] },
+  { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir', 'mpu6050', 'ir_obstacle', 'flex_sensor', 'thermistor', 'lm35_sensor', 'bme280', 'vl53l0x', 'rc522', 'ir_receiver', 'hc05'] },
   { category: 'Passive',   ids: ['resistor', 'capacitor', 'breadboard', 'diode_1n4007'] },
   { category: 'Power',     ids: ['power_5v', 'power_gnd', 'mb102_power', 'bench_power_supply'] },
   { category: 'Digital ICs', ids: ['ic_555', 'ic_74hc00', 'ic_74hc04', 'ic_74hc08', 'ic_74hc32', 'ic_74hc595', 'ic_74hc138', 'ic_74hc245'] },
