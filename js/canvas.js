@@ -2743,10 +2743,10 @@ class CircuitCanvas {
 
         /* ── WS2812B NeoPixel (reads color from props/runtimeState) ── */
         case 'neopixel': {
-          inst.runtimeState.r = inst.props.r ?? 0;
-          inst.runtimeState.g = inst.props.g ?? 0;
-          inst.runtimeState.b = inst.props.b ?? 0;
-          inst.runtimeState.brightness = inst.props.brightness ?? 255;
+          if (inst.runtimeState.r === undefined) inst.runtimeState.r = inst.props.r ?? 0;
+          if (inst.runtimeState.g === undefined) inst.runtimeState.g = inst.props.g ?? 0;
+          if (inst.runtimeState.b === undefined) inst.runtimeState.b = inst.props.b ?? 0;
+          if (inst.runtimeState.brightness === undefined) inst.runtimeState.brightness = inst.props.brightness ?? 255;
           break;
         }
 
