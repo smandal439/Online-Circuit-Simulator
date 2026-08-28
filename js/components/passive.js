@@ -13,6 +13,13 @@ defComp({
   width: 20,
   height: 60,
   defaultProps: { value: 220, unit: 'Ω' },
+  interactive: [
+    { field: 'unit', label: 'Unit', type: 'select', options: [
+      { value: 'Ω',  label: 'Ω (Ohm)' },
+      { value: 'kΩ', label: 'kΩ (kiloohm)' },
+      { value: 'MΩ', label: 'MΩ (megaohm)' },
+    ] },
+  ],
   pins: [
     { id: 'p1', label: '1', type: PIN_TYPE.SIGNAL, x: 10, y:  0, side: 'top' },
     { id: 'p2', label: '2', type: PIN_TYPE.SIGNAL, x: 10, y: 60, side: 'bottom' },
@@ -61,7 +68,7 @@ defComp({
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.font = 'bold 6px sans-serif';
-    ctx.fillText(formatResistance(val), 0, 2);
+    ctx.fillText(formatResistance(val, inst.props.unit), 0, 2);
     ctx.restore();
 
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 26, 66);
@@ -79,6 +86,14 @@ defComp({
   width: 20,
   height: 60,
   defaultProps: { value: 100, unit: 'µF' },
+  interactive: [
+    { field: 'unit', label: 'Unit', type: 'select', options: [
+      { value: 'mF',  label: 'mF (millifarad)' },
+      { value: 'µF',  label: 'µF (microfarad)' },
+      { value: 'nF',  label: 'nF (nanofarad)' },
+      { value: 'pF',  label: 'pF (picofarad)' },
+    ] },
+  ],
   pins: [
     { id: 'pos', label: '+', type: PIN_TYPE.SIGNAL, x: 10, y:  0, side: 'top' },
     { id: 'neg', label: 'âˆ’', type: PIN_TYPE.GND,    x: 10, y: 60, side: 'bottom' },
@@ -107,7 +122,7 @@ defComp({
     // Value
     ctx.fillStyle = '#888'; ctx.font = '6px sans-serif';
     ctx.save(); ctx.translate(10, 34); ctx.rotate(-Math.PI/2);
-    ctx.fillText((inst.props.value||100)+(inst.props.unit||'ÂµF'), 0, 2);
+    ctx.fillText((inst.props.value || 100) + (inst.props.unit || 'µF'), 0, 2);
     ctx.restore();
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 26, 66);
     ctx.restore();

@@ -180,7 +180,8 @@ function resistorBands(val) {
   ];
 }
 
-function formatResistance(val) {
+function formatResistance(val, unit) {
+  if (unit) return val + unit;
   if (val >= 1000000) return (val/1000000).toFixed(1) + 'MΩ';
   if (val >= 1000) return (val/1000).toFixed(1) + 'kΩ';
   return val + 'Ω';
