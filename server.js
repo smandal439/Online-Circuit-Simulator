@@ -15,6 +15,7 @@ const app = express();
 const http  = require('node:http');
 const fs    = require('node:fs');
 const path  = require('node:path');
+const os    = require('node:os');
 const crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
 
@@ -196,6 +197,20 @@ const server = http.createServer(async (req, res) => {
   // API routes (handled before static so they always win)
   if (pathname === '/api/health' && method === 'GET') {
     return sendJson(res, 200, { ok: true, name: 'ardusim', uptime: process.uptime(), time: new Date().toISOString() });
+  }
+
+  if (pathname === '/api/host' && method === 'GET') {
+    let ip = '127.0.0.1';
+    try {
+      const nets = os.networkInterfaces();
+      for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+          if (net.family === 'IPv4' && !net.internal) { ip = net.address; break; }
+        }
+        if (ip !== '127.0.0.1') break;
+      }
+    } catch (e) { /* fallback to 127.0.0.1 */ }
+    return sendJson(res, 200, { ip: ip, port: Number(PORT) || 3000 });
   }
 
   if (pathname === '/api/projects' && method === 'GET') {

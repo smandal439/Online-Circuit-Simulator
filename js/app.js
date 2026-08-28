@@ -1318,12 +1318,42 @@ _newProject() {
       // Simulation is running — show session code
       idle?.classList.add('hidden');
       active?.classList.remove('hidden');
-      const host = window.location.hostname || '127.0.0.1';
-      const port = window.location.port || '3000';
       const sessionInput = document.getElementById('remote-session-id');
       const urlInput = document.getElementById('remote-url');
       if (sessionInput) sessionInput.value = sim.sessionId;
-      if (urlInput) urlInput.value = `http://${host}:${port}/remote?session=${sim.sessionId}`;
+
+      // Fetch real LAN IP for QR code (not localhost)
+      const fallbackHost = window.location.hostname || '127.0.0.1';
+      const fallbackPort = window.location.port || '3000';
+      fetch('/api/host').then(r => r.json()).then(info => {
+        const host = info.ip || fallbackHost;
+        const port = info.port || fallbackPort;
+        const remoteUrl = `http://${host}:${port}/remote?session=${sim.sessionId}`;
+        if (urlInput) urlInput.value = remoteUrl;
+
+        // Generate QR code
+        const qrContainer = document.getElementById('remote-qr');
+        if (qrContainer && typeof QRCode !== 'undefined') {
+          qrContainer.innerHTML = '';
+          new QRCode(qrContainer, {
+            text: remoteUrl,
+            width: 160,
+            height: 160,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M,
+          });
+        }
+      }).catch(() => {
+        // Fallback to hostname
+        const remoteUrl = `http://${fallbackHost}:${fallbackPort}/remote?session=${sim.sessionId}`;
+        if (urlInput) urlInput.value = remoteUrl;
+        const qrContainer = document.getElementById('remote-qr');
+        if (qrContainer && typeof QRCode !== 'undefined') {
+          qrContainer.innerHTML = '';
+          new QRCode(qrContainer, { text: remoteUrl, width: 160, height: 160, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        }
+      });
     } else {
       // Not running — show idle message
       idle?.classList.remove('hidden');

@@ -901,11 +901,11 @@ defComp({
   width: 180,
   height: 48,
   defaultProps: { numPixels: 8, r: 0, g: 0, b: 0, brightness: 255 },
-  interactive: [
-    { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
-    { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
-    { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
-  ],
+  // interactive: [
+  //   { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
+  // ],
   pins: [
     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 16, y: 48, side: 'bottom' },
     { id: 'DIN', label: 'DIN', type: PIN_TYPE.DIGITAL, x: 32, y: 48, side: 'bottom' },
@@ -1018,11 +1018,11 @@ defComp({
   width: 120,
   height: 128,
   defaultProps: { numPixels: 12, r: 0, g: 0, b: 0, brightness: 255 },
-  interactive: [
-    { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
-    { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
-    { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
-  ],
+  // interactive: [
+  //   { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
+  // ],
   pins: [
     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 36, y: 128, side: 'bottom' },
     { id: 'DIN', label: 'DIN', type: PIN_TYPE.DIGITAL, x: 52, y: 128, side: 'bottom' },
