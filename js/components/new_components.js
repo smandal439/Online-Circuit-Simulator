@@ -590,11 +590,11 @@ defComp({
   width: 40,   // Scaled from 20 to 40 (2x)
   height: 48,  // Scaled from 24 to 48 (2x)
   defaultProps: { r: 0, g: 0, b: 0, brightness: 255 },
-  interactive: [
-    { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
-    { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
-    { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
-  ],
+  // interactive: [
+  //   { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
+  // ],
   pins: [
     // Scaled pin offsets by 2x
     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 48, side: 'bottom' },
