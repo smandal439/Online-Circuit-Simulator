@@ -2741,12 +2741,34 @@ class CircuitCanvas {
           break;
         }
 
-        /* ── WS2812B NeoPixel (reads color from props/runtimeState) ── */
+        /* ── WS2812B NeoPixel (single LED — reads color from props/runtimeState) ── */
         case 'neopixel': {
           if (inst.runtimeState.r === undefined) inst.runtimeState.r = inst.props.r ?? 0;
           if (inst.runtimeState.g === undefined) inst.runtimeState.g = inst.props.g ?? 0;
           if (inst.runtimeState.b === undefined) inst.runtimeState.b = inst.props.b ?? 0;
           if (inst.runtimeState.brightness === undefined) inst.runtimeState.brightness = inst.props.brightness ?? 255;
+          break;
+        }
+
+        /* ── WS2812B NeoPixel Strip (8-pixel — reads pixel array from runtimeState) ── */
+        case 'neopixel_strip': {
+          const npStripBri = inst.props.brightness ?? 255;
+          if (inst.runtimeState.brightness === undefined) inst.runtimeState.brightness = npStripBri;
+          if (!Array.isArray(inst.runtimeState.pixels)) {
+            const numPx = inst.props.numPixels || 8;
+            inst.runtimeState.pixels = Array(numPx).fill({ r: inst.props.r ?? 0, g: inst.props.g ?? 0, b: inst.props.b ?? 0 });
+          }
+          break;
+        }
+
+        /* ── WS2812B NeoPixel Ring (12-pixel — reads pixel array from runtimeState) ── */
+        case 'neopixel_ring': {
+          const npRingBri = inst.props.brightness ?? 255;
+          if (inst.runtimeState.brightness === undefined) inst.runtimeState.brightness = npRingBri;
+          if (!Array.isArray(inst.runtimeState.pixels)) {
+            const numPx = inst.props.numPixels || 12;
+            inst.runtimeState.pixels = Array(numPx).fill({ r: inst.props.r ?? 0, g: inst.props.g ?? 0, b: inst.props.b ?? 0 });
+          }
           break;
         }
 

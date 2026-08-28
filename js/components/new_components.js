@@ -665,12 +665,239 @@ defComp({
 // ==========================================
 // 1. NEOPIXEL STRIP (8 LEDs)
 // ==========================================
+// defComp({
+//   id: 'neopixel_strip',
+//   name: 'NeoPixel Strip (8 LED)',
+//   category: 'Output',
+//   icon: '🌈',
+//   desc: '8-Pixel WS2812B LED strip. Receives serial color data via DIN and passes downstream to DOUT.',
+//   width: 180,
+//   height: 48,
+//   defaultProps: { numPixels: 8, r: 0, g: 0, b: 0, brightness: 255 },
+//   interactive: [
+//     { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
+//     { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
+//     { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
+//   ],
+//   pins: [
+//     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 16, y: 48, side: 'bottom' },
+//     { id: 'DIN', label: 'DIN', type: PIN_TYPE.DIGITAL, x: 32, y: 48, side: 'bottom' },
+//     { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 48, y: 48, side: 'bottom' },
+//     { id: 'DOUT', label: 'DOut', type: PIN_TYPE.DIGITAL, x: 164, y: 48, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const rs = inst.runtimeState || {};
+//     const brightness = rs.brightness ?? inst.props.brightness ?? 255;
+//     const numPixels = inst.props.numPixels || 8;
+
+//     // Array of individual pixel colors, or fallback to global RGB
+//     const pixelColors = rs.pixels || Array(numPixels).fill({
+//       r: rs.r ?? inst.props.r ?? 0,
+//       g: rs.g ?? inst.props.g ?? 0,
+//       b: rs.b ?? inst.props.b ?? 0,
+//     });
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // PCB Substrate background
+//     ctx.fillStyle = '#1e1e1e';
+//     ctx.strokeStyle = '#444';
+//     ctx.lineWidth = 1.5;
+//     roundRect(ctx, 0, 4, 180, 28, 4);
+//     ctx.fill();
+//     ctx.stroke();
+
+//     // Copper solder pads (Input/Output ends)
+//     ctx.fillStyle = '#d4af37';
+//     // DIN Side
+//     ctx.fillRect(4, 8, 4, 4);   // VCC
+//     ctx.fillRect(4, 16, 4, 4);  // DIN
+//     ctx.fillRect(4, 24, 4, 4);  // GND
+//     // DOUT Side
+//     ctx.fillRect(172, 8, 4, 4);  // VCC
+//     ctx.fillRect(172, 16, 4, 4); // DOUT
+//     ctx.fillRect(172, 24, 4, 4); // GND
+
+//     // Draw individual LEDs
+//     const startX = 18;
+//     const stepX = 18;
+
+//     for (let i = 0; i < numPixels; i++) {
+//       const px = startX + i * stepX;
+//       const py = 10;
+//       const pix = pixelColors[i] || { r: 0, g: 0, b: 0 };
+//       const pr = pix.r ?? 0;
+//       const pg = pix.g ?? 0;
+//       const pb = pix.b ?? 0;
+
+//       const rgb = `rgb(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)})`;
+//       const isOn = pr > 0 || pg > 0 || pb > 0;
+
+//       // LED Housing
+//       ctx.fillStyle = '#2a2a2a';
+//       ctx.strokeStyle = '#555';
+//       ctx.lineWidth = 1;
+//       ctx.fillRect(px, py, 14, 16);
+//       ctx.strokeRect(px, py, 14, 16);
+
+//       // Emissive Chip Surface & Glow
+//       ctx.save();
+//       if (isOn) {
+//         ctx.shadowColor = rgb;
+//         ctx.shadowBlur = 10;
+//       }
+//       ctx.fillStyle = isOn ? rgb : '#111';
+//       ctx.beginPath();
+//       ctx.arc(px + 7, py + 8, 5, 0, Math.PI * 2);
+//       ctx.fill();
+//       ctx.restore();
+
+//       // Lens highlight
+//       ctx.fillStyle = 'rgba(255,255,255,0.2)';
+//       ctx.beginPath();
+//       ctx.arc(px + 5, py + 6, 2, 0, Math.PI * 2);
+//       ctx.fill();
+//     }
+
+//     // Direction arrow (DIN -> DOUT)
+//     ctx.fillStyle = '#555';
+//     ctx.beginPath();
+//     ctx.moveTo(88, 30);
+//     ctx.lineTo(94, 30);
+//     ctx.lineTo(94, 28);
+//     ctx.lineTo(98, 31);
+//     ctx.lineTo(94, 34);
+//     ctx.lineTo(94, 32);
+//     ctx.lineTo(88, 32);
+//     ctx.closePath();
+//     ctx.fill();
+
+//     if (inst.selected) drawSelectionRect(ctx, 0, 0, 180, 48);
+//     ctx.restore();
+//   }
+// });
+
+// ==========================================
+// 2. NEOPIXEL RING (12 LEDs)
+// ==========================================
+// defComp({
+//   id: 'neopixel_ring',
+//   name: 'NeoPixel Ring (12 LED)',
+//   category: 'Output',
+//   icon: '⭕',
+//   desc: '12-Pixel WS2812B circular LED ring module.',
+//   width: 120,
+//   height: 128,
+//   defaultProps: { numPixels: 12, r: 0, g: 0, b: 0, brightness: 255 },
+//   interactive: [
+//     { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
+//     { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
+//     { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
+//   ],
+//   pins: [
+//     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 36, y: 128, side: 'bottom' },
+//     { id: 'DIN', label: 'DIN', type: PIN_TYPE.DIGITAL, x: 52, y: 128, side: 'bottom' },
+//     { id: 'DOUT', label: 'DOut', type: PIN_TYPE.DIGITAL, x: 68, y: 128, side: 'bottom' },
+//     { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 84, y: 128, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const rs = inst.runtimeState || {};
+//     const brightness = rs.brightness ?? inst.props.brightness ?? 255;
+//     const numPixels = inst.props.numPixels || 12;
+
+//     const pixelColors = rs.pixels || Array(numPixels).fill({
+//       r: rs.r ?? inst.props.r ?? 0,
+//       g: rs.g ?? inst.props.g ?? 0,
+//       b: rs.b ?? inst.props.b ?? 0,
+//     });
+
+//     const centerX = 60;
+//     const centerY = 60;
+//     const outerRadius = 56;
+//     const innerRadius = 34;
+//     const ringRadius = (outerRadius + innerRadius) / 2;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // PCB Annular Ring Base
+//     ctx.beginPath();
+//     ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2, false);
+//     ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2, true);
+//     ctx.fillStyle = '#1e1e1e';
+//     ctx.fill();
+//     ctx.strokeStyle = '#444';
+//     ctx.lineWidth = 1.5;
+//     ctx.stroke();
+
+//     // Data flow direction / origin mark (Pixel 0 indicator)
+//     ctx.fillStyle = '#666';
+//     ctx.font = '7px sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('IN', centerX - 12, centerY + 28);
+//     ctx.fillText('OUT', centerX + 12, centerY + 28);
+
+//     // Render individual LEDs around the ring
+//     for (let i = 0; i < numPixels; i++) {
+//       const angle = (i * 2 * Math.PI / numPixels) - (Math.PI / 2); // Start at 12 o'clock
+//       const px = centerX + ringRadius * Math.cos(angle);
+//       const py = centerY + ringRadius * Math.sin(angle);
+
+//       const pix = pixelColors[i] || { r: 0, g: 0, b: 0 };
+//       const pr = pix.r ?? 0;
+//       const pg = pix.g ?? 0;
+//       const pb = pix.b ?? 0;
+
+//       const rgb = `rgb(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)})`;
+//       const isOn = pr > 0 || pg > 0 || pb > 0;
+
+//       ctx.save();
+//       ctx.translate(px, py);
+//       ctx.rotate(angle + Math.PI / 2); // Orient package tangential to ring
+
+//       // 5050 Chip Package
+//       ctx.fillStyle = '#2b2b2b';
+//       ctx.strokeStyle = '#555';
+//       ctx.lineWidth = 0.8;
+//       ctx.fillRect(-6, -6, 12, 12);
+//       ctx.strokeRect(-6, -6, 12, 12);
+
+//       // Emissive LED Lens & Glow
+//       if (isOn) {
+//         ctx.shadowColor = rgb;
+//         ctx.shadowBlur = 8;
+//       }
+//       ctx.fillStyle = isOn ? rgb : '#111';
+//       ctx.beginPath();
+//       ctx.arc(0, 0, 4, 0, Math.PI * 2);
+//       ctx.fill();
+
+//       // Lens highlight
+//       ctx.fillStyle = 'rgba(255,255,255,0.25)';
+//       ctx.beginPath();
+//       ctx.arc(-1.5, -1.5, 1.5, 0, Math.PI * 2);
+//       ctx.fill();
+
+//       ctx.restore();
+//     }
+
+//     if (inst.selected) drawSelectionRect(ctx, 0, 0, 120, 128);
+//     ctx.restore();
+//   }
+// });
+
+// ==========================================
+// 1. NEOPIXEL STRIP (8 LEDs - ENLARGED & BRIGHTENED)
+// ==========================================
 defComp({
   id: 'neopixel_strip',
   name: 'NeoPixel Strip (8 LED)',
   category: 'Output',
   icon: '🌈',
-  desc: '8-Pixel WS2812B LED strip. Receives serial color data via DIN and passes downstream to DOUT.',
+  desc: '8-Pixel WS2812B LED strip with enlarged high-intensity diodes.',
   width: 180,
   height: 48,
   defaultProps: { numPixels: 8, r: 0, g: 0, b: 0, brightness: 255 },
@@ -691,7 +918,6 @@ defComp({
     const brightness = rs.brightness ?? inst.props.brightness ?? 255;
     const numPixels = inst.props.numPixels || 8;
 
-    // Array of individual pixel colors, or fallback to global RGB
     const pixelColors = rs.pixels || Array(numPixels).fill({
       r: rs.r ?? inst.props.r ?? 0,
       g: rs.g ?? inst.props.g ?? 0,
@@ -701,7 +927,7 @@ defComp({
     ctx.save();
     ctx.translate(x, y);
 
-    // PCB Substrate background
+    // PCB Substrate
     ctx.fillStyle = '#1e1e1e';
     ctx.strokeStyle = '#444';
     ctx.lineWidth = 1.5;
@@ -709,24 +935,17 @@ defComp({
     ctx.fill();
     ctx.stroke();
 
-    // Copper solder pads (Input/Output ends)
+    // Solder pads
     ctx.fillStyle = '#d4af37';
-    // DIN Side
-    ctx.fillRect(4, 8, 4, 4);   // VCC
-    ctx.fillRect(4, 16, 4, 4);  // DIN
-    ctx.fillRect(4, 24, 4, 4);  // GND
-    // DOUT Side
-    ctx.fillRect(172, 8, 4, 4);  // VCC
-    ctx.fillRect(172, 16, 4, 4); // DOUT
-    ctx.fillRect(172, 24, 4, 4); // GND
+    ctx.fillRect(4, 8, 4, 4);   ctx.fillRect(4, 16, 4, 4);  ctx.fillRect(4, 24, 4, 4);
+    ctx.fillRect(172, 8, 4, 4); ctx.fillRect(172, 16, 4, 4); ctx.fillRect(172, 24, 4, 4);
 
-    // Draw individual LEDs
-    const startX = 18;
-    const stepX = 18;
+    const startX = 16;
+    const stepX = 18.5;
 
     for (let i = 0; i < numPixels; i++) {
       const px = startX + i * stepX;
-      const py = 10;
+      const py = 8.5;
       const pix = pixelColors[i] || { r: 0, g: 0, b: 0 };
       const pr = pix.r ?? 0;
       const pg = pix.g ?? 0;
@@ -735,42 +954,50 @@ defComp({
       const rgb = `rgb(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)})`;
       const isOn = pr > 0 || pg > 0 || pb > 0;
 
-      // LED Housing
+      // Enlarged LED Housing (15x18)
       ctx.fillStyle = '#2a2a2a';
       ctx.strokeStyle = '#555';
       ctx.lineWidth = 1;
-      ctx.fillRect(px, py, 14, 16);
-      ctx.strokeRect(px, py, 14, 16);
+      ctx.fillRect(px, py, 15, 18);
+      ctx.strokeRect(px, py, 15, 18);
 
-      // Emissive Chip Surface & Glow
+      const cx = px + 7.5;
+      const cy = py + 9;
+      const lensRadius = 6.5; // Enlarged lens radius (was 5)
+
+      // Emissive Chip Surface & Multi-layer Glow
       ctx.save();
       if (isOn) {
+        // High-intensity bloom
         ctx.shadowColor = rgb;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 20; // Increased blur for brighter glow
       }
       ctx.fillStyle = isOn ? rgb : '#111';
       ctx.beginPath();
-      ctx.arc(px + 7, py + 8, 5, 0, Math.PI * 2);
+      ctx.arc(cx, cy, lensRadius, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
-      // Lens highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      // Bright die core highlight when active
+      if (isOn) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Lens specular highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.beginPath();
-      ctx.arc(px + 5, py + 6, 2, 0, Math.PI * 2);
+      ctx.arc(cx - 2.2, cy - 2.2, 2.2, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Direction arrow (DIN -> DOUT)
+    // Direction arrow
     ctx.fillStyle = '#555';
     ctx.beginPath();
-    ctx.moveTo(88, 30);
-    ctx.lineTo(94, 30);
-    ctx.lineTo(94, 28);
-    ctx.lineTo(98, 31);
-    ctx.lineTo(94, 34);
-    ctx.lineTo(94, 32);
-    ctx.lineTo(88, 32);
+    ctx.moveTo(88, 30); ctx.lineTo(94, 30); ctx.lineTo(94, 28);
+    ctx.lineTo(98, 31); ctx.lineTo(94, 34); ctx.lineTo(94, 32); ctx.lineTo(88, 32);
     ctx.closePath();
     ctx.fill();
 
@@ -780,14 +1007,14 @@ defComp({
 });
 
 // ==========================================
-// 2. NEOPIXEL RING (12 LEDs)
+// 2. NEOPIXEL RING (12 LEDs - ENLARGED & BRIGHTENED)
 // ==========================================
 defComp({
   id: 'neopixel_ring',
   name: 'NeoPixel Ring (12 LED)',
   category: 'Output',
   icon: '⭕',
-  desc: '12-Pixel WS2812B circular LED ring module.',
+  desc: '12-Pixel WS2812B circular LED ring module with enlarged high-intensity diodes.',
   width: 120,
   height: 128,
   defaultProps: { numPixels: 12, r: 0, g: 0, b: 0, brightness: 255 },
@@ -833,16 +1060,17 @@ defComp({
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Data flow direction / origin mark (Pixel 0 indicator)
+    // Port labels
     ctx.fillStyle = '#666';
     ctx.font = '7px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('IN', centerX - 12, centerY + 28);
     ctx.fillText('OUT', centerX + 12, centerY + 28);
 
-    // Render individual LEDs around the ring
+    const lensRadius = 5.5; // Enlarged lens radius (was 4)
+
     for (let i = 0; i < numPixels; i++) {
-      const angle = (i * 2 * Math.PI / numPixels) - (Math.PI / 2); // Start at 12 o'clock
+      const angle = (i * 2 * Math.PI / numPixels) - (Math.PI / 2);
       const px = centerX + ringRadius * Math.cos(angle);
       const py = centerY + ringRadius * Math.sin(angle);
 
@@ -856,29 +1084,39 @@ defComp({
 
       ctx.save();
       ctx.translate(px, py);
-      ctx.rotate(angle + Math.PI / 2); // Orient package tangential to ring
+      ctx.rotate(angle + Math.PI / 2);
 
-      // 5050 Chip Package
+      // Enlarged Package Housing (14x14, was 12x12)
       ctx.fillStyle = '#2b2b2b';
       ctx.strokeStyle = '#555';
       ctx.lineWidth = 0.8;
-      ctx.fillRect(-6, -6, 12, 12);
-      ctx.strokeRect(-6, -6, 12, 12);
+      ctx.fillRect(-7, -7, 14, 14);
+      ctx.strokeRect(-7, -7, 14, 14);
 
-      // Emissive LED Lens & Glow
+      // Emissive LED Lens & Enhanced Glow
+      ctx.save();
       if (isOn) {
         ctx.shadowColor = rgb;
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 18; // Increased bloom intensity (was 8)
       }
       ctx.fillStyle = isOn ? rgb : '#111';
       ctx.beginPath();
-      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.arc(0, 0, lensRadius, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
 
-      // Lens highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      // Bright die core highlight when active
+      if (isOn) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Specular highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.beginPath();
-      ctx.arc(-1.5, -1.5, 1.5, 0, Math.PI * 2);
+      ctx.arc(-1.8, -1.8, 2.0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
@@ -2357,7 +2595,7 @@ defComp({
    Export all new component IDs for canvas.js registration
    ═══════════════════════════════════════════════════════════════ */
 window.NEW_COMPONENT_IDS = [
-  'mpu6050', 'stepper_28byj', 'neopixel',
+  'mpu6050', 'stepper_28byj', 'neopixel', 'neopixel_strip', 'neopixel_ring',
   'ir_obstacle', 'flex_sensor', 'thermistor',
   'diode_1n4007',
   'bme280', 'vl53l0x', 'rc522', 'ir_receiver',

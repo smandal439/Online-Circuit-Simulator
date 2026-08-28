@@ -455,6 +455,14 @@ class ArduinoSimulator {
       if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
       return '_a.neopixelNumPixels(' + varName;
     });
+    js = js.replace(/\b(\w+)\.ColorHSV\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelColorHSV(' + varName + ', ';
+    });
+    js = js.replace(/\b(\w+)\.gamma32\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.neopixelGamma32(' + varName + ', ';
+    });
     js = js.replace(/\bNEO_GRB\b/g, '0x02');
     js = js.replace(/\bNEO_GRBW\b/g, '0x04');
     js = js.replace(/\bNEO_KHZ800\b/g, '0x00');
@@ -1497,6 +1505,39 @@ class ArduinoSimulator {
         neopixelClear(obj) {
           const np = self._neopixels && self._neopixels[obj._npId];
           if (np) np.pixels.fill(0);
+        },
+        neopixelColorHSV(obj, hue, sat, val) {
+          const h = (Number(hue) || 0) & 0xFFFF;
+          const s = sat !== undefined ? Math.max(0, Math.min(255, Number(sat) || 0)) : 255;
+          const v = val !== undefined ? Math.max(0, Math.min(255, Number(val) || 0)) : 255;
+          if (s === 0) return (v << 16) | (v << 8) | v;
+          const hueShift = (h * 6) >> 16;
+          const region = hueShift / 256;
+          const remainder = (hueShift & 255);
+          const p = (v * (255 - s)) >> 8;
+          const q = (v * (255 - ((s * remainder) >> 8))) >> 8;
+          const t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
+          let r, g, b;
+          switch (region) {
+            case 0: r = v; g = t; b = p; break;
+            case 1: r = q; g = v; b = p; break;
+            case 2: r = p; g = v; b = t; break;
+            case 3: r = p; g = q; b = v; break;
+            case 4: r = t; g = p; b = v; break;
+            default: r = v; g = p; b = q; break;
+          }
+          return (r << 16) | (g << 8) | b;
+        },
+        neopixelGamma32(obj, color) {
+          const c = Number(color) || 0;
+          const r = (c >> 16) & 0xFF;
+          const g = (c >> 8) & 0xFF;
+          const b = c & 0xFF;
+          const gamma = 2.8;
+          const gr = Math.round(Math.pow(r / 255, gamma) * 255);
+          const gg = Math.round(Math.pow(g / 255, gamma) * 255);
+          const gb = Math.round(Math.pow(b / 255, gamma) * 255);
+          return (gr << 16) | (gg << 8) | gb;
         },
 
         /* ══════════ MFRC522 RFID ══════════ */

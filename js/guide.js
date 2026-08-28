@@ -849,6 +849,90 @@ void loop() {
     wiring: 'Connect CH1 or CH2 output to your circuit input. Connect the corresponding GND to the circuit ground.',
     code: `// The function generator is a signal source — no Arduino code needed.`,
   },
+
+  /* ── NEOPIXEL EXTENSIONS ── */
+  neopixel_strip: {
+    id: 'neopixel_strip',
+    name: 'NeoPixel Strip (8 LED)',
+    icon: '🌈',
+    category: 'Output',
+    longDesc: 'An 8-pixel WS2812B addressable LED strip. Each pixel can be set to any RGB colour independently via a single data pin. The strip has DIN (data in) and DOUT (data out) so multiple strips can be daisy-chained.',
+    use: 'Creating colour-cycling animations, status indicators, or ambient lighting effects driven from a single Arduino digital pin.',
+    pins: {
+      VCC: { label: 'VCC', type: 'power', desc: '5 V power supply.' },
+      DIN: { label: 'DIN', type: 'digital', desc: 'Data input — connect to an Arduino digital pin (e.g. D6).' },
+      GND: { label: 'GND', type: 'gnd', desc: 'Common ground.' },
+      DOUT: { label: 'DOut', type: 'digital', desc: 'Data output — chain to the DIN of the next strip.' },
+    },
+    props: {
+      numPixels: 'Number of pixels (default 8).',
+      brightness: 'Global brightness 0–255.',
+    },
+    wiring: 'VCC → 5 V, GND → GND, DIN → Arduino D6 (or any digital pin). Use a 330–470 Ω resistor on the data line and a 1000 µF capacitor across VCC/GND for best results.',
+    code: `#include <Adafruit_NeoPixel.h>
+
+#define PIN        6
+#define NUM_LEDS   8
+
+Adafruit_NeoPixel strip(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
+
+void setup() {
+  strip.begin();
+  strip.setBrightness(128);
+  strip.show();
+}
+
+void loop() {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    strip.setPixelColor(i, strip.Color(255, 0, 0));  // red
+    strip.show();
+    delay(200);
+    strip.setPixelColor(i, strip.Color(0, 0, 0));    // off
+  }
+}`,
+  },
+
+  neopixel_ring: {
+    id: 'neopixel_ring',
+    name: 'NeoPixel Ring (12 LED)',
+    icon: '⭕',
+    category: 'Output',
+    longDesc: 'A 12-pixel WS2812B circular LED ring. The LEDs are arranged in a ring, ideal for clocks, compass displays, or decorative light patterns. Uses the same single-wire protocol as other NeoPixel products.',
+    use: 'Building radial animations, rotary indicators, or circular colour effects. Works identically to the NeoPixel Strip in code — just a different physical layout.',
+    pins: {
+      VCC: { label: 'VCC', type: 'power', desc: '5 V power supply.' },
+      DIN: { label: 'DIN', type: 'digital', desc: 'Data input — connect to an Arduino digital pin.' },
+      DOUT: { label: 'DOut', type: 'digital', desc: 'Data output — chain to the next NeoPixel device.' },
+      GND: { label: 'GND', type: 'gnd', desc: 'Common ground.' },
+    },
+    props: {
+      numPixels: 'Number of pixels (default 12).',
+      brightness: 'Global brightness 0–255.',
+    },
+    wiring: 'VCC → 5 V, GND → GND, DIN → Arduino D6. Same decoupling recommendations as the strip (1000 µF cap + 470 Ω resistor on DIN).',
+    code: `#include <Adafruit_NeoPixel.h>
+
+#define PIN        6
+#define NUM_LEDS   12
+
+Adafruit_NeoPixel ring(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
+
+void setup() {
+  ring.begin();
+  ring.setBrightness(128);
+  ring.show();
+}
+
+void loop() {
+  // Chase one red LED around the ring
+  for (int i = 0; i < NUM_LEDS; i++) {
+    ring.clear();
+    ring.setPixelColor(i, ring.Color(255, 0, 0));
+    ring.show();
+    delay(100);
+  }
+}`,
+  },
 };
 
 /* ═══════════════════════════════════════════════════════════════

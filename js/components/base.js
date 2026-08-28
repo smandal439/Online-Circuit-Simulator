@@ -202,7 +202,7 @@ function getComponentPins(inst) {
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
   { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
-  { category: 'Output',    ids: ['multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel', 'bulb_12v'],
+  { category: 'Output',    ids: ['multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel', 'neopixel_strip', 'neopixel_ring', 'bulb_12v'],
     dropdown: { id: 'led', label: 'LED', icon: '💡', desc: 'Light Emitting Diode',
       variants: [
         { id: 'led',         name: 'Red LED',    color: '#ff3333', icon: '🔴' },
