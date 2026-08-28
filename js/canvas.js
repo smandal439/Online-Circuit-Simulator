@@ -251,6 +251,20 @@ class CircuitCanvas {
   // A wire exits each pin straight out from the component side, then runs
   // horizontally/vertically with right-angle bends, avoiding component bodies.
 
+  // Rotate a pin's local (pin.x, pin.y) offset around the component centre
+  // by inst.rotation × 90° CW and return the world position.
+  _pinWorldPos(inst, pin) {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    const def = defs && defs[inst.type];
+    const cx = (def ? def.width : 40) / 2;
+    const cy = (def ? def.height : 40) / 2;
+    let dx = pin.x - cx;
+    let dy = pin.y - cy;
+    const rot = (inst.rotation || 0) % 4;
+    for (let i = 0; i < rot; i++) { const t = dx; dx = -dy; dy = t; }
+    return { x: inst.x + cx + dx, y: inst.y + cy + dy };
+  }
+
   _getPinExitDir(instId, pinId) {
     const inst = this.components.find(c => c.id === instId);
     if (!inst) return { x: 0, y: 1 };
@@ -1539,8 +1553,9 @@ class CircuitCanvas {
       const def = COMPONENT_DEFS[inst.type];
       if (!def) continue;
       for (const pin of def.pins) {
-        const px = inst.x + pin.x;
-        const py = inst.y + pin.y;
+        const wp = this._pinWorldPos(inst, pin);
+        const px = wp.x;
+        const py = wp.y;
         const dist = Math.sqrt((wx - px) ** 2 + (wy - py) ** 2);
         if (dist <= radius) {
           return { inst, pin, worldX: px, worldY: py };
@@ -1728,7 +1743,7 @@ class CircuitCanvas {
     if (!def) return null;
     const pin = def.pins.find(p => p.id === pinId);
     if (!pin) return null;
-    return { x: inst.x + pin.x, y: inst.y + pin.y };
+    return this._pinWorldPos(inst, pin);
   }
 
   _getPinKey(instId, pinId) {
