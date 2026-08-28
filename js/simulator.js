@@ -66,10 +66,11 @@ class ArduinoSimulator {
     js = js.replace(/^[ \t]*#[^\n]*/gm, '');
 
     // 3. Apply #define substitutions (simple word replacement)
-    //    Skip function-like macros and escape any `$` so the replacement is literal.
+    //    Skip function-like macros (e.g. #define FOO(x) ...) but allow
+    //    parenthesized constants (e.g. #define SEALEVELPRESSURE_HPA (1013.25)).
     for (const [name, value] of Object.entries(defines)) {
       if (!/^[A-Za-z_]\w*$/.test(name)) continue;
-      if (/\(/.test(value)) continue; // function-like macro — leave untouched
+      if (/^\w+\s*\(/.test(value)) continue; // function-like macro — leave untouched
       js = js.replace(new RegExp(`\\b${name}\\b`, 'g'), () => value);
     }
 
