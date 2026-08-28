@@ -654,10 +654,10 @@ class ArduinoSimulator {
           const canvas = window.CircuitCanvas;
           if (canvas && canvas.components && canvas.wires) {
             const keyMap = [
-              ['1','2','3','A'],
-              ['4','5','6','B'],
-              ['7','8','9','C'],
-              ['*','0','#','D']
+              ['1', '2', '3', 'A'],
+              ['4', '5', '6', 'B'],
+              ['7', '8', '9', 'C'],
+              ['*', '0', '#', 'D']
             ];
             for (const inst of canvas.components) {
               if (inst.type !== 'keypad_4x4') continue;
@@ -1953,7 +1953,7 @@ class ArduinoSimulator {
         this._iterSinceDelay++;
         // Infinite-loop guard: yield if no delay has been called in many iterations
         if (this._iterSinceDelay > this._MAX_TIGHT_ITERS) {
-    this._iterSinceDelay = 0;
+          this._iterSinceDelay = 0;
           await new Promise(r => setTimeout(r, 1));
         }
         await loop();
@@ -2290,7 +2290,7 @@ class ArduinoSimulator {
 window.ArduinoSim = new ArduinoSimulator();
 window.EXAMPLE_SKETCHES = [];
 window.loadExamplesFromFiles = async function () {
-  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor', 'neopixel_color_cycle', 'mpu6050_accel', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test','temperature_LCD','dmm_current','dmm_resistance','dmm_voltage','func_gen_dual','func_gen_led','remote_control_leds','remote_servo_control','lm35_temperature','keypad_interfacing','bme280_weather','bmp280_altitude','dso_oscilloscope','simplebme280_basic','simplebme280_altitude','max7219'];
+  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor', 'neopixel_color_cycle', 'mpu6050_accel', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test', 'temperature_LCD', 'dmm_current', 'dmm_resistance', 'dmm_voltage', 'func_gen_dual', 'func_gen_led', 'remote_control_leds', 'remote_servo_control', 'lm35_temperature', 'keypad_interfacing', 'bme280_weather', 'bmp280_altitude', 'dso_oscilloscope', 'simplebme280_basic', 'simplebme280_altitude', 'max7219'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {
