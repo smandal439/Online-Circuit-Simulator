@@ -114,7 +114,12 @@ class RemoteControl {
     if (this._onStateUpdate) {
       const host = window.location.hostname || '127.0.0.1';
       const port = window.location.port || '3000';
-      this._onStateUpdate(`http://${host}:${port}/remote?session=${this.sessionId}`, this.sessionId);
+      const isSecure = window.location.protocol === 'https:';
+      const scheme = isSecure ? 'https' : 'http';
+      const isGitHubPages = host.endsWith('.github.io');
+      const pagePath = isGitHubPages ? '/remote.html' : '/remote';
+      const portStr = (!port || port === '80' || port === '443') ? '' : `:${port}`;
+      this._onStateUpdate(`${scheme}://${host}${portStr}${pagePath}?session=${this.sessionId}`, this.sessionId);
     }
   }
 

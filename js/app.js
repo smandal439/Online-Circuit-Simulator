@@ -1530,10 +1530,15 @@ _newProject() {
       // Fetch real LAN IP for QR code (not localhost)
       const fallbackHost = window.location.hostname || '127.0.0.1';
       const fallbackPort = window.location.port || '3000';
+      const isSecure = window.location.protocol === 'https:';
+      const scheme = isSecure ? 'https' : 'http';
+      const isGitHubPages = fallbackHost.endsWith('.github.io');
+      const pagePath = isGitHubPages ? '/remote.html' : '/remote';
       fetch('/api/host').then(r => r.json()).then(info => {
         const host = info.ip || fallbackHost;
         const port = info.port || fallbackPort;
-        const remoteUrl = `http://${host}:${port}/remote?session=${sim.sessionId}`;
+        const portStr = (!port || port === '80' || port === '443') ? '' : `:${port}`;
+        const remoteUrl = `${scheme}://${host}${portStr}${pagePath}?session=${sim.sessionId}`;
         if (urlInput) urlInput.value = remoteUrl;
 
         // Generate QR code
@@ -1551,7 +1556,8 @@ _newProject() {
         }
       }).catch(() => {
         // Fallback to hostname
-        const remoteUrl = `http://${fallbackHost}:${fallbackPort}/remote?session=${sim.sessionId}`;
+        const portStr = (!fallbackPort || fallbackPort === '80' || fallbackPort === '443') ? '' : `:${fallbackPort}`;
+        const remoteUrl = `${scheme}://${fallbackHost}${portStr}${pagePath}?session=${sim.sessionId}`;
         if (urlInput) urlInput.value = remoteUrl;
         const qrContainer = document.getElementById('remote-qr');
         if (qrContainer && typeof QRCode !== 'undefined') {
