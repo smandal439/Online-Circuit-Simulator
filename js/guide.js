@@ -157,6 +157,7 @@ void loop() {
     digitalWrite(p, LOW);
   }
 }`,
+    exampleId: 'multi_colour_led_blink',
   },
 
   rgb_led: {
@@ -281,6 +282,7 @@ void loop(){
   lcd.print(millis()/1000);
   delay(100);
 }`,
+    exampleId: 'lcd_hello_world',
   },
 
   lcd1602_i2c: {
@@ -489,6 +491,7 @@ void loop() {
     Serial.println(key);
   }
 }`,
+    exampleId: 'keypad_interfacing',
   },
 
   /* ── ACTUATORS ── */
@@ -720,6 +723,7 @@ void loop() {
   Serial.println(" C");
   delay(1000);
 }`,
+    exampleId: 'lm35_temperature',
   },
 
   /* ── PASSIVES ── */
@@ -817,6 +821,7 @@ void loop() {
     },
     wiring: 'For voltage: connect V+ and COM in parallel across the component. For current: break the circuit and insert the DMM in series.',
     code: `// The multimeter is a measuring instrument — no Arduino code needed.`,
+    exampleId: 'dmm_voltage',
   },
 
   func_gen: {
@@ -848,6 +853,7 @@ void loop() {
     },
     wiring: 'Connect CH1 or CH2 output to your circuit input. Connect the corresponding GND to the circuit ground.',
     code: `// The function generator is a signal source — no Arduino code needed.`,
+    exampleId: 'func_gen_led',
   },
 
   /* ── NEOPIXEL EXTENSIONS ── */
@@ -890,6 +896,7 @@ void loop() {
     strip.setPixelColor(i, strip.Color(0, 0, 0));    // off
   }
 }`,
+    exampleId: 'neopixel_color_cycle',
   },
 
   neopixel_ring: {
@@ -932,6 +939,7 @@ void loop() {
     delay(100);
   }
 }`,
+    exampleId: 'neopixel_color_cycle',
   },
 
   /* ── ICs ── */
