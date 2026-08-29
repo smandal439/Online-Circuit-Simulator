@@ -3536,6 +3536,19 @@ class CircuitCanvas {
     const other = wireTarget.inst;
     if (other.type === 'power_5v') return 1;
     if (other.type === 'power_gnd') return 0;
+    if (other.type === 'push_button') {
+      const pressed = other.runtimeState && other.runtimeState.pressed;
+      const tp = wireTarget.pinId;
+      if (pressed) {
+        if (tp === 'p1' || tp === 'p2') return this._readDigitalInput(other.id, 'p3');
+        return this._readDigitalInput(other.id, 'p1');
+      }
+      if (tp === 'p1') return this._readDigitalInput(other.id, 'p2');
+      if (tp === 'p2') return this._readDigitalInput(other.id, 'p1');
+      if (tp === 'p3') return this._readDigitalInput(other.id, 'p4');
+      if (tp === 'p4') return this._readDigitalInput(other.id, 'p3');
+      return 0;
+    }
     const pn = this._getConnectedPinNum(fromInstId, pinId);
     if (pn !== null) {
       const sim = window.ArduinoSim;
@@ -3565,6 +3578,19 @@ class CircuitCanvas {
     const other = wireTarget.inst;
     if (other.type === 'power_5v') return 1023;
     if (other.type === 'power_gnd') return 0;
+    if (other.type === 'push_button') {
+      const pressed = other.runtimeState && other.runtimeState.pressed;
+      const tp = wireTarget.pinId;
+      if (pressed) {
+        if (tp === 'p1' || tp === 'p2') return this._readAnalogInput(other.id, 'p3');
+        return this._readAnalogInput(other.id, 'p1');
+      }
+      if (tp === 'p1') return this._readAnalogInput(other.id, 'p2');
+      if (tp === 'p2') return this._readAnalogInput(other.id, 'p1');
+      if (tp === 'p3') return this._readAnalogInput(other.id, 'p4');
+      if (tp === 'p4') return this._readAnalogInput(other.id, 'p3');
+      return 0;
+    }
     const pn = this._getConnectedPinNum(fromInstId, pinId);
     if (pn !== null) {
       const sim = window.ArduinoSim;
