@@ -2407,11 +2407,84 @@ class CircuitCanvas {
           const dt = (now - inst.runtimeState._lastTime) / 1000;
           inst.runtimeState._lastTime = now;
 
-          const freq = inst.props.frequency || 1000;
-          const duty = (inst.props.dutyCycle || 50) / 100;
-          const period = 1 / freq;
-          const tHigh = period * duty;
-          const tLow = period * (1 - duty);
+          // ── Resolve actual R1, R2, C from connected components ──
+          let r1 = null, r2 = null, capC = null;
+          const self = this;
+
+          const _getOhms = (c) => {
+            let v = c.runtimeState?.value ?? c.props?.value ?? 0;
+            const u = c.runtimeState?.unit || c.props?.unit || 'Ω';
+            if (u === 'kΩ') v *= 1e3;
+            if (u === 'MΩ') v *= 1e6;
+            return v;
+          };
+          const _getFarads = (c) => {
+            let v = c.runtimeState?.value ?? c.props?.value ?? 0;
+            const u = c.runtimeState?.unit || c.props?.unit || 'F';
+            if (u === 'µF') v *= 1e-6;
+            if (u === 'nF') v *= 1e-9;
+            if (u === 'pF') v *= 1e-12;
+            if (u === 'mF') v *= 1e-3;
+            return v;
+          };
+          const _findConnectedComps = (pinId, type) => {
+            const results = [];
+            for (const w of self.wires) {
+              let tid;
+              if (w.from.instId === inst.id && w.from.pinId === pinId) tid = w.to.instId;
+              else if (w.to.instId === inst.id && w.to.pinId === pinId) tid = w.from.instId;
+              else continue;
+              const c = self.components.find(x => x.id === tid);
+              if (c && c.type === type) results.push(c);
+            }
+            return results;
+          };
+
+          // Find all resistors connected to any 555 pin and identify R1, R2
+          const _allResistors = new Map();
+          for (const pid of ['DIS', 'VCC', 'THR', 'TRIG']) {
+            for (const comp of _findConnectedComps(pid, 'resistor')) {
+              _allResistors.set(comp.id, comp);
+            }
+          }
+          for (const [, r] of _allResistors) {
+            const rPins = [];
+            for (const w of self.wires) {
+              if (w.from.instId === r.id || w.to.instId === r.id) {
+                const otherInstId = w.from.instId === r.id ? w.to.instId : w.from.instId;
+                if (otherInstId === inst.id) {
+                  rPins.push(w.from.instId === r.id ? w.from.pinId : w.to.pinId);
+                }
+              }
+            }
+            if (rPins.includes('VCC') && rPins.includes('DIS')) r1 = _getOhms(r);
+            else if (rPins.includes('DIS') && rPins.includes('THR')) r2 = _getOhms(r);
+            else if (r1 == null && rPins.includes('VCC')) r1 = _getOhms(r);
+            else if (r2 == null && rPins.includes('THR')) r2 = _getOhms(r);
+            else if (r1 == null) r1 = _getOhms(r);
+            else if (r2 == null) r2 = _getOhms(r);
+          }
+
+          // Find C from THR or TRIG pin
+          const capComps = _findConnectedComps('THR', 'capacitor');
+          const trigCapComps = _findConnectedComps('TRIG', 'capacitor');
+          const allCaps = [...new Set([...capComps, ...trigCapComps])];
+          if (allCaps.length > 0) capC = _getFarads(allCaps[0]);
+
+          // ── Calculate timing from component values ──
+          let tHigh, tLow;
+          if (r1 != null && r2 != null && capC != null && capC > 0 && r1 > 0 && r2 > 0) {
+            // Real 555 astable formulas
+            tHigh = 0.693 * (r1 + r2) * capC;
+            tLow = 0.693 * r2 * capC;
+          } else {
+            // Fallback to props when components not resolved
+            const freq = inst.props.frequency || 1000;
+            const duty = (inst.props.dutyCycle || 50) / 100;
+            const period = 1 / freq;
+            tHigh = period * duty;
+            tLow = period * (1 - duty);
+          }
           const vThresh = 2 / 3;
           const vTrig = 1 / 3;
 
