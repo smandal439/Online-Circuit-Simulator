@@ -356,8 +356,8 @@ void loop(){}`,
     name: 'Push Button',
     icon: '🔘',
     category: 'Input',
-    longDesc: 'A momentary tactile switch. The four legs form two internally-connected pairs — pressing the cap joins the pairs so current can flow. Read it with digitalRead() and an INPUT_PULLUP so the pin reads HIGH when released and LOW when pressed.',
-    use: 'User input — buttons, doorbells, triggers. Wire one side to a digital pin (with internal pull-up) and the other to GND.',
+    longDesc: 'A momentary tactile switch. The four legs form two internally-connected pairs — pressing the cap joins the pairs so current can flow. Read it with digitalRead() and an INPUT_PULLUP so the pin reads HIGH when released and LOW when pressed. Works standalone with ICs (no Arduino needed) — the simulator traces through the switch to find the voltage source on the other side.',
+    use: 'User input — buttons, doorbells, triggers. Wire one side to a digital pin (with internal pull-up) and the other to GND. Toggle it by clicking on the canvas or pressing Space/Enter when selected.',
     pins: {
       p1: { label: '1', type: 'digital', desc: 'Leg 1 — one side of the switch contact.' },
       p2: { label: '2', type: 'digital', desc: 'Leg 2 — internally connected to leg 1.' },
@@ -385,7 +385,7 @@ void loop(){
     name: 'Potentiometer',
     icon: '🎚️',
     category: 'Input',
-    longDesc: 'A 10 kΩ variable resistor (rotary knob). The wiper picks a voltage between VCC and GND, giving a smooth 0–1023 analog value. In the simulator, drag the knob (or use the property panel) to change the value while the simulation runs.',
+    longDesc: 'A 10 kΩ variable resistor (rotary knob). The wiper picks a voltage between VCC and GND, giving a smooth 0–1023 analog value. In the simulator, drag the knob (or use the property panel) to change the value while the simulation runs. Works standalone with ICs (no Arduino needed) — the wiper output can drive other IC inputs directly.',
     use: 'Volume controls, brightness dimmers, position sensors. Connect the wiper to an analog input and read with analogRead().',
     pins: {
       vcc: { label: 'VCC', type: 'power', desc: 'Connect to 5 V (or 3.3 V).' },
@@ -933,6 +933,206 @@ void loop() {
   }
 }`,
   },
+
+  /* ── ICs ── */
+  ic_555: {
+    id: 'ic_555',
+    name: '555 Timer IC',
+    icon: '⏱️',
+    category: 'ICs',
+    longDesc: 'The classic 555 timer IC configured in astable mode. The simulator automatically detects connected R1, R2, and C values and calculates the real oscillation frequency using the standard formulas: f = 1.44 / ((R1 + 2×R2) × C). Works standalone without an Arduino — the OUT pin drives LEDs and other components directly.',
+    use: 'Generating square waves, LED blinkers, tone generators, PWM sources. Connect R1 between VCC and DIS, R2 between DIS and THR, and C between THR/TRIG and GND.',
+    pins: {
+      GND: { label: 'GND', type: 'gnd', desc: 'Ground pin.' },
+      TRIG: { label: 'TRIG', type: 'digital', desc: 'Trigger input — starts the cycle when voltage falls below 1/3 VCC.' },
+      OUT: { label: 'OUT', type: 'digital', desc: 'Output pin — drives HIGH (~VCC) or LOW (GND).' },
+      RST: { label: 'RST', type: 'digital', desc: 'Reset — tie to VCC to keep timer active.' },
+      DIS: { label: 'DIS', type: 'digital', desc: 'Discharge pin — internal transistor sinks current to GND when OUT is LOW.' },
+      THR: { label: 'THR', type: 'digital', desc: 'Threshold input — resets the cycle when voltage exceeds 2/3 VCC.' },
+      CV: { label: 'CV', type: 'signal', desc: 'Control voltage — add a 0.1 µF cap to GND for noise bypass.' },
+      VCC: { label: 'VCC', type: 'power', desc: 'Supply voltage (4.5–16 V).' },
+    },
+    props: {
+      frequency: 'Fallback frequency in Hz (used when R/C values cannot be detected).',
+      dutyCycle: 'Fallback duty cycle in % (used when R/C values cannot be detected).',
+    },
+    wiring: 'VCC→5V, GND→GND, RST→VCC, CV→0.1µF→GND, OUT→LED+resistor→GND. For astable: VCC→R1→DIS, DIS→R2→THR, THR→C→GND, TRIG→THR.',
+    code: `// The 555 timer runs autonomously — no Arduino code needed.
+// Set frequency/duty via component values:
+//   R1, R2 (resistors) and C (capacitor) determine timing.
+//   f = 1.44 / ((R1 + 2*R2) * C)`,
+  },
+
+  max7219: {
+    id: 'max7219',
+    name: 'MAX7219 LED Matrix',
+    icon: '🔴',
+    category: 'ICs',
+    longDesc: 'An 8×8 LED dot matrix driver using the MAX7219 chip with SPI interface. Supports cascading via DOUT→DIN. The simulator decodes SPI commands and renders the LED matrix on the canvas. Works with or without an Arduino.',
+    use: 'Scrolling text displays, animations, bar graphs. Driven via SPI with DIN, CS, and CLK pins.',
+    pins: {
+      VCC: { label: 'VCC', type: 'power', desc: '5 V power supply.' },
+      GND: { label: 'GND', type: 'gnd', desc: 'Ground.' },
+      DIN: { label: 'DIN', type: 'digital', desc: 'SPI data input — connect to MOSI or any digital pin.' },
+      CS: { label: 'CS', type: 'digital', desc: 'Chip select — active LOW. Latch data on rising edge.' },
+      CLK: { label: 'CLK', type: 'digital', desc: 'SPI clock input.' },
+      DOUT: { label: 'DOUT', type: 'digital', desc: 'Data output — chain to the next MAX7219 DIN.' },
+    },
+    props: {},
+    wiring: 'VCC→5V, GND→GND, DIN→D11 (MOSI), CS→D10, CLK→D13 (SCK). For cascading: DOUT→next DIN.',
+    code: `// Uses SPI to send 16-bit frames: [address][data]
+// Address 0x01–0x08: row data (bit 0 = left, bit 7 = right)
+// Address 0x09: decode mode (0x00 = no decode)
+// Address 0x0A: intensity (0x00–0x0F)
+// Address 0x0B: scan limit (0x07 = all 8 rows)
+// Address 0x0C: shutdown (0x01 = normal operation)`,
+  },
+
+  /* ── DISPLAYS ── */
+  ili9341: {
+    id: 'ili9341',
+    name: 'ILI9341 TFT Display',
+    icon: '🖥️',
+    category: 'Output',
+    longDesc: 'A 2.4″ 320×240 TFT LCD driven by the ILI9341 controller with SPI interface. Supports Adafruit_GFX drawing primitives — lines, rectangles, circles, triangles, text, and pixel-level control. The simulator renders a 5×7 ASCII font for text and colour RGB drawing primitives.',
+    use: 'Colour graphics, dashboards, games, data visualization. Uses SPI: CS, DC, RST, MOSI, SCK, and LED backlight pins.',
+    pins: {
+      VCC: { label: 'VCC', type: 'power', desc: '3.3 V / 5 V power.' },
+      GND: { label: 'GND', type: 'gnd', desc: 'Ground.' },
+      CS: { label: 'CS', type: 'digital', desc: 'Chip select — active LOW.' },
+      DC: { label: 'DC', type: 'digital', desc: 'Data/Command select — HIGH for data, LOW for command.' },
+      RST: { label: 'RST', type: 'digital', desc: 'Hardware reset — active LOW.' },
+      MOSI: { label: 'MOSI', type: 'digital', desc: 'SPI master-out data.' },
+      SCK: { label: 'SCK', type: 'digital', desc: 'SPI clock.' },
+      LED: { label: 'LED', type: 'power', desc: 'Backlight control — tie to VCC for always-on.' },
+    },
+    props: {},
+    wiring: 'VCC→3.3V/5V, GND→GND, CS→D10, DC→D9, RST→D8, MOSI→D11, SCK→D13, LED→VCC.',
+    code: `#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
+
+#define TFT_CS  10
+#define TFT_DC   9
+#define TFT_RST  8
+Adafruit_ILI9341 tft(TFT_CS, TFT_DC, TFT_RST);
+
+void setup() {
+  tft.begin();
+  tft.setRotation(0);
+  tft.fillScreen(ILI9341_BLACK);
+  tft.setTextColor(ILI9341_WHITE);
+  tft.setTextSize(2);
+  tft.setCursor(10, 10);
+  tft.println("Hello TFT!");
+  tft.fillRect(50, 50, 100, 60, ILI9341_RED);
+  tft.drawCircle(200, 120, 40, ILI9341_GREEN);
+}
+void loop() {}`,
+  },
+
+  /* ── SENSORS ── */
+  ir_obstacle: {
+    id: 'ir_obstacle',
+    name: 'IR Obstacle Sensor',
+    icon: '📡',
+    category: 'Sensors',
+    longDesc: 'An infrared obstacle detection sensor. When an object is detected within range, the OUT pin goes LOW (active-low). The LED indicator lights up when an obstacle is detected. Toggle the simulated detection in the property panel.',
+    use: 'Obstacle avoidance robots, line followers, proximity detection. Read OUT with digitalRead().',
+    pins: {
+      VCC: { label: 'VCC', type: 'power', desc: '3.3 V / 5 V power.' },
+      GND: { label: 'GND', type: 'gnd', desc: 'Ground.' },
+      OUT: { label: 'OUT', type: 'digital', desc: 'Digital output — LOW when obstacle detected, HIGH when clear.' },
+    },
+    props: {
+      detected: 'Simulated detection state (0 = clear, 1 = obstacle detected).',
+    },
+    wiring: 'VCC→5V, GND→GND, OUT→D2.',
+    code: `void setup(){
+  pinMode(2, INPUT);
+  pinMode(13, OUTPUT);
+  Serial.begin(9600);
+}
+void loop(){
+  int d = digitalRead(2);
+  digitalWrite(13, d == LOW ? HIGH : LOW);
+  Serial.println(d == LOW ? "Obstacle!" : "Clear");
+  delay(100);
+}`,
+  },
+
+  flex_sensor: {
+    id: 'flex_sensor',
+    name: 'Flex Sensor',
+    icon: '〰️',
+    category: 'Sensors',
+    longDesc: 'A resistive flex sensor whose resistance increases when bent. Wired as a voltage divider, it produces a 0–1023 analog value proportional to the bend angle. Adjust the simulated bend value in the property panel.',
+    use: 'Gesture detection, glove interfaces, robotics finger control. Read the analog output with analogRead().',
+    pins: {
+      p1: { label: '1', type: 'power', desc: 'Connect to 5V (through a fixed resistor for voltage divider).' },
+      p2: { label: '2', type: 'analog', desc: 'Analog output — connect to an analog input pin.' },
+    },
+    props: {
+      bend: 'Simulated bend angle (0 = straight, 1023 = fully bent).',
+    },
+    wiring: '5V→p1 (via 10kΩ resistor), p2→A0, other end of fixed resistor→GND.',
+    code: `void setup(){
+  Serial.begin(9600);
+}
+void loop(){
+  int bend = analogRead(A0);
+  Serial.print("Bend: ");
+  Serial.println(bend);
+  delay(50);
+}`,
+  },
+
+  thermistor: {
+    id: 'thermistor',
+    name: 'NTC Thermistor',
+    icon: '🌡️',
+    category: 'Sensors',
+    longDesc: 'A Negative Temperature Coefficient thermistor whose resistance decreases as temperature rises. Wired as a voltage divider, it produces an analog value proportional to temperature. Adjust the simulated temperature in the property panel.',
+    use: 'Temperature measurement, thermal protection, environmental monitoring. Read the analog output with analogRead().',
+    pins: {
+      p1: { label: '1', type: 'analog', desc: 'Analog output — connect to an analog input pin.' },
+      p2: { label: '2', type: 'gnd', desc: 'Connect to GND (through the thermistor to form a voltage divider).' },
+    },
+    props: {
+      temperature: 'Simulated temperature in °C (default 25°C).',
+    },
+    wiring: '5V→10kΩ fixed resistor→p1, p1→A0, p2→GND.',
+    code: `void setup(){
+  Serial.begin(9600);
+}
+void loop(){
+  int adc = analogRead(A0);
+  float voltage = adc * (5.0 / 1023.0);
+  Serial.print("ADC: ");
+  Serial.print(adc);
+  Serial.print(" Voltage: ");
+  Serial.println(voltage, 2);
+  delay(500);
+}`,
+  },
+
+  /* ── PASSIVES ── */
+  diode_1n4007: {
+    id: 'diode_1n4007',
+    name: '1N4007 Diode',
+    icon: '▶',
+    category: 'Passive',
+    longDesc: 'A general-purpose silicon rectifier diode. Current flows from anode to cathode with a ~0.7 V forward voltage drop. Blocks reverse current. Used for polarity protection, rectification, and flyback protection.',
+    use: 'Reverse polarity protection, rectifying AC, flyback diodes across inductive loads (relays, motors).',
+    pins: {
+      anode: { label: 'A', type: 'signal', desc: 'Anode — current flows INTO this pin (from positive side).' },
+      cathode: { label: 'K', type: 'signal', desc: 'Cathode — current flows OUT of this pin (toward load/GND).' },
+    },
+    props: {},
+    wiring: 'Place in series: anode to positive source, cathode to load.',
+    code: `// Diodes are passive components — no code needed.
+// Anode (+) -> Diode -> Cathode (-) -> Load`,
+  },
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1256,6 +1456,30 @@ void loop() {
   }
 }`,
     exampleId: 'rainbow_rgb',
+  },
+
+  {
+    id: 'keyboard-shortcuts',
+    title: 'Keyboard Shortcuts',
+    icon: '⌨️',
+    level: 'Beginner',
+    tags: ['shortcuts', 'productivity', 'keyboard'],
+    summary: 'Speed up your workflow with these keyboard shortcuts for circuit editing and simulation.',
+    steps: [
+      'Select a push button on the canvas and press Space or Enter to toggle it — no need to click.',
+      'Press R to rotate the selected component by 90°.',
+      'Press Delete or Backspace to delete the selected component or wire.',
+      'Press F to fit the entire circuit in view.',
+      'Press Escape to cancel wiring mode, deselect, or close dialogs.',
+      'Ctrl+C / Ctrl+V to copy and paste selected components.',
+      'Ctrl+D to duplicate the selected component.',
+      'Ctrl+Z to undo, Ctrl+Y or Ctrl+Shift+Z to redo.',
+      'Ctrl+A to select all components on the canvas.',
+      'F5 to run the simulation, F6 to stop, F7 to pause/resume.',
+      'Ctrl+S to save the project, Ctrl+Shift+S to export as JSON.',
+    ],
+    wiring: 'N/A — these are editor/canvas shortcuts.',
+    code: `// Shortcuts are for the simulator UI, not Arduino code.`,
   },
 ];
 
