@@ -1,0 +1,119 @@
+{
+  "version": "1.1",
+  "name": "NeoPixel Strip Color Chase (16 LEDs)",
+  "code": "#include <Adafruit_NeoPixel.h>\n\n#define PIN        6\n#define NUM_LEDS   16\n\nAdafruit_NeoPixel strip(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);\n\nvoid setup() {\n  strip.begin();\n  strip.setBrightness(255);\n  strip.show();\n}\n\nvoid loop() {\n  // Red chase\n  for (int i = 0; i < NUM_LEDS; i++) {\n    strip.setPixelColor(i, strip.Color(255, 0, 0));\n    strip.show();\n    delay(200);\n    strip.setPixelColor(i, strip.Color(0, 0, 0));\n  }\n  // White chase\n  for (int i = 0; i < NUM_LEDS; i++) {\n    strip.setPixelColor(i, strip.Color(150, 150, 150));\n    strip.show();\n    delay(200);\n    strip.setPixelColor(i, strip.Color(0, 0, 0));\n  }\n  // Green chase\n  for (int i = 0; i < NUM_LEDS; i++) {\n    strip.setPixelColor(i, strip.Color(0, 255, 0));\n    strip.show();\n    delay(200);\n    strip.setPixelColor(i, strip.Color(0, 0, 0));\n  }\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 90,
+        "y": 75,
+        "width": 230,
+        "height": 150,
+        "props": { "label": "UNO" },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "np1",
+        "type": "neopixel_strip",
+        "x": 70,
+        "y": -15,
+        "width": 180,
+        "height": 48,
+        "props": {
+          "numPixels": 8,
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "brightness": 255
+        },
+        "runtimeState": {
+          "pixels": [
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 }
+          ],
+          "brightness": 255
+        },
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "np2",
+        "type": "neopixel_strip",
+        "x": 265,
+        "y": -15,
+        "width": 180,
+        "height": 48,
+        "props": {
+          "numPixels": 8,
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "brightness": 255
+        },
+        "runtimeState": {
+          "pixels": [
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 },
+            { "r": 0, "g": 0, "b": 0 }
+          ],
+          "brightness": 255
+        },
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": { "instId": "np1", "pinId": "DOUT" },
+        "to": { "instId": "np2", "pinId": "DIN" },
+        "waypoints": [{ "x": 234, "y": 57 }, { "x": 297, "y": 57 }]
+      },
+      {
+        "id": "w2",
+        "from": { "instId": "b1", "pinId": "5V" },
+        "to": { "instId": "np1", "pinId": "VCC" },
+        "waypoints": []
+      },
+      {
+        "id": "w3",
+        "from": { "instId": "b1", "pinId": "GND2" },
+        "to": { "instId": "np1", "pinId": "GND" },
+        "waypoints": []
+      },
+      {
+        "id": "w4",
+        "from": { "instId": "b1", "pinId": "5V" },
+        "to": { "instId": "np2", "pinId": "VCC" },
+        "waypoints": []
+      },
+      {
+        "id": "w5",
+        "from": { "instId": "b1", "pinId": "GND2" },
+        "to": { "instId": "np2", "pinId": "GND" },
+        "waypoints": []
+      },
+      {
+        "id": "w6",
+        "from": { "instId": "np1", "pinId": "DIN" },
+        "to": { "instId": "b1", "pinId": "D6" },
+        "waypoints": []
+      }
+    ]
+  }
+}
