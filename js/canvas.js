@@ -3018,6 +3018,60 @@ class CircuitCanvas {
           // Keypad column state is computed live in digitalRead() — no cached update needed.
           break;
         }
+
+        /* ── MAX7219 — SPI bit-bang decoder ── */
+        case 'max7219': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+
+          const dinPn = this._getConnectedPinNum(inst.id, 'DIN');
+          const csPn  = this._getConnectedPinNum(inst.id, 'CS');
+          const clkPn = this._getConnectedPinNum(inst.id, 'CLK');
+
+          if (dinPn === null || csPn === null || clkPn === null) break;
+
+          const dinVal = sim.pinStates[`pin_${dinPn}`] ? 1 : 0;
+          const csVal  = sim.pinStates[`pin_${csPn}`]  ? 1 : 0;
+          const clkVal = sim.pinStates[`pin_${clkPn}`] ? 1 : 0;
+
+          if (!inst.runtimeState._spi) {
+            inst.runtimeState._spi = {
+              shiftReg: 0,
+              bitCount: 0,
+              prevClk: 0,
+              prevCs: 1,
+              rows: new Uint8Array(8),
+              regs: {},
+            };
+          }
+          const spi = inst.runtimeState._spi;
+          const prevCs  = spi.prevCs;
+          const prevClk = spi.prevClk;
+
+          if (prevCs === 1 && csVal === 0) {
+            spi.shiftReg = 0;
+            spi.bitCount = 0;
+          }
+
+          if (csVal === 0 && prevClk === 0 && clkVal === 1) {
+            spi.shiftReg = ((spi.shiftReg << 1) | dinVal) & 0xFFFF;
+            spi.bitCount++;
+          }
+
+          if (prevCs === 0 && csVal === 1 && spi.bitCount >= 16) {
+            const addr = (spi.shiftReg >> 8) & 0x0F;
+            const data = spi.shiftReg & 0xFF;
+            spi.regs[addr] = data;
+
+            if (addr >= 1 && addr <= 8) {
+              spi.rows[addr - 1] = data;
+            }
+          }
+
+          spi.prevClk = clkVal;
+          spi.prevCs  = csVal;
+          break;
+        }
       }
     }
   }

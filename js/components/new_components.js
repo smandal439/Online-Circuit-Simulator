@@ -2069,7 +2069,7 @@ defComp({
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const pattern = inst.runtimeState?.pattern ?? inst.props.pattern ?? 0;
+    const rows = inst.runtimeState?._spi?.rows;
 
     ctx.save();
     ctx.translate(x, y);
@@ -2086,8 +2086,9 @@ defComp({
 
     // LED grid
     for (let row = 0; row < 8; row++) {
+      const rowData = rows ? rows[row] : 0;
       for (let col = 0; col < 8; col++) {
-        const bit = (pattern >> (row * 8 + col)) & 1;
+        const bit = (rowData >> (7 - col)) & 1;
         const lx = 12 + col * 7.5;
         const ly = 12 + row * 7.5;
         ctx.fillStyle = bit ? '#ff3333' : '#1a0a0a';
