@@ -969,7 +969,7 @@ void loop() {
 // Set frequency/duty via component values:
 //   R1, R2 (resistors) and C (capacitor) determine timing.
 //   f = 1.44 / ((R1 + 2*R2) * C)`,
-    exampleId: 'astable_555',
+    exampleId: '555 Timer Astable LED Blinker',
   },
 
   max7219: {
