@@ -2268,16 +2268,15 @@ class CircuitCanvas {
           const vccNet = this._tracePinNet(inst.id, 'vcc');
           const gndNet = this._tracePinNet(inst.id, 'gnd');
           const hasGnd = gndNet.grounds.length > 0;
-          if (wiperPin !== null && vccNet.sources.length > 0 && hasGnd) {
+          if (vccNet.sources.length > 0 && hasGnd) {
             const src = vccNet.sources[0];
             const val = inst.runtimeState.value !== undefined ? inst.runtimeState.value : (inst.props.value || 512);
             const maxVal = inst.props.maxValue || 1023;
             const ratio = Math.max(0, Math.min(1, val / maxVal));
-            // Resistive divider: wiper voltage = source voltage * ratio
-            // Convert to 10-bit ADC (0-1023) to match analogRead() range
             const outVoltage = src.voltage * ratio;
             const adcVal = Math.round((outVoltage / 5.0) * 1023);
-            if (window.ArduinoSim && window.ArduinoSim.pinStates) {
+            inst.runtimeState.wiper = adcVal;
+            if (wiperPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
               window.ArduinoSim.pinStates[`pin_${wiperPin}`] = adcVal;
             }
           }
@@ -3561,6 +3560,7 @@ class CircuitCanvas {
     }
     const IC_OUT = {
       ic_555: ['OUT'],
+      potentiometer: ['wiper'],
       ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
       ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
       ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
@@ -3601,8 +3601,12 @@ class CircuitCanvas {
       const sim = window.ArduinoSim;
       return (sim && sim.pinStates) ? (sim.pinStates[`pin_${pn}`] || 0) : 0;
     }
-    const IC_OUT = {
+    if (other.type === 'potentiometer' && wireTarget.pinId === 'wiper') {
+      return other.runtimeState && other.runtimeState.wiper != null ? other.runtimeState.wiper : 0;
+    }
+    const IC_OUT2 = {
       ic_555: ['OUT'],
+      potentiometer: ['wiper'],
       ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
       ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
       ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
@@ -3611,7 +3615,7 @@ class CircuitCanvas {
       ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
       ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
     };
-    if (IC_OUT[other.type] && IC_OUT[other.type].includes(wireTarget.pinId)) {
+    if (IC_OUT2[other.type] && IC_OUT2[other.type].includes(wireTarget.pinId)) {
       const raw = other.runtimeState && other.runtimeState[wireTarget.pinId] != null
         ? other.runtimeState[wireTarget.pinId] : 0;
       return Math.round((raw / 255) * 1023);
