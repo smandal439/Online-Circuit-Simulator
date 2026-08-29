@@ -961,6 +961,7 @@ void loop() {
 // Set frequency/duty via component values:
 //   R1, R2 (resistors) and C (capacitor) determine timing.
 //   f = 1.44 / ((R1 + 2*R2) * C)`,
+    exampleId: 'astable_555',
   },
 
   max7219: {
@@ -986,6 +987,7 @@ void loop() {
 // Address 0x0A: intensity (0x00–0x0F)
 // Address 0x0B: scan limit (0x07 = all 8 rows)
 // Address 0x0C: shutdown (0x01 = normal operation)`,
+    exampleId: 'max7219',
   },
 
   /* ── DISPLAYS ── */
@@ -1029,6 +1031,7 @@ void setup() {
   tft.drawCircle(200, 120, 40, ILI9341_GREEN);
 }
 void loop() {}`,
+    exampleId: 'ili9341',
   },
 
   /* ── SENSORS ── */
