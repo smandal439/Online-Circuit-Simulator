@@ -2132,57 +2132,98 @@ defComp({
   category: 'Output',
   icon: '🖥️',
   desc: 'ILI9341 2.4" 240x320 TFT LCD display (SPI). Full-color with Adafruit_GFX support',
-  width: 80,
-  height: 110,
-  defaultProps: { color: 0x0000 },
+  width: 160,
+  height: 140,
+  defaultProps: {},
   interactive: [],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 110, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 110, side: 'bottom' },
-    { id: 'CS', label: 'CS', type: PIN_TYPE.DIGITAL, x: 32, y: 110, side: 'bottom' },
-    { id: 'DC', label: 'DC', type: PIN_TYPE.DIGITAL, x: 44, y: 110, side: 'bottom' },
-    { id: 'MOSI', label: 'MOSI', type: PIN_TYPE.DIGITAL, x: 56, y: 110, side: 'bottom' },
-    { id: 'SCK', label: 'SCK', type: PIN_TYPE.DIGITAL, x: 68, y: 110, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 16, y: 140, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 40, y: 140, side: 'bottom' },
+    { id: 'CS', label: 'CS', type: PIN_TYPE.DIGITAL, x: 64, y: 140, side: 'bottom' },
+    { id: 'DC', label: 'DC', type: PIN_TYPE.DIGITAL, x: 88, y: 140, side: 'bottom' },
+    { id: 'MOSI', label: 'MOSI', type: PIN_TYPE.DIGITAL, x: 112, y: 140, side: 'bottom' },
+    { id: 'SCK', label: 'SCK', type: PIN_TYPE.DIGITAL, x: 136, y: 140, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const color = inst.runtimeState?.color ?? inst.props.color ?? 0x0000;
+    const tft = inst.runtimeState?.tft;
+    const powered = !!tft?.power;
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Display bezel
-    ctx.fillStyle = '#222';
-    roundRect(ctx, 0, 0, 80, 96, 4);
+    // Blue PCB board
+    ctx.fillStyle = '#0a2a5e';
+    roundRect(ctx, 0, 0, 160, 130, 6);
     ctx.fill();
-
-    // Screen
-    const r = (color >> 16) & 0xFF;
-    const g = (color >> 8) & 0xFF;
-    const b = color & 0xFF;
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
-    ctx.fillRect(6, 6, 68, 74);
-    ctx.strokeStyle = '#444';
+    ctx.strokeStyle = '#1a4a8e';
     ctx.lineWidth = 1;
-    ctx.strokeRect(6, 6, 68, 74);
+    ctx.stroke();
 
-    // Touch panel border
-    ctx.fillStyle = '#333';
-    roundRect(ctx, 4, 82, 72, 10, 2);
+    // 4 corner mounting holes
+    [[6, 6], [154, 6], [6, 124], [154, 124]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#c8a452';
+      ctx.beginPath(); ctx.arc(hx, hy, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0a2a5e';
+      ctx.beginPath(); ctx.arc(hx, hy, 1.8, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // Display bezel (black frame)
+    ctx.fillStyle = '#111';
+    roundRect(ctx, 8, 4, 144, 100, 3);
     ctx.fill();
-    ctx.fillStyle = '#888';
-    ctx.font = 'bold 5px monospace';
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Screen area — render framebuffer or show default blue
+    const screenX = 12, screenY = 8, screenW = 136, screenH = 92;
+
+    if (tft && tft.pixels) {
+      // Render 240x320 framebuffer scaled to screen
+      const fbW = 320, fbH = 240;
+      const scaleX = screenW / fbW, scaleY = screenH / fbH;
+      const px = tft.pixels;
+      for (let fy = 0; fy < fbH; fy++) {
+        for (let fx = 0; fx < fbW; fx++) {
+          const idx = (fy * fbW + fx) * 3;
+          const r = px[idx] || 0, g = px[idx + 1] || 0, b = px[idx + 2] || 0;
+          if (r === 0 && g === 0 && b === 0) continue;
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.fillRect(screenX + fx * scaleX, screenY + fy * scaleY, Math.ceil(scaleX), Math.ceil(scaleY));
+        }
+      }
+    } else {
+      // Default powered-off / idle screen
+      ctx.fillStyle = powered ? '#001030' : '#080810';
+      ctx.fillRect(screenX, screenY, screenW, screenH);
+    }
+
+    // Glass glare
+    const glare = ctx.createLinearGradient(screenX, screenY, screenX + screenW, screenY + screenH);
+    glare.addColorStop(0, 'rgba(255,255,255,0.06)');
+    glare.addColorStop(0.4, 'rgba(255,255,255,0.01)');
+    glare.addColorStop(1, 'rgba(255,255,255,0.0)');
+    ctx.fillStyle = glare;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+
+    // Bottom label area
+    ctx.fillStyle = '#333';
+    roundRect(ctx, 10, 106, 140, 16, 2);
+    ctx.fill();
+    ctx.fillStyle = '#999';
+    ctx.font = 'bold 7px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('ILI9341 240x320', 40, 89);
+    ctx.fillText('ILI9341  240x320 TFT', 80, 116);
 
     // Pin leads
     ctx.strokeStyle = '#a0a0a0';
     ctx.lineWidth = 1.5;
-    [8, 20, 32, 44, 56, 68].forEach(px => {
-      ctx.beginPath(); ctx.moveTo(px, 96); ctx.lineTo(px, 110); ctx.stroke();
+    [16, 40, 64, 88, 112, 136].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 120); ctx.lineTo(px, 140); ctx.stroke();
     });
 
-    if (inst.selected) drawSelectionRect(ctx, -2, -2, 84, 114);
+    if (inst.selected) drawSelectionRect(ctx, -4, -4, 168, 148);
     ctx.restore();
   }
 });

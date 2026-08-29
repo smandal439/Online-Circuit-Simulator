@@ -663,6 +663,206 @@ class App {
         }
       }
 
+      // TFT (ILI9341 240×320 SPI) display events — maintains a 320×240 RGB framebuffer
+      for (const inst of insts) {
+        if (inst.type !== 'ili9341') continue;
+        const FB_W = 320, FB_H = 240;
+        const tft = inst.runtimeState.tft || (inst.runtimeState.tft = {
+          power: false,
+          pixels: new Uint8Array(FB_W * FB_H * 3),
+          cursor: { x: 0, y: 0 },
+          textSize: 1,
+          fgColor: 0xFFFF,
+          bgColor: 0x0000,
+        });
+
+        const rgb565toRGB = (c) => {
+          c = Number(c) || 0;
+          const r = ((c >> 11) & 0x1F) << 3;
+          const g = ((c >> 5) & 0x3F) << 2;
+          const b = (c & 0x1F) << 3;
+          return [r, g, b];
+        };
+        const setPx = (px, py, r, g, b) => {
+          if (px >= 0 && px < FB_W && py >= 0 && py < FB_H) {
+            const i = (py * FB_W + px) * 3;
+            tft.pixels[i] = r; tft.pixels[i + 1] = g; tft.pixels[i + 2] = b;
+          }
+        };
+        const setPx565 = (px, py, c) => {
+          const [r, g, b] = rgb565toRGB(c);
+          setPx(px, py, r, g, b);
+        };
+        const drawLinePx = (x0, y0, x1, y1, c) => {
+          const [cr, cg, cb] = rgb565toRGB(c);
+          let dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+          const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+          let err = dx + dy;
+          for (;;) {
+            setPx(x0, y0, cr, cg, cb);
+            if (x0 === x1 && y0 === y1) break;
+            const e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x0 += sx; }
+            if (e2 <= dx) { err += dx; y0 += sy; }
+          }
+        };
+        const drawCharPx = (cx, cy, ch, fg, bg, sz) => {
+          const [fr, fg2, fb] = rgb565toRGB(fg);
+          const [br, bg2, bb] = rgb565toRGB(bg);
+          const font5x7 = [
+            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x5F,0x00,0x00,
+            0x00,0x07,0x00,0x07,0x00,0x14,0x7F,0x14,0x7F,0x14,
+            0x24,0x2A,0x7F,0x2A,0x12,0x23,0x13,0x08,0x64,0x62,
+            0x36,0x49,0x55,0x22,0x50,0x00,0x05,0x03,0x00,0x00,
+            0x00,0x1C,0x22,0x41,0x00,0x00,0x41,0x22,0x1C,0x00,
+            0x14,0x08,0x3E,0x08,0x14,0x08,0x08,0x3E,0x08,0x08,
+            0x00,0x50,0x30,0x00,0x00,0x08,0x08,0x08,0x08,0x08,
+            0x00,0x60,0x60,0x00,0x00,0x20,0x10,0x08,0x04,0x02,
+            0x3E,0x51,0x49,0x45,0x3E,0x00,0x42,0x7F,0x40,0x00,
+            0x42,0x61,0x51,0x49,0x46,0x21,0x41,0x45,0x4B,0x31,
+            0x18,0x14,0x12,0x7F,0x10,0x27,0x45,0x45,0x45,0x39,
+            0x3C,0x4A,0x49,0x49,0x30,0x01,0x71,0x09,0x05,0x03,
+            0x36,0x49,0x49,0x49,0x36,0x06,0x49,0x49,0x29,0x1E,
+            0x00,0x36,0x36,0x00,0x00,0x00,0x56,0x36,0x00,0x00,
+            0x08,0x14,0x22,0x41,0x00,0x14,0x14,0x14,0x14,0x14,
+            0x00,0x41,0x22,0x14,0x08,0x02,0x01,0x51,0x09,0x06,
+            0x32,0x49,0x79,0x41,0x3E,0x7E,0x11,0x11,0x11,0x7E,
+            0x7F,0x49,0x49,0x49,0x36,0x3E,0x41,0x41,0x41,0x22,
+            0x7F,0x41,0x41,0x22,0x1C,0x7F,0x49,0x49,0x49,0x41,
+            0x7F,0x09,0x09,0x09,0x01,0x3E,0x41,0x49,0x49,0x7A,
+            0x7F,0x08,0x08,0x08,0x7F,0x00,0x41,0x7F,0x41,0x00,
+            0x20,0x40,0x41,0x3F,0x01,0x7F,0x08,0x14,0x22,0x41,
+            0x7F,0x40,0x40,0x40,0x40,0x7F,0x02,0x0C,0x02,0x7F,
+            0x7F,0x04,0x08,0x10,0x7F,0x3E,0x41,0x41,0x41,0x3E,
+            0x7F,0x09,0x09,0x09,0x06,0x3E,0x41,0x51,0x21,0x5E,
+            0x7F,0x09,0x19,0x29,0x46,0x46,0x49,0x49,0x49,0x31,
+            0x01,0x01,0x7F,0x01,0x01,0x3F,0x40,0x40,0x40,0x3F,
+            0x1F,0x20,0x40,0x20,0x1F,0x3F,0x40,0x38,0x40,0x3F,
+            0x63,0x14,0x08,0x14,0x63,0x07,0x08,0x70,0x08,0x07,
+            0x61,0x51,0x49,0x45,0x43,0x00,0x7F,0x41,0x41,0x41,
+            0x02,0x04,0x08,0x10,0x20,0x41,0x41,0x41,0x7F,0x00,
+            0x04,0x02,0x01,0x02,0x04,0x40,0x40,0x40,0x40,0x40,
+            0x00,0x01,0x02,0x04,0x00,0x20,0x54,0x54,0x54,0x78,
+            0x7F,0x48,0x44,0x44,0x38,0x38,0x44,0x44,0x44,0x20,
+            0x38,0x44,0x44,0x48,0x7F,0x38,0x54,0x54,0x54,0x18,
+            0x08,0x7E,0x09,0x01,0x02,0x0C,0x52,0x52,0x52,0x3E,
+            0x7F,0x08,0x04,0x04,0x78,0x00,0x44,0x7D,0x40,0x00,
+            0x20,0x40,0x44,0x3D,0x00,0x7F,0x10,0x28,0x44,0x00,
+            0x00,0x41,0x7F,0x40,0x00,0x7C,0x04,0x18,0x04,0x78,
+            0x7F,0x08,0x04,0x04,0x78,0x00,0x44,0x7D,0x40,0x00,
+            0x08,0x14,0x54,0x54,0x18,0x7F,0x10,0x28,0x44,0x00,
+            0x00,0x44,0x7D,0x40,0x00,0x08,0x14,0x54,0x54,0x18,
+            0x7F,0x10,0x28,0x44,0x00,0x00,0x44,0x7D,0x40,0x00
+          ];
+          const code = ch.charCodeAt(0);
+          if (code < 32 || code > 126) return;
+          const idx = (code - 32) * 5;
+          for (let col = 0; col < 5; col++) {
+            const bits = font5x7[idx + col] || 0;
+            for (let row = 0; row < 7; row++) {
+              if (bits & (1 << row)) {
+                for (let dy = 0; dy < sz; dy++) {
+                  for (let dx = 0; dx < sz; dx++) {
+                    setPx(cx + col * sz + dx, cy + row * sz + dy, fr, fg2, fb);
+                  }
+                }
+              }
+            }
+          }
+        };
+
+        if (type === 'tft_power') {
+          tft.power = true;
+        } else if (type === 'tft_draw' && data) {
+          const op = data.op;
+          if (op === 'fillScreen') {
+            const [r, g, b] = rgb565toRGB(data.color);
+            for (let i = 0; i < tft.pixels.length; i += 3) {
+              tft.pixels[i] = r; tft.pixels[i + 1] = g; tft.pixels[i + 2] = b;
+            }
+          } else if (op === 'pixel') {
+            setPx565(data.x, data.y, data.color);
+          } else if (op === 'line') {
+            drawLinePx(data.x0, data.y0, data.x1, data.y1, data.color);
+          } else if (op === 'rect') {
+            const c = data.color;
+            drawLinePx(data.x, data.y, data.x + data.w, data.y, c);
+            drawLinePx(data.x, data.y + data.h, data.x + data.w, data.y + data.h, c);
+            drawLinePx(data.x, data.y, data.x, data.y + data.h, c);
+            drawLinePx(data.x + data.w, data.y, data.x + data.w, data.y + data.h, c);
+          } else if (op === 'fillRect') {
+            const [r, g, b] = rgb565toRGB(data.color);
+            for (let py = data.y; py < data.y + data.h; py++) {
+              for (let px = data.x; px < data.x + data.w; px++) setPx(px, py, r, g, b);
+            }
+          } else if (op === 'circle') {
+            const cx = data.x, cy = data.y, rad = data.r, c = data.color;
+            let xx = rad, yy = 0, err = 1 - rad;
+            while (xx >= yy) {
+              setPx565(cx + xx, cy + yy, c); setPx565(cx - xx, cy + yy, c);
+              setPx565(cx + xx, cy - yy, c); setPx565(cx - xx, cy - yy, c);
+              setPx565(cx + yy, cy + xx, c); setPx565(cx - yy, cy + xx, c);
+              setPx565(cx + yy, cy - xx, c); setPx565(cx - yy, cy - xx, c);
+              yy++;
+              if (err < 0) err += 2 * yy + 1;
+              else { xx--; err += 2 * (yy - xx) + 1; }
+            }
+          } else if (op === 'fillCircle') {
+            const cx = data.x, cy = data.y, rad = data.r;
+            const [r, g, b] = rgb565toRGB(data.color);
+            for (let yy = -rad; yy <= rad; yy++) {
+              for (let xx = -rad; xx <= rad; xx++) {
+                if (xx * xx + yy * yy <= rad * rad) setPx(cx + xx, cy + yy, r, g, b);
+              }
+            }
+          } else if (op === 'print') {
+            const sz = data.size || 1;
+            const fg = data.fg != null ? data.fg : 0xFFFF;
+            const bg = data.bg != null ? data.bg : 0x0000;
+            let cx = data.x || 0, cy = data.y || 0;
+            for (let i = 0; i < data.text.length; i++) {
+              drawCharPx(cx, cy, data.text[i], fg, bg, sz);
+              cx += 6 * sz;
+            }
+          } else if (op === 'roundRect') {
+            const c = data.color;
+            const rx = data.r || 0;
+            drawLinePx(data.x + rx, data.y, data.x + data.w - rx, data.y, c);
+            drawLinePx(data.x + rx, data.y + data.h, data.x + data.w - rx, data.y + data.h, c);
+            drawLinePx(data.x, data.y + rx, data.x, data.y + data.h - rx, c);
+            drawLinePx(data.x + data.w, data.y + rx, data.x + data.w, data.y + data.h - rx, c);
+          } else if (op === 'fillRoundRect') {
+            const [r, g, b] = rgb565toRGB(data.color);
+            for (let py = data.y; py < data.y + data.h; py++) {
+              for (let px = data.x; px < data.x + data.w; px++) setPx(px, py, r, g, b);
+            }
+          } else if (op === 'triangle') {
+            const c = data.color;
+            drawLinePx(data.x0, data.y0, data.x1, data.y1, c);
+            drawLinePx(data.x1, data.y1, data.x2, data.y2, c);
+            drawLinePx(data.x2, data.y2, data.x0, data.y0, c);
+          } else if (op === 'fillTriangle') {
+            const [fr, fg2, fb] = rgb565toRGB(data.color);
+            const minX = Math.min(data.x0, data.x1, data.x2);
+            const maxX = Math.max(data.x0, data.x1, data.x2);
+            const minY = Math.min(data.y0, data.y1, data.y2);
+            const maxY = Math.max(data.y0, data.y1, data.y2);
+            for (let py = minY; py <= maxY; py++) {
+              for (let px = minX; px <= maxX; px++) {
+                const a = (data.x1 - data.x0) * (py - data.y0) - (data.y1 - data.y0) * (px - data.x0);
+                const b2 = (data.x2 - data.x1) * (py - data.y1) - (data.y2 - data.y1) * (px - data.x1);
+                const c2 = (data.x0 - data.x2) * (py - data.y2) - (data.y0 - data.y2) * (px - data.x2);
+                if ((a >= 0 && b2 >= 0 && c2 >= 0) || (a <= 0 && b2 <= 0 && c2 <= 0)) {
+                  setPx(px, py, fr, fg2, fb);
+                }
+              }
+            }
+          } else if (op === 'char') {
+            drawCharPx(data.x, data.y, data.char, data.color, data.bg, data.size || 1);
+          }
+        }
+      }
+
       // Servo events
       if (type === 'servo' && data && Number.isFinite(Number(data.angle))) {
         const angle = Math.max(0, Math.min(180, Number(data.angle)));

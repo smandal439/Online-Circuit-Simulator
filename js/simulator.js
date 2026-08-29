@@ -101,11 +101,13 @@ class ArduinoSimulator {
     // PubSubClient client(espClient);  →  let client = new PubSubClient(espClient);
     // WebServer server(80);  →  let server = new WebServer(80);
     // Adafruit_SSD1306 display(128, 64, &Wire, -1);  →  let display = new Adafruit_SSD1306(128, 64, Wire, -1);
-    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|SimpleBME280)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
+    // Adafruit_ILI9341 tft(CS, DC, MOSI, SCK, RESET);  →  let tft = new Adafruit_ILI9341(CS, DC, MOSI, SCK, RESET);
+    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|Adafruit_ILI9341|SimpleBME280)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
 
     // C++ passes I2C objects by reference: `&Wire` is invalid JS. Strip the `&`
     // only inside Adafruit_SSD1306 constructors to avoid breaking `a & b`.
     js = js.replace(/new\s+Adafruit_SSD1306\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_SSD1306(${args.replace(/&\s*/g, '')})`);
+    js = js.replace(/new\s+Adafruit_ILI9341\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_ILI9341(${args.replace(/&\s*/g, '')})`);
 
     // 6. Handle arrays: int arr[10] → let arr = new Array(10).fill(0)
     js = js.replace(/let\s+(\w+)\s*\[(\d+)\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$3]');
@@ -291,7 +293,7 @@ class ArduinoSimulator {
     js = js.replace(/\bSoftwareSerial\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.softwareSerialNew($2)');
     js = js.replace(/\b(\w+)\.println\s*\(/g, function (match, v) {
       if (v === 'Serial') return match;
-      return '_a.softSerialPrintln(' + v + ', ';
+      return '_a.genericPrintln(' + v + ', ';
     });
     js = js.replace(/\b(\w+)\.listen\s*\(/g, '_a.softSerialListen($1)');
     js = js.replace(/\b(\w+)\.isListening\s*\(/g, '_a.softSerialIsListening($1)');
@@ -589,6 +591,20 @@ class ArduinoSimulator {
     js = js.replace(/\b(\w+)\.readHumidity\s*\(\s*\)/g, '_a.bme280ReadHum($1)');
     js = js.replace(/\b(\w+)\.readPressure\s*\(\s*\)/g, '_a.bme280ReadPres($1)');
     js = js.replace(/\b(\w+)\.readAltitude\s*\(([^)]+)\)/g, '_a.bme280ReadAlt($1, $2)');
+
+    // Adafruit_ILI9341 / Adafruit_GFX — map before generic LCD rules
+    js = js.replace(/\b(\w+)\.drawPixel\s*\(/g, '_a.tftDrawPixel($1, ');
+    js = js.replace(/\b(\w+)\.drawLine\s*\(/g, '_a.tftDrawLine($1, ');
+    js = js.replace(/\b(\w+)\.drawRect\s*\(/g, '_a.tftDrawRect($1, ');
+    js = js.replace(/\b(\w+)\.fillRect\s*\(/g, '_a.tftFillRect($1, ');
+    js = js.replace(/\b(\w+)\.drawCircle\s*\(/g, '_a.tftDrawCircle($1, ');
+    js = js.replace(/\b(\w+)\.fillCircle\s*\(/g, '_a.tftFillCircle($1, ');
+    js = js.replace(/\b(\w+)\.fillScreen\s*\(/g, '_a.tftFillScreen($1, ');
+    js = js.replace(/\b(\w+)\.drawRoundRect\s*\(/g, '_a.tftDrawRoundRect($1, ');
+    js = js.replace(/\b(\w+)\.fillRoundRect\s*\(/g, '_a.tftFillRoundRect($1, ');
+    js = js.replace(/\b(\w+)\.drawTriangle\s*\(/g, '_a.tftDrawTriangle($1, ');
+    js = js.replace(/\b(\w+)\.fillTriangle\s*\(/g, '_a.tftFillTriangle($1, ');
+    js = js.replace(/\b(\w+)\.drawChar\s*\(/g, '_a.tftDrawChar($1, ');
 
     // LiquidCrystal
     js = js.replace(/\b(\w+)\.begin\s*\(\s*\)/g, '_a.lcdBegin($1)');
@@ -1015,9 +1031,17 @@ class ArduinoSimulator {
             self._emitEvent('oled_power', { on: true });
             return;
           }
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_power', { on: true });
+            return;
+          }
           self._emitEvent('lcd_power', { on: true });
         },
         lcdSetCursor(varName, col, row) {
+          if (varName && varName.__tft) {
+            self._tftCursor = { col: Number(col) || 0, row: Number(row) || 0 };
+            return;
+          }
           self._lcdCursor = { col: Number(col) || 0, row: Number(row) || 0 };
         },
         lcdPrint(varName, val) {
@@ -1027,6 +1051,20 @@ class ArduinoSimulator {
             return;
           }
           const text = String(val);
+          // TFT (Adafruit_ILI9341): cursor in pixels, sized by setTextSize()
+          if (varName && varName.__tft) {
+            const cursor = self._tftCursor || { col: 0, row: 0 };
+            const size = self._tftTextSize || 1;
+            const fg = self._tftFgColor != null ? self._tftFgColor : 0xFFFF;
+            const bg = self._tftBgColor != null ? self._tftBgColor : 0x0000;
+            self._emitEvent('tft_draw', {
+              op: 'print', text,
+              x: cursor.col, y: cursor.row,
+              size, fg, bg,
+            });
+            self._tftCursor = { col: cursor.col + text.length * 6 * size, row: cursor.row };
+            return;
+          }
           const cursor = self._lcdCursor || { col: 0, row: 0 };
           // OLED (Adafruit_SSD1306): cursor is in pixels, sized by setTextSize()
           if (varName && varName.__oled) {
@@ -1059,9 +1097,126 @@ class ArduinoSimulator {
             self._emitEvent('oled_draw', { op: 'clear' });
             return;
           }
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'fillScreen', color: 0x0000 });
+            return;
+          }
           self._emitEvent('lcd_clear', {});
         },
         lcdHome(varName) { self._lcdCursor = { col: 0, row: 0 }; },
+
+        /* ══════════ Adafruit_ILI9341 / Adafruit_GFX — TFT (240×320 RGB) ══════════ */
+        tftBegin(varName) {
+          self._emitEvent('tft_power', { on: true });
+        },
+        tftSetCursor(varName, col, row) {
+          if (varName && varName.__tft) {
+            self._tftCursor = { col: Number(col) || 0, row: Number(row) || 0 };
+          }
+        },
+        tftPrint(varName, val) {
+          if (varName && varName.__tft) {
+            const text = String(val);
+            const cursor = self._tftCursor || { col: 0, row: 0 };
+            const size = self._tftTextSize || 1;
+            const fg = self._tftFgColor != null ? self._tftFgColor : 0xFFFF;
+            const bg = self._tftBgColor != null ? self._tftBgColor : 0x0000;
+            self._emitEvent('tft_draw', {
+              op: 'print', text,
+              x: cursor.col, y: cursor.row,
+              size, fg, bg,
+            });
+            self._tftCursor = { col: cursor.col + text.length * 6 * size, row: cursor.row };
+          }
+        },
+        tftPrintln(varName, val) {
+          if (varName && varName.__tft) {
+            const text = String(val);
+            const cursor = self._tftCursor || { col: 0, row: 0 };
+            const size = self._tftTextSize || 1;
+            const fg = self._tftFgColor != null ? self._tftFgColor : 0xFFFF;
+            const bg = self._tftBgColor != null ? self._tftBgColor : 0x0000;
+            self._emitEvent('tft_draw', {
+              op: 'print', text,
+              x: cursor.col, y: cursor.row,
+              size, fg, bg,
+            });
+            self._tftCursor = { col: 0, row: cursor.row + 8 * size };
+          }
+        },
+        tftSetTextColor(varName, fg, bg) {
+          if (varName && varName.__tft) {
+            self._tftFgColor = Number(fg) || 0xFFFF;
+            self._tftBgColor = bg != null ? (Number(bg) || 0x0000) : self._tftFgColor;
+          }
+        },
+        tftSetTextSize(varName, s) {
+          if (varName && varName.__tft) {
+            self._tftTextSize = Math.max(1, Math.round(Number(s) || 1));
+          }
+        },
+        tftSetTextWrap(varName, w) { },
+        tftSetRotation(varName, r) { },
+        tftDrawPixel(varName, x, y, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'pixel', x: Number(x) || 0, y: Number(y) || 0, color: Number(color) || 0xFFFF });
+          }
+        },
+        tftDrawLine(varName, x0, y0, x1, y1, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'line', x0: Number(x0), y0: Number(y0), x1: Number(x1), y1: Number(y1), color: Number(color) || 0xFFFF });
+          }
+        },
+        tftDrawRect(varName, x, y, w, h, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'rect', x: Number(x), y: Number(y), w: Number(w), h: Number(h), color: Number(color) || 0xFFFF });
+          }
+        },
+        tftFillRect(varName, x, y, w, h, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'fillRect', x: Number(x), y: Number(y), w: Number(w), h: Number(h), color: Number(color) || 0x0000 });
+          }
+        },
+        tftDrawCircle(varName, cx, cy, r, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'circle', x: Number(cx), y: Number(cy), r: Number(r), color: Number(color) || 0xFFFF });
+          }
+        },
+        tftFillCircle(varName, cx, cy, r, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'fillCircle', x: Number(cx), y: Number(cy), r: Number(r), color: Number(color) || 0x0000 });
+          }
+        },
+        tftFillScreen(varName, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'fillScreen', color: Number(color) || 0x0000 });
+          }
+        },
+        tftDrawRoundRect(varName, x, y, w, h, r, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'roundRect', x: Number(x), y: Number(y), w: Number(w), h: Number(h), r: Number(r), color: Number(color) || 0xFFFF });
+          }
+        },
+        tftFillRoundRect(varName, x, y, w, h, r, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'fillRoundRect', x: Number(x), y: Number(y), w: Number(w), h: Number(h), r: Number(r), color: Number(color) || 0x0000 });
+          }
+        },
+        tftDrawTriangle(varName, x0, y0, x1, y1, x2, y2, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'triangle', x0: Number(x0), y0: Number(y0), x1: Number(x1), y1: Number(y1), x2: Number(x2), y2: Number(y2), color: Number(color) || 0xFFFF });
+          }
+        },
+        tftFillTriangle(varName, x0, y0, x1, y1, x2, y2, color) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'fillTriangle', x0: Number(x0), y0: Number(y0), x1: Number(x1), y1: Number(y1), x2: Number(x2), y2: Number(y2), color: Number(color) || 0x0000 });
+          }
+        },
+        tftDrawChar(varName, x, y, c, color, bg, size) {
+          if (varName && varName.__tft) {
+            self._emitEvent('tft_draw', { op: 'char', x: Number(x), y: Number(y), char: String(c), color: Number(color) || 0xFFFF, bg: Number(bg) || 0x0000, size: Number(size) || 1 });
+          }
+        },
 
         /* ══════════ ESP32 — WebServer (simulated HTTP) ══════════ */
         serverOn(server, path, m3, m4) {
@@ -1222,6 +1377,34 @@ class ArduinoSimulator {
         },
         softSerialPrintln(obj, val) {
           self._serialLog(String(val) + '\n', 'data');
+        },
+        genericPrintln(obj, val) {
+          const text = String(val);
+          // TFT (Adafruit_ILI9341)
+          if (obj && obj.__tft) {
+            const cursor = self._tftCursor || { col: 0, row: 0 };
+            const size = self._tftTextSize || 1;
+            const fg = self._tftFgColor != null ? self._tftFgColor : 0xFFFF;
+            const bg = self._tftBgColor != null ? self._tftBgColor : 0x0000;
+            self._emitEvent('tft_draw', { op: 'print', text, x: cursor.col, y: cursor.row, size, fg, bg });
+            self._tftCursor = { col: 0, row: cursor.row + 8 * size };
+            return;
+          }
+          // OLED (Adafruit_SSD1306)
+          if (obj && obj.__oled) {
+            const cursor = self._lcdCursor || { col: 0, row: 0 };
+            const size = self._oledTextSize || 1;
+            self._emitEvent('oled_draw', { op: 'print', text, cursor: { col: cursor.col, row: cursor.row }, size, color: self._oledTextColor === 0 ? 0 : 1 });
+            self._lcdCursor = { col: 0, row: cursor.row + 8 * size };
+            return;
+          }
+          // SoftwareSerial
+          if (obj && obj._ssId) {
+            self._serialLog(text + '\n', 'data');
+            return;
+          }
+          // Default: log to serial
+          self._serialLog(text + '\n', 'data');
         },
         softSerialRead(obj) {
           const ch = self._softSerial && self._softSerial[obj._ssId];
@@ -1627,6 +1810,13 @@ class ArduinoSimulator {
       SSD1306_SWITCHCAPVCC: 0x01, SSD1306_EXTERNALVCC: 0x02,
       SSD1306_I2C_ADDRESS: 0x3C, SSD1306_WHITE: 1, SSD1306_BLACK: 0,
       SSD1306_SETCONTRAST: 0x81, SSD1306_SETVCOMDETECT: 0xDB,
+      // Adafruit_ILI9341 common RGB565 color constants
+      ILI9341_BLACK: 0x0000, ILI9341_WHITE: 0xFFFF, ILI9341_RED: 0xF800,
+      ILI9341_GREEN: 0x07E0, ILI9341_BLUE: 0x001F, ILI9341_CYAN: 0x07FF,
+      ILI9341_MAGENTA: 0xF81F, ILI9341_YELLOW: 0xFFE0, ILI9341_ORANGE: 0xFD20,
+      ILI9341_DARKGREEN: 0x03E0, ILI9341_DARKGREY: 0x7BEF, ILI9341_NAVY: 0x000F,
+      ILI9341_MAROON: 0x7800, ILI9341_PURPLE: 0x780F, ILI9341_OLIVE: 0x7BE0,
+      ILI9341_LIGHTGREY: 0xC618, ILI9341_DARKCYAN: 0x03EF,
 
       /* Servo/LCD class stubs */
       Servo: function () { return {}; },
@@ -1677,6 +1867,62 @@ class ArduinoSimulator {
           drawBitmap() { },
           ssd1306_command() { },
           ssd1306_command1() { },
+        };
+      },
+      /* ILI9341 240×320 (SPI) — Adafruit_GFX + Adafruit_ILI9341 library stub.
+         All drawing methods emit tft_draw events processed in app.js. */
+      Adafruit_ILI9341: function () {
+        const num = (v) => Math.round(Number(v) || 0);
+        const rgb565toRGB = (c) => {
+          c = Number(c) || 0;
+          const r = ((c >> 11) & 0x1F) << 3;
+          const g = ((c >> 5) & 0x3F) << 2;
+          const b = (c & 0x1F) << 3;
+          return [r, g, b];
+        };
+        const draw = (op, extra) => self._emitEvent('tft_draw', Object.assign({ op }, extra));
+        return {
+          __tft: true,
+          begin() { self._emitEvent('tft_power', { on: true }); },
+          setRotation(r) { },
+          fillScreen(color) { draw('fillScreen', { color: num(color) }); },
+          setCursor(x, y) { self._tftCursor = { col: num(x), row: num(y) }; },
+          setTextColor(fg, bg) { self._tftFgColor = num(fg); self._tftBgColor = bg != null ? num(bg) : num(fg); },
+          setTextSize(s) { self._tftTextSize = Math.max(1, Math.round(Number(s) || 1)); },
+          setTextWrap(w) { },
+          print(val) {
+            const text = String(val);
+            const cursor = self._tftCursor || { col: 0, row: 0 };
+            const size = self._tftTextSize || 1;
+            const fg = self._tftFgColor != null ? self._tftFgColor : 0xFFFF;
+            const bg = self._tftBgColor != null ? self._tftBgColor : 0x0000;
+            draw('print', { text, x: cursor.col, y: cursor.row, size, fg, bg });
+            self._tftCursor = { col: cursor.col + text.length * 6 * size, row: cursor.row };
+          },
+          println(val) {
+            const text = String(val);
+            const cursor = self._tftCursor || { col: 0, row: 0 };
+            const size = self._tftTextSize || 1;
+            const fg = self._tftFgColor != null ? self._tftFgColor : 0xFFFF;
+            const bg = self._tftBgColor != null ? self._tftBgColor : 0x0000;
+            draw('print', { text, x: cursor.col, y: cursor.row, size, fg, bg });
+            self._tftCursor = { col: 0, row: cursor.row + 8 * size };
+          },
+          drawPixel(x, y, color) { draw('pixel', { x: num(x), y: num(y), color: num(color) }); },
+          drawLine(x0, y0, x1, y1, color) { draw('line', { x0: num(x0), y0: num(y0), x1: num(x1), y1: num(y1), color: num(color) }); },
+          drawRect(x, y, w, h, color) { draw('rect', { x: num(x), y: num(y), w: num(w), h: num(h), color: num(color) }); },
+          fillRect(x, y, w, h, color) { draw('fillRect', { x: num(x), y: num(y), w: num(w), h: num(h), color: num(color) }); },
+          drawCircle(x, y, r, color) { draw('circle', { x: num(x), y: num(y), r: num(r), color: num(color) }); },
+          fillCircle(x, y, r, color) { draw('fillCircle', { x: num(x), y: num(y), r: num(r), color: num(color) }); },
+          drawRoundRect(x, y, w, h, r, color) { draw('roundRect', { x: num(x), y: num(y), w: num(w), h: num(h), r: num(r), color: num(color) }); },
+          fillRoundRect(x, y, w, h, r, color) { draw('fillRoundRect', { x: num(x), y: num(y), w: num(w), h: num(h), r: num(r), color: num(color) }); },
+          drawTriangle(x0, y0, x1, y1, x2, y2, color) { draw('triangle', { x0: num(x0), y0: num(y0), x1: num(x1), y1: num(y1), x2: num(x2), y2: num(y2), color: num(color) }); },
+          fillTriangle(x0, y0, x1, y1, x2, y2, color) { draw('fillTriangle', { x0: num(x0), y0: num(y0), x1: num(x1), y1: num(y1), x2: num(x2), y2: num(y2), color: num(color) }); },
+          drawChar(x, y, c, color, bg, size) { draw('char', { x: num(x), y: num(y), char: String(c), color: num(color), bg: num(bg), size: num(size) }); },
+          setRotation(r) { },
+          width() { return 320; },
+          height() { return 240; },
+          color565(r, g, b) { return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3); },
         };
       },
       /* Library stubs (instances) */
@@ -2290,7 +2536,7 @@ class ArduinoSimulator {
 window.ArduinoSim = new ArduinoSimulator();
 window.EXAMPLE_SKETCHES = [];
 window.loadExamplesFromFiles = async function () {
-  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor', 'neopixel_color_cycle', 'mpu6050_accel', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test', 'temperature_LCD', 'dmm_current', 'dmm_resistance', 'dmm_voltage', 'func_gen_dual', 'func_gen_led', 'remote_control_leds', 'remote_servo_control', 'lm35_temperature', 'keypad_interfacing', 'bme280_weather', 'bmp280_altitude', 'dso_oscilloscope', 'simplebme280_basic', 'simplebme280_altitude', 'max7219'];
+  const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep', 'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor', 'neopixel_color_cycle', 'mpu6050_accel', 'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'ic_nand_test', 'logic_analyzer_test', 'temperature_LCD', 'dmm_current', 'dmm_resistance', 'dmm_voltage', 'func_gen_dual', 'func_gen_led', 'remote_control_leds', 'remote_servo_control', 'lm35_temperature', 'keypad_interfacing', 'bme280_weather', 'bmp280_altitude', 'dso_oscilloscope', 'simplebme280_basic', 'simplebme280_altitude', 'max7219', 'ili9341'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {

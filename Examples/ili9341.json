@@ -1,0 +1,63 @@
+{
+  "id": "ili9341",
+  "name": "ILI9341 TFT Display",
+  "icon": "🖥️",
+  "desc": "Draw text and graphics on a 240x320 color TFT display via SPI (CS→D10, DC→D9, MOSI→D11, SCK→D13)",
+  "tags": [
+    "intermediate",
+    "display",
+    "spi",
+    "tft",
+    "graphics",
+    "color"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100
+      },
+      {
+        "id": "tft1",
+        "type": "ili9341",
+        "x": 80,
+        "y": 300
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": { "instId": "b1", "pinId": "5V" },
+        "to": { "instId": "tft1", "pinId": "VCC" }
+      },
+      {
+        "id": "w2",
+        "from": { "instId": "b1", "pinId": "GND1" },
+        "to": { "instId": "tft1", "pinId": "GND" }
+      },
+      {
+        "id": "w3",
+        "from": { "instId": "b1", "pinId": "D10" },
+        "to": { "instId": "tft1", "pinId": "CS" }
+      },
+      {
+        "id": "w4",
+        "from": { "instId": "b1", "pinId": "D9" },
+        "to": { "instId": "tft1", "pinId": "DC" }
+      },
+      {
+        "id": "w5",
+        "from": { "instId": "b1", "pinId": "D11" },
+        "to": { "instId": "tft1", "pinId": "MOSI" }
+      },
+      {
+        "id": "w6",
+        "from": { "instId": "b1", "pinId": "D13" },
+        "to": { "instId": "tft1", "pinId": "SCK" }
+      }
+    ]
+  },
+  "code": "/*\n * ILI9341 TFT Display — draw colorful text and shapes.\n *\n * Wiring (Arduino Uno to ILI9341):\n *   5V   to VCC\n *   GND  to GND\n *   D10  to CS\n *   D9   to DC\n *   D11  to MOSI\n *   D13  to SCK\n */\n\n#include <Adafruit_GFX.h>\n#include <Adafruit_ILI9341.h>\n\n#define TFT_CS  10\n#define TFT_DC   9\n\nAdafruit_ILI9341 tft(TFT_CS, TFT_DC);\n\nint counter = 0;\n\nvoid setup() {\n  tft.begin();\n  tft.setRotation(1);\n\n  // Fill screen with navy\n  tft.fillScreen(ILI9341_NAVY);\n\n  // Title\n  tft.setTextColor(ILI9341_YELLOW);\n  tft.setTextSize(2);\n  tft.setCursor(20, 20);\n  tft.println(\"ArduSim TFT\");\n\n  // Subtitle\n  tft.setTextColor(ILI9341_WHITE);\n  tft.setTextSize(1);\n  tft.setCursor(20, 50);\n  tft.println(\"ILI9341 240x320 Color Display\");\n\n  // Decorative border\n  tft.drawRect(5, 5, 310, 230, ILI9341_CYAN);\n  tft.drawRect(8, 8, 304, 224, ILI9341_DARKCYAN);\n\n  // Draw color swatches\n  uint16_t colors[] = {\n    ILI9341_RED, ILI9341_GREEN, ILI9341_BLUE,\n    ILI9341_YELLOW, ILI9341_CYAN, ILI9341_MAGENTA,\n    ILI9341_ORANGE, ILI9341_WHITE\n  };\n  for (int i = 0; i < 8; i++) {\n    tft.fillRect(20 + i * 35, 70, 30, 30, colors[i]);\n  }\n\n  // Circle demo\n  tft.drawCircle(160, 160, 40, ILI9341_GREEN);\n  tft.fillCircle(160, 160, 20, ILI9341_DARKGREEN);\n\n  // Triangle\n  tft.fillTriangle(80, 180, 60, 220, 100, 220, ILI9341_RED);\n  tft.drawTriangle(200, 180, 220, 220, 180, 220, ILI9341_ORANGE);\n\n  delay(2000);\n}\n\nvoid loop() {\n  counter++;\n\n  // Update counter text\n  tft.fillRect(20, 110, 200, 20, ILI9341_NAVY);\n  tft.setTextColor(ILI9341_WHITE);\n  tft.setTextSize(1);\n  tft.setCursor(20, 115);\n  tft.print(\"Count: \");\n  tft.print(counter);\n\n  // Animated dot\n  int x = 20 + (counter * 7) % 260;\n  tft.fillCircle(x, 140, 5, ILI9341_CYAN);\n  delay(300);\n  tft.fillCircle(x, 140, 5, ILI9341_NAVY);\n}"
+}
