@@ -1509,6 +1509,11 @@ class CircuitCanvas {
 
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); this.deleteSelected(); }
     if (e.key === 'r' || e.key === 'R') { this.rotateSelected(); }
+    if ((e.key === ' ' || e.key === 'Enter') && this.selected && this.selected.type === 'push_button') {
+      e.preventDefault();
+      this.selected.runtimeState = this.selected.runtimeState || {};
+      this.selected.runtimeState.pressed = !this.selected.runtimeState.pressed;
+    }
     if (e.key === 'Escape') {
       if (this.mode === 'placing') this.cancelPlacing();
       if (this.mode === 'wiring') this._endWiring();
