@@ -2434,8 +2434,11 @@ class CircuitCanvas {
           inst.runtimeState._capVoltage = cv;
 
           const outVal = inst.runtimeState.outHigh ? 255 : 0;
+          const disVal = inst.runtimeState.outHigh ? 0 : 255;
+          inst.runtimeState.OUT = outVal;
+          inst.runtimeState.DIS = disVal;
           if (outPin !== null) sim.pinStates[`pin_${outPin}`] = outVal;
-          if (disPin !== null) sim.pinStates[`pin_${disPin}`] = inst.runtimeState.outHigh ? 0 : 255;
+          if (disPin !== null) sim.pinStates[`pin_${disPin}`] = disVal;
 
           const capScaled = Math.round(cv * 255);
           if (thrPin !== null) sim.pinStates[`pin_${thrPin}`] = capScaled;
@@ -3264,6 +3267,7 @@ class CircuitCanvas {
 
       // 4b1. Digital IC output pins act as voltage sources
       const IC_OUTPUT_PINS = {
+        ic_555: ['OUT', 'DIS'],
         ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
         ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
         ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
@@ -3365,6 +3369,7 @@ class CircuitCanvas {
     }
     // IC output LOW acts as ground
     const IC_OUTPUT_PINS = {
+      ic_555: ['OUT'],
       ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
       ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
       ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
