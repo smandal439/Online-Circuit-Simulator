@@ -87,7 +87,7 @@ class ArduinoSimulator {
 
     // 5. Handle variable declarations (not already transformed)
     // int x = 5; → let x = 5;
-    js = js.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|String)\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
+    js = js.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
     // char x = 'a'; → let x = 'a';
     js = js.replace(/\bchar\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
     // Handle const
