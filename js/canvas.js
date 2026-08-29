@@ -2523,15 +2523,7 @@ class CircuitCanvas {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
-          const read = (id) => {
-            const wireTarget = this._getWireTarget(inst.id, id);
-            if (!wireTarget) return 0;
-            const other = wireTarget.inst;
-            if (other.type === 'power_5v') return 1;
-            if (other.type === 'power_gnd') return 0;
-            const pn = this._getConnectedPinNum(inst.id, id);
-            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
-          };
+          const read = (id) => this._readDigitalInput(inst.id, id);
           const gates = [['A1', 'B1', 'Y1'], ['A2', 'B2', 'Y2'], ['A3', 'B3', 'Y3'], ['A4', 'B4', 'Y4']];
           for (const [a, b, y] of gates) {
             const outVal = (read(a) & read(b)) ? 0 : 1;
@@ -2546,15 +2538,7 @@ class CircuitCanvas {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
-          const read = (id) => {
-            const wireTarget = this._getWireTarget(inst.id, id);
-            if (!wireTarget) return 0;
-            const other = wireTarget.inst;
-            if (other.type === 'power_5v') return 1;
-            if (other.type === 'power_gnd') return 0;
-            const pn = this._getConnectedPinNum(inst.id, id);
-            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
-          };
+          const read = (id) => this._readDigitalInput(inst.id, id);
           const gates = [
             ['A1', 'Y1'], ['A2', 'Y2'], ['A3', 'Y3'], ['A4', 'Y4'], ['A5', 'Y5'], ['A6', 'Y6']
           ];
@@ -2571,15 +2555,7 @@ class CircuitCanvas {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
-          const read = (id) => {
-            const wireTarget = this._getWireTarget(inst.id, id);
-            if (!wireTarget) return 0;
-            const other = wireTarget.inst;
-            if (other.type === 'power_5v') return 1;
-            if (other.type === 'power_gnd') return 0;
-            const pn = this._getConnectedPinNum(inst.id, id);
-            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
-          };
+          const read = (id) => this._readDigitalInput(inst.id, id);
           const gates = [['A1', 'B1', 'Y1'], ['A2', 'B2', 'Y2'], ['A3', 'B3', 'Y3'], ['A4', 'B4', 'Y4']];
           for (const [a, b, y] of gates) {
             const outVal = read(a) & read(b);
@@ -2594,15 +2570,7 @@ class CircuitCanvas {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
-          const read = (id) => {
-            const wireTarget = this._getWireTarget(inst.id, id);
-            if (!wireTarget) return 0;
-            const other = wireTarget.inst;
-            if (other.type === 'power_5v') return 1;
-            if (other.type === 'power_gnd') return 0;
-            const pn = this._getConnectedPinNum(inst.id, id);
-            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
-          };
+          const read = (id) => this._readDigitalInput(inst.id, id);
           const gates = [['A1', 'B1', 'Y1'], ['A2', 'B2', 'Y2'], ['A3', 'B3', 'Y3'], ['A4', 'B4', 'Y4']];
           for (const [a, b, y] of gates) {
             const outVal = read(a) | read(b);
@@ -2617,15 +2585,7 @@ class CircuitCanvas {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
-          const read = (id) => {
-            const wireTarget = this._getWireTarget(inst.id, id);
-            if (!wireTarget) return 0;
-            const other = wireTarget.inst;
-            if (other.type === 'power_5v') return 1;
-            if (other.type === 'power_gnd') return 0;
-            const pn = this._getConnectedPinNum(inst.id, id);
-            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
-          };
+          const read = (id) => this._readDigitalInput(inst.id, id);
           const write = (id, val) => {
             const pn = this._getConnectedPinNum(inst.id, id);
             if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
@@ -2675,15 +2635,7 @@ class CircuitCanvas {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
-          const read = (id) => {
-            const wireTarget = this._getWireTarget(inst.id, id);
-            if (!wireTarget) return 0;
-            const other = wireTarget.inst;
-            if (other.type === 'power_5v') return 1;
-            if (other.type === 'power_gnd') return 0;
-            const pn = this._getConnectedPinNum(inst.id, id);
-            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
-          };
+          const read = (id) => this._readDigitalInput(inst.id, id);
           const write = (id, val) => {
             const pn = this._getConnectedPinNum(inst.id, id);
             if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
@@ -2712,15 +2664,7 @@ class CircuitCanvas {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
           const ps = sim.pinStates;
-          const read = (id) => {
-            const wireTarget = this._getWireTarget(inst.id, id);
-            if (!wireTarget) return 0;
-            const other = wireTarget.inst;
-            if (other.type === 'power_5v') return 1;
-            if (other.type === 'power_gnd') return 0;
-            const pn = this._getConnectedPinNum(inst.id, id);
-            return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
-          };
+          const read = (id) => this._readDigitalInput(inst.id, id);
           const readVal = (id) => {
             const pn = this._getConnectedPinNum(inst.id, id);
             return pn !== null ? (ps[`pin_${pn}`] || 0) : 0;
@@ -2854,7 +2798,7 @@ class CircuitCanvas {
           if (!sim || !sim.pinStates) break;
           const detected = inst.props.detected ?? 0;
           inst.runtimeState.detected = detected;
-          // Write LOW when detected (active-low like real sensor)
+          inst.runtimeState.OUT = detected ? 0 : 1;
           const outPn = this._getConnectedPinNum(inst.id, 'OUT');
           if (outPn !== null) sim.pinStates[`pin_${outPn}`] = detected ? 0 : 1;
           break;
@@ -3104,11 +3048,9 @@ class CircuitCanvas {
           const csPn  = this._getConnectedPinNum(inst.id, 'CS');
           const clkPn = this._getConnectedPinNum(inst.id, 'CLK');
 
-          if (dinPn === null || csPn === null || clkPn === null) break;
-
-          const dinVal = sim.pinStates[`pin_${dinPn}`] ? 1 : 0;
-          const csVal  = sim.pinStates[`pin_${csPn}`]  ? 1 : 0;
-          const clkVal = sim.pinStates[`pin_${clkPn}`] ? 1 : 0;
+          const dinVal = dinPn !== null ? (sim.pinStates[`pin_${dinPn}`] ? 1 : 0) : this._readDigitalInput(inst.id, 'DIN');
+          const csVal  = csPn !== null ? (sim.pinStates[`pin_${csPn}`]  ? 1 : 0) : this._readDigitalInput(inst.id, 'CS');
+          const clkVal = clkPn !== null ? (sim.pinStates[`pin_${clkPn}`] ? 1 : 0) : this._readDigitalInput(inst.id, 'CLK');
 
           if (!inst.runtimeState._spi) {
             inst.runtimeState._spi = {
@@ -3586,6 +3528,87 @@ class CircuitCanvas {
       }
     }
     return null;
+  }
+
+  _readDigitalInput(fromInstId, pinId) {
+    const wireTarget = this._getWireTarget(fromInstId, pinId);
+    if (!wireTarget) return 0;
+    const other = wireTarget.inst;
+    if (other.type === 'power_5v') return 1;
+    if (other.type === 'power_gnd') return 0;
+    const pn = this._getConnectedPinNum(fromInstId, pinId);
+    if (pn !== null) {
+      const sim = window.ArduinoSim;
+      return (sim && sim.pinStates && (sim.pinStates[`pin_${pn}`] || 0) > 0) ? 1 : 0;
+    }
+    const IC_OUT = {
+      ic_555: ['OUT'],
+      ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
+      ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc32: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
+      ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
+      ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+    };
+    if (IC_OUT[other.type] && IC_OUT[other.type].includes(wireTarget.pinId)) {
+      const raw = other.runtimeState && other.runtimeState[wireTarget.pinId] != null
+        ? other.runtimeState[wireTarget.pinId] : 0;
+      return raw > 0 ? 1 : 0;
+    }
+    return 0;
+  }
+
+  _readAnalogInput(fromInstId, pinId) {
+    const wireTarget = this._getWireTarget(fromInstId, pinId);
+    if (!wireTarget) return 0;
+    const other = wireTarget.inst;
+    if (other.type === 'power_5v') return 1023;
+    if (other.type === 'power_gnd') return 0;
+    const pn = this._getConnectedPinNum(fromInstId, pinId);
+    if (pn !== null) {
+      const sim = window.ArduinoSim;
+      return (sim && sim.pinStates) ? (sim.pinStates[`pin_${pn}`] || 0) : 0;
+    }
+    const IC_OUT = {
+      ic_555: ['OUT'],
+      ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
+      ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc32: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
+      ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
+      ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+    };
+    if (IC_OUT[other.type] && IC_OUT[other.type].includes(wireTarget.pinId)) {
+      const raw = other.runtimeState && other.runtimeState[wireTarget.pinId] != null
+        ? other.runtimeState[wireTarget.pinId] : 0;
+      return Math.round((raw / 255) * 1023);
+    }
+    return 0;
+  }
+
+  _writeDigitalOutput(fromInstId, pinId, val) {
+    const sim = window.ArduinoSim;
+    const ps = sim ? sim.pinStates : null;
+    const pn = this._getConnectedPinNum(fromInstId, pinId);
+    if (pn !== null && ps) ps[`pin_${pn}`] = val ? 255 : 0;
+    const wireTarget = this._getWireTarget(fromInstId, pinId);
+    if (!wireTarget) return;
+    const other = wireTarget.inst;
+    const IC_OUT = {
+      ic_555: ['OUT'],
+      ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
+      ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc32: ['Y1', 'Y2', 'Y3', 'Y4'],
+      ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
+      ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
+      ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+    };
+    if (IC_OUT[other.type] && IC_OUT[other.type].includes(wireTarget.pinId)) {
+      other.runtimeState[wireTarget.pinId] = val ? 255 : 0;
+    }
   }
 }
 
