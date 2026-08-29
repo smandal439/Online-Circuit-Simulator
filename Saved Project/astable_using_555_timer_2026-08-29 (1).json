@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "savedAt": "2026-08-29T14:32:35.277Z",
+  "savedAt": "2026-08-29T17:01:51.880Z",
   "name": "astable using 555 timer",
   "code": "void setup() {\n   // Put your setup code here, to run once when the board starts:\n}\nvoid loop() {\n  // Put your main code here, to run repeatedly indefinitely:\n}",
   "circuit": {
@@ -8,8 +8,8 @@
       {
         "id": "comp_1788013360266_noqvx",
         "type": "ic_555",
-        "x": 240,
-        "y": 295,
+        "x": 210,
+        "y": 300,
         "width": 68,
         "height": 50,
         "props": {
@@ -18,9 +18,11 @@
           "dutyCycle": 50
         },
         "runtimeState": {
-          "outHigh": false,
-          "_lastTime": 1788013955275,
-          "_capVoltage": 0.6666666666666666
+          "_lastTime": 1788022911878,
+          "_capVoltage": 0.4054834054834057,
+          "outHigh": true,
+          "OUT": 255,
+          "DIS": 0
         },
         "selected": false,
         "rotation": 1
@@ -28,8 +30,8 @@
       {
         "id": "comp_1788013379916_3ooyt",
         "type": "power_5v",
-        "x": 340,
-        "y": 205,
+        "x": 255,
+        "y": 185,
         "width": 30,
         "height": 30,
         "props": {},
@@ -40,8 +42,8 @@
       {
         "id": "comp_1788013385264_7bc6i",
         "type": "power_gnd",
-        "x": 215,
-        "y": 540,
+        "x": 155,
+        "y": 315,
         "width": 30,
         "height": 30,
         "props": {},
@@ -57,11 +59,11 @@
         "width": 20,
         "height": 60,
         "props": {
-          "value": 22,
+          "value": 5,
           "unit": "kΩ"
         },
         "runtimeState": {
-          "value": 22,
+          "value": 5,
           "unit": "kΩ"
         },
         "selected": false,
@@ -70,18 +72,15 @@
       {
         "id": "comp_1788013440876_yxrcx",
         "type": "resistor",
-        "x": 380,
-        "y": 355,
+        "x": 385,
+        "y": 400,
         "width": 20,
         "height": 60,
         "props": {
-          "value": 22,
+          "value": 2.2,
           "unit": "kΩ"
         },
-        "runtimeState": {
-          "value": 22,
-          "unit": "kΩ"
-        },
+        "runtimeState": {},
         "selected": false,
         "rotation": 0
       },
@@ -93,14 +92,14 @@
         "width": 20,
         "height": 60,
         "props": {
-          "value": 100,
+          "value": 200,
           "unit": "µF"
         },
         "runtimeState": {
-          "value": 100,
+          "value": 200,
           "unit": "µF"
         },
-        "selected": false,
+        "selected": true,
         "rotation": 0
       },
       {
@@ -115,10 +114,10 @@
           "colorName": "Red"
         },
         "runtimeState": {
-          "val": 0,
-          "lit": false,
-          "brightness": 0,
-          "current_mA": 0,
+          "current_mA": 12.244897959183673,
+          "val": 255,
+          "lit": true,
+          "brightness": 0.928976919549213,
           "overload": false,
           "blown": false,
           "_warnedBlown": false
@@ -137,177 +136,39 @@
           "value": 220,
           "unit": "Ω"
         },
-        "runtimeState": {
-          "value": 220,
-          "unit": "Ω"
-        },
+        "runtimeState": {},
         "selected": false,
         "rotation": 0
       },
       {
         "id": "capacitor_1788013793433",
         "type": "capacitor",
-        "x": 285,
-        "y": 380,
+        "x": 300,
+        "y": 405,
         "width": 20,
         "height": 60,
         "props": {
-          "value": 0.1,
+          "value": 0.01,
           "unit": "µF"
         },
-        "runtimeState": {
-          "value": 0.1,
-          "unit": "µF"
-        },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "power_gnd_1788022824670",
+        "type": "power_gnd",
+        "x": 195,
+        "y": 525,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
         "selected": false,
         "rotation": 0
       }
     ],
     "wires": [
-      {
-        "id": "wire_1788013389003_xeh7t",
-        "from": {
-          "instId": "comp_1788013360266_noqvx",
-          "pinId": "GND"
-        },
-        "to": {
-          "instId": "comp_1788013385264_7bc6i",
-          "pinId": "gnd"
-        },
-        "color": null,
-        "waypoints": [
-          {
-            "x": 160,
-            "y": 286
-          },
-          {
-            "x": 160,
-            "y": 490
-          },
-          {
-            "x": 230,
-            "y": 490
-          }
-        ]
-      },
-      {
-        "id": "wire_1788013392746_n679p",
-        "from": {
-          "instId": "comp_1788013360266_noqvx",
-          "pinId": "VCC"
-        },
-        "to": {
-          "instId": "comp_1788013379916_3ooyt",
-          "pinId": "vcc"
-        },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "wire_1788013446776_eno14",
-        "from": {
-          "instId": "comp_1788013360266_noqvx",
-          "pinId": "VCC"
-        },
-        "to": {
-          "instId": "comp_1788013438993_hpkud",
-          "pinId": "p1"
-        },
-        "color": null,
-        "waypoints": [
-          {
-            "x": 323,
-            "y": 286
-          },
-          {
-            "x": 323,
-            "y": 246
-          },
-          {
-            "x": 390,
-            "y": 246
-          }
-        ]
-      },
-      {
-        "id": "wire_1788013449226_ht5hj",
-        "from": {
-          "instId": "comp_1788013360266_noqvx",
-          "pinId": "DIS"
-        },
-        "to": {
-          "instId": "comp_1788013438993_hpkud",
-          "pinId": "p2"
-        },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "wire_1788013453777_z3iik",
-        "from": {
-          "instId": "comp_1788013360266_noqvx",
-          "pinId": "THR"
-        },
-        "to": {
-          "instId": "comp_1788013440876_yxrcx",
-          "pinId": "p2"
-        },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "wire_1788013465326_jwsal",
-        "from": {
-          "instId": "comp_1788013360266_noqvx",
-          "pinId": "THR"
-        },
-        "to": {
-          "instId": "comp_1788013459942_8ymwh",
-          "pinId": "pos"
-        },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "wire_1788013481285_yg1u3",
-        "from": {
-          "instId": "comp_1788013360266_noqvx",
-          "pinId": "TRIG"
-        },
-        "to": {
-          "instId": "comp_1788013459942_8ymwh",
-          "pinId": "pos"
-        },
-        "color": null,
-        "waypoints": [
-          {
-            "x": 435,
-            "y": 303
-          }
-        ]
-      },
-      {
-        "id": "wire_1788013492497_76565",
-        "from": {
-          "instId": "comp_1788013459942_8ymwh",
-          "pinId": "neg"
-        },
-        "to": {
-          "instId": "comp_1788013385264_7bc6i",
-          "pinId": "gnd"
-        },
-        "color": null,
-        "waypoints": [
-          {
-            "x": 435,
-            "y": 490
-          },
-          {
-            "x": 230,
-            "y": 490
-          }
-        ]
-      },
       {
         "id": "wire_1788013552020_nnth3",
         "from": {
@@ -322,20 +183,98 @@
         "waypoints": []
       },
       {
-        "id": "wire_1788013554019_dr9uk",
+        "id": "wire_1788022701815_kizin",
         "from": {
-          "instId": "resistor_1788013540379",
-          "pinId": "p2"
+          "instId": "comp_1788013360266_noqvx",
+          "pinId": "VCC"
         },
         "to": {
-          "instId": "comp_1788013385264_7bc6i",
-          "pinId": "gnd"
+          "instId": "comp_1788013379916_3ooyt",
+          "pinId": "vcc"
         },
         "color": null,
         "waypoints": []
       },
       {
-        "id": "wire_1788013556567_l6brp",
+        "id": "wire_1788022706466_1g5nw",
+        "from": {
+          "instId": "comp_1788013360266_noqvx",
+          "pinId": "RST"
+        },
+        "to": {
+          "instId": "comp_1788013379916_3ooyt",
+          "pinId": "vcc"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788022743325_o5ko4",
+        "from": {
+          "instId": "comp_1788013360266_noqvx",
+          "pinId": "VCC"
+        },
+        "to": {
+          "instId": "comp_1788013438993_hpkud",
+          "pinId": "p1"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788022747341_ntpyw",
+        "from": {
+          "instId": "comp_1788013360266_noqvx",
+          "pinId": "DIS"
+        },
+        "to": {
+          "instId": "comp_1788013438993_hpkud",
+          "pinId": "p2"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788022788338_cbh5y",
+        "from": {
+          "instId": "comp_1788013438993_hpkud",
+          "pinId": "p2"
+        },
+        "to": {
+          "instId": "comp_1788013440876_yxrcx",
+          "pinId": "p1"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788022797489_mrew9",
+        "from": {
+          "instId": "comp_1788013360266_noqvx",
+          "pinId": "THR"
+        },
+        "to": {
+          "instId": "comp_1788013440876_yxrcx",
+          "pinId": "p2"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788022801475_radiz",
+        "from": {
+          "instId": "comp_1788013360266_noqvx",
+          "pinId": "TRIG"
+        },
+        "to": {
+          "instId": "comp_1788013440876_yxrcx",
+          "pinId": "p2"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788022808521_oydai",
         "from": {
           "instId": "comp_1788013534995_vh01n",
           "pinId": "anode"
@@ -348,25 +287,7 @@
         "waypoints": []
       },
       {
-        "id": "wire_1788013598154_azfiq",
-        "from": {
-          "instId": "comp_1788013360266_noqvx",
-          "pinId": "RST"
-        },
-        "to": {
-          "instId": "comp_1788013379916_3ooyt",
-          "pinId": "vcc"
-        },
-        "color": null,
-        "waypoints": [
-          {
-            "x": 265,
-            "y": 395
-          }
-        ]
-      },
-      {
-        "id": "wire_1788013799990_het3i",
+        "id": "wire_1788022810920_0undx",
         "from": {
           "instId": "comp_1788013360266_noqvx",
           "pinId": "CV"
@@ -376,17 +297,82 @@
           "pinId": "pos"
         },
         "color": null,
+        "waypoints": [
+          {
+            "x": 293,
+            "y": 342
+          },
+          {
+            "x": 293,
+            "y": 381
+          },
+          {
+            "x": 310,
+            "y": 381
+          }
+        ]
+      },
+      {
+        "id": "wire_1788022818612_jol7l",
+        "from": {
+          "instId": "comp_1788013360266_noqvx",
+          "pinId": "GND"
+        },
+        "to": {
+          "instId": "comp_1788013385264_7bc6i",
+          "pinId": "gnd"
+        },
+        "color": null,
         "waypoints": []
       },
       {
-        "id": "wire_1788013803885_f6m1e",
+        "id": "wire_1788022833240_qvm4c",
         "from": {
           "instId": "capacitor_1788013793433",
           "pinId": "neg"
         },
         "to": {
-          "instId": "comp_1788013385264_7bc6i",
+          "instId": "power_gnd_1788022824670",
           "pinId": "gnd"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788022835887_hlybb",
+        "from": {
+          "instId": "comp_1788013459942_8ymwh",
+          "pinId": "neg"
+        },
+        "to": {
+          "instId": "power_gnd_1788022824670",
+          "pinId": "gnd"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788022838253_ynlpn",
+        "from": {
+          "instId": "resistor_1788013540379",
+          "pinId": "p2"
+        },
+        "to": {
+          "instId": "power_gnd_1788022824670",
+          "pinId": "gnd"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788022856769_99c35",
+        "from": {
+          "instId": "comp_1788013360266_noqvx",
+          "pinId": "THR"
+        },
+        "to": {
+          "instId": "comp_1788013459942_8ymwh",
+          "pinId": "pos"
         },
         "color": null,
         "waypoints": []
