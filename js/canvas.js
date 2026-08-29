@@ -3438,10 +3438,9 @@ class CircuitCanvas {
         continue;
       }
 
-      // Diode pass-through (forward biased only)
-      if (inst.type === 'diode_1n4007') {
-        const otherPin = current.pinId === 'anode' ? 'cathode' : 'anode';
-        queue.push({ instId: inst.id, pinId: otherPin, resistance: current.resistance + 0.7 });
+      // Diode pass-through (forward biased only: anode → cathode)
+      if (inst.type === 'diode_1n4007' && current.pinId === 'anode') {
+        queue.push({ instId: inst.id, pinId: 'cathode', resistance: current.resistance + 0.7 });
       }
 
       // Breadboard internal connectivity
