@@ -2800,7 +2800,7 @@ class CircuitCanvas {
         case 'ir_obstacle': {
           const sim = window.ArduinoSim;
           if (!sim || !sim.pinStates) break;
-          const detected = inst.props.detected ?? 0;
+          const detected = inst.runtimeState?.detected ?? inst.props.detected ?? 0;
           inst.runtimeState.detected = detected;
           inst.runtimeState.OUT = detected ? 0 : 1;
           const outPn = this._getConnectedPinNum(inst.id, 'OUT');
