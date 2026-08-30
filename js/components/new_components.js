@@ -2352,9 +2352,9 @@ defComp({
   width: 60,
   height: 50,
   defaultProps: { speed: 0 },
-  interactive: [
-    { field: 'speed', label: 'Speed', min: -100, max: 100, step: 1, unit: '%' },
-  ],
+  // interactive: [
+  //   { field: 'speed', label: 'Speed', min: -100, max: 100, step: 1, unit: '%' },
+  // ],
   pins: [
     { id: 'signal', label: 'SIG', type: PIN_TYPE.PWM, x: 8, y: 50, side: 'bottom' },
     { id: 'vcc', label: '+', type: PIN_TYPE.POWER, x: 25, y: 50, side: 'bottom' },
@@ -2502,21 +2502,21 @@ defComp({
   category: 'Input',
   icon: '🎚️',
   desc: '8-position DIP switch bank. Multi-position toggle for hardware settings and binary input',
-  width: 70,
-  height: 30,
+  width: 140,
+  height: 60,
   defaultProps: { switches: 0 },
-  interactive: [
-    { field: 'switches', label: 'Value', min: 0, max: 255, step: 1, unit: '' },
-  ],
+  // interactive: [
+  //   { field: 'switches', label: 'Value', min: 0, max: 255, step: 1, unit: '' },
+  // ],
   pins: [
-    { id: '1', label: '1', type: PIN_TYPE.DIGITAL, x: 6, y: 30, side: 'bottom' },
-    { id: '2', label: '2', type: PIN_TYPE.DIGITAL, x: 14, y: 30, side: 'bottom' },
-    { id: '3', label: '3', type: PIN_TYPE.DIGITAL, x: 22, y: 30, side: 'bottom' },
-    { id: '4', label: '4', type: PIN_TYPE.DIGITAL, x: 30, y: 30, side: 'bottom' },
-    { id: '5', label: '5', type: PIN_TYPE.DIGITAL, x: 38, y: 30, side: 'bottom' },
-    { id: '6', label: '6', type: PIN_TYPE.DIGITAL, x: 46, y: 30, side: 'bottom' },
-    { id: '7', label: '7', type: PIN_TYPE.DIGITAL, x: 54, y: 30, side: 'bottom' },
-    { id: '8', label: '8', type: PIN_TYPE.DIGITAL, x: 62, y: 30, side: 'bottom' },
+    { id: '1', label: '1', type: PIN_TYPE.DIGITAL, x: 12, y: 60, side: 'bottom' },
+    { id: '2', label: '2', type: PIN_TYPE.DIGITAL, x: 28, y: 60, side: 'bottom' },
+    { id: '3', label: '3', type: PIN_TYPE.DIGITAL, x: 44, y: 60, side: 'bottom' },
+    { id: '4', label: '4', type: PIN_TYPE.DIGITAL, x: 60, y: 60, side: 'bottom' },
+    { id: '5', label: '5', type: PIN_TYPE.DIGITAL, x: 76, y: 60, side: 'bottom' },
+    { id: '6', label: '6', type: PIN_TYPE.DIGITAL, x: 92, y: 60, side: 'bottom' },
+    { id: '7', label: '7', type: PIN_TYPE.DIGITAL, x: 108, y: 60, side: 'bottom' },
+    { id: '8', label: '8', type: PIN_TYPE.DIGITAL, x: 124, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -2527,51 +2527,64 @@ defComp({
 
     // Body
     ctx.fillStyle = '#1a1a1a';
-    roundRect(ctx, 0, 2, 70, 22, 3);
+    roundRect(ctx, 0, 4, 140, 44, 5);
     ctx.fill();
     ctx.strokeStyle = '#444';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
     // Switches
     for (let i = 0; i < 8; i++) {
       const isOn = (switches >> i) & 1;
-      const sx = 6 + i * 8;
+      const sx = 12 + i * 16;
 
       // Switch housing
       ctx.fillStyle = '#333';
-      roundRect(ctx, sx - 2, 6, 6, 12, 1);
+      roundRect(ctx, sx - 5, 10, 12, 24, 2);
       ctx.fill();
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
 
       // Switch toggle
       ctx.fillStyle = isOn ? '#00cc00' : '#cc0000';
-      ctx.fillRect(sx - 1, isOn ? 7 : 13, 4, 5);
+      roundRect(ctx, sx - 3, isOn ? 12 : 24, 8, 8, 1);
+      ctx.fill();
+
+      // ON/OFF text
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 5px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(isOn ? 'ON' : 'OFF', sx + 1, isOn ? 18 : 30);
 
       // Label
-      ctx.fillStyle = '#888';
-      ctx.font = '4px monospace';
+      ctx.fillStyle = '#aaa';
+      ctx.font = 'bold 6px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(`${i + 1}`, sx + 1, 22);
+      ctx.fillText(`${i + 1}`, sx + 1, 44);
     }
 
     // Binary value display
     ctx.fillStyle = '#0a0a1a';
-    roundRect(ctx, 18, 24, 34, 5, 1);
+    roundRect(ctx, 30, 48, 80, 8, 2);
     ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 4px monospace';
+    ctx.font = 'bold 6px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(switches.toString(2).padStart(8, '0'), 35, 28);
+    ctx.fillText(switches.toString(2).padStart(8, '0'), 70, 55);
 
     // Pin leads
     ctx.strokeStyle = '#a0a0a0';
     ctx.lineWidth = 1.5;
     for (let i = 0; i < 8; i++) {
-      const px = 6 + i * 8;
-      ctx.beginPath(); ctx.moveTo(px, 24); ctx.lineTo(px, 30); ctx.stroke();
+      const px = 12 + i * 16;
+      ctx.beginPath(); ctx.moveTo(px, 48); ctx.lineTo(px, 60); ctx.stroke();
     }
 
-    if (inst.selected) drawSelectionRect(ctx, -2, 0, 74, 32);
+    if (inst.selected) drawSelectionRect(ctx, -3, 0, 146, 64);
     ctx.restore();
   }
 });
