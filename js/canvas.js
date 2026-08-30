@@ -2327,6 +2327,19 @@ class CircuitCanvas {
           }
           break;
         }
+        case 'rotary_encoder': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const position = inst.runtimeState?.position ?? inst.props.position ?? 0;
+          const pressed = inst.runtimeState?.pressed ?? inst.props.pressed ?? false;
+          const aPin = this._getConnectedPinNum(inst.id, 'A');
+          const bPin = this._getConnectedPinNum(inst.id, 'B');
+          const swPin = this._getConnectedPinNum(inst.id, 'SW');
+          if (aPin !== null) sim.pinStates[`pin_${aPin}`] = Math.abs(position) % 2;
+          if (bPin !== null) sim.pinStates[`pin_${bPin}`] = Math.abs(Math.floor(position / 2)) % 2;
+          if (swPin !== null) sim.pinStates[`pin_${swPin}`] = pressed ? 0 : 1;
+          break;
+        }
         case 'relay': {
           const sigPin = this._getConnectedPinNum(inst.id, 'sig');
           const sigOn = sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates
