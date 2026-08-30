@@ -82,13 +82,10 @@ class Oscilloscope {
     if (simTime - this._lastSampleTime < 10) return; // max 100 samples/sec
     this._lastSampleTime = simTime;
 
-    const pin1Num = this._pinNameToNum(this.ch1Pin);
-    const pin2Num = this._pinNameToNum(this.ch2Pin);
-
     const states = (pinStates && typeof pinStates === 'object') ? pinStates : {};
 
-    const v1 = pin1Num !== null ? (states[`pin_${pin1Num}`] || 0) : 0;
-    const v2 = pin2Num !== null ? (states[`pin_${pin2Num}`] || 0) : 0;
+    const v1 = this._readChannel(this.ch1Pin, states);
+    const v2 = this._readChannel(this.ch2Pin, states);
 
     this.ch1Data.push({ t: simTime, v: v1 });
     this.ch2Data.push({ t: simTime, v: v2 });
@@ -100,6 +97,60 @@ class Oscilloscope {
     if (this.triggerEnabled) {
       this._updateTrigger();
     }
+  }
+
+  _readChannel(pinName, pinStates) {
+    if (!pinName || pinName === 'none') return 0;
+
+    // Probe channel — read from probe component's runtimeState
+    if (pinName.startsWith('probe:')) {
+      const probeId = pinName.slice(6);
+      const probe = this._findProbe(probeId);
+      return probe && probe.runtimeState ? (probe.runtimeState.voltage || 0) : 0;
+    }
+
+    // Standard Arduino pin
+    const pinNum = this._pinNameToNum(pinName);
+    return pinNum !== null ? (pinStates[`pin_${pinNum}`] || 0) : 0;
+  }
+
+  _findProbe(probeId) {
+    const canvas = window.CircuitCanvas;
+    if (!canvas) return null;
+    const comps = canvas.components || [];
+    for (let i = 0; i < comps.length; i++) {
+      if (comps[i].type === 'probe' && comps[i].id === probeId) return comps[i];
+    }
+    return null;
+  }
+
+  getProbes() {
+    const canvas = window.CircuitCanvas;
+    if (!canvas) return [];
+    const comps = canvas.components || [];
+    const probes = [];
+    for (let i = 0; i < comps.length; i++) {
+      if (comps[i].type === 'probe') {
+        probes.push({ id: comps[i].id, label: comps[i].id.replace('probe', 'P') });
+      }
+    }
+    return probes;
+  }
+
+  refreshProbeOptions(ch1El, ch2El) {
+    const probes = this.getProbes();
+    [ch1El, ch2El].forEach(sel => {
+      if (!sel) return;
+      const existing = sel.querySelectorAll('.probe-option');
+      existing.forEach(el => el.remove());
+      probes.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = 'probe:' + p.id;
+        opt.textContent = 'Probe ' + p.label;
+        opt.className = 'probe-option';
+        sel.appendChild(opt);
+      });
+    });
   }
 
   _updateTrigger() {
@@ -325,12 +376,18 @@ class Oscilloscope {
     
     ctx.fillStyle = this.CH1_COLOR;
     const ch1Val = this.ch1Data.length > 0 ? this.ch1Data[this.ch1Data.length - 1].v : 0;
-    ctx.fillText(`CH1: ${this.ch1Pin} (${ch1Val})`, 8, 16);
+    const ch1Label = this.ch1Pin && this.ch1Pin.startsWith('probe:')
+      ? this.ch1Pin.slice(6).replace('probe', 'P')
+      : this.ch1Pin;
+    ctx.fillText(`CH1: ${ch1Label} (${ch1Val.toFixed(1)})`, 8, 16);
 
     if (this.ch2Pin !== 'none') {
       ctx.fillStyle = this.CH2_COLOR;
       const ch2Val = this.ch2Data.length > 0 ? this.ch2Data[this.ch2Data.length - 1].v : 0;
-      ctx.fillText(`CH2: ${this.ch2Pin} (${ch2Val})`, 8, 30);
+      const ch2Label = this.ch2Pin && this.ch2Pin.startsWith('probe:')
+        ? this.ch2Pin.slice(6).replace('probe', 'P')
+        : this.ch2Pin;
+      ctx.fillText(`CH2: ${ch2Label} (${ch2Val.toFixed(1)})`, 8, 30);
     }
 
     // Time window info

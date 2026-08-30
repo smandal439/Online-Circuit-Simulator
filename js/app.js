@@ -534,6 +534,12 @@ class App {
         const samples = this.la.channels.reduce((n, ch) => n + (this.la.data[ch.pin]?.length || 0), 0);
         laStatus.textContent = `Running · ${samples} samples`;
       }
+      // Refresh oscilloscope probe dropdown options every ~2s
+      if (this.osc && !this._oscProbeRefreshTick) this._oscProbeRefreshTick = 0;
+      if (this.osc && ++this._oscProbeRefreshTick >= 120) {
+        this._oscProbeRefreshTick = 0;
+        this.osc.refreshProbeOptions(document.getElementById('osc-ch1'), document.getElementById('osc-ch2'));
+      }
     };
 
     this.sim.onError = (err) => {

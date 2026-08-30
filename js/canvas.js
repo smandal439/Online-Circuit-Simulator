@@ -84,6 +84,14 @@ class CircuitCanvas {
       this.updateSimState({});
     }
 
+    // Sample oscilloscope from probe components even in standalone mode
+    if (this._hasStandalonePower && !sim?.isRunning) {
+      const app = window.App;
+      if (app && app.osc && !app.osc.paused) {
+        app.osc.sample(performance.now(), {});
+      }
+    }
+
     ctx.save();
     ctx.translate(panX, panY);
     ctx.scale(zoom, zoom);
