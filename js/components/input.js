@@ -19,9 +19,9 @@ defComp({
   defaultProps: { pressed: false, label: 'BTN' },
 
   pins: [
-    { id: 'p1', label: '1', type: PIN_TYPE.DIGITAL, x:  8, y:  0, side: 'top' },
-    { id: 'p2', label: '2', type: PIN_TYPE.DIGITAL, x: 32, y:  0, side: 'top' },
-    { id: 'p3', label: '3', type: PIN_TYPE.DIGITAL, x:  8, y: 40, side: 'bottom' },
+    { id: 'p1', label: '1', type: PIN_TYPE.DIGITAL, x: 8, y: 0, side: 'top' },
+    { id: 'p2', label: '2', type: PIN_TYPE.DIGITAL, x: 32, y: 0, side: 'top' },
+    { id: 'p3', label: '3', type: PIN_TYPE.DIGITAL, x: 8, y: 40, side: 'bottom' },
     { id: 'p4', label: '4', type: PIN_TYPE.DIGITAL, x: 32, y: 40, side: 'bottom' },
   ],
 
@@ -139,9 +139,9 @@ defComp({
     { field: 'value', label: 'Wiper', min: 0, max: 1023, step: 1 },
   ],
   pins: [
-    { id: 'vcc',    label: 'VCC', type: PIN_TYPE.POWER,  x:  8, y: 60, side: 'bottom' },
-    { id: 'wiper',  label: 'OUT', type: PIN_TYPE.ANALOG, x: 25, y: 60, side: 'bottom' },
-    { id: 'gnd',    label: 'GND', type: PIN_TYPE.GND,    x: 42, y: 60, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 60, side: 'bottom' },
+    { id: 'wiper', label: 'OUT', type: PIN_TYPE.ANALOG, x: 25, y: 60, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 42, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -155,7 +155,7 @@ defComp({
     // Leads
     ctx.strokeStyle = '#888';
     ctx.lineWidth = 1.5;
-    [[8,60],[25,60],[42,60]].forEach(([px, py]) => {
+    [[8, 60], [25, 60], [42, 60]].forEach(([px, py]) => {
       ctx.beginPath();
       ctx.moveTo(px, py);
       ctx.lineTo(px, 46);
@@ -231,16 +231,16 @@ defComp({
   height: 60,
   defaultProps: { x: 512, y: 512, sw: 0 },
   interactive: [
-    { field: 'x',  label: 'X',  min: 0, max: 1023, step: 1 },
-    { field: 'y',  label: 'Y',  min: 0, max: 1023, step: 1 },
-    { field: 'sw', label: 'SW', min: 0, max: 1,    step: 1 },
+    { field: 'x', label: 'X', min: 0, max: 1023, step: 1 },
+    { field: 'y', label: 'Y', min: 0, max: 1023, step: 1 },
+    { field: 'sw', label: 'SW', min: 0, max: 1, step: 1 },
   ],
   pins: [
-    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,     x:  8, y: 60, side: 'bottom' },
-    { id: 'vcc',  label: 'VCC', type: PIN_TYPE.POWER,   x: 20, y: 60, side: 'bottom' },
-    { id: 'x',    label: 'X',   type: PIN_TYPE.ANALOG,  x: 32, y: 60, side: 'bottom' },
-    { id: 'y',    label: 'Y',   type: PIN_TYPE.ANALOG,  x: 44, y: 60, side: 'bottom' },
-    { id: 'sw',   label: 'SW',  type: PIN_TYPE.DIGITAL, x: 56, y: 60, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 8, y: 60, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 20, y: 60, side: 'bottom' },
+    { id: 'x', label: 'X', type: PIN_TYPE.ANALOG, x: 32, y: 60, side: 'bottom' },
+    { id: 'y', label: 'Y', type: PIN_TYPE.ANALOG, x: 44, y: 60, side: 'bottom' },
+    { id: 'sw', label: 'SW', type: PIN_TYPE.DIGITAL, x: 56, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -256,7 +256,7 @@ defComp({
     // Leads
     ctx.strokeStyle = '#c8a84b';
     ctx.lineWidth = 1.5;
-    [[8,60],[20,60],[32,60],[44,60],[56,60]].forEach(([px,py]) => {
+    [[8, 60], [20, 60], [32, 60], [44, 60], [56, 60]].forEach(([px, py]) => {
       ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 54); ctx.stroke();
     });
 
@@ -317,12 +317,12 @@ defComp({
     pressedKey: null,
   },
   pins: [
-    { id: 'R1', label: 'R1', type: PIN_TYPE.DIGITAL, x: 20,  y: 160, side: 'bottom' },
-    { id: 'R2', label: 'R2', type: PIN_TYPE.DIGITAL, x: 34,  y: 160, side: 'bottom' },
-    { id: 'R3', label: 'R3', type: PIN_TYPE.DIGITAL, x: 48,  y: 160, side: 'bottom' },
-    { id: 'R4', label: 'R4', type: PIN_TYPE.DIGITAL, x: 62,  y: 160, side: 'bottom' },
-    { id: 'C1', label: 'C1', type: PIN_TYPE.DIGITAL, x: 78,  y: 160, side: 'bottom' },
-    { id: 'C2', label: 'C2', type: PIN_TYPE.DIGITAL, x: 92,  y: 160, side: 'bottom' },
+    { id: 'R1', label: 'R1', type: PIN_TYPE.DIGITAL, x: 20, y: 160, side: 'bottom' },
+    { id: 'R2', label: 'R2', type: PIN_TYPE.DIGITAL, x: 34, y: 160, side: 'bottom' },
+    { id: 'R3', label: 'R3', type: PIN_TYPE.DIGITAL, x: 48, y: 160, side: 'bottom' },
+    { id: 'R4', label: 'R4', type: PIN_TYPE.DIGITAL, x: 62, y: 160, side: 'bottom' },
+    { id: 'C1', label: 'C1', type: PIN_TYPE.DIGITAL, x: 78, y: 160, side: 'bottom' },
+    { id: 'C2', label: 'C2', type: PIN_TYPE.DIGITAL, x: 92, y: 160, side: 'bottom' },
     { id: 'C3', label: 'C3', type: PIN_TYPE.DIGITAL, x: 106, y: 160, side: 'bottom' },
     { id: 'C4', label: 'C4', type: PIN_TYPE.DIGITAL, x: 120, y: 160, side: 'bottom' },
   ],
@@ -437,14 +437,14 @@ defComp({
     ctx.restore();
   }
 });
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   EC11 Rotary Encoder with Push Button
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+/*---------------------EC11 rotary encoder with push button----------------------- */
+
 defComp({
   id: 'rotary_encoder',
   name: 'Rotary Encoder EC11',
   category: 'Input',
-  icon: 'ðŸŽ›ï¸',
+  icon: '',
   desc: 'EC11 rotary encoder with push button. Infinite rotation with quadrature output (A, B) + switch',
   width: 40,
   height: 50,
@@ -509,14 +509,12 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   DIP Switch Bank (8-position)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/*--------------------------8-position DIP switch bank----------------------------- */
 defComp({
   id: 'dip_switch',
   name: 'DIP Switch 8-Pos',
   category: 'Input',
-  icon: 'ðŸŽšï¸',
+  icon: '',
   desc: '8-position DIP switch bank. Multi-position toggle for hardware settings and binary input',
   width: 140,
   height: 60,

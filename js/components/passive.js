@@ -14,14 +14,16 @@ defComp({
   height: 60,
   defaultProps: { value: 220, unit: 'Ω' },
   interactive: [
-    { field: 'unit', label: 'Unit', type: 'select', options: [
-      { value: 'Ω',  label: 'Ω (Ohm)' },
-      { value: 'kΩ', label: 'kΩ (kiloohm)' },
-      { value: 'MΩ', label: 'MΩ (megaohm)' },
-    ] },
+    {
+      field: 'unit', label: 'Unit', type: 'select', options: [
+        { value: 'Ω', label: 'Ω (Ohm)' },
+        { value: 'kΩ', label: 'kΩ (kiloohm)' },
+        { value: 'MΩ', label: 'MΩ (megaohm)' },
+      ]
+    },
   ],
   pins: [
-    { id: 'p1', label: '1', type: PIN_TYPE.SIGNAL, x: 10, y:  0, side: 'top' },
+    { id: 'p1', label: '1', type: PIN_TYPE.SIGNAL, x: 10, y: 0, side: 'top' },
     { id: 'p2', label: '2', type: PIN_TYPE.SIGNAL, x: 10, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
@@ -35,7 +37,7 @@ defComp({
     // Lead wires
     ctx.strokeStyle = '#888';
     ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(10, 0);  ctx.lineTo(10, 16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(10, 16); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(10, 44); ctx.lineTo(10, 60); ctx.stroke();
 
     // Body
@@ -87,16 +89,18 @@ defComp({
   height: 60,
   defaultProps: { value: 100, unit: 'µF' },
   interactive: [
-    { field: 'unit', label: 'Unit', type: 'select', options: [
-      { value: 'mF',  label: 'mF (millifarad)' },
-      { value: 'µF',  label: 'µF (microfarad)' },
-      { value: 'nF',  label: 'nF (nanofarad)' },
-      { value: 'pF',  label: 'pF (picofarad)' },
-    ] },
+    {
+      field: 'unit', label: 'Unit', type: 'select', options: [
+        { value: 'mF', label: 'mF (millifarad)' },
+        { value: 'µF', label: 'µF (microfarad)' },
+        { value: 'nF', label: 'nF (nanofarad)' },
+        { value: 'pF', label: 'pF (picofarad)' },
+      ]
+    },
   ],
   pins: [
-    { id: 'pos', label: '+', type: PIN_TYPE.SIGNAL, x: 10, y:  0, side: 'top' },
-    { id: 'neg', label: 'âˆ’', type: PIN_TYPE.GND,    x: 10, y: 60, side: 'bottom' },
+    { id: 'pos', label: '+', type: PIN_TYPE.SIGNAL, x: 10, y: 0, side: 'top' },
+    { id: 'neg', label: 'âˆ’', type: PIN_TYPE.GND, x: 10, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -104,7 +108,7 @@ defComp({
     ctx.translate(x, y);
     // Leads
     ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(10, 0);  ctx.lineTo(10, 22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(10, 22); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(10, 38); ctx.lineTo(10, 60); ctx.stroke();
     // Plates
     ctx.strokeStyle = '#aaa'; ctx.lineWidth = 2.5;
@@ -121,7 +125,7 @@ defComp({
     ctx.stroke();
     // Value
     ctx.fillStyle = '#888'; ctx.font = '6px sans-serif';
-    ctx.save(); ctx.translate(10, 34); ctx.rotate(-Math.PI/2);
+    ctx.save(); ctx.translate(10, 34); ctx.rotate(-Math.PI / 2);
     ctx.fillText((inst.props.value || 100) + (inst.props.unit || 'µF'), 0, 2);
     ctx.restore();
     if (inst.selected) drawSelectionRect(ctx, -3, -3, 26, 66);
@@ -148,10 +152,10 @@ function _genBreadboardPins() {
   }
 
   // Power rails (each rail represents a continuous electrical node)
-  pins.push({ id: 'rp', label: '+', type: PIN_TYPE.POWER, x: 30, y: 19,  side: 'top' });
-  pins.push({ id: 'rn', label: '-', type: PIN_TYPE.GND,   x: 30, y: 31,  side: 'top' });
+  pins.push({ id: 'rp', label: '+', type: PIN_TYPE.POWER, x: 30, y: 19, side: 'top' });
+  pins.push({ id: 'rn', label: '-', type: PIN_TYPE.GND, x: 30, y: 31, side: 'top' });
   pins.push({ id: 'bp', label: '+', type: PIN_TYPE.POWER, x: 30, y: 189, side: 'bottom' });
-  pins.push({ id: 'bn', label: '-', type: PIN_TYPE.GND,   x: 30, y: 201, side: 'bottom' });
+  pins.push({ id: 'bn', label: '-', type: PIN_TYPE.GND, x: 30, y: 201, side: 'bottom' });
   return pins;
 }
 
@@ -338,14 +342,12 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   1N4007 Diode â€” Rectifier Diode
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/*-----------------------diode_1n4007---------------------- */
 defComp({
   id: 'diode_1n4007',
   name: '1N4007 Diode',
   category: 'Passive',
-  icon: 'â–¶ï¸',
+  icon: '',
   desc: 'General-purpose rectifier diode. 1A forward current, 1000V reverse voltage. 0.7V forward drop',
   width: 40,
   height: 14,

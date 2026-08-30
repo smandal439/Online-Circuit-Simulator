@@ -226,7 +226,7 @@ defComp({
 //     bodyGrad.addColorStop(0.4, '#e8ecf1'); // High specular reflection
 //     bodyGrad.addColorStop(0.7, '#63676e');
 //     bodyGrad.addColorStop(1.0, '#202225');
-    
+
 //     ctx.fillStyle = bodyGrad;
 //     roundRect(ctx, 6, 12, 38, 34, 4);
 //     ctx.fill();
@@ -253,7 +253,7 @@ defComp({
 //     // --- 5. Rotating Steel Shaft & Fan Blades ---
 //     ctx.save();
 //     ctx.translate(25, 24);
-    
+
 //     // Continuous rotation angle based on simulation time and speed/direction
 //     const angle = t * 0.05 * speed;
 //     ctx.rotate(angle);
@@ -269,7 +269,7 @@ defComp({
 //     for (let i = 0; i < 3; i++) {
 //       ctx.save();
 //       ctx.rotate((i * Math.PI * 2) / 3);
-      
+
 //       // Teardrop-shaped fan blade
 //       ctx.beginPath();
 //       ctx.moveTo(0, 0);
@@ -277,7 +277,7 @@ defComp({
 //       ctx.bezierCurveTo(6, -16, 5, -8, 0, 0);
 //       ctx.fill();
 //       ctx.stroke();
-      
+
 //       ctx.restore();
 //     }
 
@@ -295,7 +295,7 @@ defComp({
 //     shaftGrad.addColorStop(0, '#ffffff');
 //     shaftGrad.addColorStop(0.5, '#7f8c8d');
 //     shaftGrad.addColorStop(1, '#2c3e50');
-    
+
 //     ctx.fillStyle = shaftGrad;
 //     ctx.beginPath();
 //     ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
@@ -316,7 +316,7 @@ defComp({
 //     ctx.fillStyle = isActive ? '#00ffcc' : '#7f8c8d';
 //     ctx.font = '600 7px "Courier New", monospace';
 //     ctx.textAlign = 'center';
-    
+
 //     const dirSymbol = speed > 0.01 ? '↻ ' : speed < -0.01 ? '↺ ' : '';
 //     ctx.fillText(`${dirSymbol}${rpm} RPM`, 25, 42);
 
@@ -434,14 +434,14 @@ defComp({
 //     for (let i = 0; i < 3; i++) {
 //       ctx.save();
 //       ctx.rotate((i * Math.PI * 2) / 3);
-      
+
 //       ctx.beginPath();
 //       ctx.moveTo(0, 0);
 //       ctx.bezierCurveTo(-6, -6, -7, -15, 0, -16.5);
 //       ctx.bezierCurveTo(7, -15, 6, -6, 0, 0);
 //       ctx.fill();
 //       ctx.stroke();
-      
+
 //       ctx.restore();
 //     }
 
@@ -653,7 +653,7 @@ defComp({
   height: 100,
   defaultProps: { label: 'MOTOR' },
   pins: [
-    { id: 'in',  label: 'IN',  type: PIN_TYPE.PWM, x: 30, y: 100, side: 'bottom' },
+    { id: 'in', label: 'IN', type: PIN_TYPE.PWM, x: 30, y: 100, side: 'bottom' },
     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 50, y: 100, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
@@ -747,14 +747,14 @@ defComp({
     for (let i = 0; i < 3; i++) {
       ctx.save();
       ctx.rotate((i * Math.PI * 2) / 3);
-      
+
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.bezierCurveTo(-10, -10, -11, -25, 0, -27);
       ctx.bezierCurveTo(11, -25, 10, -10, 0, 0);
       ctx.fill();
       ctx.stroke();
-      
+
       ctx.restore();
     }
 
@@ -804,7 +804,7 @@ defComp({
   id: 'stepper_28byj',
   name: '28BYJ-48 Stepper',
   category: 'Actuators',
-  icon: 'âš™ï¸',
+  icon: '',
   desc: '5V 4-phase unipolar stepper motor with ULN2003 driver (2048 steps/rev, 5.625Â°/step)',
   width: 100,
   height: 100,
@@ -1042,14 +1042,14 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   L298N â€” Dual H-Bridge Motor Driver
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+/*------------L298N dual H-bridge motor driver-----------*/
+
 defComp({
   id: 'l298n',
   name: 'L298N Motor Driver',
   category: 'Actuators',
-  icon: 'ðŸ”Œ',
+  icon: '',
   desc: 'L298N dual H-bridge motor driver. Controls direction and PWM speed for two DC motors',
   width: 100,
   height: 80,
@@ -1141,14 +1141,12 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Continuous Rotation Servo
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-defComp({
+/*------------------Continuous rotation servo motor------------------ */
+   defComp({
   id: 'servo_continuous',
   name: 'Cont. Rotation Servo',
   category: 'Actuators',
-  icon: 'âš™ï¸',
+  icon: '',
   desc: 'Continuous rotation servo motor. Variable speed control in both directions (not 0-180Â° positioning)',
   width: 60,
   height: 50,

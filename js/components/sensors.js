@@ -14,13 +14,13 @@ defComp({
   defaultProps: { temperature: 25, humidity: 60 },
   interactive: [
     { field: 'temperature', label: 'Temp', min: 0, max: 50, step: 1, unit: '°C' },
-    { field: 'humidity',    label: 'Hum',  min: 0, max: 100, step: 1, unit: '%' },
+    { field: 'humidity', label: 'Hum', min: 0, max: 100, step: 1, unit: '%' },
   ],
   pins: [
-    { id: 'vcc',  label: 'VCC',  type: PIN_TYPE.POWER,   x: 13, y: 88, side: 'bottom' },
-    { id: 'data', label: 'DAT',  type: PIN_TYPE.DIGITAL, x: 23, y: 88, side: 'bottom' },
-    { id: 'nc',   label: 'NC',   type: PIN_TYPE.SIGNAL,  x: 35, y: 88, side: 'bottom' },
-    { id: 'gnd',  label: 'GND',  type: PIN_TYPE.GND,     x: 45, y: 88, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 13, y: 88, side: 'bottom' },
+    { id: 'data', label: 'DAT', type: PIN_TYPE.DIGITAL, x: 23, y: 88, side: 'bottom' },
+    { id: 'nc', label: 'NC', type: PIN_TYPE.SIGNAL, x: 35, y: 88, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 45, y: 88, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -127,10 +127,10 @@ defComp({
     ctx.fillRect(6, 65, 46, 4);
 
     const pinDefs = [
-      { id: 'vcc',  label: 'VCC', x: 13 },
+      { id: 'vcc', label: 'VCC', x: 13 },
       { id: 'data', label: 'DAT', x: 23 },
-      { id: 'nc',   label: 'NC',  x: 35 },
-      { id: 'gnd',  label: 'GND', x: 45 },
+      { id: 'nc', label: 'NC', x: 35 },
+      { id: 'gnd', label: 'GND', x: 45 },
     ];
 
     pinDefs.forEach(p => {
@@ -173,10 +173,10 @@ defComp({
     { field: 'distance', label: 'Dist', min: 2, max: 400, step: 1, unit: 'cm' },
   ],
   pins: [
-    { id:'vcc',   label:'VCC',   type:PIN_TYPE.POWER,  x:  8, y: 0, side:'top' },
-    { id:'trig',  label:'TRIG',  type:PIN_TYPE.DIGITAL, x:24, y: 0, side:'top' },
-    { id:'echo',  label:'ECHO',  type:PIN_TYPE.DIGITAL, x:46, y: 0, side:'top' },
-    { id:'gnd',   label:'GND',   type:PIN_TYPE.GND,     x:62, y: 0, side:'top' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 0, side: 'top' },
+    { id: 'trig', label: 'TRIG', type: PIN_TYPE.DIGITAL, x: 24, y: 0, side: 'top' },
+    { id: 'echo', label: 'ECHO', type: PIN_TYPE.DIGITAL, x: 46, y: 0, side: 'top' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 62, y: 0, side: 'top' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -194,12 +194,12 @@ defComp({
     // Transducer circles (eyes)
     [18, 52].forEach(cx => {
       ctx.fillStyle = '#888';
-      ctx.beginPath(); ctx.arc(cx, 24, 12, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, 24, 12, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1; ctx.stroke();
       ctx.fillStyle = '#333';
-      ctx.beginPath(); ctx.arc(cx, 24, 8, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, 24, 8, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#555';
-      ctx.beginPath(); ctx.arc(cx, 24, 5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, 24, 5, 0, Math.PI * 2); ctx.fill();
     });
 
     // Text
@@ -211,7 +211,7 @@ defComp({
     // Pin leads
     ctx.strokeStyle = '#c8a84b';
     ctx.lineWidth = 1.5;
-    [8,24,46,62].forEach(px => {
+    [8, 24, 46, 62].forEach(px => {
       ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, 8); ctx.stroke();
     });
 
@@ -234,9 +234,9 @@ defComp({
     { field: 'light', label: 'Light', min: 0, max: 1023, step: 1, unit: ' lx' },
   ],
   pins: [
-    { id: 'vcc',  label: 'VCC', type: PIN_TYPE.POWER,  x:  8, y: 40, side: 'bottom' },
-    { id: 'a',    label: 'A',   type: PIN_TYPE.ANALOG, x: 20, y: 40, side: 'bottom' },
-    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,    x: 32, y: 40, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 40, side: 'bottom' },
+    { id: 'a', label: 'A', type: PIN_TYPE.ANALOG, x: 20, y: 40, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 32, y: 40, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -249,7 +249,7 @@ defComp({
     // Leads
     ctx.strokeStyle = '#c8a84b';
     ctx.lineWidth = 1.5;
-    [[8,40],[20,40],[32,40]].forEach(([px,py]) => {
+    [[8, 40], [20, 40], [32, 40]].forEach(([px, py]) => {
       ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 34); ctx.stroke();
     });
 
@@ -274,7 +274,7 @@ defComp({
     ctx.strokeStyle = rayOn ? '#ffee88' : '#666';
     ctx.lineWidth = 1;
     if (rayOn) { ctx.shadowColor = '#ffee88'; ctx.shadowBlur = 5; }
-    [[-2,4],[14,-2],[30,4]].forEach(([rx,ry]) => {
+    [[-2, 4], [14, -2], [30, 4]].forEach(([rx, ry]) => {
       ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 3, ry - 5); ctx.stroke();
     });
     ctx.shadowBlur = 0;
@@ -303,9 +303,9 @@ defComp({
     { field: 'motion', label: 'Motion', min: 0, max: 1, step: 1, unit: '' },
   ],
   pins: [
-    { id: 'vcc',  label: 'VCC', type: PIN_TYPE.POWER,   x: 12, y: 40, side: 'bottom' },
-    { id: 'out',  label: 'OUT', type: PIN_TYPE.DIGITAL, x: 25, y: 40, side: 'bottom' },
-    { id: 'gnd',  label: 'GND', type: PIN_TYPE.GND,     x: 38, y: 40, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 40, side: 'bottom' },
+    { id: 'out', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 25, y: 40, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 38, y: 40, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -317,7 +317,7 @@ defComp({
     // Leads
     ctx.strokeStyle = '#c8a84b';
     ctx.lineWidth = 1.5;
-    [[12,40],[25,40],[38,40]].forEach(([px,py]) => {
+    [[12, 40], [25, 40], [38, 40]].forEach(([px, py]) => {
       ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 36); ctx.stroke();
     });
 
@@ -373,14 +373,14 @@ defComp({
     { field: 'temp', label: 'Temperature', min: -40, max: 125, step: 1, unit: '°C' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC (+5V)', type: PIN_TYPE.POWER,  x: 15, y: 80, side: 'bottom' },
-    { id: 'OUT', label: 'VOUT',     type: PIN_TYPE.ANALOG, x: 30, y: 80, side: 'bottom' },
-    { id: 'GND', label: 'GND',      type: PIN_TYPE.GND,    x: 45, y: 80, side: 'bottom' },
+    { id: 'VCC', label: 'VCC (+5V)', type: PIN_TYPE.POWER, x: 15, y: 80, side: 'bottom' },
+    { id: 'OUT', label: 'VOUT', type: PIN_TYPE.ANALOG, x: 30, y: 80, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 45, y: 80, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const temp = Number(inst.runtimeState?.temp ?? inst.props.temp ?? 25);
-    
+
     // Voltage scale factor: 10 mV / °C (0.01 V / °C)
     const vOut = temp * 0.01;
 
@@ -455,17 +455,14 @@ defComp({
     ctx.restore();
   }
 });
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   MPU6050 â€” 6-DoF Accelerometer + Gyroscope (I2C)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   MPU6050 IMU (Enlarged 2x: 72x64)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+
+/*-----------------------MPU6050 6-axis Accelerometer + Gyroscope (I2C @ 0x68)------------------------ */
 defComp({
   id: 'mpu6050',
   name: 'MPU6050 IMU',
   category: 'Sensors',
-  icon: 'ðŸ“',
+  icon: '',
   desc: '6-axis Accelerometer + Gyroscope (I2C @ 0x68). Provides accel X/Y/Z Â±2g and gyro X/Y/Z Â±250Â°/s',
   width: 72,   // Scaled from 36 to 72 (2x)
   height: 64,  // Scaled from 32 to 64 (2x)
@@ -532,16 +529,13 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   IR Obstacle Avoidance Sensor
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* -------------- IR Obstacle Avoidance Sensor Module (Enlarged) ------------------ */
 defComp({
   id: 'ir_obstacle',
   name: 'IR Obstacle Sensor',
   category: 'Sensors',
-  icon: 'ðŸ‘ï¸',
+  icon: '',
   desc: 'Infrared obstacle detection sensor module with LM393 comparator (Digital OUT: LOW when obstacle detected, 2â€“30cm range)',
   width: 54,
   height: 92,
@@ -729,9 +723,8 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   Flex Sensor â€” Analog Bend Sensor
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/*---------------------Analog flex/bend sensor----------------------*/
+
 defComp({
   id: 'flex_sensor',
   name: 'Flex Sensor',
@@ -801,14 +794,12 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   NTC Thermistor â€” Analog Temperature Sensor
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/*--------NTC Thermistor 10k ohms NTC thermistor. Resistance decreases with temperature------------- */
 defComp({
   id: 'thermistor',
   name: 'NTC Thermistor',
   category: 'Sensors',
-  icon: 'ðŸŒ¡ï¸',
+  icon: '',
   desc: '10kÎ© NTC thermistor. Resistance decreases with temperature. Reads 0-1023 on analog pin',
   width: 24,
   height: 30,
@@ -860,14 +851,13 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   BME280 / BMP280 â€” Precision Environment Sensor (I2C @ 0x76)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ---------------BME280 / BMP280 â€” Precision Environment Sensor (I2C @ 0x76)-------------------*/
+
 defComp({
   id: 'bme280',
   name: 'BME280 Sensor',
   category: 'Sensors',
-  icon: 'ðŸŒ¡ï¸',
+  icon: '',
   desc: 'BME280 precision barometric pressure, temperature, and humidity sensor (I2C @ 0x76)',
   width: 56,
   height: 76,
@@ -950,7 +940,7 @@ defComp({
 
     // Live Readout Text (T, H, P)
     ctx.textAlign = 'left';
-    
+
     // Temp
     ctx.fillStyle = '#ff9800';
     ctx.font = 'bold 4px monospace';
@@ -1020,14 +1010,12 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   VL53L0X â€” Time-of-Flight Laser Distance Sensor (I2C)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/*----------------------VL53L0X  Time-of-Flight Laser Distance Sensor (I2C)--------------*/
 defComp({
   id: 'vl53l0x',
   name: 'VL53L0X ToF Sensor',
   category: 'Sensors',
-  icon: 'ðŸ“',
+  icon: '',
   desc: 'VL53L0X laser Time-of-Flight distance sensor (I2C @ 0x29). Millimetre accuracy, 200cm range',
   width: 50,
   height: 60,
@@ -1109,14 +1097,13 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   RC522 â€” 13.56MHz RFID Reader (SPI)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* --------------------------RC522 â€” 13.56MHz RFID Reader (SPI)------------------*/
+
 defComp({
   id: 'rc522',
   name: 'RC522 RFID Reader',
   category: 'Sensors',
-  icon: 'ðŸ’³',
+  icon: '',
   desc: 'RC522 13.56MHz RFID tag reader (SPI). For access control and security gate simulations',
   width: 60,
   height: 80,
@@ -1202,14 +1189,13 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   TSOP4838 â€” IR Receiver (38kHz NEC/RC5)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ---------------------TSOP4838 IR Receiver (38kHz NEC/RC5)----------*/
+  
 defComp({
   id: 'ir_receiver',
   name: 'IR Receiver TSOP4838',
   category: 'Sensors',
-  icon: 'ðŸ“¡',
+  icon: '',
   desc: 'TSOP4838 38kHz IR receiver module. Decodes NEC/RC5 infrared remote control signals',
   width: 30,
   height: 50,
@@ -1285,14 +1271,12 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   HC-05 Bluetooth Module (UART)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/*--------------------------  HC-05 Bluetooth Module (UART)  -----------------*/
 defComp({
   id: 'hc05',
   name: 'HC-05 Bluetooth',
   category: 'Sensors',
-  icon: 'ðŸ“¶',
+  icon: '',
   desc: 'HC-05 serial-to-Bluetooth transceiver module (UART). For mobile app communication',
   width: 50,
   height: 70,

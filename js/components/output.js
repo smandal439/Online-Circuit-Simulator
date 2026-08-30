@@ -19,7 +19,7 @@ function drawLED(ctx, inst, sim) {
   // Lead lines
   ctx.strokeStyle = '#888';
   ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(15, 0);  ctx.lineTo(15, 18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(15, 18); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(15, 42); ctx.lineTo(15, 60); ctx.stroke();
 
   // Flat side (cathode indicator)
@@ -119,8 +119,8 @@ defComp({
   height: 60,
   defaultProps: { color: '#ff3333', colorName: 'Red' },
   pins: [
-    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
-    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+    { id: 'anode', label: '+', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND, x: 15, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
 });
@@ -136,8 +136,8 @@ defComp({
   height: 60,
   defaultProps: { color: '#33ff66', colorName: 'Green' },
   pins: [
-    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
-    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+    { id: 'anode', label: '+', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND, x: 15, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
 });
@@ -153,8 +153,8 @@ defComp({
   height: 60,
   defaultProps: { color: '#3399ff', colorName: 'Blue' },
   pins: [
-    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
-    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+    { id: 'anode', label: '+', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND, x: 15, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
 });
@@ -170,8 +170,8 @@ defComp({
   height: 60,
   defaultProps: { color: '#ffee33', colorName: 'Yellow' },
   pins: [
-    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
-    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+    { id: 'anode', label: '+', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND, x: 15, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
 });
@@ -187,8 +187,8 @@ defComp({
   height: 60,
   defaultProps: { color: '#ff8833', colorName: 'Orange' },
   pins: [
-    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
-    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+    { id: 'anode', label: '+', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND, x: 15, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
 });
@@ -204,8 +204,8 @@ defComp({
   height: 60,
   defaultProps: { color: '#ffffff', colorName: 'White' },
   pins: [
-    { id: 'anode',   label: '+', type: PIN_TYPE.PWM,     x: 15, y:  0, side: 'top' },
-    { id: 'cathode', label: '−', type: PIN_TYPE.GND,     x: 15, y: 60, side: 'bottom' },
+    { id: 'anode', label: '+', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND, x: 15, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
 });
@@ -225,7 +225,7 @@ defComp({
     { id: 'led_y', label: 'Y', type: PIN_TYPE.DIGITAL, x: 30, y: 60, side: 'bottom' },
     { id: 'led_g', label: 'G', type: PIN_TYPE.DIGITAL, x: 45, y: 60, side: 'bottom' },
     { id: 'led_b', label: 'B', type: PIN_TYPE.DIGITAL, x: 60, y: 60, side: 'bottom' },
-    { id: 'gnd',   label: 'âˆ’', type: PIN_TYPE.GND,     x: 75, y: 60, side: 'bottom' },
+    { id: 'gnd', label: 'âˆ’', type: PIN_TYPE.GND, x: 75, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -328,10 +328,10 @@ defComp({
   height: 70,
   defaultProps: {},
   pins: [
-    { id: 'red',    label: 'R', type: PIN_TYPE.PWM,  x:  6, y:  0, side: 'top' },
-    { id: 'green',  label: 'G', type: PIN_TYPE.PWM,  x: 15, y:  0, side: 'top' },
-    { id: 'blue',   label: 'B', type: PIN_TYPE.PWM,  x: 24, y:  0, side: 'top' },
-    { id: 'gnd',    label: 'âˆ’', type: PIN_TYPE.GND,  x: 15, y: 70, side: 'bottom' },
+    { id: 'red', label: 'R', type: PIN_TYPE.PWM, x: 6, y: 0, side: 'top' },
+    { id: 'green', label: 'G', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+    { id: 'blue', label: 'B', type: PIN_TYPE.PWM, x: 24, y: 0, side: 'top' },
+    { id: 'gnd', label: 'âˆ’', type: PIN_TYPE.GND, x: 15, y: 70, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -427,7 +427,7 @@ defComp({
   defaultProps: { frequency: 1000 },
   pins: [
     { id: 'vcc', label: '+', type: PIN_TYPE.DIGITAL, x: 12, y: 50, side: 'bottom' },
-    { id: 'gnd', label: 'âˆ’', type: PIN_TYPE.GND,     x: 28, y: 50, side: 'bottom' },
+    { id: 'gnd', label: 'âˆ’', type: PIN_TYPE.GND, x: 28, y: 50, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -497,15 +497,15 @@ defComp({
   height: 80,
   defaultProps: { commonAnode: false },
   pins: [
-    { id:'segA', label:'A', type:PIN_TYPE.DIGITAL, x: 8, y: 0, side:'top' },
-    { id:'segB', label:'B', type:PIN_TYPE.DIGITAL, x:16, y: 0, side:'top' },
-    { id:'segC', label:'C', type:PIN_TYPE.DIGITAL, x:24, y: 0, side:'top' },
-    { id:'segD', label:'D', type:PIN_TYPE.DIGITAL, x:32, y: 0, side:'top' },
-    { id:'segE', label:'E', type:PIN_TYPE.DIGITAL, x:40, y: 0, side:'top' },
-    { id:'segF', label:'F', type:PIN_TYPE.DIGITAL, x:48, y: 0, side:'top' },
-    { id:'segG', label:'G', type:PIN_TYPE.DIGITAL, x: 8, y:80, side:'bottom' },
-    { id:'dp',   label:'DP',type:PIN_TYPE.DIGITAL, x:16, y:80, side:'bottom' },
-    { id:'com',  label:'COM',type:PIN_TYPE.POWER,  x:32, y:80, side:'bottom' },
+    { id: 'segA', label: 'A', type: PIN_TYPE.DIGITAL, x: 8, y: 0, side: 'top' },
+    { id: 'segB', label: 'B', type: PIN_TYPE.DIGITAL, x: 16, y: 0, side: 'top' },
+    { id: 'segC', label: 'C', type: PIN_TYPE.DIGITAL, x: 24, y: 0, side: 'top' },
+    { id: 'segD', label: 'D', type: PIN_TYPE.DIGITAL, x: 32, y: 0, side: 'top' },
+    { id: 'segE', label: 'E', type: PIN_TYPE.DIGITAL, x: 40, y: 0, side: 'top' },
+    { id: 'segF', label: 'F', type: PIN_TYPE.DIGITAL, x: 48, y: 0, side: 'top' },
+    { id: 'segG', label: 'G', type: PIN_TYPE.DIGITAL, x: 8, y: 80, side: 'bottom' },
+    { id: 'dp', label: 'DP', type: PIN_TYPE.DIGITAL, x: 16, y: 80, side: 'bottom' },
+    { id: 'com', label: 'COM', type: PIN_TYPE.POWER, x: 32, y: 80, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -530,15 +530,15 @@ defComp({
     const drawHSeg = (sy, active) => {
       ctx.fillStyle = active ? SEG_ON : SEG_OFF;
       ctx.beginPath();
-      ctx.moveTo(14, sy); ctx.lineTo(16, sy-3); ctx.lineTo(36, sy-3);
-      ctx.lineTo(38, sy); ctx.lineTo(36, sy+3); ctx.lineTo(16, sy+3);
+      ctx.moveTo(14, sy); ctx.lineTo(16, sy - 3); ctx.lineTo(36, sy - 3);
+      ctx.lineTo(38, sy); ctx.lineTo(36, sy + 3); ctx.lineTo(16, sy + 3);
       ctx.closePath(); ctx.fill();
     };
     const drawVSeg = (sx, sy, active) => {
       ctx.fillStyle = active ? SEG_ON : SEG_OFF;
       ctx.beginPath();
-      ctx.moveTo(sx, sy); ctx.lineTo(sx+3, sy+2); ctx.lineTo(sx+3, sy+16);
-      ctx.lineTo(sx, sy+18); ctx.lineTo(sx-3, sy+16); ctx.lineTo(sx-3, sy+2);
+      ctx.moveTo(sx, sy); ctx.lineTo(sx + 3, sy + 2); ctx.lineTo(sx + 3, sy + 16);
+      ctx.lineTo(sx, sy + 18); ctx.lineTo(sx - 3, sy + 16); ctx.lineTo(sx - 3, sy + 2);
       ctx.closePath(); ctx.fill();
     };
     drawHSeg(16, segs.A); // a - top
@@ -572,16 +572,16 @@ defComp({
   height: 90,
   defaultProps: { line1: 'Hello, World!  ', line2: 'ArduSim v1.0   ' },
   pins: [
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x:  14, y: 90, side: 'bottom' },
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x:  28, y: 90, side: 'bottom' },
-    { id: 'vo',  label: 'V0',  type: PIN_TYPE.SIGNAL,  x:  42, y: 90, side: 'bottom' },
-    { id: 'rs',  label: 'RS',  type: PIN_TYPE.DIGITAL, x:  56, y: 90, side: 'bottom' },
-    { id: 'rw',  label: 'R/W', type: PIN_TYPE.DIGITAL, x:  70, y: 90, side: 'bottom' },
-    { id: 'en',  label: 'EN',  type: PIN_TYPE.DIGITAL, x:  84, y: 90, side: 'bottom' },
-    { id: 'd4',  label: 'D4',  type: PIN_TYPE.DIGITAL, x: 112, y: 90, side: 'bottom' },
-    { id: 'd5',  label: 'D5',  type: PIN_TYPE.DIGITAL, x: 126, y: 90, side: 'bottom' },
-    { id: 'd6',  label: 'D6',  type: PIN_TYPE.DIGITAL, x: 140, y: 90, side: 'bottom' },
-    { id: 'd7',  label: 'D7',  type: PIN_TYPE.DIGITAL, x: 154, y: 90, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 14, y: 90, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 28, y: 90, side: 'bottom' },
+    { id: 'vo', label: 'V0', type: PIN_TYPE.SIGNAL, x: 42, y: 90, side: 'bottom' },
+    { id: 'rs', label: 'RS', type: PIN_TYPE.DIGITAL, x: 56, y: 90, side: 'bottom' },
+    { id: 'rw', label: 'R/W', type: PIN_TYPE.DIGITAL, x: 70, y: 90, side: 'bottom' },
+    { id: 'en', label: 'EN', type: PIN_TYPE.DIGITAL, x: 84, y: 90, side: 'bottom' },
+    { id: 'd4', label: 'D4', type: PIN_TYPE.DIGITAL, x: 112, y: 90, side: 'bottom' },
+    { id: 'd5', label: 'D5', type: PIN_TYPE.DIGITAL, x: 126, y: 90, side: 'bottom' },
+    { id: 'd6', label: 'D6', type: PIN_TYPE.DIGITAL, x: 140, y: 90, side: 'bottom' },
+    { id: 'd7', label: 'D7', type: PIN_TYPE.DIGITAL, x: 154, y: 90, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -681,8 +681,8 @@ defComp({
     // 6. Pinout Silkscreen Labels
     const pins = [
       { label: 'GND', x: 14 }, { label: 'VCC', x: 28 }, { label: 'V0', x: 42 },
-      { label: 'RS',  x: 56 }, { label: 'RW',  x: 70 }, { label: 'E',  x: 84 },
-      { label: 'D4',  x: 112 }, { label: 'D5', x: 126 }, { label: 'D6', x: 140 }, { label: 'D7', x: 154 }
+      { label: 'RS', x: 56 }, { label: 'RW', x: 70 }, { label: 'E', x: 84 },
+      { label: 'D4', x: 112 }, { label: 'D5', x: 126 }, { label: 'D6', x: 140 }, { label: 'D7', x: 154 }
     ];
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
@@ -725,8 +725,8 @@ defComp({
   //   { field: 'address', label: 'I2C Addr', type: 'text' },
   // ],
   pins: [
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 50, y: 90, side: 'bottom' },
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 70, y: 90, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 50, y: 90, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 70, y: 90, side: 'bottom' },
     { id: 'sda', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 90, y: 90, side: 'bottom' },
     { id: 'scl', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 110, y: 90, side: 'bottom' },
   ],
@@ -897,8 +897,8 @@ defComp({
   //   { field: 'address', label: 'I2C Addr', type: 'text' },
   // ],
   pins: [
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 36, y: 76, side: 'bottom' },
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 52, y: 76, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 36, y: 76, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 52, y: 76, side: 'bottom' },
     { id: 'scl', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 68, y: 76, side: 'bottom' },
     { id: 'sda', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 84, y: 76, side: 'bottom' },
   ],
@@ -940,7 +940,7 @@ defComp({
 
     // 2. Ultra-Thin Protective Glass Panel Substrate
     const glassX = 1.5, glassY = 2, glassW = 129, glassH = 55;
-    
+
     // Glass Outer Shadow & Bevel
     ctx.fillStyle = '#03070d';
     roundRect(ctx, glassX, glassY, glassW, glassH, 1.5);
@@ -1053,8 +1053,8 @@ defComp({
   height: 80,
   defaultProps: {},
   pins: [
-    { id: 'anode',   label: '+', type: PIN_TYPE.POWER, x: 20, y: 0,  side: 'top' },
-    { id: 'cathode', label: '−', type: PIN_TYPE.GND,   x: 20, y: 80, side: 'bottom' },
+    { id: 'anode', label: '+', type: PIN_TYPE.POWER, x: 20, y: 0, side: 'top' },
+    { id: 'cathode', label: '−', type: PIN_TYPE.GND, x: 20, y: 80, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -1213,14 +1213,14 @@ defComp({
     ctx.restore();
   }
 });
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   WS2812B NeoPixel (Enlarged 2x: 40x48)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+/*-----------------------------Addressable RGB LED (WS2812B)------------------------------ */
+
 defComp({
   id: 'neopixel',
   name: 'WS2812B NeoPixel',
   category: 'Output',
-  icon: 'ðŸ’¡',
+  icon: '',
   desc: 'Addressable RGB LED (WS2812B). Single pixel â€” data pin receives color via NeoPixel library',
   width: 40,   // Scaled from 20 to 40 (2x)
   height: 48,  // Scaled from 24 to 48 (2x)
@@ -1304,7 +1304,7 @@ defComp({
   id: 'neopixel_strip',
   name: 'NeoPixel Strip (8 LED)',
   category: 'Output',
-  icon: 'ðŸŒˆ',
+  icon: '',
   desc: '8-Pixel WS2812B LED strip with enlarged high-intensity diodes.',
   width: 180,
   height: 48,
@@ -1345,7 +1345,7 @@ defComp({
 
     // Solder pads
     ctx.fillStyle = '#d4af37';
-    ctx.fillRect(4, 8, 4, 4);   ctx.fillRect(4, 16, 4, 4);  ctx.fillRect(4, 24, 4, 4);
+    ctx.fillRect(4, 8, 4, 4); ctx.fillRect(4, 16, 4, 4); ctx.fillRect(4, 24, 4, 4);
     ctx.fillRect(172, 8, 4, 4); ctx.fillRect(172, 16, 4, 4); ctx.fillRect(172, 24, 4, 4);
 
     const startX = 16;
@@ -1434,7 +1434,7 @@ defComp({
   id: 'neopixel_ring',
   name: 'NeoPixel Ring (12 LED)',
   category: 'Output',
-  icon: 'â­•',
+  icon: '',
   desc: '12-Pixel WS2812B circular LED ring module with enlarged high-intensity diodes.',
   width: 120,
   height: 128,
@@ -1548,14 +1548,12 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   MAX7219 â€” 8x8 LED Matrix Display (SPI)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/*---------------------MAX7219 8x8 LED matrix display driver (SPI)----------------------- */
 defComp({
   id: 'max7219',
   name: 'MAX7219 LED Matrix',
   category: 'Output',
-  icon: 'ðŸ”²',
+  icon: '',
   desc: 'MAX7219 8x8 LED matrix display driver (SPI). Daisy-chainable for scrolling text and animations',
   width: 80,
   height: 100,
@@ -1624,14 +1622,12 @@ defComp({
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   ILI9341 â€” 2.4" TFT Display (SPI)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-defComp({
+/*-------------------ILI9341 2.4" 240x320 TFT LCD display (SPI)------------------- */
+   defComp({
   id: 'ili9341',
   name: 'ILI9341 TFT Display',
   category: 'Output',
-  icon: 'ðŸ–¥ï¸',
+  icon: '',
   desc: 'ILI9341 2.4" 240x320 TFT LCD display (SPI). Full-color with Adafruit_GFX support',
   width: 160,
   height: 140,
