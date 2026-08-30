@@ -1534,11 +1534,16 @@ _newProject() {
       const scheme = isSecure ? 'https' : 'http';
       const isGitHubPages = fallbackHost.endsWith('.github.io');
       const pagePath = isGitHubPages ? '/remote.html' : '/remote';
+      let basePath = '';
+      if (isGitHubPages) {
+        const segs = window.location.pathname.split('/').filter(Boolean);
+        if (segs.length > 0) basePath = '/' + segs[0];
+      }
       fetch('/api/host').then(r => r.json()).then(info => {
         const host = info.ip || fallbackHost;
         const port = info.port || fallbackPort;
         const portStr = (!port || port === '80' || port === '443') ? '' : `:${port}`;
-        const remoteUrl = `${scheme}://${host}${portStr}${pagePath}?session=${sim.sessionId}`;
+        const remoteUrl = `${scheme}://${host}${portStr}${basePath}${pagePath}?session=${sim.sessionId}`;
         if (urlInput) urlInput.value = remoteUrl;
 
         // Generate QR code
@@ -1557,7 +1562,7 @@ _newProject() {
       }).catch(() => {
         // Fallback to hostname
         const portStr = (!fallbackPort || fallbackPort === '80' || fallbackPort === '443') ? '' : `:${fallbackPort}`;
-        const remoteUrl = `${scheme}://${fallbackHost}${portStr}${pagePath}?session=${sim.sessionId}`;
+        const remoteUrl = `${scheme}://${fallbackHost}${portStr}${basePath}${pagePath}?session=${sim.sessionId}`;
         if (urlInput) urlInput.value = remoteUrl;
         const qrContainer = document.getElementById('remote-qr');
         if (qrContainer && typeof QRCode !== 'undefined') {

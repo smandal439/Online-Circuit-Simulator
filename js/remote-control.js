@@ -119,7 +119,12 @@ class RemoteControl {
       const isGitHubPages = host.endsWith('.github.io');
       const pagePath = isGitHubPages ? '/remote.html' : '/remote';
       const portStr = (!port || port === '80' || port === '443') ? '' : `:${port}`;
-      this._onStateUpdate(`${scheme}://${host}${portStr}${pagePath}?session=${this.sessionId}`, this.sessionId);
+      let basePath = '';
+      if (isGitHubPages) {
+        const segs = window.location.pathname.split('/').filter(Boolean);
+        if (segs.length > 0) basePath = '/' + segs[0];
+      }
+      this._onStateUpdate(`${scheme}://${host}${portStr}${basePath}${pagePath}?session=${this.sessionId}`, this.sessionId);
     }
   }
 
