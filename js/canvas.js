@@ -3331,7 +3331,7 @@ class CircuitCanvas {
         case 'func_gen': {
           const props = inst.props || {};
           const sim = window.ArduinoSim;
-          const t = sim ? (sim.simTime || 0) / 1000 : 0;
+          const t = sim && sim.isRunning ? (sim.simTime || 0) / 1000 : performance.now() / 1000;
 
           const calcWave = (wave, freq, amp, offset, phaseDeg, duty) => {
             const phaseRad = (phaseDeg || 0) * Math.PI / 180;

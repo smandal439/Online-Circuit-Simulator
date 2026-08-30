@@ -71,7 +71,12 @@ defComp({
       inst._buffers = { ch1: [], ch2: [], ch3: [], ch4: [], t: [] };
     }
     const t = sim && typeof sim.time === 'number' ? sim.time : performance.now() / 1000;
-    const readV = (pin) => (sim && typeof sim.getPinVoltage === 'function') ? sim.getPinVoltage(inst, pin) : 0;
+    const avSim = window.ArduinoSim;
+    const readV = (pin) => {
+      if (sim && typeof sim.getPinVoltage === 'function') return sim.getPinVoltage(inst, pin);
+      if (avSim && typeof avSim.getPinVoltage === 'function') return avSim.getPinVoltage(inst, pin);
+      return 0;
+    };
     inst._buffers.ch1.push(readV('ch1_in'));
     inst._buffers.ch2.push(readV('ch2_in'));
     inst._buffers.ch3.push(readV('ch3_in'));
