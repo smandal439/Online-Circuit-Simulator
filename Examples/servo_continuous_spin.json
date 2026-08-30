@@ -1,0 +1,66 @@
+{
+  "id": "servo_continuous_spin",
+  "name": "Continuous Rotation Servo Sweep",
+  "icon": "⚙️",
+  "desc": "Continuous rotation servo sweeps forward, stops, then reverses — no position limits",
+  "tags": ["servo", "actuator", "motor", "pwm"],
+  "code": "int servoPin = 9;\n\nvoid setup() {\n  pinMode(servoPin, OUTPUT);\n}\n\nvoid loop() {\n  // Forward (1500us pulse = stop, >1500 = CW, <1500 = CCW)\n  analogWrite(servoPin, 255);\n  delay(2000);\n\n  // Stop\n  analogWrite(servoPin, 127);\n  delay(1000);\n\n  // Reverse\n  analogWrite(servoPin, 0);\n  delay(2000);\n\n  // Stop\n  analogWrite(servoPin, 127);\n  delay(1000);\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 100,
+        "y": 120,
+        "width": 230,
+        "height": 150,
+        "props": { "label": "UNO" },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "sv1",
+        "type": "servo_continuous",
+        "x": 420,
+        "y": 130,
+        "width": 60,
+        "height": 50,
+        "props": { "speed": 0 },
+        "runtimeState": { "speed": 0 },
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "vcc1",
+        "type": "power_5v",
+        "x": 520,
+        "y": 130,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "gnd1",
+        "type": "power_gnd",
+        "x": 520,
+        "y": 250,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      { "id": "w1", "from": { "instId": "b1", "pinId": "D9" }, "to": { "instId": "sv1", "pinId": "signal" }, "waypoints": [] },
+      { "id": "w2", "from": { "instId": "vcc1", "pinId": "vcc" }, "to": { "instId": "sv1", "pinId": "vcc" }, "waypoints": [] },
+      { "id": "w3", "from": { "instId": "gnd1", "pinId": "gnd" }, "to": { "instId": "sv1", "pinId": "gnd" }, "waypoints": [] },
+      { "id": "w4", "from": { "instId": "gnd1", "pinId": "gnd" }, "to": { "instId": "b1", "pinId": "GND2" }, "waypoints": [] }
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "id": "rotary_encoder_counter",
+  "name": "Rotary Encoder Position Counter",
+  "icon": "🎛️",
+  "desc": "EC11 rotary encoder increments/decrements a counter displayed on Serial",
+  "tags": ["input", "encoder", "rotary", "counter"],
+  "code": "int pinA = 2;\nint pinB = 3;\nint swPin = 4;\nvolatile int counter = 0;\nint lastState = LOW;\n\nvoid setup() {\n  pinMode(pinA, INPUT_PULLUP);\n  pinMode(pinB, INPUT_PULLUP);\n  pinMode(swPin, INPUT_PULLUP);\n  Serial.begin(9600);\n  attachInterrupt(digitalPinToInterrupt(pinA), readEncoder, CHANGE);\n}\n\nvoid readEncoder() {\n  int state = digitalRead(pinB);\n  if (state != lastState) {\n    counter += (state == HIGH) ? 1 : -1;\n  }\n  lastState = state;\n}\n\nvoid loop() {\n  if (digitalRead(swPin) == LOW) {\n    counter = 0;\n    Serial.println(\"Reset!\");\n    delay(200);\n  }\n  Serial.println(counter);\n  delay(100);\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 100,
+        "y": 120,
+        "width": 230,
+        "height": 150,
+        "props": { "label": "UNO" },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "enc1",
+        "type": "rotary_encoder",
+        "x": 420,
+        "y": 130,
+        "width": 40,
+        "height": 50,
+        "props": { "position": 0, "pressed": false },
+        "runtimeState": { "position": 0, "pressed": false },
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "gnd1",
+        "type": "power_gnd",
+        "x": 520,
+        "y": 220,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      { "id": "w1", "from": { "instId": "enc1", "pinId": "A" }, "to": { "instId": "b1", "pinId": "D2" }, "waypoints": [] },
+      { "id": "w2", "from": { "instId": "enc1", "pinId": "B" }, "to": { "instId": "b1", "pinId": "D3" }, "waypoints": [] },
+      { "id": "w3", "from": { "instId": "enc1", "pinId": "SW" }, "to": { "instId": "b1", "pinId": "D4" }, "waypoints": [] },
+      { "id": "w4", "from": { "instId": "enc1", "pinId": "GND" }, "to": { "instId": "gnd1", "pinId": "gnd" }, "waypoints": [] }
+    ]
+  }
+}

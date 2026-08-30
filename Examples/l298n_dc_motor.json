@@ -1,0 +1,99 @@
+{
+  "id": "l298n_dc_motor",
+  "name": "L298N Dual DC Motor Control",
+  "icon": "🔌",
+  "desc": "Control two DC motors with L298N H-bridge driver — direction and PWM speed",
+  "tags": ["motor", "l298n", "actuator", "pwm"],
+  "code": "int in1 = 8;\nint in2 = 9;\nint ena = 10;\nint in3 = 12;\nint in4 = 13;\nint enb = 11;\n\nvoid setup() {\n  pinMode(in1, OUTPUT);\n  pinMode(in2, OUTPUT);\n  pinMode(in3, OUTPUT);\n  pinMode(in4, OUTPUT);\n  pinMode(ena, OUTPUT);\n  pinMode(enb, OUTPUT);\n}\n\nvoid loop() {\n  // Motor A forward\n  digitalWrite(in1, HIGH);\n  digitalWrite(in2, LOW);\n  analogWrite(ena, 200);\n\n  // Motor B reverse\n  digitalWrite(in3, LOW);\n  digitalWrite(in4, HIGH);\n  analogWrite(enb, 150);\n  delay(2000);\n\n  // Stop both\n  digitalWrite(in1, LOW);\n  digitalWrite(in2, LOW);\n  digitalWrite(in3, LOW);\n  digitalWrite(in4, LOW);\n  delay(1000);\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 80,
+        "y": 120,
+        "width": 230,
+        "height": 150,
+        "props": { "label": "UNO" },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "m1",
+        "type": "l298n",
+        "x": 400,
+        "y": 140,
+        "width": 100,
+        "height": 80,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "dc1",
+        "type": "dc_motor",
+        "x": 380,
+        "y": 40,
+        "width": 30,
+        "height": 40,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "dc2",
+        "type": "dc_motor",
+        "x": 490,
+        "y": 40,
+        "width": 30,
+        "height": 40,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "vcc1",
+        "type": "power_5v",
+        "x": 530,
+        "y": 110,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "gnd1",
+        "type": "power_gnd",
+        "x": 530,
+        "y": 260,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      { "id": "w1", "from": { "instId": "b1", "pinId": "D8" }, "to": { "instId": "m1", "pinId": "IN1" }, "waypoints": [] },
+      { "id": "w2", "from": { "instId": "b1", "pinId": "D9" }, "to": { "instId": "m1", "pinId": "IN2" }, "waypoints": [] },
+      { "id": "w3", "from": { "instId": "b1", "pinId": "D10" }, "to": { "instId": "m1", "pinId": "ENA" }, "waypoints": [] },
+      { "id": "w4", "from": { "instId": "b1", "pinId": "D12" }, "to": { "instId": "m1", "pinId": "IN3" }, "waypoints": [] },
+      { "id": "w5", "from": { "instId": "b1", "pinId": "D13" }, "to": { "instId": "m1", "pinId": "IN4" }, "waypoints": [] },
+      { "id": "w6", "from": { "instId": "b1", "pinId": "D11" }, "to": { "instId": "m1", "pinId": "ENB" }, "waypoints": [] },
+      { "id": "w7", "from": { "instId": "m1", "pinId": "OUT1" }, "to": { "instId": "dc1", "pinId": "p1" }, "waypoints": [] },
+      { "id": "w8", "from": { "instId": "m1", "pinId": "OUT2" }, "to": { "instId": "dc1", "pinId": "p2" }, "waypoints": [] },
+      { "id": "w9", "from": { "instId": "m1", "pinId": "OUT3" }, "to": { "instId": "dc2", "pinId": "p1" }, "waypoints": [] },
+      { "id": "w10", "from": { "instId": "m1", "pinId": "OUT4" }, "to": { "instId": "dc2", "pinId": "p2" }, "waypoints": [] },
+      { "id": "w11", "from": { "instId": "vcc1", "pinId": "vcc" }, "to": { "instId": "m1", "pinId": "VS" }, "waypoints": [] },
+      { "id": "w12", "from": { "instId": "gnd1", "pinId": "gnd" }, "to": { "instId": "m1", "pinId": "GND" }, "waypoints": [] },
+      { "id": "w13", "from": { "instId": "gnd1", "pinId": "gnd" }, "to": { "instId": "b1", "pinId": "GND2" }, "waypoints": [] }
+    ]
+  }
+}

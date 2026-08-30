@@ -1144,6 +1144,183 @@ void loop(){
     code: `// Diodes are passive components — no code needed.
 // Anode (+) -> Diode -> Cathode (-) -> Load`,
   },
+
+  /* ── ACTUATORS ── */
+  l298n: {
+    id: 'l298n',
+    name: 'L298N Motor Driver',
+    icon: '🔌',
+    category: 'Actuators',
+    longDesc: 'Dual H-Bridge motor driver module. Controls direction and speed (PWM) for up to two DC motors independently. IN1/IN2 control Motor A direction, IN3/IN4 control Motor B. ENA/ENB accept PWM for speed control.',
+    use: 'Driving DC motors, stepper motors, solenoids. IN1/IN2 set Motor A direction (HIGH/LOW = forward, LOW/HIGH = reverse), ENA sets speed via PWM.',
+    pins: {
+      IN1: { label: 'IN1', type: 'digital', desc: 'Motor A direction input 1.' },
+      IN2: { label: 'IN2', type: 'digital', desc: 'Motor A direction input 2.' },
+      IN3: { label: 'IN3', type: 'digital', desc: 'Motor B direction input 1.' },
+      IN4: { label: 'IN4', type: 'digital', desc: 'Motor B direction input 2.' },
+      ENA: { label: 'ENA', type: 'pwm', desc: 'Motor A speed (PWM) — jumper on for full speed.' },
+      ENB: { label: 'ENB', type: 'pwm', desc: 'Motor B speed (PWM) — jumper on for full speed.' },
+      OUT1: { label: 'M1+', type: 'signal', desc: 'Motor A positive terminal.' },
+      OUT2: { label: 'M1-', type: 'signal', desc: 'Motor A negative terminal.' },
+      OUT3: { label: 'M2+', type: 'signal', desc: 'Motor B positive terminal.' },
+      OUT4: { label: 'M2-', type: 'signal', desc: 'Motor B negative terminal.' },
+      VS: { label: 'VS', type: 'power', desc: 'Motor supply voltage (6–12V). 5V pin output when jumper is on.' },
+      GND: { label: 'GND', type: 'gnd', desc: 'Common ground — must share GND with Arduino.' },
+    },
+    props: {},
+    wiring: 'IN1→D8, IN2→D9, ENA→D10(PWM). VS→external 7–12V. GND→Arduino GND. OUT1/OUT2→Motor A.',
+    code: `void setup(){
+  pinMode(8, OUTPUT);
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+}
+void loop(){
+  digitalWrite(8, HIGH);   // IN1 HIGH
+  digitalWrite(9, LOW);    // IN2 LOW  -> Motor A forward
+  analogWrite(10, 200);    // ENA PWM  -> speed
+  delay(2000);
+  digitalWrite(8, LOW);
+  digitalWrite(9, LOW);    // stop
+  delay(1000);
+}`,
+    exampleId: 'l298n_dc_motor',
+  },
+
+  servo_continuous: {
+    id: 'servo_continuous',
+    name: 'Cont. Rotation Servo',
+    icon: '⚙️',
+    category: 'Actuators',
+    longDesc: 'Continuous rotation servo motor. Unlike standard servos (0–180°), this spins continuously in both directions. A 1500µs pulse stops the motor; above 1500µs spins one direction, below spins the other. Speed is proportional to pulse width deviation.',
+    use: 'Wheels on robots, conveyor belts, panning mechanisms. Use analogWrite or Servo library to set speed.',
+    pins: {
+      signal: { label: 'SIG', type: 'pwm', desc: 'PWM signal — pulse width controls speed and direction.' },
+      vcc: { label: '+', type: 'power', desc: 'Power supply (4.8–6V typical).' },
+      gnd: { label: '−', type: 'gnd', desc: 'Ground.' },
+    },
+    props: {
+      speed: 'Simulated speed: −100% (full CCW) to +100% (full CW), 0% = stopped.',
+    },
+    wiring: 'SIG→D9 (PWM), +→5V (or external 5V), −→GND.',
+    code: `void setup(){
+  pinMode(9, OUTPUT);
+}
+void loop(){
+  analogWrite(9, 255);  // Full CW
+  delay(2000);
+  analogWrite(9, 127);  // Stop (1500us)
+  delay(1000);
+  analogWrite(9, 0);    // Full CCW
+  delay(2000);
+  analogWrite(9, 127);  // Stop
+  delay(1000);
+}`,
+    exampleId: 'servo_continuous_spin',
+  },
+
+  /* ── INPUT ── */
+  rotary_encoder: {
+    id: 'rotary_encoder',
+    name: 'Rotary Encoder EC11',
+    icon: '🎛️',
+    category: 'Input',
+    longDesc: 'EC11 rotary encoder with push button. Provides infinite rotation with quadrature output (A, B channels 90° out of phase). Turns left/right and presses like a button. Use interrupts for accurate position tracking.',
+    use: 'Menu navigation, volume control, parameter adjustment. Use attachInterrupt() on pin A to count edges.',
+    pins: {
+      A: { label: 'A', type: 'digital', desc: 'Channel A — connect to interrupt pin (D2/D3).' },
+      B: { label: 'B', type: 'digital', desc: 'Channel B — connect to digital input.' },
+      SW: { label: 'SW', type: 'digital', desc: 'Push switch — active LOW (internal pull-up).' },
+      GND: { label: 'GND', type: 'gnd', desc: 'Ground.' },
+    },
+    props: {
+      position: 'Rotational position (drag slider to simulate turning).',
+    },
+    wiring: 'A→D2 (interrupt), B→D3, SW→D4 (INPUT_PULLUP), GND→GND.',
+    code: `volatile int counter = 0;
+void setup(){
+  attachInterrupt(digitalPinToInterrupt(2), readEncoder, CHANGE);
+  pinMode(4, INPUT_PULLUP);
+  Serial.begin(9600);
+}
+void readEncoder(){
+  int b = digitalRead(3);
+  counter += (b == HIGH) ? 1 : -1;
+}
+void loop(){
+  if (digitalRead(4) == LOW) counter = 0;
+  Serial.println(counter);
+  delay(100);
+}`,
+    exampleId: 'rotary_encoder_counter',
+  },
+
+  dip_switch: {
+    id: 'dip_switch',
+    name: 'DIP Switch 8-Pos',
+    icon: '🎚️',
+    category: 'Input',
+    longDesc: '8-position DIP switch bank. Each toggle is an independent SPST switch — up = ON (HIGH), down = OFF (LOW). Commonly used for hardware address configuration, mode selection, or binary input.',
+    use: 'Set binary input values, hardware configuration, mode selection. Read each pin with digitalRead().',
+    pins: {
+      '1': { label: '1', type: 'digital', desc: 'Switch 1 — bit 0 of binary value.' },
+      '2': { label: '2', type: 'digital', desc: 'Switch 2 — bit 1 of binary value.' },
+      '3': { label: '3', type: 'digital', desc: 'Switch 3 — bit 2.' },
+      '4': { label: '4', type: 'digital', desc: 'Switch 4 — bit 3.' },
+      '5': { label: '5', type: 'digital', desc: 'Switch 5 — bit 4.' },
+      '6': { label: '6', type: 'digital', desc: 'Switch 6 — bit 5.' },
+      '7': { label: '7', type: 'digital', desc: 'Switch 7 — bit 6.' },
+      '8': { label: '8', type: 'digital', desc: 'Switch 8 — bit 7 (MSB).' },
+    },
+    props: {
+      switches: '8-bit binary value (0–255). Each bit controls one switch position.',
+    },
+    wiring: 'Connect pins 1–8 to Arduino digital inputs D2–D9. Use INPUT_PULLUP for each pin.',
+    code: `int pins[8] = {2,3,4,5,6,7,8,9};
+void setup(){
+  for(int i=0;i<8;i++) pinMode(pins[i], INPUT_PULLUP);
+  Serial.begin(9600);
+}
+void loop(){
+  int v=0;
+  for(int i=0;i<8;i++)
+    if(digitalRead(pins[i])==HIGH) v|=(1<<i);
+  Serial.println(v);
+  delay(200);
+}`,
+    exampleId: 'dip_switch_binary',
+  },
+
+  /* ── SENSORS / COMMUNICATION ── */
+  hc05: {
+    id: 'hc05',
+    name: 'HC-05 Bluetooth',
+    icon: '📶',
+    category: 'Sensors',
+    longDesc: 'HC-05 serial-to-Bluetooth transceiver module (UART). Pairs with a phone/tablet to send and receive data over Bluetooth Serial Port Profile (SPP). Defaults to 9600 baud. TXD→Arduino RX, RXD→Arduino TX (with voltage divider for 3.3V logic).',
+    use: 'Wireless communication with phone apps, remote control, telemetry. Send characters from phone to Arduino via Bluetooth.',
+    pins: {
+      VCC: { label: 'VCC', type: 'power', desc: 'Power supply (3.6–6V).' },
+      GND: { label: 'GND', type: 'gnd', desc: 'Ground.' },
+      TXD: { label: 'TXD', type: 'digital', desc: 'Bluetooth TX → Arduino RX (D0).' },
+      RXD: { label: 'RXD', type: 'digital', desc: 'Bluetooth RX → Arduino TX (D1) via voltage divider.' },
+    },
+    props: {
+      connected: 'Toggle Bluetooth connection status (simulated).',
+    },
+    wiring: 'VCC→5V, GND→GND, TXD→Arduino D0 (RX), RXD→Arduino D1 (TX via 1kΩ/2kΩ divider).',
+    code: `void setup(){
+  Serial.begin(9600);
+  pinMode(13, OUTPUT);
+}
+void loop(){
+  if (Serial.available() > 0) {
+    char c = Serial.read();
+    if (c == '1') { digitalWrite(13, HIGH); Serial.println("LED ON"); }
+    if (c == '0') { digitalWrite(13, LOW);  Serial.println("LED OFF"); }
+  }
+}`,
+    exampleId: 'hc05_bluetooth_led',
+  },
 };
 
 /* ═══════════════════════════════════════════════════════════════
