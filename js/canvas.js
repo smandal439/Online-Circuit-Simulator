@@ -2803,6 +2803,245 @@ class CircuitCanvas {
           break;
         }
 
+        case 'ic_74hc74': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => this._readDigitalInput(inst.id, id);
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+          // Initialize edge detectors
+          if (inst.runtimeState._lastCLK1 === undefined) inst.runtimeState._lastCLK1 = 0;
+          if (inst.runtimeState._lastCLK2 === undefined) inst.runtimeState._lastCLK2 = 0;
+          if (inst.runtimeState.Q1 === undefined) inst.runtimeState.Q1 = 0;
+          if (inst.runtimeState.Q2 === undefined) inst.runtimeState.Q2 = 0;
+          // Flip-flop 1: CLR1, PRE1 are active-LOW
+          const clr1 = read('CLR1');
+          const pre1 = read('PRE1');
+          const clk1 = read('CLK1');
+          const d1 = read('D1');
+          if (clr1 === 0) {
+            inst.runtimeState.Q1 = 0;
+          } else if (pre1 === 0) {
+            inst.runtimeState.Q1 = 1;
+          } else if (clk1 === 1 && inst.runtimeState._lastCLK1 === 0) {
+            inst.runtimeState.Q1 = d1;
+          }
+          inst.runtimeState._lastCLK1 = clk1;
+          write('Q1', inst.runtimeState.Q1);
+          write('Q1n', inst.runtimeState.Q1 ? 0 : 1);
+          // Flip-flop 2
+          const clr2 = read('CLR2');
+          const pre2 = read('PRE2');
+          const clk2 = read('CLK2');
+          const d2 = read('D2');
+          if (clr2 === 0) {
+            inst.runtimeState.Q2 = 0;
+          } else if (pre2 === 0) {
+            inst.runtimeState.Q2 = 1;
+          } else if (clk2 === 1 && inst.runtimeState._lastCLK2 === 0) {
+            inst.runtimeState.Q2 = d2;
+          }
+          inst.runtimeState._lastCLK2 = clk2;
+          write('Q2', inst.runtimeState.Q2);
+          write('Q2n', inst.runtimeState.Q2 ? 0 : 1);
+          break;
+        }
+
+        case 'ic_74hc165': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => this._readDigitalInput(inst.id, id);
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+          if (inst.runtimeState._lastCLK165 === undefined) inst.runtimeState._lastCLK165 = 0;
+          if (inst.runtimeState.bits === undefined) inst.runtimeState.bits = 0;
+          const shld = read('SHLD'); // active LOW = parallel load
+          const clk = read('CLK');
+          const clkInh = read('CLKINH');
+          if (shld === 0) {
+            // Parallel load A-H
+            let val = 0;
+            for (let i = 0; i < 8; i++) {
+              const pinId = ['A','E','F','G','H','Fn','Gn','Hn'][i];
+              if (read(pinId)) val |= (1 << i);
+            }
+            inst.runtimeState.bits = val;
+          } else if (clk === 1 && inst.runtimeState._lastCLK165 === 0 && clkInh === 0) {
+            // Shift left, insert SER at LSB
+            const ser = read('SER');
+            inst.runtimeState.bits = ((inst.runtimeState.bits << 1) | ser) & 0xFF;
+          }
+          inst.runtimeState._lastCLK165 = clk;
+          // Q7 = MSB, Q7n = !MSB
+          write('Q7', (inst.runtimeState.bits >> 7) & 1);
+          write('Q7n', (inst.runtimeState.bits >> 7) & 1 ? 0 : 1);
+          break;
+        }
+
+        case 'ic_74hc193': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => this._readDigitalInput(inst.id, id);
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+          if (inst.runtimeState.count === undefined) inst.runtimeState.count = 0;
+          if (inst.runtimeState._lastCPU === undefined) inst.runtimeState._lastCPU = 0;
+          if (inst.runtimeState._lastCPD === undefined) inst.runtimeState._lastCPD = 0;
+          const mr = read('MR'); // Master Reset (active HIGH)
+          const pl = read('PL'); // Parallel Load (active LOW)
+          const cpu = read('CPU');
+          const cpd = read('CPD');
+          if (mr) {
+            inst.runtimeState.count = 0;
+          } else if (pl === 0) {
+            // Parallel load from A,B,C,D,DD inputs
+            let val = 0;
+            if (read('A'))  val |= 1;
+            if (read('B'))  val |= 2;
+            if (read('C'))  val |= 4;
+            if (read('DD')) val |= 8;
+            inst.runtimeState.count = val & 0xF;
+          } else {
+            if (cpu === 1 && inst.runtimeState._lastCPU === 0) {
+              inst.runtimeState.count = (inst.runtimeState.count + 1) & 0xF;
+            }
+            if (cpd === 1 && inst.runtimeState._lastCPD === 0) {
+              inst.runtimeState.count = (inst.runtimeState.count - 1) & 0xF;
+            }
+          }
+          inst.runtimeState._lastCPU = cpu;
+          inst.runtimeState._lastCPD = cpd;
+          const c = inst.runtimeState.count;
+          write('QA', c & 1); write('QB', (c >> 1) & 1);
+          write('CO', (c === 0xF) ? 0 : 1);  // Carry: low when count=15
+          write('BO', (c === 0x0) ? 0 : 1);  // Borrow: low when count=0
+          write('TC_U', c === 0xF ? 1 : 0);
+          write('TC_D', c === 0x0 ? 1 : 0);
+          break;
+        }
+
+        case 'ic_74hc47': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => this._readDigitalInput(inst.id, id);
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+          // BCD input
+          let bcd = 0;
+          if (read('A')) bcd |= 1;
+          if (read('B')) bcd |= 2;
+          if (read('C')) bcd |= 4;
+          if (read('D')) bcd |= 8;
+          // 7-segment decode table (active LOW: 0=on, 1=off) — segments a-g
+          const segTable = [0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,0x7F,0x6F,0x77,0x7C,0x39,0x5E,0x79,0x71];
+          const lt = read('LT');
+          const bi = read('BI');
+          let segments;
+          if (bi === 0) {
+            segments = 0x00; // blanking
+          } else if (lt === 0) {
+            segments = 0x7F; // lamp test: all on
+          } else {
+            segments = segTable[bcd] || 0x7F;
+          }
+          inst.runtimeState.segments = segments;
+          // Active LOW outputs: write inverted segments
+          write('a', (segments & 0x01) ? 0 : 1);
+          write('b', (segments & 0x02) ? 0 : 1);
+          write('c', (segments & 0x04) ? 0 : 1);
+          write('d', (segments & 0x08) ? 0 : 1);
+          write('e', (segments & 0x10) ? 0 : 1);
+          write('f', (segments & 0x20) ? 0 : 1);
+          write('g', (segments & 0x40) ? 0 : 1);
+          break;
+        }
+
+        case 'ic_74hc148': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          const read = (id) => this._readDigitalInput(inst.id, id);
+          const write = (id, val) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) ps[`pin_${pn}`] = val ? 255 : 0;
+          };
+          const ei = read('EI'); // active LOW enable
+          // Read inputs I0-I7 (active LOW: 0 = active)
+          const inputs = [0,1,2,3,4,5,6,7].map(i => !read(`I${i}`));
+          let activeIdx = -1;
+          for (let i = 7; i >= 0; i--) {
+            if (inputs[i]) { activeIdx = i; break; }
+          }
+          const anyActive = activeIdx >= 0;
+          if (ei === 1) {
+            // Disabled: all outputs HIGH
+            write('A0', 0); write('A1', 0); write('A2', 0);
+            write('GS', 0); write('EO', 0);
+            inst.runtimeState.code = null;
+          } else {
+            if (anyActive) {
+              write('A0', activeIdx & 1);
+              write('A1', (activeIdx >> 1) & 1);
+              write('A2', (activeIdx >> 2) & 1);
+              write('GS', 1); // group select active
+              write('EO', 0);
+            } else {
+              write('A0', 1); write('A1', 1); write('A2', 1);
+              write('GS', 0);
+              write('EO', 1); // no input active
+            }
+            inst.runtimeState.code = anyActive ? activeIdx : null;
+          }
+          break;
+        }
+
+        case 'lm741': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const ps = sim.pinStates;
+          // Read analog voltages at IN+ and IN-
+          const readAnalog = (id) => {
+            const pn = this._getConnectedPinNum(inst.id, id);
+            if (pn !== null) return (ps[`pin_${pn}`] || 0) * 5.0 / 1023.0;
+            // Check for IC output sources
+            const wireTarget = this._getWireTarget(inst.id, id);
+            if (wireTarget) {
+              const other = wireTarget.inst;
+              if (other.type === 'potentiometer' && wireTarget.pinId === 'wiper') {
+                return (other.runtimeState?.wiper || 0) * 5.0 / 1023.0;
+              }
+              if (other.type === 'lm741' && wireTarget.pinId === 'OUT') {
+                return other.runtimeState?.vOut || 0;
+              }
+            }
+            return 0;
+          };
+          const vInp = readAnalog('INP');
+          const vInn = readAnalog('INN');
+          const vccp = 5.0;  // Assume 5V rail
+          const vccn = 0;
+          const diff = vInp - vInn;
+          let vOut = diff * 100000; // High open-loop gain
+          vOut = Math.max(vccn, Math.min(vccp, vOut)); // Clamp to supply rails
+          inst.runtimeState.vOut = vOut;
+          // Write output voltage scaled to pin state (0-1023 for 0-5V)
+          const pn = this._getConnectedPinNum(inst.id, 'OUT');
+          if (pn !== null) ps[`pin_${pn}`] = Math.round((vOut / 5.0) * 1023);
+          break;
+        }
+
         /* ── MPU6050 IMU (I2C sensor — writes accel values to pin states) ── */
         case 'mpu6050': {
           const sim = window.ArduinoSim;
@@ -3391,6 +3630,12 @@ class CircuitCanvas {
         ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
         ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
         ic_74hc245: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'],
+        ic_74hc74: ['Q1', 'Q1n', 'Q2', 'Q2n'],
+        ic_74hc165: ['Q7', 'Q7n'],
+        ic_74hc193: ['QA', 'QB', 'CO', 'BO', 'TC_U', 'TC_D'],
+        ic_74hc47: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+        ic_74hc148: ['A0', 'A1', 'A2', 'GS', 'EO'],
+        lm741: ['OUT'],
       };
       if (IC_OUTPUT_PINS[inst.type] && IC_OUTPUT_PINS[inst.type].includes(current.pinId)) {
         const rawVal = inst.runtimeState && inst.runtimeState[current.pinId] != null
@@ -3493,6 +3738,12 @@ class CircuitCanvas {
       ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
       ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
       ic_74hc245: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'],
+      ic_74hc74: ['Q1', 'Q1n', 'Q2', 'Q2n'],
+      ic_74hc165: ['Q7', 'Q7n'],
+      ic_74hc193: ['QA', 'QB', 'CO', 'BO', 'TC_U', 'TC_D'],
+      ic_74hc47: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      ic_74hc148: ['A0', 'A1', 'A2', 'GS', 'EO'],
+      lm741: ['OUT'],
     };
     if (IC_OUTPUT_PINS[inst.type] && IC_OUTPUT_PINS[inst.type].includes(pinId)) {
       const rawVal = inst.runtimeState && inst.runtimeState[pinId] != null ? inst.runtimeState[pinId] : 0;
@@ -3664,6 +3915,12 @@ class CircuitCanvas {
       ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
       ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
       ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+      ic_74hc74: ['Q1', 'Q1n', 'Q2', 'Q2n'],
+      ic_74hc165: ['Q7', 'Q7n'],
+      ic_74hc193: ['QA', 'QB', 'CO', 'BO', 'TC_U', 'TC_D'],
+      ic_74hc47: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      ic_74hc148: ['A0', 'A1', 'A2', 'GS', 'EO'],
+      lm741: ['OUT'],
     };
     if (IC_OUT[other.type] && IC_OUT[other.type].includes(wireTarget.pinId)) {
       const raw = other.runtimeState && other.runtimeState[wireTarget.pinId] != null
@@ -3710,6 +3967,12 @@ class CircuitCanvas {
       ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
       ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
       ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+      ic_74hc74: ['Q1', 'Q1n', 'Q2', 'Q2n'],
+      ic_74hc165: ['Q7', 'Q7n'],
+      ic_74hc193: ['QA', 'QB', 'CO', 'BO', 'TC_U', 'TC_D'],
+      ic_74hc47: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      ic_74hc148: ['A0', 'A1', 'A2', 'GS', 'EO'],
+      lm741: ['OUT'],
     };
     if (IC_OUT2[other.type] && IC_OUT2[other.type].includes(wireTarget.pinId)) {
       const raw = other.runtimeState && other.runtimeState[wireTarget.pinId] != null
@@ -3736,6 +3999,12 @@ class CircuitCanvas {
       ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
       ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
       ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+      ic_74hc74: ['Q1', 'Q1n', 'Q2', 'Q2n'],
+      ic_74hc165: ['Q7', 'Q7n'],
+      ic_74hc193: ['QA', 'QB', 'CO', 'BO', 'TC_U', 'TC_D'],
+      ic_74hc47: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      ic_74hc148: ['A0', 'A1', 'A2', 'GS', 'EO'],
+      lm741: ['OUT'],
     };
     if (IC_OUT[other.type] && IC_OUT[other.type].includes(wireTarget.pinId)) {
       other.runtimeState[wireTarget.pinId] = val ? 255 : 0;

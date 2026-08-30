@@ -783,3 +783,458 @@ defComp({
     ctx.restore();
   }
 });
+
+/* ══════════════════════════════════════════════════════════
+   74HC74 — Dual D-Type Flip-Flop (14-pin DIP)
+   
+   Real pinout:
+   Pin 1: 1CLR'  Pin 8:  2CLK
+   Pin 2: 1D     Pin 9:  2D
+   Pin 3: 1CLK   Pin 10: 2CLR'
+   Pin 4: 1PRE'  Pin 11: 2PRE'
+   Pin 5: 1Q     Pin 12: 2Q
+   Pin 6: 1Q'    Pin 13: 2Q'
+   Pin 7: GND    Pin 14: VCC
+   ══════════════════════════════════════════════════════════ */
+defComp({
+  id: 'ic_74hc74',
+  name: '74HC74 Dual DFF',
+  category: 'Digital ICs',
+  icon: '⮗',
+  desc: 'Dual D-type flip-flop — positive-edge triggered with preset and clear',
+  width: 119,
+  height: 50,
+  defaultProps: {},
+  pins: [
+    { id: 'CLR1', label: '1',  type: PIN_TYPE.DIGITAL, x:   0, y: 50, side: 'bottom' },
+    { id: 'D1',   label: '2',  type: PIN_TYPE.DIGITAL, x:  17, y: 50, side: 'bottom' },
+    { id: 'CLK1', label: '3',  type: PIN_TYPE.DIGITAL, x:  34, y: 50, side: 'bottom' },
+    { id: 'PRE1', label: '4',  type: PIN_TYPE.DIGITAL, x:  51, y: 50, side: 'bottom' },
+    { id: 'Q1',   label: '5',  type: PIN_TYPE.DIGITAL, x:  68, y: 50, side: 'bottom' },
+    { id: 'Q1n',  label: '6',  type: PIN_TYPE.DIGITAL, x:  85, y: 50, side: 'bottom' },
+    { id: 'GND',  label: '7',  type: PIN_TYPE.GND,     x: 102, y: 50, side: 'bottom' },
+    { id: 'VCC',  label: '14', type: PIN_TYPE.POWER,   x:   0, y:  0, side: 'top' },
+    { id: 'CLK2', label: '13', type: PIN_TYPE.DIGITAL, x:  17, y:  0, side: 'top' },
+    { id: 'Q2n',  label: '12', type: PIN_TYPE.DIGITAL, x:  34, y:  0, side: 'top' },
+    { id: 'Q2',   label: '11', type: PIN_TYPE.DIGITAL, x:  51, y:  0, side: 'top' },
+    { id: 'PRE2', label: '10', type: PIN_TYPE.DIGITAL, x:  68, y:  0, side: 'top' },
+    { id: 'CLR2', label: '9',  type: PIN_TYPE.DIGITAL, x:  85, y:  0, side: 'top' },
+    { id: 'D2',   label: '8',  type: PIN_TYPE.DIGITAL, x: 102, y:  0, side: 'top' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 6; i++) {
+      const px = i * 17;
+      ctx.beginPath(); ctx.moveTo(px, 40); ctx.lineTo(px, 50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, 10); ctx.lineTo(px, 0); ctx.stroke();
+    }
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, -6, 10, 114, 30, 3); ctx.fill();
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-6, 25, 4, -Math.PI / 2, Math.PI / 2);
+    ctx.strokeStyle = '#666'; ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(0, 32, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ccc';
+    ctx.font = 'bold 8px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('74HC74', 51, 23);
+    ctx.font = '5px sans-serif';
+    ctx.fillStyle = '#888';
+    ctx.fillText('Dual D Flip-Flop', 51, 32);
+    // Q output indicators
+    const state = inst.runtimeState || {};
+    const drawQ = (cx, high) => {
+      ctx.fillStyle = high ? '#33ff66' : '#334433';
+      ctx.beginPath(); ctx.arc(cx, 36, 2, 0, Math.PI * 2); ctx.fill();
+      if (high) { ctx.shadowColor = '#33ff66'; ctx.shadowBlur = 3; ctx.beginPath(); ctx.arc(cx, 36, 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
+    };
+    drawQ(68, state.Q1); drawQ(85, state.Q2);
+    if (inst.selected) drawSelectionRect(ctx, -10, -4, 123, 58);
+    ctx.restore();
+  }
+});
+
+/* ══════════════════════════════════════════════════════════
+   74HC165 — 8-Bit Parallel-In Shift Register (16-pin DIP)
+   
+   Real pinout:
+   Pin 1: SH/LD'   Pin 9:  Q7'
+   Pin 2: CLK       Pin 10: SER
+   Pin 3: E         Pin 11: F
+   Pin 4: F         Pin 12: G
+   Pin 5: G         Pin 13: H
+   Pin 6: H         Pin 14: CLK INH
+   Pin 7: Q7        Pin 15: A
+   Pin 8: GND       Pin 16: VCC
+   ══════════════════════════════════════════════════════════ */
+defComp({
+  id: 'ic_74hc165',
+  name: '74HC165 PISO',
+  category: 'Digital ICs',
+  icon: '⮗',
+  desc: '8-bit parallel-in serial-out shift register',
+  width: 136,
+  height: 50,
+  defaultProps: {},
+  pins: [
+    { id: 'SHLD',  label: '1',  type: PIN_TYPE.DIGITAL, x:   0, y: 50, side: 'bottom' },
+    { id: 'CLK',   label: '2',  type: PIN_TYPE.DIGITAL, x:  17, y: 50, side: 'bottom' },
+    { id: 'E',     label: '3',  type: PIN_TYPE.DIGITAL, x:  34, y: 50, side: 'bottom' },
+    { id: 'F',     label: '4',  type: PIN_TYPE.DIGITAL, x:  51, y: 50, side: 'bottom' },
+    { id: 'G',     label: '5',  type: PIN_TYPE.DIGITAL, x:  68, y: 50, side: 'bottom' },
+    { id: 'H',     label: '6',  type: PIN_TYPE.DIGITAL, x:  85, y: 50, side: 'bottom' },
+    { id: 'Q7',    label: '7',  type: PIN_TYPE.DIGITAL, x: 102, y: 50, side: 'bottom' },
+    { id: 'GND',   label: '8',  type: PIN_TYPE.GND,     x: 119, y: 50, side: 'bottom' },
+    { id: 'VCC',   label: '16', type: PIN_TYPE.POWER,   x:   0, y:  0, side: 'top' },
+    { id: 'A',     label: '15', type: PIN_TYPE.DIGITAL, x:  17, y:  0, side: 'top' },
+    { id: 'CLKINH',label: '14', type: PIN_TYPE.DIGITAL, x:  34, y:  0, side: 'top' },
+    { id: 'Hn',    label: '13', type: PIN_TYPE.DIGITAL, x:  51, y:  0, side: 'top' },
+    { id: 'Gn',    label: '12', type: PIN_TYPE.DIGITAL, x:  68, y:  0, side: 'top' },
+    { id: 'Fn',    label: '11', type: PIN_TYPE.DIGITAL, x:  85, y:  0, side: 'top' },
+    { id: 'SER',   label: '10', type: PIN_TYPE.DIGITAL, x: 102, y:  0, side: 'top' },
+    { id: 'Q7n',   label: '9',  type: PIN_TYPE.DIGITAL, x: 119, y:  0, side: 'top' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const state = inst.runtimeState || {};
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 7; i++) {
+      const px = i * 17;
+      ctx.beginPath(); ctx.moveTo(px, 40); ctx.lineTo(px, 50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, 10); ctx.lineTo(px, 0); ctx.stroke();
+    }
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, -6, 10, 131, 30, 3); ctx.fill();
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-6, 25, 4, -Math.PI / 2, Math.PI / 2);
+    ctx.strokeStyle = '#666'; ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(0, 32, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ccc';
+    ctx.font = 'bold 7px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('74HC165', 59, 21);
+    ctx.font = '5px sans-serif';
+    ctx.fillStyle = '#888';
+    ctx.fillText('8-Bit PISO Shift Reg', 59, 28);
+    const bits = state.bits || 0;
+    for (let i = 0; i < 8; i++) {
+      const bitOn = (bits >> (7 - i)) & 1;
+      const lx = 8 + i * 14;
+      ctx.fillStyle = bitOn ? '#33ff66' : '#334433';
+      ctx.beginPath(); ctx.arc(lx, 34, 2, 0, Math.PI * 2); ctx.fill();
+      if (bitOn) { ctx.shadowColor = '#33ff66'; ctx.shadowBlur = 3; ctx.beginPath(); ctx.arc(lx, 34, 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
+    }
+    if (inst.selected) drawSelectionRect(ctx, -10, -4, 140, 58);
+    ctx.restore();
+  }
+});
+
+/* ══════════════════════════════════════════════════════════
+   74HC193 — 4-Bit Synchronous Up/Down Counter (16-pin DIP)
+   
+   Real pinout:
+   Pin 1: CPU (Count Up)    Pin 9:  BO' (Borrow)
+   Pin 2: CPD (Count Down)  Pin 10: CO' (Carry)
+   Pin 3: PL' (Parallel Load) Pin 11: C
+   Pin 4: TCD (TC DOWN)     Pin 12: B
+   Pin 5: TC UP             Pin 13: A
+   Pin 6: Q_A               Pin 14: MR (Master Reset)
+   Pin 7: Q_B               Pin 15: D
+   Pin 8: GND               Pin 16: VCC
+   ══════════════════════════════════════════════════════════ */
+defComp({
+  id: 'ic_74hc193',
+  name: '74HC193 Counter',
+  category: 'Digital ICs',
+  icon: '⮗',
+  desc: '4-bit synchronous up/down counter with parallel load and clear',
+  width: 136,
+  height: 50,
+  defaultProps: {},
+  pins: [
+    { id: 'CPU', label: '1',  type: PIN_TYPE.DIGITAL, x:   0, y: 50, side: 'bottom' },
+    { id: 'CPD', label: '2',  type: PIN_TYPE.DIGITAL, x:  17, y: 50, side: 'bottom' },
+    { id: 'PL',  label: '3',  type: PIN_TYPE.DIGITAL, x:  34, y: 50, side: 'bottom' },
+    { id: 'TC_D',label: '4',  type: PIN_TYPE.DIGITAL, x:  51, y: 50, side: 'bottom' },
+    { id: 'TC_U',label: '5',  type: PIN_TYPE.DIGITAL, x:  68, y: 50, side: 'bottom' },
+    { id: 'QA',  label: '6',  type: PIN_TYPE.DIGITAL, x:  85, y: 50, side: 'bottom' },
+    { id: 'QB',  label: '7',  type: PIN_TYPE.DIGITAL, x: 102, y: 50, side: 'bottom' },
+    { id: 'GND', label: '8',  type: PIN_TYPE.GND,     x: 119, y: 50, side: 'bottom' },
+    { id: 'VCC', label: '16', type: PIN_TYPE.POWER,   x:   0, y:  0, side: 'top' },
+    { id: 'MR',  label: '14', type: PIN_TYPE.DIGITAL, x:  17, y:  0, side: 'top' },
+    { id: 'DD',  label: '15', type: PIN_TYPE.DIGITAL, x:  34, y:  0, side: 'top' },
+    { id: 'A',   label: '13', type: PIN_TYPE.DIGITAL, x:  51, y:  0, side: 'top' },
+    { id: 'B',   label: '12', type: PIN_TYPE.DIGITAL, x:  68, y:  0, side: 'top' },
+    { id: 'C',   label: '11', type: PIN_TYPE.DIGITAL, x:  85, y:  0, side: 'top' },
+    { id: 'CO',  label: '10', type: PIN_TYPE.DIGITAL, x: 102, y:  0, side: 'top' },
+    { id: 'BO',  label: '9',  type: PIN_TYPE.DIGITAL, x: 119, y:  0, side: 'top' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const state = inst.runtimeState || {};
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 7; i++) {
+      const px = i * 17;
+      ctx.beginPath(); ctx.moveTo(px, 40); ctx.lineTo(px, 50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, 10); ctx.lineTo(px, 0); ctx.stroke();
+    }
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, -6, 10, 131, 30, 3); ctx.fill();
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-6, 25, 4, -Math.PI / 2, Math.PI / 2);
+    ctx.strokeStyle = '#666'; ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(0, 32, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ccc';
+    ctx.font = 'bold 7px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('74HC193', 59, 21);
+    ctx.font = '5px sans-serif';
+    ctx.fillStyle = '#888';
+    ctx.fillText('4-Bit Up/Down Counter', 59, 28);
+    // Show current count as hex
+    const count = state.count || 0;
+    ctx.fillStyle = '#33ff66';
+    ctx.font = 'bold 7px JetBrains Mono, monospace';
+    ctx.fillText(count.toString(16).toUpperCase().padStart(2, '0'), 59, 38);
+    // QA-QD output indicators
+    for (let i = 0; i < 4; i++) {
+      const bitOn = (count >> i) & 1;
+      const lx = 85 + i * 14;
+      ctx.fillStyle = bitOn ? '#33ff66' : '#334433';
+      ctx.beginPath(); ctx.arc(lx, 36, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    if (inst.selected) drawSelectionRect(ctx, -10, -4, 140, 58);
+    ctx.restore();
+  }
+});
+
+/* ══════════════════════════════════════════════════════════
+   74HC47 — BCD-to-7-Segment Decoder/Driver (16-pin DIP)
+   
+   Real pinout:
+   Pin 1: A     Pin 9:  e
+   Pin 2: B     Pin 10: d
+   Pin 3: C     Pin 11: g
+   Pin 4: D     Pin 12: c
+   Pin 5: LT'   Pin 13: b
+   Pin 6: RBI'  Pin 14: a
+   Pin 7: BI'/RBO' Pin 15: f
+   Pin 8: GND   Pin 16: VCC
+   ══════════════════════════════════════════════════════════ */
+defComp({
+  id: 'ic_74hc47',
+  name: '74HC47 BCD→7Seg',
+  category: 'Digital ICs',
+  icon: '⮗',
+  desc: 'BCD to 7-segment decoder/driver — active-LOW outputs for common anode displays',
+  width: 136,
+  height: 50,
+  defaultProps: {},
+  pins: [
+    { id: 'A',   label: '1',  type: PIN_TYPE.DIGITAL, x:   0, y: 50, side: 'bottom' },
+    { id: 'B',   label: '2',  type: PIN_TYPE.DIGITAL, x:  17, y: 50, side: 'bottom' },
+    { id: 'C',   label: '3',  type: PIN_TYPE.DIGITAL, x:  34, y: 50, side: 'bottom' },
+    { id: 'D',   label: '4',  type: PIN_TYPE.DIGITAL, x:  51, y: 50, side: 'bottom' },
+    { id: 'LT',  label: '5',  type: PIN_TYPE.DIGITAL, x:  68, y: 50, side: 'bottom' },
+    { id: 'RBI', label: '6',  type: PIN_TYPE.DIGITAL, x:  85, y: 50, side: 'bottom' },
+    { id: 'BI',  label: '7',  type: PIN_TYPE.DIGITAL, x: 102, y: 50, side: 'bottom' },
+    { id: 'GND', label: '8',  type: PIN_TYPE.GND,     x: 119, y: 50, side: 'bottom' },
+    { id: 'VCC', label: '16', type: PIN_TYPE.POWER,   x:   0, y:  0, side: 'top' },
+    { id: 'f',   label: '15', type: PIN_TYPE.DIGITAL, x:  17, y:  0, side: 'top' },
+    { id: 'a',   label: '14', type: PIN_TYPE.DIGITAL, x:  34, y:  0, side: 'top' },
+    { id: 'b',   label: '13', type: PIN_TYPE.DIGITAL, x:  51, y:  0, side: 'top' },
+    { id: 'c',   label: '12', type: PIN_TYPE.DIGITAL, x:  68, y:  0, side: 'top' },
+    { id: 'g',   label: '11', type: PIN_TYPE.DIGITAL, x:  85, y:  0, side: 'top' },
+    { id: 'd',   label: '10', type: PIN_TYPE.DIGITAL, x: 102, y:  0, side: 'top' },
+    { id: 'e',   label: '9',  type: PIN_TYPE.DIGITAL, x: 119, y:  0, side: 'top' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const state = inst.runtimeState || {};
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 7; i++) {
+      const px = i * 17;
+      ctx.beginPath(); ctx.moveTo(px, 40); ctx.lineTo(px, 50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, 10); ctx.lineTo(px, 0); ctx.stroke();
+    }
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, -6, 10, 131, 30, 3); ctx.fill();
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-6, 25, 4, -Math.PI / 2, Math.PI / 2);
+    ctx.strokeStyle = '#666'; ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(0, 32, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ccc';
+    ctx.font = 'bold 7px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('74HC47', 59, 21);
+    ctx.font = '5px sans-serif';
+    ctx.fillStyle = '#888';
+    ctx.fillText('BCD→7-Seg Decoder', 59, 28);
+    // Show decoded digit as hex
+    const segs = state.segments || 0x7F;
+    ctx.fillStyle = '#33ff66';
+    ctx.font = 'bold 7px JetBrains Mono, monospace';
+    ctx.fillText('0x' + (segs & 0xFF).toString(16).toUpperCase().padStart(2, '0'), 59, 38);
+    if (inst.selected) drawSelectionRect(ctx, -10, -4, 140, 58);
+    ctx.restore();
+  }
+});
+
+/* ══════════════════════════════════════════════════════════
+   74HC148 — 8-to-3 Line Priority Encoder (16-pin DIP)
+   
+   Real pinout:
+   Pin 1: EI'     Pin 9:  A0
+   Pin 2: I0      Pin 10: I7
+   Pin 3: I1      Pin 11: I6
+   Pin 4: I2      Pin 12: I5
+   Pin 5: I3      Pin 13: I4
+   Pin 6: A1      Pin 14: GS'
+   Pin 7: A2      Pin 15: EO'
+   Pin 8: GND     Pin 16: VCC
+   ══════════════════════════════════════════════════════════ */
+defComp({
+  id: 'ic_74hc148',
+  name: '74HC148 Encoder',
+  category: 'Digital ICs',
+  icon: '⮗',
+  desc: '8-to-3 line priority encoder — encodes highest-priority active input to 3-bit binary',
+  width: 136,
+  height: 50,
+  defaultProps: {},
+  pins: [
+    { id: 'EI',  label: '1',  type: PIN_TYPE.DIGITAL, x:   0, y: 50, side: 'bottom' },
+    { id: 'I0',  label: '2',  type: PIN_TYPE.DIGITAL, x:  17, y: 50, side: 'bottom' },
+    { id: 'I1',  label: '3',  type: PIN_TYPE.DIGITAL, x:  34, y: 50, side: 'bottom' },
+    { id: 'I2',  label: '4',  type: PIN_TYPE.DIGITAL, x:  51, y: 50, side: 'bottom' },
+    { id: 'I3',  label: '5',  type: PIN_TYPE.DIGITAL, x:  68, y: 50, side: 'bottom' },
+    { id: 'A1',  label: '6',  type: PIN_TYPE.DIGITAL, x:  85, y: 50, side: 'bottom' },
+    { id: 'A2',  label: '7',  type: PIN_TYPE.DIGITAL, x: 102, y: 50, side: 'bottom' },
+    { id: 'GND', label: '8',  type: PIN_TYPE.GND,     x: 119, y: 50, side: 'bottom' },
+    { id: 'VCC', label: '16', type: PIN_TYPE.POWER,   x:   0, y:  0, side: 'top' },
+    { id: 'EO',  label: '15', type: PIN_TYPE.DIGITAL, x:  17, y:  0, side: 'top' },
+    { id: 'GS',  label: '14', type: PIN_TYPE.DIGITAL, x:  34, y:  0, side: 'top' },
+    { id: 'I4',  label: '13', type: PIN_TYPE.DIGITAL, x:  51, y:  0, side: 'top' },
+    { id: 'I5',  label: '12', type: PIN_TYPE.DIGITAL, x:  68, y:  0, side: 'top' },
+    { id: 'I6',  label: '11', type: PIN_TYPE.DIGITAL, x:  85, y:  0, side: 'top' },
+    { id: 'I7',  label: '10', type: PIN_TYPE.DIGITAL, x: 102, y:  0, side: 'top' },
+    { id: 'A0',  label: '9',  type: PIN_TYPE.DIGITAL, x: 119, y:  0, side: 'top' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const state = inst.runtimeState || {};
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 7; i++) {
+      const px = i * 17;
+      ctx.beginPath(); ctx.moveTo(px, 40); ctx.lineTo(px, 50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, 10); ctx.lineTo(px, 0); ctx.stroke();
+    }
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, -6, 10, 131, 30, 3); ctx.fill();
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-6, 25, 4, -Math.PI / 2, Math.PI / 2);
+    ctx.strokeStyle = '#666'; ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(0, 32, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ccc';
+    ctx.font = 'bold 7px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('74HC148', 59, 21);
+    ctx.font = '5px sans-serif';
+    ctx.fillStyle = '#888';
+    ctx.fillText('8-to-3 Priority Encoder', 59, 28);
+    // Show encoded value
+    const code = state.code != null ? state.code : 7;
+    ctx.fillStyle = '#33ff66';
+    ctx.font = 'bold 7px JetBrains Mono, monospace';
+    ctx.fillText('Y=' + code, 59, 38);
+    if (inst.selected) drawSelectionRect(ctx, -10, -4, 140, 58);
+    ctx.restore();
+  }
+});
+
+/* ══════════════════════════════════════════════════════════
+   LM741 — General-Purpose Operational Amplifier (8-pin DIP)
+   
+   Real pinout:
+   Pin 1: OFFSET N1   Pin 5: OFFSET N2
+   Pin 2: IN- (Inverting)   Pin 6: OUT
+   Pin 3: IN+ (Non-Inverting)   Pin 7: VCC+
+   Pin 4: VCC-         Pin 8: NC
+   ══════════════════════════════════════════════════════════ */
+defComp({
+  id: 'lm741',
+  name: 'LM741 Op-Amp',
+  category: 'Digital ICs',
+  icon: '📐',
+  desc: 'LM741 general-purpose operational amplifier — differential input, single-ended output',
+  width: 68,
+  height: 50,
+  defaultProps: {},
+  pins: [
+    { id: 'OFF1', label: '1',  type: PIN_TYPE.DIGITAL, x:  0, y: 50, side: 'bottom' },
+    { id: 'INN',  label: '2',  type: PIN_TYPE.SIGNAL,  x: 17, y: 50, side: 'bottom' },
+    { id: 'INP',  label: '3',  type: PIN_TYPE.SIGNAL,  x: 34, y: 50, side: 'bottom' },
+    { id: 'VCCN', label: '4',  type: PIN_TYPE.GND,     x: 51, y: 50, side: 'bottom' },
+    { id: 'OFF2', label: '5',  type: PIN_TYPE.DIGITAL, x:  0, y:  0, side: 'top' },
+    { id: 'OUT',  label: '6',  type: PIN_TYPE.SIGNAL,  x: 17, y:  0, side: 'top' },
+    { id: 'VCCP', label: '7',  type: PIN_TYPE.POWER,   x: 34, y:  0, side: 'top' },
+    { id: 'NC',   label: '8',  type: PIN_TYPE.DIGITAL, x: 51, y:  0, side: 'top' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const state = inst.runtimeState || {};
+    ctx.save();
+    ctx.translate(x, y);
+    // Pin leads
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+    [0, 17, 34, 51].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 40); ctx.lineTo(px, 50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, 10); ctx.lineTo(px, 0); ctx.stroke();
+    });
+    // DIP body
+    const grad = ctx.createLinearGradient(0, 10, 68, 40);
+    grad.addColorStop(0, '#1a1a1a');
+    grad.addColorStop(1, '#0c0c0c');
+    ctx.fillStyle = grad;
+    roundRect(ctx, -6, 10, 63, 30, 3); ctx.fill();
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.stroke();
+    // Left notch
+    ctx.beginPath(); ctx.arc(-6, 25, 4, -Math.PI / 2, Math.PI / 2);
+    ctx.strokeStyle = '#666'; ctx.stroke();
+    // Pin 1 dot
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(0, 32, 2, 0, Math.PI * 2); ctx.fill();
+    // Label
+    ctx.fillStyle = '#ccc';
+    ctx.font = 'bold 8px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('LM741', 25, 23);
+    ctx.font = '5px sans-serif';
+    ctx.fillStyle = '#888';
+    ctx.fillText('Op-Amp', 25, 32);
+    // Output level indicator
+    const vOut = state.vOut || 0;
+    const intensity = Math.min(1, Math.abs(vOut) / 5);
+    ctx.fillStyle = vOut > 0.1 ? `rgba(51,255,102,${intensity})` : vOut < -0.1 ? `rgba(255,51,51,${intensity})` : '#334433';
+    ctx.beginPath(); ctx.arc(25, 38, 2.5, 0, Math.PI * 2); ctx.fill();
+    if (Math.abs(vOut) > 0.1) { ctx.shadowColor = vOut > 0 ? '#33ff66' : '#ff3333'; ctx.shadowBlur = 4; ctx.beginPath(); ctx.arc(25, 38, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
+    if (inst.selected) drawSelectionRect(ctx, -10, -4, 72, 58);
+    ctx.restore();
+  }
+});
