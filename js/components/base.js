@@ -239,7 +239,7 @@ const COMPONENT_CATALOG = [
       ]
     }
   },
-  { category: 'Instruments', ids: ['multimeter', 'func_gen', 'dso_4ch'] },
+  { category: 'Instruments', ids: ['multimeter', 'func_gen', 'dso_4ch', 'probe'] },
 ];
 
 /* Export */

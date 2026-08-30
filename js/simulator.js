@@ -2562,6 +2562,10 @@ class ArduinoSimulator {
         if (other.type === 'lm741' && target.pinId === 'OUT') {
           return other.runtimeState ? (other.runtimeState.vOut || 0) : 0;
         }
+        // Probe pass-through — return voltage sampled at probe tip
+        if (other.type === 'probe') {
+          return other.runtimeState ? (other.runtimeState.voltage || 0) : 0;
+        }
         // Another DSO reading from a source — recurse
         if (other.type === 'dso_4ch') {
           return 0;

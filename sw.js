@@ -25,6 +25,7 @@ const STATIC_ASSETS = [
   'js/components/power.js',
   'js/components/ics.js',
   'js/components/multimeter.js',
+  'js/components/probe.js',
   'js/components/function_generator.js',
   'js/serial.js',
   'js/output.js',
