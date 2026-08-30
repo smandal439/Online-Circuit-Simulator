@@ -2,9 +2,9 @@
   "id": "rotary_encoder_servo",
   "name": "Rotary Encoder Servo Position Control",
   "icon": "🎛️",
-  "desc": "Turn rotary encoder to set servo angle 0-180° with push button to reset to center",
+  "desc": "Turn rotary encoder to set servo angle 0-180 with push button to reset to center",
   "tags": ["servo", "encoder", "input", "actuator", "position"],
-  "code": "int encA = 2;\nint encB = 3;\nint swPin = 4;\nint servoPin = 9;\nvolatile int counter = 90;\nint lastState = LOW;\n\nvoid setup() {\n  pinMode(encA, INPUT_PULLUP);\n  pinMode(encB, INPUT_PULLUP);\n  pinMode(swPin, INPUT_PULLUP);\n  pinMode(servoPin, OUTPUT);\n  Serial.begin(9600);\n  attachInterrupt(digitalPinToInterrupt(encA), readEncoder, CHANGE);\n}\n\nvoid readEncoder() {\n  int state = digitalRead(encB);\n  if (state != lastState) {\n    counter += (state == HIGH) ? 1 : -1;\n    counter = constrain(counter, 0, 180);\n  }\n  lastState = state;\n}\n\nvoid loop() {\n  if (digitalRead(swPin) == LOW) {\n    counter = 90;\n    delay(200);\n  }\n  int pulse = map(counter, 0, 180, 544, 2400);\n  int duty = map(pulse, 0, 20000, 0, 255);\n  analogWrite(servoPin, duty);\n  Serial.print(\"Angle: \");\n  Serial.println(counter);\n  delay(20);\n}",
+  "code": "int encA = 2;\nint encB = 3;\nint swPin = 4;\nint servoPin = 9;\nint counter = 90;\nint lastA = LOW;\n\nvoid setup() {\n  pinMode(encA, INPUT_PULLUP);\n  pinMode(encB, INPUT_PULLUP);\n  pinMode(swPin, INPUT_PULLUP);\n  pinMode(servoPin, OUTPUT);\n  Serial.begin(9600);\n  lastA = digitalRead(encA);\n}\n\nvoid loop() {\n  int curA = digitalRead(encA);\n  int curB = digitalRead(encB);\n  if (curA != lastA) {\n    if (curA == HIGH) {\n      counter += (curB == HIGH) ? 1 : -1;\n    } else {\n      counter += (curB == HIGH) ? -1 : 1;\n    }\n    counter = constrain(counter, 0, 180);\n    lastA = curA;\n  }\n  if (digitalRead(swPin) == LOW) {\n    counter = 90;\n    delay(200);\n  }\n  int duty = map(counter, 0, 180, 0, 255);\n  analogWrite(servoPin, duty);\n  Serial.print(\"Angle: \");\n  Serial.println(counter);\n  delay(20);\n}",
   "circuit": {
     "components": [
       {
