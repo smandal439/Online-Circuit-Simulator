@@ -1,6 +1,6 @@
 {
   "id": "neopixel_strip_chase",
-  "name": "NeoPixel Strip Color Chase (16 LEDs)",
+  "name": "NeoPixel Strip Color Chase",
   "icon": "🌈",
   "desc": "Two daisy-chained NeoPixel strips with red, white, and green chase animation",
   "tags": ["led", "neopixel", "animation"],
