@@ -2563,7 +2563,7 @@ class ArduinoSimulator {
           return other.runtimeState ? (other.runtimeState.vOut || 0) : 0;
         }
         // Probe pass-through — return voltage sampled at probe tip
-        if (other.type === 'probe') {
+        if (other.type === 'probe' || other.type.startsWith('osc_probe_') || other.type.startsWith('dso_probe_')) {
           return other.runtimeState ? (other.runtimeState.voltage || 0) : 0;
         }
         // Another DSO reading from a source — recurse

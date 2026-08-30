@@ -118,6 +118,13 @@ class Oscilloscope {
     const canvas = window.CircuitCanvas;
     if (!canvas) return null;
     const comps = canvas.components || [];
+    // Check dedicated oscilloscope probes first
+    if (probeId === 'osc_probe_ch1' || probeId === 'osc_probe_ch2') {
+      for (let i = 0; i < comps.length; i++) {
+        if (comps[i].type === probeId) return comps[i];
+      }
+    }
+    // Fallback: generic probe
     for (let i = 0; i < comps.length; i++) {
       if (comps[i].type === 'probe' && comps[i].id === probeId) return comps[i];
     }
@@ -130,8 +137,9 @@ class Oscilloscope {
     const comps = canvas.components || [];
     const probes = [];
     for (let i = 0; i < comps.length; i++) {
-      if (comps[i].type === 'probe') {
-        probes.push({ id: comps[i].id, label: comps[i].id.replace('probe', 'P') });
+      const c = comps[i];
+      if (c.type === 'osc_probe_ch1' || c.type === 'osc_probe_ch2') {
+        probes.push({ id: c.type, label: c.runtimeState?.label || c.type });
       }
     }
     return probes;
@@ -146,7 +154,7 @@ class Oscilloscope {
       probes.forEach(p => {
         const opt = document.createElement('option');
         opt.value = 'probe:' + p.id;
-        opt.textContent = 'Probe ' + p.label;
+        opt.textContent = p.label;
         opt.className = 'probe-option';
         sel.appendChild(opt);
       });

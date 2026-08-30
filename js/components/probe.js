@@ -1,190 +1,159 @@
 'use strict';
 
 /* ═══════════════════════════════════════════════════════
-   Oscilloscope Probe — lightweight signal tap
+   Dedicated Channel Probes — virtual connection to
+   Oscilloscope (CH1-CH2) and DSO (CH1-CH4)
    ═══════════════════════════════════════════════════════ */
 
-defComp({
-  id: 'probe',
-  name: 'Oscilloscope Probe',
-  category: 'Instruments',
-  icon: '🔍',
-  desc: 'Passive probe tap — wire tip to circuit node and out to DSO channel.',
+const PROBE_CHANNEL_COLORS = {
+  osc_ch1: '#73ff00',  // oscilloscope CH1 green
+  osc_ch2: '#ff9800',  // oscilloscope CH2 orange
+  dso_ch1: '#ffe600',  // DSO CH1 yellow
+  dso_ch2: '#00e5ff',  // DSO CH2 cyan
+  dso_ch3: '#ff3090',  // DSO CH3 magenta
+  dso_ch4: '#30ff60',  // DSO CH4 green
+};
 
-  width: 16,
-  height: 36,
+const PROBE_CHANNEL_LABELS = {
+  osc_ch1: 'OSC CH1',
+  osc_ch2: 'OSC CH2',
+  dso_ch1: 'DSO CH1',
+  dso_ch2: 'DSO CH2',
+  dso_ch3: 'DSO CH3',
+  dso_ch4: 'DSO CH4',
+};
 
-  defaultProps: {},
-
-  interactive: [],
-
-  pins: [
-    { id: 'tip', label: 'TIP', type: PIN_TYPE.SIGNAL, x: 8, y: 36, side: 'bottom' },
-    { id: 'out', label: 'OUT', type: PIN_TYPE.SIGNAL, x: 8, y: 0,  side: 'top' },
-  ],
-
-  step(inst, sim) {
-    const avSim = window.ArduinoSim;
-    const readV = (pin) => {
-      if (sim && typeof sim.getPinVoltage === 'function') return sim.getPinVoltage(inst, pin);
-      if (avSim && typeof avSim.getPinVoltage === 'function') return avSim.getPinVoltage(inst, pin);
-      return 0;
-    };
-    inst.runtimeState.voltage = readV('tip');
-
-    // Auto-detect color by walking wires from OUT pin toward DSO
-    if (!inst.runtimeState._lastColorCheck || performance.now() - inst.runtimeState._lastColorCheck > 500) {
-      inst.runtimeState._lastColorCheck = performance.now();
-      inst.runtimeState.color = _probeAutoColor(inst);
+function _defProbe(id, label) {
+  const col = PROBE_CHANNEL_COLORS[id];
+  defComp({
+    id: id,
+    name: label,
+    category: 'Instruments',
+    icon: '🔍',
+    desc: 'Place tip on a circuit pin to probe its signal — auto-routed to ' + label,
+    width: 16,
+    height: 36,
+    defaultProps: {},
+    interactive: [],
+    pins: [
+      { id: 'tip', label: 'TIP', type: PIN_TYPE.SIGNAL, x: 8, y: 36, side: 'bottom' },
+    ],
+    step(inst, sim) {
+      const avSim = window.ArduinoSim;
+      const readV = (pin) => {
+        if (sim && typeof sim.getPinVoltage === 'function') return sim.getPinVoltage(inst, pin);
+        if (avSim && typeof avSim.getPinVoltage === 'function') return avSim.getPinVoltage(inst, pin);
+        return 0;
+      };
+      inst.runtimeState.voltage = readV('tip');
+      inst.runtimeState.color = col;
+      inst.runtimeState.label = label;
+    },
+    draw(ctx, inst) {
+      _drawProbe(ctx, inst, col, label);
     }
-  },
+  });
+}
 
-  draw(ctx, inst) {
-    const { x, y } = inst;
-    const col = (inst.runtimeState && inst.runtimeState.color) || '#ffffff';
+_defProbe('osc_probe_ch1', 'OSC CH1');
+_defProbe('osc_probe_ch2', 'OSC CH2');
+_defProbe('dso_probe_ch1', 'DSO CH1');
+_defProbe('dso_probe_ch2', 'DSO CH2');
+_defProbe('dso_probe_ch3', 'DSO CH3');
+_defProbe('dso_probe_ch4', 'DSO CH4');
 
+/* ── Shared probe drawing ── */
+function _drawProbe(ctx, inst, col, label) {
+  const { x, y } = inst;
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Cable stub going up
+  ctx.strokeStyle = '#3a3e48';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(8, 5); ctx.stroke();
+  ctx.strokeStyle = col;
+  ctx.globalAlpha = 0.6;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(8, 5); ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // BNC connector
+  ctx.fillStyle = '#6a7488';
+  ctx.beginPath(); ctx.arc(8, 5, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(8, 5, 1.5, 0, Math.PI * 2); ctx.fill();
+
+  // Probe body
+  const bodyGrad = ctx.createLinearGradient(2, 0, 14, 0);
+  bodyGrad.addColorStop(0, '#404858');
+  bodyGrad.addColorStop(0.5, '#58606e');
+  bodyGrad.addColorStop(1, '#383e4c');
+  ctx.fillStyle = bodyGrad;
+  ctx.fillRect(2, 8, 12, 16);
+  ctx.strokeStyle = '#1a1e28';
+  ctx.lineWidth = 0.8;
+  ctx.strokeRect(2, 8, 12, 16);
+
+  // Color band
+  ctx.fillStyle = col;
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(3, 13, 10, 3);
+  ctx.globalAlpha = 1;
+
+  // Channel label on body
+  ctx.fillStyle = col;
+  ctx.font = 'bold 5px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(label.replace('OSC ', '').replace('DSO ', ''), 8, 22);
+
+  // Probe tip (triangle)
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.moveTo(5, 24);
+  ctx.lineTo(11, 24);
+  ctx.lineTo(8, 36);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#1a1e28';
+  ctx.lineWidth = 0.6;
+  ctx.stroke();
+
+  // Tip highlight
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.35;
+  ctx.beginPath(); ctx.arc(8, 33, 1.2, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Voltage readout
+  const v = inst.runtimeState ? inst.runtimeState.voltage || 0 : 0;
+  ctx.fillStyle = col;
+  ctx.globalAlpha = 0.9;
+  ctx.font = 'bold 7px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(_probeFmtV(v), 8, -2);
+  ctx.globalAlpha = 1;
+
+  // Signal glow
+  if (Math.abs(v) > 0.01) {
     ctx.save();
-    ctx.translate(x, y);
-
-    // Probe cable (thin line from out to body top)
-    ctx.strokeStyle = col;
-    ctx.globalAlpha = 0.5;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(8, 0);
-    ctx.lineTo(8, 4);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-
-    // Cable bundle (wider behind)
-    ctx.strokeStyle = '#3a3e48';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(8, 0);
-    ctx.lineTo(8, 4);
-    ctx.stroke();
-
-    // Probe body (cylindrical handle)
-    const bodyGrad = ctx.createLinearGradient(2, 0, 14, 0);
-    bodyGrad.addColorStop(0, '#404858');
-    bodyGrad.addColorStop(0.5, '#58606e');
-    bodyGrad.addColorStop(1, '#383e4c');
-    ctx.fillStyle = bodyGrad;
-    ctx.fillRect(2, 4, 12, 18);
-    ctx.strokeStyle = '#1a1e28';
-    ctx.lineWidth = 0.8;
-    ctx.strokeRect(2, 4, 12, 18);
-
-    // Color band on body
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 8;
     ctx.fillStyle = col;
-    ctx.globalAlpha = 0.85;
-    ctx.fillRect(3, 10, 10, 3);
-    ctx.globalAlpha = 1;
-
-    // BNC connector nub at top of body
-    ctx.fillStyle = '#6a7488';
-    ctx.beginPath();
-    ctx.arc(8, 4, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#3a3e48';
-    ctx.lineWidth = 0.6;
-    ctx.stroke();
-
-    // Inner BNC pin
-    ctx.fillStyle = '#c0c8d4';
-    ctx.beginPath();
-    ctx.arc(8, 4, 1.2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Probe tip (pointed triangle)
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.moveTo(5, 22);
-    ctx.lineTo(11, 22);
-    ctx.lineTo(8, 36);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#1a1e28';
-    ctx.lineWidth = 0.6;
-    ctx.stroke();
-
-    // Tip highlight
-    ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = 0.35;
-    ctx.beginPath();
-    ctx.arc(8, 33, 1.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    // Voltage readout
-    const v = inst.runtimeState ? inst.runtimeState.voltage || 0 : 0;
-    ctx.fillStyle = col;
-    ctx.globalAlpha = 0.9;
-    ctx.font = 'bold 7px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(_probeFmtV(v), 8, -2);
-    ctx.globalAlpha = 1;
-
-    // Signal glow
-    if (Math.abs(v) > 0.01) {
-      ctx.save();
-      ctx.shadowColor = col;
-      ctx.shadowBlur = 8;
-      ctx.fillStyle = col;
-      ctx.globalAlpha = 0.45;
-      ctx.beginPath();
-      ctx.arc(8, 33, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    if (inst.selected && typeof drawSelectionRect === 'function') {
-      drawSelectionRect(ctx, -3, -6, 22, 48);
-    }
-
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath(); ctx.arc(8, 33, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
-});
 
-/* ── Helpers ── */
+  if (inst.selected && typeof drawSelectionRect === 'function') {
+    drawSelectionRect(ctx, -3, -6, 22, 48);
+  }
+  ctx.restore();
+}
 
 function _probeFmtV(v) {
   const abs = Math.abs(v);
   if (abs >= 1) return v.toFixed(2) + 'V';
   if (abs >= 0.01) return (v * 1000).toFixed(1) + 'mV';
   return '0.00V';
-}
-
-function _probeAutoColor(inst) {
-  const canvas = window.CircuitCanvas;
-  if (!canvas) return '#ffffff';
-  const wires = canvas.wires || [];
-  const components = canvas.components || [];
-
-  for (const w of wires) {
-    let nextInstId = null, nextPinId = null;
-    if (w.from.instId === inst.id && w.from.pinId === 'out') {
-      nextInstId = w.to.instId; nextPinId = w.to.pinId;
-    } else if (w.to.instId === inst.id && w.to.pinId === 'out') {
-      nextInstId = w.from.instId; nextPinId = w.from.pinId;
-    }
-    if (!nextInstId) continue;
-
-    const target = components.find(c => c.id === nextInstId);
-    if (!target) continue;
-
-    if (target.type === 'dso_4ch') {
-      return _probeCHColor(nextPinId);
-    }
-  }
-  return '#ffffff';
-}
-
-function _probeCHColor(pinId) {
-  return {
-    'ch1_in': '#ffe600',
-    'ch2_in': '#00e5ff',
-    'ch3_in': '#ff3090',
-    'ch4_in': '#30ff60',
-  }[pinId] || '#ffffff';
 }

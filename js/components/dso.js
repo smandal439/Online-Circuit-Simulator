@@ -77,10 +77,18 @@ defComp({
       if (avSim && typeof avSim.getPinVoltage === 'function') return avSim.getPinVoltage(inst, pin);
       return 0;
     };
-    inst._buffers.ch1.push(readV('ch1_in'));
-    inst._buffers.ch2.push(readV('ch2_in'));
-    inst._buffers.ch3.push(readV('ch3_in'));
-    inst._buffers.ch4.push(readV('ch4_in'));
+    const readChannel = (pin, probeType) => {
+      // Wire-based reading (existing)
+      const wireV = readV(pin);
+      if (Math.abs(wireV) > 0.001) return wireV;
+      // Dedicated DSO probe reading (no wire needed)
+      const probe = _dsoFindProbe(probeType);
+      return probe && probe.runtimeState ? (probe.runtimeState.voltage || 0) : 0;
+    };
+    inst._buffers.ch1.push(readChannel('ch1_in', 'dso_probe_ch1'));
+    inst._buffers.ch2.push(readChannel('ch2_in', 'dso_probe_ch2'));
+    inst._buffers.ch3.push(readChannel('ch3_in', 'dso_probe_ch3'));
+    inst._buffers.ch4.push(readChannel('ch4_in', 'dso_probe_ch4'));
     inst._buffers.t.push(t);
     if (inst._buffers.t.length > 500) {
       inst._buffers.ch1.shift(); inst._buffers.ch2.shift();
@@ -509,6 +517,16 @@ defComp({
     ctx.restore();
   }
 });
+
+function _dsoFindProbe(probeType) {
+  const canvas = window.CircuitCanvas;
+  if (!canvas) return null;
+  const comps = canvas.components || [];
+  for (let i = 0; i < comps.length; i++) {
+    if (comps[i].type === probeType) return comps[i];
+  }
+  return null;
+}
 
 function _darken(hex, amt) {
   const r = parseInt(hex.slice(1, 3), 16);
