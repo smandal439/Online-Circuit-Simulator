@@ -2334,9 +2334,38 @@ class CircuitCanvas {
           if (inPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
             pwm = window.ArduinoSim.pinStates[`pin_${inPin}`] || 0;
           }
+          if (pwm === 0) {
+            const target = this._getWireTarget(inst.id, 'in');
+            if (target && target.inst.type === 'l298n') {
+              const l298 = target.inst;
+              const pinId = target.pinId;
+              if (pinId === 'OUT1' || pinId === 'OUT2') pwm = Math.abs((l298.runtimeState?.motorA || 0)) * 255;
+              else if (pinId === 'OUT3' || pinId === 'OUT4') pwm = Math.abs((l298.runtimeState?.motorB || 0)) * 255;
+            }
+          }
           const speed = Math.max(0, Math.min(1, (Number(pwm) || 0) / 255));
           inst.runtimeState.speed = speed;
           inst.runtimeState.rpm = Math.round(speed * 120);
+          break;
+        }
+        case 'l298n': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const readPin = (pid) => {
+            const pn = this._getConnectedPinNum(inst.id, pid);
+            return pn !== null ? (sim.pinStates[`pin_${pn}`] || 0) : 0;
+          };
+          const in1 = readPin('IN1'), in2 = readPin('IN2');
+          const in3 = readPin('IN3'), in4 = readPin('IN4');
+          const ena = readPin('ENA'), enb = readPin('ENB');
+          let motorA = 0;
+          if (in1 && !in2) motorA = ena / 255;
+          else if (!in1 && in2) motorA = -(enb / 255);
+          let motorB = 0;
+          if (in3 && !in4) motorB = ena / 255;
+          else if (!in3 && in4) motorB = -(enb / 255);
+          inst.runtimeState.motorA = motorA;
+          inst.runtimeState.motorB = motorB;
           break;
         }
         case 'ldr': {
