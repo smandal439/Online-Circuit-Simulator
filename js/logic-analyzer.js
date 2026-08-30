@@ -157,49 +157,55 @@ class LogicAnalyzer {
   }
 
   /* ── Measurement calculations ── */
-  _measureBetweenCursors(ch, startT, windowMs) {
+  _measureBetweenCursors(ch) {
     if (this.cursorA === null || this.cursorB === null) return null;
     const data = this.data[ch.pin];
     if (data.length < 2) return null;
 
-    const tA = this.cursorA;
-    const tB = this.cursorB;
+    const tA = Math.min(this.cursorA, this.cursorB);
+    const tB = Math.max(this.cursorA, this.cursorB);
     const dt = tB - tA;
     if (dt <= 0) return null;
 
-    // Count rising edges between cursors to estimate frequency
-    let risingEdges = 0;
-    let firstRisingT = null;
-    let lastRisingT = null;
-    let highTime = 0;
-
+    // Find all edges (rising and falling) across entire dataset
+    const edges = [];
     for (let i = 1; i < data.length; i++) {
       const prev = data[i - 1];
       const curr = data[i];
-      if (curr.t < tA || curr.t > tB) continue;
-
-      // Rising edge: LOW → HIGH
-      if (prev.v === 0 && curr.v === 1) {
-        risingEdges++;
-        if (firstRisingT === null) firstRisingT = curr.t;
-        lastRisingT = curr.t;
+      if (prev.v !== curr.v) {
+        edges.push({ t: curr.t, type: curr.v === 1 ? 'rise' : 'fall' });
       }
     }
+
+    // Filter edges within cursor range (with 1ms tolerance)
+    const margin = 1;
+    const rangeEdges = edges.filter(e => e.t >= tA - margin && e.t <= tB + margin);
+
+    // Count rising edges in range
+    const risingEdges = rangeEdges.filter(e => e.type === 'rise');
 
     // Calculate high time between cursors
+    let highTime = 0;
     for (let i = 1; i < data.length; i++) {
       const prev = data[i - 1];
       const curr = data[i];
-      const clampPrevT = Math.max(prev.t, tA);
-      const clampCurrT = Math.min(curr.t, tB);
-      if (clampCurrT <= clampPrevT) continue;
-      if (prev.v === 1) {
-        highTime += clampCurrT - clampPrevT;
+      const segStart = Math.max(prev.t, tA);
+      const segEnd = Math.min(curr.t, tB);
+      if (segEnd > segStart && prev.v === 1) {
+        highTime += segEnd - segStart;
       }
     }
 
-    const period = risingEdges > 1 ? (lastRisingT - firstRisingT) / (risingEdges - 1) : null;
-    const frequency = period ? 1000 / period : null; // Hz (period is in ms)
+    // Frequency from rising edges
+    let period = null;
+    let frequency = null;
+    if (risingEdges.length >= 2) {
+      const firstT = risingEdges[0].t;
+      const lastT = risingEdges[risingEdges.length - 1].t;
+      period = (lastT - firstT) / (risingEdges.length - 1);
+      frequency = 1000 / period; // Hz (period is in ms)
+    }
+
     const dutyCycle = dt > 0 ? (highTime / dt) * 100 : null;
 
     // State at each cursor
@@ -208,7 +214,7 @@ class LogicAnalyzer {
 
     return {
       dt, period, frequency, dutyCycle,
-      risingEdges, stateA, stateB,
+      risingEdges: risingEdges.length, stateA, stateB,
       voltageA: stateA ? 5 : 0,
       voltageB: stateB ? 5 : 0,
     };
@@ -613,13 +619,13 @@ class LogicAnalyzer {
 
     // Frequency (from first active channel)
     if (activeChannels.length > 0) {
-      const m = this._measureBetweenCursors(activeChannels[0], 0, Infinity);
+      const m = this._measureBetweenCursors(activeChannels[0]);
       if (m && m.frequency !== null) {
         ctx.fillStyle = activeChannels[0].color;
         ctx.font = 'bold 11px JetBrains Mono, monospace';
         ctx.fillText(`f: ${this._fmtFreq(m.frequency)}`, px + 6, y);
         y += 14;
-      } else if (m) {
+      } else {
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
         ctx.font = 'bold 11px JetBrains Mono, monospace';
         ctx.fillText(`f: --`, px + 6, y);
@@ -629,7 +635,7 @@ class LogicAnalyzer {
 
     // Per-channel state at cursors
     activeChannels.forEach((ch) => {
-      const m = this._measureBetweenCursors(ch, 0, Infinity);
+      const m = this._measureBetweenCursors(ch);
       if (!m) return;
       ctx.fillStyle = ch.color;
       ctx.font = '10px JetBrains Mono, monospace';
