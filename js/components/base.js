@@ -239,7 +239,7 @@ const COMPONENT_CATALOG = [
       ]
     }
   },
-  { category: 'Instruments', ids: ['multimeter', 'func_gen', 'dso_4ch', 'osc_probe_ch1', 'osc_probe_ch2', 'dso_probe_ch1', 'dso_probe_ch2', 'dso_probe_ch3', 'dso_probe_ch4'] },
+  { category: 'Instruments', ids: ['multimeter', 'func_gen', 'dso_4ch', 'osc_probe_ch1', 'osc_probe_ch2', 'dso_probe_ch1', 'dso_probe_ch2', 'dso_probe_ch3', 'dso_probe_ch4', 'la_probe_ch1', 'la_probe_ch2', 'la_probe_ch3', 'la_probe_ch4', 'la_probe_ch5', 'la_probe_ch6', 'la_probe_ch7', 'la_probe_ch8'] },
 ];
 
 /* Export */

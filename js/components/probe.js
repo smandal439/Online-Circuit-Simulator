@@ -12,6 +12,14 @@ const PROBE_CHANNEL_COLORS = {
   dso_ch2: '#00e5ff',  // DSO CH2 cyan
   dso_ch3: '#ff3090',  // DSO CH3 magenta
   dso_ch4: '#30ff60',  // DSO CH4 green
+  la_ch1: '#00e5ff',   // LA CH1 cyan
+  la_ch2: '#ff9800',   // LA CH2 orange
+  la_ch3: '#4caf50',   // LA CH3 green
+  la_ch4: '#ff5722',   // LA CH4 red-orange
+  la_ch5: '#ab47bc',   // LA CH5 purple
+  la_ch6: '#ffee33',   // LA CH6 yellow
+  la_ch7: '#e91e63',   // LA CH7 pink
+  la_ch8: '#76ff03',   // LA CH8 lime
 };
 
 const PROBE_CHANNEL_LABELS = {
@@ -61,6 +69,16 @@ _defProbe('dso_probe_ch1', 'DSO CH1');
 _defProbe('dso_probe_ch2', 'DSO CH2');
 _defProbe('dso_probe_ch3', 'DSO CH3');
 _defProbe('dso_probe_ch4', 'DSO CH4');
+
+/* ── Logic Analyzer Probes (8 channels) ── */
+_defProbe('la_probe_ch1', 'LA CH1');
+_defProbe('la_probe_ch2', 'LA CH2');
+_defProbe('la_probe_ch3', 'LA CH3');
+_defProbe('la_probe_ch4', 'LA CH4');
+_defProbe('la_probe_ch5', 'LA CH5');
+_defProbe('la_probe_ch6', 'LA CH6');
+_defProbe('la_probe_ch7', 'LA CH7');
+_defProbe('la_probe_ch8', 'LA CH8');
 
 /* ── Shared probe drawing ── */
 function _drawProbe(ctx, inst, col, label) {

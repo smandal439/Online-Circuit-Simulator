@@ -413,10 +413,11 @@ class App {
         this._refreshCanvasSummary();
         this._triggerAutoSave();
         window.StorageManager?.markDirty();
-        // Refresh oscilloscope probe dropdown options
+        // Refresh instrument probe dropdown options
         if (this.osc) {
           this.osc.refreshProbeOptions(document.getElementById('osc-ch1'), document.getElementById('osc-ch2'));
         }
+        if (this.la) this.la.refreshProbeOptions();
       };
       this.canvas.onPlacingChanged = (placing, type) => {
         document.querySelectorAll('.comp-item').forEach(item => {
@@ -529,9 +530,12 @@ class App {
     };
 
     this.sim.onTick = (simTime, fps) => {
-      // Continuously sample oscilloscope (probes read from components, not just pins)
+      // Continuously sample oscilloscope and logic analyzer (probes read from components, not just pins)
       if (this.osc && !this.osc.paused) {
         this.osc.sample(simTime, this.sim.pinStates);
+      }
+      if (this.la && !this.la.paused) {
+        this.la.sample(simTime, this.sim.pinStates);
       }
       const simTimeEl = document.getElementById('sim-time');
       const fpsEl     = document.getElementById('sim-fps');
@@ -1769,6 +1773,9 @@ _newProject() {
     if (target === 'pins') this._updatePinMonitor();
     if (target === 'oscilloscope' && this.osc) {
       this.osc.refreshProbeOptions(document.getElementById('osc-ch1'), document.getElementById('osc-ch2'));
+    }
+    if (target === 'logic-analyzer' && this.la) {
+      this.la.refreshProbeOptions();
     }
   }
 

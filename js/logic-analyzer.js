@@ -85,13 +85,68 @@ class LogicAnalyzer {
 
     for (const ch of this.channels) {
       if (!ch.enabled) continue;
-      const pinNum = this._pinNameToNum(ch.pin);
-      if (pinNum === null) continue;
-      const raw = states[`pin_${pinNum}`] || 0;
+      const raw = this._readChannel(ch.pin, states);
       const high = raw > 0; // any non-zero value is HIGH
       this.data[ch.pin].push({ t: simTime, v: high ? 1 : 0 });
       if (this.data[ch.pin].length > this.maxSamples) this.data[ch.pin].shift();
     }
+  }
+
+  _readChannel(pinName, pinStates) {
+    if (!pinName || pinName === 'none') return 0;
+
+    // LA probe channel — read from probe component's runtimeState
+    if (pinName.startsWith('probe:')) {
+      const probeId = pinName.slice(6);
+      const probe = this._findProbe(probeId);
+      return probe && probe.runtimeState ? (probe.runtimeState.voltage || 0) : 0;
+    }
+
+    // Standard Arduino pin
+    const pinNum = this._pinNameToNum(pinName);
+    return pinNum !== null ? (pinStates[`pin_${pinNum}`] || 0) : 0;
+  }
+
+  _findProbe(probeId) {
+    const canvas = window.CircuitCanvas;
+    if (!canvas) return null;
+    const comps = canvas.components || [];
+    // Check dedicated LA probes
+    if (probeId.startsWith('la_probe_ch')) {
+      for (let i = 0; i < comps.length; i++) {
+        if (comps[i].type === probeId) return comps[i];
+      }
+    }
+    return null;
+  }
+
+  getProbes() {
+    const canvas = window.CircuitCanvas;
+    if (!canvas) return [];
+    const comps = canvas.components || [];
+    const probes = [];
+    for (let i = 0; i < comps.length; i++) {
+      const c = comps[i];
+      if (c.type && c.type.startsWith('la_probe_ch')) {
+        probes.push({ id: c.type, label: c.runtimeState?.label || c.type });
+      }
+    }
+    return probes;
+  }
+
+  refreshProbeOptions() {
+    const probes = this.getProbes();
+    document.querySelectorAll('.la-ch-select').forEach(sel => {
+      const existing = sel.querySelectorAll('.probe-option');
+      existing.forEach(el => el.remove());
+      probes.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = 'probe:' + p.id;
+        opt.textContent = p.label;
+        opt.className = 'probe-option';
+        sel.appendChild(opt);
+      });
+    });
   }
 
   /* ── Rendering ── */
