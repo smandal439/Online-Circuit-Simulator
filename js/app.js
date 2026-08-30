@@ -529,6 +529,10 @@ class App {
     };
 
     this.sim.onTick = (simTime, fps) => {
+      // Continuously sample oscilloscope (probes read from components, not just pins)
+      if (this.osc && !this.osc.paused) {
+        this.osc.sample(simTime, this.sim.pinStates);
+      }
       const simTimeEl = document.getElementById('sim-time');
       const fpsEl     = document.getElementById('sim-fps');
       if (simTimeEl) simTimeEl.textContent = `⏱ ${(simTime / 1000).toFixed(2)}s`;
