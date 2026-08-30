@@ -2304,6 +2304,17 @@ class CircuitCanvas {
           }
           break;
         }
+        case 'servo_continuous': {
+          const sigPin = this._getConnectedPinNum(inst.id, 'signal');
+          let pwm = 0;
+          if (sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+            pwm = window.ArduinoSim.pinStates[`pin_${sigPin}`] || 0;
+          }
+          const center = 127;
+          const speed = Math.max(-100, Math.min(100, Math.round(((pwm - center) / center) * 100)));
+          inst.runtimeState.speed = speed;
+          break;
+        }
         case 'relay': {
           const sigPin = this._getConnectedPinNum(inst.id, 'sig');
           const sigOn = sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates
