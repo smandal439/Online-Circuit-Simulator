@@ -584,7 +584,7 @@ class LogicAnalyzer {
   _drawMeasurementPanel(ctx, xA, xB, labelW, plotW, H, activeChannels) {
     const panelX = Math.min(xA, xB) + 4;
     const panelW = Math.abs(xB - xA) - 8;
-    if (panelW < 40) return; // too narrow to show panel
+    if (panelW < 60) return; // too narrow to show panel
 
     // Draw shaded region between cursors
     ctx.fillStyle = 'rgba(255,255,255,0.03)';
@@ -592,36 +592,38 @@ class LogicAnalyzer {
 
     // Top measurement panel
     const panelY = 2;
-    const panelH = 14 + activeChannels.length * 11;
-    const px = Math.min(xA, xB) + 2;
+    const panelH = 20 + activeChannels.length * 14;
+    const px = Math.min(xA, xB) + 4;
 
-    ctx.fillStyle = 'rgba(10,14,20,0.85)';
+    ctx.fillStyle = 'rgba(10,14,20,0.9)';
     ctx.fillRect(px, panelY, panelW, panelH);
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
     ctx.strokeRect(px, panelY, panelW, panelH);
 
-    let y = panelY + 10;
-    ctx.font = 'bold 8px JetBrains Mono, monospace';
+    let y = panelY + 15;
     ctx.textAlign = 'left';
 
     // Delta time
     const dt = Math.abs(this.cursorB - this.cursorA);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`ΔT: ${this._fmtTime(dt)}`, px + 4, y);
-    y += 11;
+    ctx.font = 'bold 11px JetBrains Mono, monospace';
+    ctx.fillText(`ΔT: ${this._fmtTime(dt)}`, px + 6, y);
+    y += 14;
 
     // Frequency (from first active channel)
     if (activeChannels.length > 0) {
       const m = this._measureBetweenCursors(activeChannels[0], 0, Infinity);
       if (m && m.frequency !== null) {
         ctx.fillStyle = activeChannels[0].color;
-        ctx.fillText(`f: ${this._fmtFreq(m.frequency)}`, px + 4, y);
-        y += 11;
+        ctx.font = 'bold 11px JetBrains Mono, monospace';
+        ctx.fillText(`f: ${this._fmtFreq(m.frequency)}`, px + 6, y);
+        y += 14;
       } else if (m) {
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.fillText(`f: --`, px + 4, y);
-        y += 11;
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = 'bold 11px JetBrains Mono, monospace';
+        ctx.fillText(`f: --`, px + 6, y);
+        y += 14;
       }
     }
 
@@ -630,11 +632,11 @@ class LogicAnalyzer {
       const m = this._measureBetweenCursors(ch, 0, Infinity);
       if (!m) return;
       ctx.fillStyle = ch.color;
-      ctx.font = '7px JetBrains Mono, monospace';
-      const stateStr = `${m.stateA ? 'H' : 'L'} → ${m.stateB ? 'H' : 'L'}`;
-      const dutyStr = m.dutyCycle !== null ? ` ${m.dutyCycle.toFixed(0)}%` : '';
-      ctx.fillText(`${ch.label}: ${stateStr}${dutyStr}`, px + 4, y);
-      y += 11;
+      ctx.font = '10px JetBrains Mono, monospace';
+      const stateStr = `${m.stateA ? 'HIGH' : 'LOW'} → ${m.stateB ? 'HIGH' : 'LOW'}`;
+      const dutyStr = m.dutyCycle !== null ? `  Duty: ${m.dutyCycle.toFixed(1)}%` : '';
+      ctx.fillText(`${ch.label}: ${stateStr}${dutyStr}`, px + 6, y);
+      y += 14;
     });
   }
 
