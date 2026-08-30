@@ -988,7 +988,7 @@ defComp({
 
       // Outer radial glow bloom
       if (isOn) {
-        const glowRadius = 14;
+        const glowRadius = 20; // Increased glow radius for more pronounced effect
         const glow = ctx.createRadialGradient(cx, cy, lensRadius * 0.5, cx, cy, glowRadius);
         glow.addColorStop(0, `rgba(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)}, 0.45)`);
         glow.addColorStop(0.5, `rgba(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)}, 0.15)`);
