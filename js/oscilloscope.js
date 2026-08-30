@@ -79,8 +79,9 @@ class Oscilloscope {
   /* Called every tick from the app (e.g., every 50ms) */
   sample(simTime, pinStates) {
     if (this.paused) return;
-    if (simTime - this._lastSampleTime < 10) return; // max 100 samples/sec
-    this._lastSampleTime = simTime;
+    const now = performance.now();
+    if (now - this._lastSampleTime < 10) return; // max 100 samples/sec — use real clock
+    this._lastSampleTime = now;
 
     const states = (pinStates && typeof pinStates === 'object') ? pinStates : {};
 

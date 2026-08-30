@@ -78,8 +78,9 @@ class LogicAnalyzer {
   /* ── Called every simulation tick ── */
   sample(simTime, pinStates) {
     if (this.paused) return;
-    if (simTime - this._lastSampleTime < 10) return;
-    this._lastSampleTime = simTime;
+    const now = performance.now();
+    if (now - this._lastSampleTime < 10) return; // use real clock for throttle
+    this._lastSampleTime = now;
 
     const states = (pinStates && typeof pinStates === 'object') ? pinStates : {};
 
