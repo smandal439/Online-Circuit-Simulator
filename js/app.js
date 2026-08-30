@@ -1542,7 +1542,7 @@ _newProject() {
       fetch('/api/host').then(r => r.json()).then(info => {
         const host = info.ip || fallbackHost;
         const port = info.port || fallbackPort;
-        const portStr = (!port || port === '80' || port === '443') ? '' : `:${port}`;
+        const portStr = (isGitHubPages || !port || port === '80' || port === '443') ? '' : `:${port}`;
         const remoteUrl = `${scheme}://${host}${portStr}${basePath}${pagePath}?session=${sim.sessionId}`;
         if (urlInput) urlInput.value = remoteUrl;
 
@@ -1561,7 +1561,7 @@ _newProject() {
         }
       }).catch(() => {
         // Fallback to hostname
-        const portStr = (!fallbackPort || fallbackPort === '80' || fallbackPort === '443') ? '' : `:${fallbackPort}`;
+        const portStr = (isGitHubPages || !fallbackPort || fallbackPort === '80' || fallbackPort === '443') ? '' : `:${fallbackPort}`;
         const remoteUrl = `${scheme}://${fallbackHost}${portStr}${basePath}${pagePath}?session=${sim.sessionId}`;
         if (urlInput) urlInput.value = remoteUrl;
         const qrContainer = document.getElementById('remote-qr');

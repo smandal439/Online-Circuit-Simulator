@@ -118,7 +118,7 @@ class RemoteControl {
       const scheme = isSecure ? 'https' : 'http';
       const isGitHubPages = host.endsWith('.github.io');
       const pagePath = isGitHubPages ? '/remote.html' : '/remote';
-      const portStr = (!port || port === '80' || port === '443') ? '' : `:${port}`;
+      const portStr = (isGitHubPages || !port || port === '80' || port === '443') ? '' : `:${port}`;
       let basePath = '';
       if (isGitHubPages) {
         const segs = window.location.pathname.split('/').filter(Boolean);
