@@ -858,7 +858,7 @@ void loop() {
 
   /* ── NEOPIXEL EXTENSIONS ── */
   neopixel_strip: {
-    id: 'neopixel_strip',
+    id: 'neopixel_strip_chase',
     name: 'NeoPixel Strip (8 LED)',
     icon: '🌈',
     category: 'Output',
@@ -878,7 +878,7 @@ void loop() {
     code: `#include <Adafruit_NeoPixel.h>
 
 #define PIN        6
-#define NUM_LEDS   8
+#define NUM_LEDS   16
 
 Adafruit_NeoPixel strip(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -896,7 +896,7 @@ void loop() {
     strip.setPixelColor(i, strip.Color(0, 0, 0));    // off
   }
 }`,
-    exampleId: 'neopixel_color_cycle',
+    exampleId: 'neopixel_strip_chase',
   },
 
   neopixel_ring: {
@@ -1070,6 +1070,7 @@ void loop(){
   Serial.println(d == LOW ? "Obstacle!" : "Clear");
   delay(100);
 }`,
+    exampleId: 'ir_obstacle_led',
   },
 
   flex_sensor: {
