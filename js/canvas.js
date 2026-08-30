@@ -719,8 +719,8 @@ class CircuitCanvas {
       const lx = wx - inst.x;
       const ly = wy - inst.y;
       for (let i = 0; i < 8; i++) {
-        const sx = 6 + i * 8;
-        if (lx >= sx - 4 && lx <= sx + 6 && ly >= 4 && ly <= 22) {
+        const sx = 12 + i * 16;
+        if (lx >= sx - 8 && lx <= sx + 12 && ly >= 6 && ly <= 42) {
           return { inst, bit: i };
         }
       }
@@ -2328,12 +2328,12 @@ class CircuitCanvas {
           break;
         }
         case 'servo': {
-          const sigNet = this._tracePinNet(inst.id, 'signal');
-          const source = sigNet.sources[0];
-          if (source) {
-            const pwm = source.rawVal || 0;
-            inst.runtimeState.angle = Math.round((pwm / 255) * 180);
+          const sigPin = this._getConnectedPinNum(inst.id, 'signal');
+          let pwm = 0;
+          if (sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+            pwm = window.ArduinoSim.pinStates[`pin_${sigPin}`] || 0;
           }
+          inst.runtimeState.angle = Math.round((pwm / 255) * 180);
           break;
         }
         case 'servo_continuous': {
