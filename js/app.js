@@ -413,6 +413,10 @@ class App {
         this._refreshCanvasSummary();
         this._triggerAutoSave();
         window.StorageManager?.markDirty();
+        // Refresh oscilloscope probe dropdown options
+        if (this.osc) {
+          this.osc.refreshProbeOptions(document.getElementById('osc-ch1'), document.getElementById('osc-ch2'));
+        }
       };
       this.canvas.onPlacingChanged = (placing, type) => {
         document.querySelectorAll('.comp-item').forEach(item => {
@@ -1759,6 +1763,9 @@ _newProject() {
     document.querySelectorAll('.btm-tab').forEach(tab => tab.classList.toggle('active', tab === button));
     document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.toggle('active', pane.id === `pane-${target}`));
     if (target === 'pins') this._updatePinMonitor();
+    if (target === 'oscilloscope' && this.osc) {
+      this.osc.refreshProbeOptions(document.getElementById('osc-ch1'), document.getElementById('osc-ch2'));
+    }
   }
 
   /* ══════════════════════ VIEW FOCUS MODES ══════════════════════ */
