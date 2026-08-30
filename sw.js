@@ -24,7 +24,6 @@ const STATIC_ASSETS = [
   'js/components/passive.js',
   'js/components/power.js',
   'js/components/ics.js',
-  'js/components/new_components.js',
   'js/components/multimeter.js',
   'js/components/function_generator.js',
   'js/serial.js',
