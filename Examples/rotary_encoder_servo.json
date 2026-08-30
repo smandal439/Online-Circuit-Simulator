@@ -1,0 +1,82 @@
+{
+  "id": "rotary_encoder_servo",
+  "name": "Rotary Encoder Servo Position Control",
+  "icon": "🎛️",
+  "desc": "Turn rotary encoder to set servo angle 0-180° with push button to reset to center",
+  "tags": ["servo", "encoder", "input", "actuator", "position"],
+  "code": "int encA = 2;\nint encB = 3;\nint swPin = 4;\nint servoPin = 9;\nvolatile int counter = 90;\nint lastState = LOW;\n\nvoid setup() {\n  pinMode(encA, INPUT_PULLUP);\n  pinMode(encB, INPUT_PULLUP);\n  pinMode(swPin, INPUT_PULLUP);\n  pinMode(servoPin, OUTPUT);\n  Serial.begin(9600);\n  attachInterrupt(digitalPinToInterrupt(encA), readEncoder, CHANGE);\n}\n\nvoid readEncoder() {\n  int state = digitalRead(encB);\n  if (state != lastState) {\n    counter += (state == HIGH) ? 1 : -1;\n    counter = constrain(counter, 0, 180);\n  }\n  lastState = state;\n}\n\nvoid loop() {\n  if (digitalRead(swPin) == LOW) {\n    counter = 90;\n    delay(200);\n  }\n  int pulse = map(counter, 0, 180, 544, 2400);\n  int duty = map(pulse, 0, 20000, 0, 255);\n  analogWrite(servoPin, duty);\n  Serial.print(\"Angle: \");\n  Serial.println(counter);\n  delay(20);\n}",
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 80,
+        "y": 120,
+        "width": 230,
+        "height": 150,
+        "props": { "label": "UNO" },
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "enc1",
+        "type": "rotary_encoder",
+        "x": 420,
+        "y": 100,
+        "width": 40,
+        "height": 50,
+        "props": { "position": 90, "pressed": false },
+        "runtimeState": { "position": 90, "pressed": false },
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "sv1",
+        "type": "servo",
+        "x": 420,
+        "y": 230,
+        "width": 60,
+        "height": 50,
+        "props": { "angle": 90 },
+        "runtimeState": { "angle": 90 },
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "vcc1",
+        "type": "power_5v",
+        "x": 530,
+        "y": 220,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "gnd1",
+        "type": "power_gnd",
+        "x": 530,
+        "y": 350,
+        "width": 30,
+        "height": 30,
+        "props": {},
+        "runtimeState": {},
+        "selected": false,
+        "rotation": 0
+      }
+    ],
+    "wires": [
+      { "id": "w1", "from": { "instId": "enc1", "pinId": "A" }, "to": { "instId": "b1", "pinId": "D2" }, "waypoints": [] },
+      { "id": "w2", "from": { "instId": "enc1", "pinId": "B" }, "to": { "instId": "b1", "pinId": "D3" }, "waypoints": [] },
+      { "id": "w3", "from": { "instId": "enc1", "pinId": "SW" }, "to": { "instId": "b1", "pinId": "D4" }, "waypoints": [] },
+      { "id": "w4", "from": { "instId": "enc1", "pinId": "GND" }, "to": { "instId": "gnd1", "pinId": "gnd" }, "waypoints": [] },
+      { "id": "w5", "from": { "instId": "b1", "pinId": "D9" }, "to": { "instId": "sv1", "pinId": "signal" }, "waypoints": [] },
+      { "id": "w6", "from": { "instId": "vcc1", "pinId": "vcc" }, "to": { "instId": "sv1", "pinId": "vcc" }, "waypoints": [] },
+      { "id": "w7", "from": { "instId": "gnd1", "pinId": "gnd" }, "to": { "instId": "sv1", "pinId": "gnd" }, "waypoints": [] },
+      { "id": "w8", "from": { "instId": "gnd1", "pinId": "gnd" }, "to": { "instId": "b1", "pinId": "GND2" }, "waypoints": [] }
+    ]
+  }
+}
