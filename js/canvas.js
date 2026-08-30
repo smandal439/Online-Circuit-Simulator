@@ -2315,6 +2315,18 @@ class CircuitCanvas {
           inst.runtimeState.speed = speed;
           break;
         }
+        case 'dip_switch': {
+          const sim = window.ArduinoSim;
+          if (!sim || !sim.pinStates) break;
+          const switches = inst.runtimeState?.switches ?? inst.props.switches ?? 0;
+          for (let i = 0; i < 8; i++) {
+            const pinNum = this._getConnectedPinNum(inst.id, String(i + 1));
+            if (pinNum !== null) {
+              sim.pinStates[`pin_${pinNum}`] = (switches >> i) & 1 ? 1 : 0;
+            }
+          }
+          break;
+        }
         case 'relay': {
           const sigPin = this._getConnectedPinNum(inst.id, 'sig');
           const sigOn = sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates
