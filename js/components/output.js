@@ -1213,3 +1213,518 @@ defComp({
     ctx.restore();
   }
 });
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   WS2812B NeoPixel (Enlarged 2x: 40x48)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+defComp({
+  id: 'neopixel',
+  name: 'WS2812B NeoPixel',
+  category: 'Output',
+  icon: 'ðŸ’¡',
+  desc: 'Addressable RGB LED (WS2812B). Single pixel â€” data pin receives color via NeoPixel library',
+  width: 40,   // Scaled from 20 to 40 (2x)
+  height: 48,  // Scaled from 24 to 48 (2x)
+  defaultProps: { r: 0, g: 0, b: 0, brightness: 255 },
+  // interactive: [
+  //   { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
+  // ],
+  pins: [
+    // Scaled pin offsets by 2x
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 48, side: 'bottom' },
+    { id: 'DOUT', label: 'DOut', type: PIN_TYPE.DIGITAL, x: 20, y: 48, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 28, y: 48, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const rs = inst.runtimeState || {};
+    const r = rs.r ?? inst.props.r ?? 0;
+    const g = rs.g ?? inst.props.g ?? 0;
+    const b = rs.b ?? inst.props.b ?? 0;
+    const brightness = rs.brightness ?? inst.props.brightness ?? 255;
+    const scale = 2; // Scale factor
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale); // Scales all vector drawing, fonts, and borders
+
+    // LED body
+    const rgb = `rgb(${Math.round(r * brightness / 255)}, ${Math.round(g * brightness / 255)}, ${Math.round(b * brightness / 255)})`;
+    const isOn = r > 0 || g > 0 || b > 0;
+
+    if (isOn) {
+      // Glow effect
+      ctx.shadowColor = rgb;
+      ctx.shadowBlur = 12;
+    }
+
+    ctx.fillStyle = isOn ? rgb : '#222';
+    roundRect(ctx, 2, 2, 16, 16, 3);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // LED lens highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath();
+    ctx.arc(10, 9, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    roundRect(ctx, 2, 2, 16, 16, 3);
+    ctx.stroke();
+
+    // Color label
+    ctx.fillStyle = '#aaa';
+    ctx.font = '4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`R${r}`, 6, 22);
+    ctx.fillText(`G${g}`, 10, 22);
+    ctx.fillText(`B${b}`, 14, 22);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(6, 18); ctx.lineTo(6, 24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10, 18); ctx.lineTo(10, 24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14, 18); ctx.lineTo(14, 24); ctx.stroke();
+
+    // Uses base dimensions because the canvas context is already scaled
+    if (inst.selected) drawSelectionRect(ctx, 0, 0, 20, 24);
+    ctx.restore();
+  }
+});
+
+// ==========================================
+// 1. NEOPIXEL STRIP (8 LEDs - ENLARGED & BRIGHTENED)
+// ==========================================
+defComp({
+  id: 'neopixel_strip',
+  name: 'NeoPixel Strip (8 LED)',
+  category: 'Output',
+  icon: 'ðŸŒˆ',
+  desc: '8-Pixel WS2812B LED strip with enlarged high-intensity diodes.',
+  width: 180,
+  height: 48,
+  defaultProps: { numPixels: 8, r: 0, g: 0, b: 0, brightness: 255 },
+  // interactive: [
+  //   { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
+  // ],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 16, y: 48, side: 'bottom' },
+    { id: 'DIN', label: 'DIN', type: PIN_TYPE.DIGITAL, x: 32, y: 48, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 48, y: 48, side: 'bottom' },
+    { id: 'DOUT', label: 'DOut', type: PIN_TYPE.DIGITAL, x: 164, y: 48, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const rs = inst.runtimeState || {};
+    const brightness = rs.brightness ?? inst.props.brightness ?? 255;
+    const numPixels = inst.props.numPixels || 8;
+
+    const pixelColors = rs.pixels || Array(numPixels).fill({
+      r: rs.r ?? inst.props.r ?? 0,
+      g: rs.g ?? inst.props.g ?? 0,
+      b: rs.b ?? inst.props.b ?? 0,
+    });
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB Substrate
+    ctx.fillStyle = '#1e1e1e';
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, 0, 4, 180, 28, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    // Solder pads
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(4, 8, 4, 4);   ctx.fillRect(4, 16, 4, 4);  ctx.fillRect(4, 24, 4, 4);
+    ctx.fillRect(172, 8, 4, 4); ctx.fillRect(172, 16, 4, 4); ctx.fillRect(172, 24, 4, 4);
+
+    const startX = 16;
+    const stepX = 18.5;
+
+    for (let i = 0; i < numPixels; i++) {
+      const px = startX + i * stepX;
+      const py = 8.5;
+      const pix = pixelColors[i] || { r: 0, g: 0, b: 0 };
+      const pr = pix.r ?? 0;
+      const pg = pix.g ?? 0;
+      const pb = pix.b ?? 0;
+
+      const rgb = `rgb(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)})`;
+      const isOn = pr > 0 || pg > 0 || pb > 0;
+
+      // Enlarged LED Housing (15x18)
+      ctx.fillStyle = '#2a2a2a';
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1;
+      ctx.fillRect(px, py, 15, 18);
+      ctx.strokeRect(px, py, 15, 18);
+
+      const cx = px + 7.5;
+      const cy = py + 9;
+      const lensRadius = 6.5; // Enlarged lens radius (was 5)
+
+      // Emissive Chip Surface & Multi-layer Glow
+      ctx.save();
+      if (isOn) {
+        // High-intensity bloom
+        ctx.shadowColor = rgb;
+        ctx.shadowBlur = 20; // Increased blur for brighter glow
+      }
+      ctx.fillStyle = isOn ? rgb : '#111';
+      ctx.beginPath();
+      ctx.arc(cx, cy, lensRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Bright die core highlight when active
+      if (isOn) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Outer radial glow bloom
+      if (isOn) {
+        const glowRadius = 20; // Increased glow radius for more pronounced effect
+        const glow = ctx.createRadialGradient(cx, cy, lensRadius * 0.5, cx, cy, glowRadius);
+        glow.addColorStop(0, `rgba(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)}, 0.45)`);
+        glow.addColorStop(0.5, `rgba(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)}, 0.15)`);
+        glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Lens specular highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.beginPath();
+      ctx.arc(cx - 2.2, cy - 2.2, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Direction arrow
+    ctx.fillStyle = '#555';
+    ctx.beginPath();
+    ctx.moveTo(88, 30); ctx.lineTo(94, 30); ctx.lineTo(94, 28);
+    ctx.lineTo(98, 31); ctx.lineTo(94, 34); ctx.lineTo(94, 32); ctx.lineTo(88, 32);
+    ctx.closePath();
+    ctx.fill();
+
+    if (inst.selected) drawSelectionRect(ctx, 0, 0, 180, 48);
+    ctx.restore();
+  }
+});
+
+// ==========================================
+// 2. NEOPIXEL RING (12 LEDs - ENLARGED & BRIGHTENED)
+// ==========================================
+defComp({
+  id: 'neopixel_ring',
+  name: 'NeoPixel Ring (12 LED)',
+  category: 'Output',
+  icon: 'â­•',
+  desc: '12-Pixel WS2812B circular LED ring module with enlarged high-intensity diodes.',
+  width: 120,
+  height: 128,
+  defaultProps: { numPixels: 12, r: 0, g: 0, b: 0, brightness: 255 },
+  // interactive: [
+  //   { field: 'r', label: 'R', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'g', label: 'G', min: 0, max: 255, step: 1, unit: '' },
+  //   { field: 'b', label: 'B', min: 0, max: 255, step: 1, unit: '' },
+  // ],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 36, y: 128, side: 'bottom' },
+    { id: 'DIN', label: 'DIN', type: PIN_TYPE.DIGITAL, x: 52, y: 128, side: 'bottom' },
+    { id: 'DOUT', label: 'DOut', type: PIN_TYPE.DIGITAL, x: 68, y: 128, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 84, y: 128, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const rs = inst.runtimeState || {};
+    const brightness = rs.brightness ?? inst.props.brightness ?? 255;
+    const numPixels = inst.props.numPixels || 12;
+
+    const pixelColors = rs.pixels || Array(numPixels).fill({
+      r: rs.r ?? inst.props.r ?? 0,
+      g: rs.g ?? inst.props.g ?? 0,
+      b: rs.b ?? inst.props.b ?? 0,
+    });
+
+    const centerX = 60;
+    const centerY = 60;
+    const outerRadius = 56;
+    const innerRadius = 34;
+    const ringRadius = (outerRadius + innerRadius) / 2;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB Annular Ring Base
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2, false);
+    ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2, true);
+    ctx.fillStyle = '#1e1e1e';
+    ctx.fill();
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Port labels
+    ctx.fillStyle = '#666';
+    ctx.font = '7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('IN', centerX - 12, centerY + 28);
+    ctx.fillText('OUT', centerX + 12, centerY + 28);
+
+    const lensRadius = 5.5; // Enlarged lens radius (was 4)
+
+    for (let i = 0; i < numPixels; i++) {
+      const angle = (i * 2 * Math.PI / numPixels) - (Math.PI / 2);
+      const px = centerX + ringRadius * Math.cos(angle);
+      const py = centerY + ringRadius * Math.sin(angle);
+
+      const pix = pixelColors[i] || { r: 0, g: 0, b: 0 };
+      const pr = pix.r ?? 0;
+      const pg = pix.g ?? 0;
+      const pb = pix.b ?? 0;
+
+      const rgb = `rgb(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)})`;
+      const isOn = pr > 0 || pg > 0 || pb > 0;
+
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(angle + Math.PI / 2);
+
+      // Enlarged Package Housing (14x14, was 12x12)
+      ctx.fillStyle = '#2b2b2b';
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 0.8;
+      ctx.fillRect(-7, -7, 14, 14);
+      ctx.strokeRect(-7, -7, 14, 14);
+
+      // Emissive LED Lens & Enhanced Glow
+      ctx.save();
+      if (isOn) {
+        ctx.shadowColor = rgb;
+        ctx.shadowBlur = 18; // Increased bloom intensity (was 8)
+      }
+      ctx.fillStyle = isOn ? rgb : '#111';
+      ctx.beginPath();
+      ctx.arc(0, 0, lensRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Bright die core highlight when active
+      if (isOn) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Specular highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath();
+      ctx.arc(-1.8, -1.8, 2.0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    if (inst.selected) drawSelectionRect(ctx, 0, 0, 120, 128);
+    ctx.restore();
+  }
+});
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   MAX7219 â€” 8x8 LED Matrix Display (SPI)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+defComp({
+  id: 'max7219',
+  name: 'MAX7219 LED Matrix',
+  category: 'Output',
+  icon: 'ðŸ”²',
+  desc: 'MAX7219 8x8 LED matrix display driver (SPI). Daisy-chainable for scrolling text and animations',
+  width: 80,
+  height: 100,
+  defaultProps: { pattern: 0 },
+  interactive: [],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 100, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 22, y: 100, side: 'bottom' },
+    { id: 'DIN', label: 'DIN', type: PIN_TYPE.DIGITAL, x: 36, y: 100, side: 'bottom' },
+    { id: 'CS', label: 'CS', type: PIN_TYPE.DIGITAL, x: 50, y: 100, side: 'bottom' },
+    { id: 'CLK', label: 'CLK', type: PIN_TYPE.DIGITAL, x: 64, y: 100, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const rows = inst.runtimeState?._spi?.rows;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB body
+    ctx.fillStyle = '#1a1a2e';
+    roundRect(ctx, 0, 0, 80, 88, 4);
+    ctx.fill();
+
+    // 8x8 LED matrix
+    ctx.fillStyle = '#0a0a0a';
+    roundRect(ctx, 8, 8, 64, 64, 2);
+    ctx.fill();
+
+    // LED grid
+    for (let row = 0; row < 8; row++) {
+      const rowData = rows ? rows[row] : 0;
+      for (let col = 0; col < 8; col++) {
+        const bit = (rowData >> (7 - col)) & 1;
+        const lx = 12 + col * 7.5;
+        const ly = 12 + row * 7.5;
+        ctx.fillStyle = bit ? '#ff3333' : '#1a0a0a';
+        ctx.fillRect(lx, ly, 6, 6);
+        if (bit) {
+          ctx.shadowColor = '#ff0000';
+          ctx.shadowBlur = 3;
+          ctx.fillRect(lx, ly, 6, 6);
+          ctx.shadowBlur = 0;
+        }
+      }
+    }
+
+    // MAX7219 chip
+    ctx.fillStyle = '#111';
+    roundRect(ctx, 24, 76, 32, 8, 1);
+    ctx.fill();
+    ctx.fillStyle = '#666';
+    ctx.font = 'bold 4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('MAX7219', 40, 81);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [8, 22, 36, 50, 64].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 88); ctx.lineTo(px, 100); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 84, 104);
+    ctx.restore();
+  }
+});
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   ILI9341 â€” 2.4" TFT Display (SPI)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+defComp({
+  id: 'ili9341',
+  name: 'ILI9341 TFT Display',
+  category: 'Output',
+  icon: 'ðŸ–¥ï¸',
+  desc: 'ILI9341 2.4" 240x320 TFT LCD display (SPI). Full-color with Adafruit_GFX support',
+  width: 160,
+  height: 140,
+  defaultProps: {},
+  interactive: [],
+  pins: [
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 16, y: 140, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 40, y: 140, side: 'bottom' },
+    { id: 'CS', label: 'CS', type: PIN_TYPE.DIGITAL, x: 64, y: 140, side: 'bottom' },
+    { id: 'DC', label: 'DC', type: PIN_TYPE.DIGITAL, x: 88, y: 140, side: 'bottom' },
+    { id: 'MOSI', label: 'MOSI', type: PIN_TYPE.DIGITAL, x: 112, y: 140, side: 'bottom' },
+    { id: 'SCK', label: 'SCK', type: PIN_TYPE.DIGITAL, x: 136, y: 140, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const tft = inst.runtimeState?.tft;
+    const powered = !!tft?.power;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Blue PCB board
+    ctx.fillStyle = '#0a2a5e';
+    roundRect(ctx, 0, 0, 160, 130, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#1a4a8e';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 4 corner mounting holes
+    [[6, 6], [154, 6], [6, 124], [154, 124]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#c8a452';
+      ctx.beginPath(); ctx.arc(hx, hy, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0a2a5e';
+      ctx.beginPath(); ctx.arc(hx, hy, 1.8, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // Display bezel (black frame)
+    ctx.fillStyle = '#111';
+    roundRect(ctx, 8, 4, 144, 100, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Screen area â€” render framebuffer or show default blue
+    const screenX = 12, screenY = 8, screenW = 136, screenH = 92;
+
+    if (tft && tft.pixels) {
+      // Render 240x320 framebuffer scaled to screen
+      const fbW = 320, fbH = 240;
+      const scaleX = screenW / fbW, scaleY = screenH / fbH;
+      const px = tft.pixels;
+      for (let fy = 0; fy < fbH; fy++) {
+        for (let fx = 0; fx < fbW; fx++) {
+          const idx = (fy * fbW + fx) * 3;
+          const r = px[idx] || 0, g = px[idx + 1] || 0, b = px[idx + 2] || 0;
+          if (r === 0 && g === 0 && b === 0) continue;
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.fillRect(screenX + fx * scaleX, screenY + fy * scaleY, Math.ceil(scaleX), Math.ceil(scaleY));
+        }
+      }
+    } else {
+      // Default powered-off / idle screen
+      ctx.fillStyle = powered ? '#001030' : '#080810';
+      ctx.fillRect(screenX, screenY, screenW, screenH);
+    }
+
+    // Glass glare
+    const glare = ctx.createLinearGradient(screenX, screenY, screenX + screenW, screenY + screenH);
+    glare.addColorStop(0, 'rgba(255,255,255,0.06)');
+    glare.addColorStop(0.4, 'rgba(255,255,255,0.01)');
+    glare.addColorStop(1, 'rgba(255,255,255,0.0)');
+    ctx.fillStyle = glare;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+
+    // Bottom label area
+    ctx.fillStyle = '#333';
+    roundRect(ctx, 10, 106, 140, 16, 2);
+    ctx.fill();
+    ctx.fillStyle = '#999';
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ILI9341  240x320 TFT', 80, 116);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [16, 40, 64, 88, 112, 136].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 120); ctx.lineTo(px, 140); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -4, -4, 168, 148);
+    ctx.restore();
+  }
+});

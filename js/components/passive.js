@@ -337,3 +337,83 @@ defComp({
     ctx.restore();
   }
 });
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   1N4007 Diode â€” Rectifier Diode
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+defComp({
+  id: 'diode_1n4007',
+  name: '1N4007 Diode',
+  category: 'Passive',
+  icon: 'â–¶ï¸',
+  desc: 'General-purpose rectifier diode. 1A forward current, 1000V reverse voltage. 0.7V forward drop',
+  width: 40,
+  height: 14,
+  defaultProps: {},
+  interactive: [],
+  pins: [
+    { id: 'anode', label: 'A', type: PIN_TYPE.SIGNAL, x: 4, y: 14, side: 'bottom' },
+    { id: 'cathode', label: 'K', type: PIN_TYPE.SIGNAL, x: 36, y: 14, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const rs = inst.runtimeState || {};
+    const conducting = rs.conducting || false;
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Body
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, 8, 2, 24, 10, 2);
+    ctx.fill();
+
+    // Cathode band
+    ctx.fillStyle = '#888';
+    ctx.fillRect(26, 2, 3, 10);
+
+    // Diode symbol (triangle + bar)
+    ctx.fillStyle = conducting ? '#00cc66' : '#555';
+    ctx.beginPath();
+    ctx.moveTo(12, 7);
+    ctx.lineTo(22, 3);
+    ctx.lineTo(22, 11);
+    ctx.closePath();
+    ctx.fill();
+
+    // Cathode bar
+    ctx.strokeStyle = conducting ? '#00cc66' : '#888';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(22, 3);
+    ctx.lineTo(22, 11);
+    ctx.stroke();
+
+    // Arrow direction
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(14, 7);
+    ctx.lineTo(18, 7);
+    ctx.lineTo(16, 5);
+    ctx.moveTo(18, 7);
+    ctx.lineTo(16, 9);
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#aaa';
+    ctx.font = '4px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('1N4007', 18, 8);
+
+    // Wire leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(4, 7); ctx.lineTo(8, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(32, 7); ctx.lineTo(36, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4, 7); ctx.lineTo(4, 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(36, 7); ctx.lineTo(36, 14); ctx.stroke();
+
+    if (inst.selected) drawSelectionRect(ctx, 0, 0, 40, 14);
+    ctx.restore();
+  }
+});

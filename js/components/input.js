@@ -437,3 +437,170 @@ defComp({
     ctx.restore();
   }
 });
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   EC11 Rotary Encoder with Push Button
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+defComp({
+  id: 'rotary_encoder',
+  name: 'Rotary Encoder EC11',
+  category: 'Input',
+  icon: 'ðŸŽ›ï¸',
+  desc: 'EC11 rotary encoder with push button. Infinite rotation with quadrature output (A, B) + switch',
+  width: 40,
+  height: 50,
+  defaultProps: { position: 0, pressed: false },
+  interactive: [
+    { field: 'position', label: 'Pos', min: -100, max: 100, step: 1, unit: '' },
+  ],
+  pins: [
+    { id: 'A', label: 'A', type: PIN_TYPE.DIGITAL, x: 6, y: 50, side: 'bottom' },
+    { id: 'B', label: 'B', type: PIN_TYPE.DIGITAL, x: 16, y: 50, side: 'bottom' },
+    { id: 'SW', label: 'SW', type: PIN_TYPE.DIGITAL, x: 26, y: 50, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 36, y: 50, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const pressed = inst.runtimeState?.pressed ?? inst.props.pressed ?? false;
+    const position = inst.runtimeState?.position ?? inst.props.position ?? 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Shaft
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(20, 18, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#aaa';
+    ctx.beginPath(); ctx.arc(20, 18, 5, 0, Math.PI * 2); ctx.fill();
+
+    // Knob
+    ctx.fillStyle = pressed ? '#333' : '#444';
+    ctx.beginPath(); ctx.arc(20, 18, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Knob indicator
+    const angle = (position * 3.6) * Math.PI / 180;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(20, 18);
+    ctx.lineTo(20 + Math.cos(angle) * 10, 18 + Math.sin(angle) * 10);
+    ctx.stroke();
+
+    // Position display
+    ctx.fillStyle = '#0a0a1a';
+    roundRect(ctx, 2, 34, 36, 10, 2);
+    ctx.fill();
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${position}`, 20, 42);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    [6, 16, 26, 36].forEach(px => {
+      ctx.beginPath(); ctx.moveTo(px, 44); ctx.lineTo(px, 50); ctx.stroke();
+    });
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 44, 54);
+    ctx.restore();
+  }
+});
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   DIP Switch Bank (8-position)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+defComp({
+  id: 'dip_switch',
+  name: 'DIP Switch 8-Pos',
+  category: 'Input',
+  icon: 'ðŸŽšï¸',
+  desc: '8-position DIP switch bank. Multi-position toggle for hardware settings and binary input',
+  width: 140,
+  height: 60,
+  defaultProps: { switches: 0 },
+  // interactive: [
+  //   { field: 'switches', label: 'Value', min: 0, max: 255, step: 1, unit: '' },
+  // ],
+  pins: [
+    { id: '1', label: '1', type: PIN_TYPE.DIGITAL, x: 12, y: 60, side: 'bottom' },
+    { id: '2', label: '2', type: PIN_TYPE.DIGITAL, x: 28, y: 60, side: 'bottom' },
+    { id: '3', label: '3', type: PIN_TYPE.DIGITAL, x: 44, y: 60, side: 'bottom' },
+    { id: '4', label: '4', type: PIN_TYPE.DIGITAL, x: 60, y: 60, side: 'bottom' },
+    { id: '5', label: '5', type: PIN_TYPE.DIGITAL, x: 76, y: 60, side: 'bottom' },
+    { id: '6', label: '6', type: PIN_TYPE.DIGITAL, x: 92, y: 60, side: 'bottom' },
+    { id: '7', label: '7', type: PIN_TYPE.DIGITAL, x: 108, y: 60, side: 'bottom' },
+    { id: '8', label: '8', type: PIN_TYPE.DIGITAL, x: 124, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const switches = inst.runtimeState?.switches ?? inst.props.switches ?? 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Body
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, 0, 4, 140, 44, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Switches
+    for (let i = 0; i < 8; i++) {
+      const isOn = (switches >> i) & 1;
+      const sx = 12 + i * 16;
+
+      // Switch housing
+      ctx.fillStyle = '#333';
+      roundRect(ctx, sx - 5, 10, 12, 24, 2);
+      ctx.fill();
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      // Switch toggle
+      ctx.fillStyle = isOn ? '#00cc00' : '#cc0000';
+      roundRect(ctx, sx - 3, isOn ? 12 : 24, 8, 8, 1);
+      ctx.fill();
+
+      // ON/OFF text
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 5px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(isOn ? 'ON' : 'OFF', sx + 1, isOn ? 18 : 30);
+
+      // Label
+      ctx.fillStyle = '#aaa';
+      ctx.font = 'bold 6px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${i + 1}`, sx + 1, 44);
+    }
+
+    // Binary value display
+    ctx.fillStyle = '#0a0a1a';
+    roundRect(ctx, 30, 48, 80, 8, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(switches.toString(2).padStart(8, '0'), 70, 55);
+
+    // Pin leads
+    ctx.strokeStyle = '#a0a0a0';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 8; i++) {
+      const px = 12 + i * 16;
+      ctx.beginPath(); ctx.moveTo(px, 48); ctx.lineTo(px, 60); ctx.stroke();
+    }
+
+    if (inst.selected) drawSelectionRect(ctx, -3, 0, 146, 64);
+    ctx.restore();
+  }
+});
