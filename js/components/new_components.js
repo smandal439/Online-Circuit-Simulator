@@ -2603,6 +2603,7 @@ defComp({
   defaultProps: { connected: false, rxData: '' },
   interactive: [
     { field: 'connected', label: 'Conn', min: 0, max: 1, step: 1, unit: '' },
+    { field: 'rxData', label: 'RX Data', type: 'text' },
   ],
   pins: [
     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 70, side: 'bottom' },
@@ -2610,6 +2611,17 @@ defComp({
     { id: 'TXD', label: 'TXD', type: PIN_TYPE.DIGITAL, x: 32, y: 70, side: 'bottom' },
     { id: 'RXD', label: 'RXD', type: PIN_TYPE.DIGITAL, x: 44, y: 70, side: 'bottom' },
   ],
+  step(inst, sim) {
+    if (!sim || !sim.isRunning) return;
+    const connected = inst.runtimeState?.connected ?? inst.props?.connected ?? false;
+    if (!connected) return;
+    const rxData = inst.runtimeState?.rxData ?? inst.props?.rxData ?? '';
+    if (typeof rxData === 'string' && rxData.length > 0) {
+      sim.sendSerialInput(rxData);
+      if (inst.runtimeState) inst.runtimeState.rxData = '';
+      else inst.props.rxData = '';
+    }
+  },
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const connected = inst.runtimeState?.connected ?? inst.props.connected ?? false;

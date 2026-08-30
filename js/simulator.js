@@ -125,6 +125,15 @@ class ArduinoSimulator {
     js = js.replace(/\b(?:static|volatile|extern|register|const)\s+let\b/g, 'let');
     js = js.replace(/\b(?:static|volatile|extern|register|const)\s+async\b/g, 'async');
 
+    // 7a. Convert C char literals to charCode numbers: '1' → 49, 'A' → 65, '\n' → 10
+    // Only single-quoted single characters (not double-quoted strings or multi-char)
+    js = js.replace(/'\\n'/g, '10');
+    js = js.replace(/'\\r'/g, '13');
+    js = js.replace(/'\\t'/g, '9');
+    js = js.replace(/'\\\\'/g, '92');
+    js = js.replace(/''/g, '0');
+    js = js.replace(/'.'/g, (match) => match.charCodeAt(1));
+
     // 8. Arduino constants
     js = js.replace(/\bHIGH\b/g, '1');
     js = js.replace(/\bLOW\b/g, '0');
