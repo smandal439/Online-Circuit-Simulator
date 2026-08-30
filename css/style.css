@@ -1367,11 +1367,6 @@ body.view-serial #resizer-bottom { display: none; }
   flex-direction: column;
   gap: 10px;
   margin-bottom: 16px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--bg-main, #1a1a2e);
-  padding: 0 0 4px 0;
 }
 .library-search {
   position: relative;
