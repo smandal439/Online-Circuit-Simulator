@@ -2630,7 +2630,7 @@ defComp({
     ctx.translate(x, y);
 
     // PCB body
-    ctx.fillStyle = '#0a2463';
+    ctx.fillStyle = '#8B1A1A';
     roundRect(ctx, 0, 0, 50, 58, 4);
     ctx.fill();
 
