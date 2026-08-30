@@ -2360,9 +2360,9 @@ class CircuitCanvas {
           const ena = readPin('ENA'), enb = readPin('ENB');
           let motorA = 0;
           if (in1 && !in2) motorA = ena / 255;
-          else if (!in1 && in2) motorA = -(enb / 255);
+          else if (!in1 && in2) motorA = -(ena / 255);
           let motorB = 0;
-          if (in3 && !in4) motorB = ena / 255;
+          if (in3 && !in4) motorB = enb / 255;
           else if (!in3 && in4) motorB = -(enb / 255);
           inst.runtimeState.motorA = motorA;
           inst.runtimeState.motorB = motorB;

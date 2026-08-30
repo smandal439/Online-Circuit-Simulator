@@ -2298,11 +2298,19 @@ defComp({
       ctx.fill();
     });
 
-    // Status LEDs
-    ctx.fillStyle = '#00ff00';
+    // Status LEDs — green when motor runs forward, red when reverse, dim when stopped
+    const mA = inst.runtimeState?.motorA ?? 0;
+    const mB = inst.runtimeState?.motorB ?? 0;
+    // Motor A LED
+    ctx.fillStyle = mA > 0 ? '#00ff00' : mA < 0 ? '#ff4444' : '#333';
+    if (mA !== 0) { ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 4; }
     ctx.beginPath(); ctx.arc(10, 50, 2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ff0000';
+    ctx.shadowBlur = 0;
+    // Motor B LED
+    ctx.fillStyle = mB > 0 ? '#00ff00' : mB < 0 ? '#ff4444' : '#333';
+    if (mB !== 0) { ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 4; }
     ctx.beginPath(); ctx.arc(20, 50, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
 
     // Labels
     ctx.fillStyle = '#aaa';
@@ -2310,6 +2318,12 @@ defComp({
     ctx.textAlign = 'center';
     ctx.fillText('MOTOR A', 22, 60);
     ctx.fillText('MOTOR B', 78, 60);
+    ctx.fillStyle = '#0f0';
+    ctx.font = 'bold 3.5px monospace';
+    const aPct = Math.round(Math.abs(mA) * 100);
+    const bPct = Math.round(Math.abs(mB) * 100);
+    ctx.fillText(mA !== 0 ? `${aPct}% ${mA > 0 ? 'FWD' : 'REV'}` : 'STOP', 22, 66);
+    ctx.fillText(mB !== 0 ? `${bPct}% ${mB > 0 ? 'FWD' : 'REV'}` : 'STOP', 78, 66);
 
     // Pin leads
     ctx.strokeStyle = '#a0a0a0';
