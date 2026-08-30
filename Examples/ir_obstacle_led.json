@@ -1,6 +1,9 @@
 {
-  "version": "1.1",
+  "id": "ir_obstacle_led",
   "name": "IR Obstacle Sensor LED Alert",
+  "icon": "📡",
+  "desc": "IR obstacle sensor triggers LED when an object is detected",
+  "tags": ["sensor", "ir", "led", "beginner"],
   "code": "int sensorPin = 2;\nint ledPin = 13;\n\nvoid setup() {\n  pinMode(sensorPin, INPUT);\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  int state = digitalRead(sensorPin);\n  if (state == LOW) {\n    digitalWrite(ledPin, HIGH);\n    Serial.println(\"Obstacle detected!\");\n  } else {\n    digitalWrite(ledPin, LOW);\n    Serial.println(\"Clear\");\n  }\n  delay(100);\n}",
   "circuit": {
     "components": [
