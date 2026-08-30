@@ -709,6 +709,25 @@ class CircuitCanvas {
     return null;
   }
 
+  _hitTestDipSwitch(wx, wy) {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    if (!defs) return null;
+    for (const inst of this.components) {
+      if (inst.type !== 'dip_switch') continue;
+      const def = defs[inst.type];
+      if (!def) continue;
+      const lx = wx - inst.x;
+      const ly = wy - inst.y;
+      for (let i = 0; i < 8; i++) {
+        const sx = 6 + i * 8;
+        if (lx >= sx - 4 && lx <= sx + 6 && ly >= 4 && ly <= 22) {
+          return { inst, bit: i };
+        }
+      }
+    }
+    return null;
+  }
+
   _hitTestKeypadButton(wx, wy) {
     const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
     if (!defs) return null;
@@ -1160,6 +1179,19 @@ class CircuitCanvas {
         inst.runtimeState = inst.runtimeState || {};
         const cur = Number(inst.runtimeState[ctrl.field] ?? inst.props?.[ctrl.field] ?? ctrl.min);
         inst.runtimeState[ctrl.field] = cur > 0 ? ctrl.min : ctrl.max;
+        this._selectAll(false);
+        inst.selected = true;
+        this.selected = inst;
+        return;
+      }
+
+      // DIP switch individual toggle
+      const dipHit = this._hitTestDipSwitch(world.x, world.y);
+      if (dipHit) {
+        const { inst, bit } = dipHit;
+        inst.runtimeState = inst.runtimeState || {};
+        const cur = inst.runtimeState.switches ?? inst.props.switches ?? 0;
+        inst.runtimeState.switches = cur ^ (1 << bit);
         this._selectAll(false);
         inst.selected = true;
         this.selected = inst;
