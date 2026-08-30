@@ -219,7 +219,20 @@ const COMPONENT_CATALOG = [
   { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir', 'mpu6050', 'ir_obstacle', 'flex_sensor', 'thermistor', 'lm35_sensor', 'bme280', 'vl53l0x', 'rc522', 'ir_receiver', 'hc05'] },
   { category: 'Passive',   ids: ['resistor', 'capacitor', 'breadboard', 'diode_1n4007'] },
   { category: 'Power',     ids: ['power_5v', 'power_gnd', 'mb102_power', 'bench_power_supply'] },
-  { category: 'Digital ICs', ids: ['ic_555', 'ic_74hc00', 'ic_74hc04', 'ic_74hc08', 'ic_74hc32', 'ic_74hc595', 'ic_74hc138', 'ic_74hc245'] },
+  { category: 'Digital ICs', ids: [],
+    dropdown: { id: 'digital_ic', label: 'Digital ICs', icon: '⮗', desc: 'Logic Gates & Timers',
+      variants: [
+        { id: 'ic_555',   name: '555 Timer',      icon: '⏱️' },
+        { id: 'ic_74hc00', name: '74HC00 NAND',    icon: '⮗' },
+        { id: 'ic_74hc04', name: '74HC04 NOT',     icon: '⮗' },
+        { id: 'ic_74hc08', name: '74HC08 AND',     icon: '⮗' },
+        { id: 'ic_74hc32', name: '74HC32 OR',      icon: '⮗' },
+        { id: 'ic_74hc595', name: '74HC595 Shift Reg', icon: '⮗' },
+        { id: 'ic_74hc138', name: '74HC138 Decoder',   icon: '⮗' },
+        { id: 'ic_74hc245', name: '74HC245 Buffer',    icon: '⮗' },
+      ]
+    }
+  },
   { category: 'Instruments', ids: ['multimeter', 'func_gen', 'dso_4ch'] },
 ];
 
