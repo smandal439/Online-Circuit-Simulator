@@ -2509,10 +2509,67 @@ class ArduinoSimulator {
   }
 
   getPinVoltage(inst, pinId) {
-    if (!window.CircuitCanvas || typeof window.CircuitCanvas._getConnectedPinNum !== 'function') return 0;
-    const pinNum = window.CircuitCanvas._getConnectedPinNum(inst.id, pinId);
-    if (pinNum !== null) return this.pinStates[`pin_${pinNum}`] || 0;
-    return this.pinStates[`${inst.id}_${pinId}`] || 0;
+    if (!window.CircuitCanvas) return 0;
+
+    // 1. Try Arduino/ESP32 board pin lookup
+    if (typeof window.CircuitCanvas._getConnectedPinNum === 'function') {
+      const pinNum = window.CircuitCanvas._getConnectedPinNum(inst.id, pinId);
+      if (pinNum !== null) return this.pinStates[`pin_${pinNum}`] || 0;
+    }
+
+    // 2. Try direct pinStates lookup
+    const directVal = this.pinStates[`${inst.id}_${pinId}`];
+    if (directVal !== undefined) return directVal;
+
+    // 3. Follow wire to the connected component and read its output voltage
+    if (typeof window.CircuitCanvas._getWireTarget === 'function') {
+      const target = window.CircuitCanvas._getWireTarget(inst.id, pinId);
+      if (target) {
+        const other = target.inst;
+        // Function Generator output
+        if (other.type === 'func_gen') {
+          const rs = other.runtimeState || {};
+          if (target.pinId === 'ch1_out') return rs.ch1_voltage || 0;
+          if (target.pinId === 'ch2_out') return rs.ch2_voltage || 0;
+        }
+        // IC output pins
+        const IC_OUT = {
+          ic_555: ['OUT'],
+          ic_74hc00: ['Y1','Y2','Y3','Y4'],
+          ic_74hc04: ['Y1','Y2','Y3','Y4','Y5','Y6'],
+          ic_74hc08: ['Y1','Y2','Y3','Y4'],
+          ic_74hc32: ['Y1','Y2','Y3','Y4'],
+          ic_74hc595: ['QA','QB','QC','QD','QE','QF','QG','QH'],
+          ic_74hc138: ['Y0','Y1','Y2','Y3','Y4','Y5','Y6','Y7'],
+          ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
+          ic_74hc74: ['Q1','Q1n','Q2','Q2n'],
+          ic_74hc165: ['Q7','Q7n'],
+          ic_74hc193: ['QA','QB','CO','BO','TC_U','TC_D'],
+          ic_74hc47: ['a','b','c','d','e','f','g'],
+          ic_74hc148: ['A0','A1','A2','GS','EO'],
+          lm741: ['OUT'],
+        };
+        if (IC_OUT[other.type] && IC_OUT[other.type].includes(target.pinId)) {
+          const raw = other.runtimeState && other.runtimeState[target.pinId] != null
+            ? other.runtimeState[target.pinId] : 0;
+          return raw > 1 ? (raw / 255) * 5.0 : raw > 0 ? 5.0 : 0;
+        }
+        // Potentiometer wiper
+        if (other.type === 'potentiometer' && target.pinId === 'wiper') {
+          return (other.runtimeState && other.runtimeState.wiper != null) ? (other.runtimeState.wiper / 1023) * 5.0 : 0;
+        }
+        // Op-amp output
+        if (other.type === 'lm741' && target.pinId === 'OUT') {
+          return other.runtimeState ? (other.runtimeState.vOut || 0) : 0;
+        }
+        // Another DSO reading from a source — recurse
+        if (other.type === 'dso_4ch') {
+          return 0;
+        }
+      }
+    }
+
+    return 0;
   }
 
   _bme280FindInst() {
