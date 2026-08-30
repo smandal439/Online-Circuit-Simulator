@@ -150,6 +150,7 @@ class Oscilloscope {
     const probes = this.getProbes();
     [ch1El, ch2El].forEach(sel => {
       if (!sel) return;
+      const prevVal = sel.value; // preserve current selection
       const existing = sel.querySelectorAll('.probe-option');
       existing.forEach(el => el.remove());
       probes.forEach(p => {
@@ -159,6 +160,13 @@ class Oscilloscope {
         opt.className = 'probe-option';
         sel.appendChild(opt);
       });
+      // Restore selection if still present
+      if (prevVal && sel.querySelector(`option[value="${prevVal}"]`)) {
+        sel.value = prevVal;
+      }
+      // Sync internal state
+      if (sel.id === 'osc-ch1') this.ch1Pin = sel.value;
+      if (sel.id === 'osc-ch2') this.ch2Pin = sel.value;
     });
   }
 

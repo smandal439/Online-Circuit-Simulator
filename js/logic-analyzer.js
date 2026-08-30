@@ -138,6 +138,7 @@ class LogicAnalyzer {
   refreshProbeOptions() {
     const probes = this.getProbes();
     document.querySelectorAll('.la-ch-select').forEach(sel => {
+      const prevVal = sel.value;
       const existing = sel.querySelectorAll('.probe-option');
       existing.forEach(el => el.remove());
       probes.forEach(p => {
@@ -147,6 +148,11 @@ class LogicAnalyzer {
         opt.className = 'probe-option';
         sel.appendChild(opt);
       });
+      if (prevVal && sel.querySelector(`option[value="${prevVal}"]`)) {
+        sel.value = prevVal;
+        const idx = parseInt(sel.dataset.ch);
+        if (!isNaN(idx)) this.setChannel(idx, sel.value);
+      }
     });
   }
 
