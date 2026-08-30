@@ -986,6 +986,19 @@ defComp({
         ctx.fill();
       }
 
+      // Outer radial glow bloom
+      if (isOn) {
+        const glowRadius = 14;
+        const glow = ctx.createRadialGradient(cx, cy, lensRadius * 0.5, cx, cy, glowRadius);
+        glow.addColorStop(0, `rgba(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)}, 0.45)`);
+        glow.addColorStop(0.5, `rgba(${Math.round(pr * brightness / 255)}, ${Math.round(pg * brightness / 255)}, ${Math.round(pb * brightness / 255)}, 0.15)`);
+        glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       // Lens specular highlight
       ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.beginPath();
