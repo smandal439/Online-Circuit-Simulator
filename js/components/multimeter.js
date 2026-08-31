@@ -57,10 +57,26 @@ defComp({
     const props = inst.props || {};
     const mode = props.mode || 'V_DC';
 
-    // Probe Potentials
-    const vRed = sim && typeof sim.getPinVoltage === 'function' ? (sim.getPinVoltage(inst, 'probe_red') || 0) : 0;
-    const vCom = sim && typeof sim.getPinVoltage === 'function' ? (sim.getPinVoltage(inst, 'probe_com') || 0) : 0;
-    const vAmp = sim && typeof sim.getPinVoltage === 'function' ? (sim.getPinVoltage(inst, 'probe_amp') || 0) : 0;
+    // Probe Potentials — use _tracePinNet for accurate electrical path tracing
+    const CC = window.CircuitCanvas;
+    let vRed = 0, vCom = 0, vAmp = 0;
+    if (CC && typeof CC._tracePinNet === 'function') {
+      const _getNetV = (net) => {
+        if (!net || !net.sources || net.sources.length === 0) return 0;
+        const best = net.sources.sort((a, b) => b.voltage - a.voltage)[0];
+        return best ? best.voltage : 0;
+      };
+      const redNet = CC._tracePinNet(inst.id, 'probe_red');
+      const comNet = CC._tracePinNet(inst.id, 'probe_com');
+      const ampNet = CC._tracePinNet(inst.id, 'probe_amp');
+      vRed = _getNetV(redNet);
+      vCom = _getNetV(comNet);
+      vAmp = _getNetV(ampNet);
+    } else if (sim && typeof sim.getPinVoltage === 'function') {
+      vRed = sim.getPinVoltage(inst, 'probe_red') || 0;
+      vCom = sim.getPinVoltage(inst, 'probe_com') || 0;
+      vAmp = sim.getPinVoltage(inst, 'probe_amp') || 0;
+    }
     const vDiff = vRed - vCom;
 
     // Buffer for True-RMS sliding window (128 samples)
