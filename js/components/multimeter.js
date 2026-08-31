@@ -157,12 +157,12 @@ defComp({
     ctx.translate(x, y);
 
     // ── Rugged High-Visibility Holster (Yellow/Orange) ──
-    const bootGrad = ctx.createLinearGradient(32, 0, W, H - 20);
+    const bootGrad = ctx.createLinearGradient(32, 0, W, H - 10);
     bootGrad.addColorStop(0, '#f39c12');
     bootGrad.addColorStop(0.5, '#e67e22');
     bootGrad.addColorStop(1, '#d35400');
     ctx.fillStyle = bootGrad;
-    drawRRect(ctx, 32, 0, W - 32, H - 20, 14);
+    drawRRect(ctx, 32, 0, W - 32, H - 10, 14);
     ctx.fill();
 
     // Side Grip Ribs
@@ -172,11 +172,11 @@ defComp({
     }
 
     // ── Dark Grey Bezel / Meter Core ──
-    const bodyGrad = ctx.createLinearGradient(38, 4, W - 8, H - 24);
+    const bodyGrad = ctx.createLinearGradient(38, 4, W - 8, H - 14);
     bodyGrad.addColorStop(0, '#2d3436');
     bodyGrad.addColorStop(1, '#1e272e');
     ctx.fillStyle = bodyGrad;
-    drawRRect(ctx, 37, 5, W - 43, H - 30, 10);
+    drawRRect(ctx, 37, 5, W - 43, H - 20, 10);
     ctx.fill();
     ctx.strokeStyle = '#111417';
     ctx.lineWidth = 1.5;
@@ -316,38 +316,36 @@ defComp({
     ctx.fillText('A', dialX + 28, dialY + 14);
     ctx.fillText('OFF', dialX - 26, dialY + 14);
 
-    // ── Bottom Lead Wires & Banana Plug Terminals ──
-    const _drawBottomLead = (lx, ly, color, label) => {
-      // Vertical wire from body bottom to pin
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(lx, H - 20); ctx.lineTo(lx, ly); ctx.stroke();
+    // ── Bottom Connector Panel (flush with body) ──
+    const connY = H - 28;
 
-      // Banana plug strain boot
-      ctx.fillStyle = '#1c1f24';
-      drawRRect(ctx, lx - 8, H - 20, 16, 10, 2);
-      ctx.fill();
+    // Connector panel background
+    ctx.fillStyle = '#1a1d22';
+    drawRRect(ctx, 38, connY - 2, W - 44, 24, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#111417';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-      // Terminal Contact ring
+    const _drawTerminal = (tx, color, label) => {
+      // Terminal ring
       ctx.fillStyle = '#333';
-      ctx.beginPath(); ctx.arc(lx, H - 20, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(tx, connY + 8, 8, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(lx, H - 20, 5, 0, Math.PI * 2); ctx.fill();
-
+      ctx.beginPath(); ctx.arc(tx, connY + 8, 6, 0, Math.PI * 2); ctx.fill();
       // Gold contact bore
       ctx.fillStyle = '#d4af37';
-      ctx.beginPath(); ctx.arc(lx, H - 20, 2.5, 0, Math.PI * 2); ctx.fill();
-
-      // Label under terminal
+      ctx.beginPath(); ctx.arc(tx, connY + 8, 2.5, 0, Math.PI * 2); ctx.fill();
+      // Label
       ctx.fillStyle = color;
-      ctx.font = 'bold 6px "JetBrains Mono", monospace';
+      ctx.font = 'bold 7px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(label, lx, H - 8);
+      ctx.fillText(label, tx, connY + 22);
     };
 
-    _drawBottomLead(72, 180, '#eccc68', '10A');
-    _drawBottomLead(110, 180, '#2f3542', 'COM');
-    _drawBottomLead(148, 180, '#ff3838', 'V\u03A9');
+    _drawTerminal(72, '#eccc68', '10A');
+    _drawTerminal(110, '#2f3542', 'COM');
+    _drawTerminal(148, '#ff3838', 'V\u03A9');
 
     // Selection Highlight
     if (inst.selected && typeof drawSelectionRect === 'function') {
