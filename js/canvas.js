@@ -3022,8 +3022,7 @@ class CircuitCanvas {
 
         case 'lm741': {
           const sim = window.ArduinoSim;
-          if (!sim || !sim.pinStates) break;
-          const ps = sim.pinStates;
+          const ps = (sim && sim.pinStates) || {};
           // Read analog voltages at IN+ and IN-
           const readAnalog = (id) => {
             const pn = this._getConnectedPinNum(inst.id, id);
@@ -3651,8 +3650,14 @@ class CircuitCanvas {
         lm741: ['OUT'],
       };
       if (IC_OUTPUT_PINS[inst.type] && IC_OUTPUT_PINS[inst.type].includes(current.pinId)) {
-        const rawVal = inst.runtimeState && inst.runtimeState[current.pinId] != null
-          ? inst.runtimeState[current.pinId] : 0;
+        let rawVal;
+        if (inst.type === 'lm741') {
+          rawVal = inst.runtimeState && inst.runtimeState.vOut != null
+            ? Math.round((inst.runtimeState.vOut / 5.0) * 255) : 0;
+        } else {
+          rawVal = inst.runtimeState && inst.runtimeState[current.pinId] != null
+            ? inst.runtimeState[current.pinId] : 0;
+        }
         if (rawVal > 0) {
           const voltage = 5.0 * (rawVal > 1 ? (rawVal / 255) : 1.0);
           sources.push({ type: 'ic_out', voltage, rawVal, resistance: current.resistance });
