@@ -7,16 +7,17 @@ defComp({
   icon: '〜',
   desc: 'Dual channel DDS function generator — sine, square, triangle, sawtooth, and noise waveforms with phase & duty cycle control',
 
-  width: 280,
+  width: 300,
   height: 190,
 
   defaultProps: {
+    powered: 1,
     ch1_wave: 'sine',  ch1_freq: 440,  ch1_amp: 5.0,  ch1_offset: 0,  ch1_phase: 0,   ch1_duty: 50,
     ch2_wave: 'square', ch2_freq: 880, ch2_amp: 3.0, ch2_offset: 0, ch2_phase: 90,  ch2_duty: 50,
   },
 
   interactive: [
-    
+    { field: 'powered', label: 'Power', type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 265, y: 28, w: 26, h: 42 } },
     { field: 'ch1_wave', label: 'CH1 Wave', type: 'select', options: [
       { value: 'sine',     label: 'Sine' },
       { value: 'square',   label: 'Square' },
@@ -43,8 +44,8 @@ defComp({
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const props = inst.props || {};
-    const rs = inst.runtimeState || {};
-    const W = 280, H = 190;
+    const W = 300, H = 190;
+    const isPowered = Boolean(inst.runtimeState?.powered ?? inst.props.powered ?? 1);
 
     ctx.save();
     ctx.translate(x, y);
@@ -57,10 +58,10 @@ defComp({
       ctx.fillStyle = color;
       ctx.beginPath(); ctx.arc(px, H, 3, 0, Math.PI * 2); ctx.fill();
     };
-    drawLead(80,  H, '#00e5ff');
-    drawLead(110, H, '#555');
-    drawLead(170, H, '#ff3366');
-    drawLead(200, H, '#555');
+    drawLead(80,  H, isPowered ? '#00e5ff' : '#1a2a30');
+    drawLead(110, H, '#333');
+    drawLead(170, H, isPowered ? '#ff3366' : '#2a1a20');
+    drawLead(200, H, '#333');
 
     // ── Main body ──
     ctx.fillStyle = '#22262f';
@@ -73,7 +74,7 @@ defComp({
     // ── Top bar ──
     ctx.fillStyle = '#333945';
     ctx.fillRect(8, 6, W - 16, 2);
-    ctx.fillStyle = '#556677';
+    ctx.fillStyle = isPowered ? '#556677' : '#333945';
     ctx.font = 'bold 9px monospace';
     ctx.textAlign = 'left';
     ctx.fillText('DUAL-CHANNEL DDS FUNCTION GENERATOR', 12, 18);
@@ -82,79 +83,94 @@ defComp({
     ctx.fillStyle = '#333945';
     ctx.fillRect(8, 22, W - 16, 2);
 
+    // ── Power LED in top bar ──
+    ctx.fillStyle = isPowered ? '#00e676' : '#1b3a24';
+    ctx.beginPath(); ctx.arc(W - 55, 15, 2.5, 0, Math.PI * 2); ctx.fill();
+    if (isPowered) {
+      ctx.fillStyle = 'rgba(0,230,118,0.3)';
+      ctx.beginPath(); ctx.arc(W - 55, 15, 5, 0, Math.PI * 2); ctx.fill();
+    }
+
     // ── Scope screen ──
     const scrX = 10, scrY = 28, scrW = W - 20, scrH = 56;
     ctx.fillStyle = '#090b0e';
     roundRect(ctx, scrX, scrY, scrW, scrH, 4);
     ctx.fill();
-    ctx.strokeStyle = '#2d333f';
+    ctx.strokeStyle = isPowered ? '#2d333f' : '#1a1e24';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Graticule
-    ctx.strokeStyle = '#1e232d';
-    ctx.lineWidth = 0.5;
-    for (let gx = 1; gx < 10; gx++) {
-      const gxPos = scrX + (scrW / 10) * gx;
-      ctx.beginPath(); ctx.moveTo(gxPos, scrY); ctx.lineTo(gxPos, scrY + scrH); ctx.stroke();
-    }
-    for (let gy = 1; gy < 6; gy++) {
-      const gyPos = scrY + (scrH / 6) * gy;
-      ctx.beginPath(); ctx.moveTo(scrX, gyPos); ctx.lineTo(scrX + scrW, gyPos); ctx.stroke();
-    }
-    // Zero line
-    ctx.strokeStyle = '#343a46';
-    ctx.lineWidth = 0.8;
-    const zeroY = scrY + scrH / 2;
-    ctx.beginPath(); ctx.moveTo(scrX, zeroY); ctx.lineTo(scrX + scrW, zeroY); ctx.stroke();
-
-    // Draw waveform traces on screen
-    const ch1Freq = props.ch1_freq || 440;
-    const ch2Freq = props.ch2_freq || 880;
-    const baseFreq = ch1Freq || ch2Freq || 100;
-    const timeWindow = 2.5 / baseFreq;
-    const dt = timeWindow / scrW;
-    const vScale = (scrH / 2) / 6.0;
-
-    const _sampleWave = (wave, t, freq, amp, offset, phaseDeg, duty) => {
-      const phaseRad = (phaseDeg * Math.PI) / 180;
-      const tau = ((t * freq + phaseRad / (2 * Math.PI)) % 1 + 1) % 1;
-      const dutyFrac = duty / 100;
-      let v = 0;
-      switch (wave) {
-        case 'sine':     v = Math.sin(2 * Math.PI * tau); break;
-        case 'square':   v = tau < dutyFrac ? 1 : -1; break;
-        case 'triangle': v = tau < dutyFrac ? -1 + 2 * (tau / dutyFrac) : 1 - 2 * ((tau - dutyFrac) / (1 - dutyFrac)); break;
-        case 'sawtooth': v = 2 * tau - 1; break;
-        case 'noise':    v = Math.sin(t * freq * 137.5) * 0.7 + Math.sin(t * freq * 239.1) * 0.3; break;
-        default:         v = Math.sin(2 * Math.PI * tau); break;
+    if (isPowered) {
+      // Graticule
+      ctx.strokeStyle = '#1e232d';
+      ctx.lineWidth = 0.5;
+      for (let gx = 1; gx < 10; gx++) {
+        const gxPos = scrX + (scrW / 10) * gx;
+        ctx.beginPath(); ctx.moveTo(gxPos, scrY); ctx.lineTo(gxPos, scrY + scrH); ctx.stroke();
       }
-      return offset + v * (amp / 2);
-    };
+      for (let gy = 1; gy < 6; gy++) {
+        const gyPos = scrY + (scrH / 6) * gy;
+        ctx.beginPath(); ctx.moveTo(scrX, gyPos); ctx.lineTo(scrX + scrW, gyPos); ctx.stroke();
+      }
+      // Zero line
+      ctx.strokeStyle = '#343a46';
+      ctx.lineWidth = 0.8;
+      const zeroY = scrY + scrH / 2;
+      ctx.beginPath(); ctx.moveTo(scrX, zeroY); ctx.lineTo(scrX + scrW, zeroY); ctx.stroke();
 
-    // CH1 trace (cyan)
-    ctx.strokeStyle = '#00e5ff';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let px = 0; px < scrW; px++) {
-      const t = px * dt;
-      const v = _sampleWave(props.ch1_wave || 'sine', t, ch1Freq, props.ch1_amp || 5, props.ch1_offset || 0, props.ch1_phase || 0, props.ch1_duty || 50);
-      const py = zeroY - v * vScale;
-      if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
-    }
-    ctx.stroke();
+      // Draw waveform traces on screen
+      const ch1Freq = props.ch1_freq || 440;
+      const ch2Freq = props.ch2_freq || 880;
+      const baseFreq = ch1Freq || ch2Freq || 100;
+      const timeWindow = 2.5 / baseFreq;
+      const dt = timeWindow / scrW;
+      const vScale = (scrH / 2) / 6.0;
 
-    // CH2 trace (pink)
-    ctx.strokeStyle = '#ff3366';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let px = 0; px < scrW; px++) {
-      const t = px * dt;
-      const v = _sampleWave(props.ch2_wave || 'square', t, ch2Freq, props.ch2_amp || 3, props.ch2_offset || 0, props.ch2_phase || 90, props.ch2_duty || 50);
-      const py = zeroY - v * vScale;
-      if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
+      const _sampleWave = (wave, t, freq, amp, offset, phaseDeg, duty) => {
+        const phaseRad = (phaseDeg * Math.PI) / 180;
+        const tau = ((t * freq + phaseRad / (2 * Math.PI)) % 1 + 1) % 1;
+        const dutyFrac = duty / 100;
+        let v = 0;
+        switch (wave) {
+          case 'sine':     v = Math.sin(2 * Math.PI * tau); break;
+          case 'square':   v = tau < dutyFrac ? 1 : -1; break;
+          case 'triangle': v = tau < dutyFrac ? -1 + 2 * (tau / dutyFrac) : 1 - 2 * ((tau - dutyFrac) / (1 - dutyFrac)); break;
+          case 'sawtooth': v = 2 * tau - 1; break;
+          case 'noise':    v = Math.sin(t * freq * 137.5) * 0.7 + Math.sin(t * freq * 239.1) * 0.3; break;
+          default:         v = Math.sin(2 * Math.PI * tau); break;
+        }
+        return offset + v * (amp / 2);
+      };
+
+      // CH1 trace (cyan)
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let px = 0; px < scrW; px++) {
+        const t = px * dt;
+        const v = _sampleWave(props.ch1_wave || 'sine', t, ch1Freq, props.ch1_amp || 5, props.ch1_offset || 0, props.ch1_phase || 0, props.ch1_duty || 50);
+        const py = zeroY - v * vScale;
+        if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
+      }
+      ctx.stroke();
+
+      // CH2 trace (pink)
+      ctx.strokeStyle = '#ff3366';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let px = 0; px < scrW; px++) {
+        const t = px * dt;
+        const v = _sampleWave(props.ch2_wave || 'square', t, ch2Freq, props.ch2_amp || 3, props.ch2_offset || 0, props.ch2_phase || 90, props.ch2_duty || 50);
+        const py = zeroY - v * vScale;
+        if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
+      }
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#111418';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('\u2014 STANDBY \u2014', scrX + scrW / 2, scrY + scrH / 2 + 4);
     }
-    ctx.stroke();
 
     // ── Channel cards ──
     const cardY = 88, cardH = 88, cardGap = 8;
@@ -162,31 +178,31 @@ defComp({
 
     const _drawCard = (cx, cy, cw, ch, label, labelColor, wave, freq, amp, offset, phase, duty) => {
       // Card background
-      ctx.fillStyle = '#181b22';
+      ctx.fillStyle = isPowered ? '#181b22' : '#13151a';
       roundRect(ctx, cx, cy, cw, ch, 6);
       ctx.fill();
       // Color top border
-      ctx.fillStyle = labelColor;
+      ctx.fillStyle = isPowered ? labelColor : '#22262f';
       roundRect(ctx, cx, cy, cw, 3, 6);
       ctx.fill();
       // Label
-      ctx.fillStyle = labelColor;
+      ctx.fillStyle = isPowered ? labelColor : '#333945';
       ctx.font = 'bold 10px monospace';
       ctx.textAlign = 'left';
       ctx.fillText(label, cx + 8, cy + 16);
       // Wave type badge
       const waveLabels = { sine: 'SIN', square: 'SQR', triangle: 'TRI', sawtooth: 'SAW', noise: 'NOI' };
-      ctx.fillStyle = '#2b303c';
+      ctx.fillStyle = isPowered ? '#2b303c' : '#1a1d22';
       const badgeW = 30;
       roundRect(ctx, cx + cw - badgeW - 8, cy + 6, badgeW, 14, 3);
       ctx.fill();
-      ctx.fillStyle = labelColor;
+      ctx.fillStyle = isPowered ? labelColor : '#333945';
       ctx.font = 'bold 8px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(waveLabels[wave] || 'SIN', cx + cw - badgeW / 2 - 8, cy + 16);
 
       // Parameters
-      ctx.fillStyle = '#8c9ba5';
+      ctx.fillStyle = isPowered ? '#8c9ba5' : '#3a3f48';
       ctx.font = '8px monospace';
       ctx.textAlign = 'left';
       const lineH = 13;
@@ -198,17 +214,79 @@ defComp({
       ctx.fillText('Duty: ' + duty + '%', cx + 8, py);
     };
 
+    const ch1Freq = props.ch1_freq || 440;
+    const ch2Freq = props.ch2_freq || 880;
+
     _drawCard(scrX, cardY, cardW, cardH, 'CHANNEL 1', '#00e5ff',
       props.ch1_wave || 'sine', ch1Freq, props.ch1_amp || 5, props.ch1_offset || 0, props.ch1_phase || 0, props.ch1_duty || 50);
     _drawCard(scrX + cardW + cardGap, cardY, cardW, cardH, 'CHANNEL 2', '#ff3366',
       props.ch2_wave || 'square', ch2Freq, props.ch2_amp || 3, props.ch2_offset || 0, props.ch2_phase || 90, props.ch2_duty || 50);
 
+    // ── Power toggle switch ──
+    function drawToggleSwitch(tx, ty, tw, th, isOn, label) {
+      ctx.fillStyle = '#0e1114';
+      roundRect(ctx, tx, ty, tw, th, 3);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(80,90,100,0.4)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      const trackW = tw * 0.7;
+      const trackH = 8;
+      const trackX = tx + (tw - trackW) / 2;
+      const trackY = ty + th / 2 - 2;
+      ctx.fillStyle = '#080a0c';
+      roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+      ctx.fill();
+
+      if (isOn) {
+        const grad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+        grad.addColorStop(0, 'rgba(0,230,118,0.2)');
+        grad.addColorStop(1, 'rgba(0,230,118,0.65)');
+        ctx.fillStyle = grad;
+        roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+        ctx.fill();
+      }
+
+      const thumbR = 5;
+      const thumbX = isOn ? trackX + trackW - thumbR - 1 : trackX + thumbR + 1;
+      const thumbY = trackY + trackH / 2;
+      if (isFinite(thumbX) && isFinite(thumbY)) {
+        const thumbGrad = ctx.createRadialGradient(thumbX - 1, thumbY - 1, 0.5, thumbX, thumbY, thumbR);
+        thumbGrad.addColorStop(0, isOn ? '#c8e6c9' : '#b0bec5');
+        thumbGrad.addColorStop(1, isOn ? '#2e7d32' : '#546e7a');
+        ctx.fillStyle = thumbGrad;
+        ctx.beginPath();
+        ctx.arc(thumbX, thumbY, thumbR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      }
+
+      const ledX = tx + tw / 2;
+      const ledY = ty + 5;
+      ctx.fillStyle = isOn ? '#00e676' : '#1b3a24';
+      ctx.beginPath(); ctx.arc(ledX, ledY, 2, 0, Math.PI * 2); ctx.fill();
+      if (isOn) {
+        ctx.fillStyle = 'rgba(0,230,118,0.3)';
+        ctx.beginPath(); ctx.arc(ledX, ledY, 4.5, 0, Math.PI * 2); ctx.fill();
+      }
+
+      ctx.fillStyle = isOn ? '#eceff1' : '#78909c';
+      ctx.font = 'bold 5.5px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, tx + tw / 2, ty + th - 3);
+    }
+
+    drawToggleSwitch(265, 28, 26, 42, isPowered, 'POWER');
+
     // ── Pin labels ──
     ctx.font = 'bold 8px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#00e5ff';
+    ctx.fillStyle = isPowered ? '#00e5ff' : '#1a2a30';
     ctx.fillText('CH1', 80, H - 8);
-    ctx.fillStyle = '#ff3366';
+    ctx.fillStyle = isPowered ? '#ff3366' : '#2a1a20';
     ctx.fillText('CH2', 170, H - 8);
 
     // ── Selection highlight ──

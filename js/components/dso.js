@@ -7,10 +7,11 @@ defComp({
   icon: '∿',
   desc: '4-Channel DSO with phosphor display, AC/DC coupling, trigger, and interactive controls.',
 
-  width: 420,
+  width: 440,
   height: 300,
 
   defaultProps: {
+    powered: 1,
     timebase: 0.001,
     trig_source: 'ch1',
     trig_level: 0.0,
@@ -23,6 +24,7 @@ defComp({
   },
 
   interactive: [
+    { field: 'powered',     label: 'Power',      type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 388, y: 38, w: 26, h: 42 } },
     { field: 'timebase',    label: 'Time/Div',     min: 0.00001, max: 0.1, step: 0.0001, unit: 's' },
     { field: 'trig_source', label: 'Trig Source',  type: 'select', options: [
       { value: 'ch1', label: 'CH1' }, { value: 'ch2', label: 'CH2' },
@@ -67,6 +69,8 @@ defComp({
   ],
 
   step(inst, sim) {
+    const isPowered = Boolean(inst.runtimeState?.powered ?? inst.props.powered ?? 1);
+    if (!isPowered) return;
     if (!inst._buffers) {
       inst._buffers = { ch1: [], ch2: [], ch3: [], ch4: [], t: [] };
     }
@@ -100,8 +104,9 @@ defComp({
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const props = inst.props || {};
-    const W = 420, H = 300;
+    const W = 440, H = 300;
     const t = sim && typeof sim.time === 'number' ? sim.time : performance.now() / 1000;
+    const isPowered = Boolean(inst.runtimeState?.powered ?? inst.props.powered ?? 1);
 
     const _rr = (c, rx, ry, rw, rh, rad) => {
       if (typeof roundRect === 'function') { roundRect(c, rx, ry, rw, rh, rad); return; }
@@ -137,20 +142,28 @@ defComp({
     ctx.fillRect(10, 6, W - 20, 20);
 
     // Brand Logo
-    ctx.fillStyle = '#00d4e6';
+    ctx.fillStyle = isPowered ? '#00d4e6' : '#1a2a30';
     ctx.font = 'bold 11px "JetBrains Mono", monospace';
     ctx.textAlign = 'left';
     ctx.fillText('DSO-4100', 18, 20);
 
-    ctx.fillStyle = '#606878';
+    ctx.fillStyle = isPowered ? '#606878' : '#2a2e38';
     ctx.font = '7px sans-serif';
     ctx.fillText('4-CH DIGITAL STORAGE OSCILLOSCOPE', 82, 20);
 
     // Trigger Status
-    ctx.fillStyle = '#00ff66';
+    ctx.fillStyle = isPowered ? '#00ff66' : '#1a2a20';
     ctx.font = 'bold 8px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText('TRIG\'D', W - 18, 20);
+    ctx.fillText('TRIG\'D', W - 48, 20);
+
+    // Power LED
+    ctx.fillStyle = isPowered ? '#00e676' : '#1b3a24';
+    ctx.beginPath(); ctx.arc(W - 18, 15, 3, 0, Math.PI * 2); ctx.fill();
+    if (isPowered) {
+      ctx.fillStyle = 'rgba(0,230,118,0.3)';
+      ctx.beginPath(); ctx.arc(W - 18, 15, 6, 0, Math.PI * 2); ctx.fill();
+    }
 
     // ── Screen Panel ──
     const scrX = 12, scrY = 32, scrW = 280, scrH = 170;
@@ -208,6 +221,7 @@ defComp({
     }
 
     // ── Waveform Rendering ──
+    if (isPowered) {
     const channels = [
       { id: 'ch1', en: props.ch1_en !== false, col: '#ffe600', glow: '#ffe600', vdiv: props.ch1_vdiv || 1, pos: props.ch1_pos || 0, coup: props.ch1_coupling || 'dc' },
       { id: 'ch2', en: props.ch2_en !== false, col: '#00e5ff', glow: '#00e5ff', vdiv: props.ch2_vdiv || 2, pos: props.ch2_pos || 0, coup: props.ch2_coupling || 'dc' },
@@ -318,6 +332,13 @@ defComp({
     for (let sy = scrY; sy < scrY + scrH; sy += 2) {
       ctx.fillRect(scrX, sy, scrW, 1);
     }
+    } else {
+      // Standby state
+      ctx.fillStyle = '#111418';
+      ctx.font = 'bold 13px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('\u2014 STANDBY \u2014', scrX + scrW / 2, scrY + scrH / 2 + 4);
+    }
 
     ctx.restore(); // End screen clip
 
@@ -365,12 +386,12 @@ defComp({
     const panX = 306;
 
     // Panel background
-    ctx.fillStyle = '#1a1d24';
+    ctx.fillStyle = isPowered ? '#1a1d24' : '#13151a';
     _rr(ctx, panX - 4, 32, W - panX + 4, scrH + 20, 6); ctx.fill();
     ctx.strokeStyle = '#2a2e38'; ctx.lineWidth = 0.8; ctx.stroke();
 
     // Panel label
-    ctx.fillStyle = '#4a5264';
+    ctx.fillStyle = isPowered ? '#4a5264' : '#2a2e38';
     ctx.font = 'bold 6px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('CONTROLS', panX + 52, 42);
@@ -411,9 +432,9 @@ defComp({
       ctx.fillText(label, kx, ky + r + 9);
     };
 
-    _knob(panX + 20, 68, 16, 'SEC/DIV', '#a0b0c0');
-    _knob(panX + 60, 68, 16, 'VOLTS/DIV', '#a0b0c0');
-    _knob(panX + 40, 120, 13, 'TRIG LVL', '#ffaa00');
+    _knob(panX + 20, 68, 16, 'SEC/DIV', isPowered ? '#a0b0c0' : '#3a4050');
+    _knob(panX + 60, 68, 16, 'VOLTS/DIV', isPowered ? '#a0b0c0' : '#3a4050');
+    _knob(panX + 40, 120, 13, 'TRIG LVL', isPowered ? '#ffaa00' : '#3a3a2a');
 
     // ── Channel Buttons ──
     const _chBtn = (bx, by, lbl, col, active) => {
@@ -438,22 +459,96 @@ defComp({
     };
 
     const btnY = 155;
-    _chBtn(panX + 4,  btnY, 'CH1', '#ffe600', props.ch1_en !== false);
-    _chBtn(panX + 28, btnY, 'CH2', '#00e5ff', props.ch2_en !== false);
-    _chBtn(panX + 52, btnY, 'CH3', '#ff3090', props.ch3_en !== false);
-    _chBtn(panX + 76, btnY, 'CH4', '#30ff60', props.ch4_en !== false);
+    _chBtn(panX + 4,  btnY, 'CH1', '#ffe600', isPowered && props.ch1_en !== false);
+    _chBtn(panX + 28, btnY, 'CH2', '#00e5ff', isPowered && props.ch2_en !== false);
+    _chBtn(panX + 52, btnY, 'CH3', '#ff3090', isPowered && props.ch3_en !== false);
+    _chBtn(panX + 76, btnY, 'CH4', '#30ff60', isPowered && props.ch4_en !== false);
 
     // ── Run/Stop Button ──
     const rsY = 185;
-    const rsGrad = ctx.createLinearGradient(panX + 10, rsY, panX + 10, rsY + 16);
-    rsGrad.addColorStop(0, '#28c85a'); rsGrad.addColorStop(1, '#1a9040');
-    ctx.fillStyle = rsGrad;
-    _rr(ctx, panX + 10, rsY, 80, 16, 4); ctx.fill();
-    ctx.strokeStyle = '#0a1a0e'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 8px sans-serif';
+    ctx.fillStyle = isPowered ? '#1a2550' : '#15181e';
+    const rsBg = ctx.createLinearGradient(panX + 10, rsY, panX + 10, rsY + 30);
+    if (isPowered) { rsBg.addColorStop(0, '#28305f'); rsBg.addColorStop(1, '#1a2040'); }
+    else { rsBg.addColorStop(0, '#22262f'); rsBg.addColorStop(1, '#181b22'); }
+    ctx.fillStyle = rsBg;
+    _rr(ctx, panX + 30, rsY + 16, 20, 20, 4); ctx.fill();
+    ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.save();
+    if (isPowered) {
+      ctx.shadowColor = '#ff3366';
+      ctx.shadowBlur = 8;
+      ctx.strokeStyle = '#ff3366';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(panX + 40, rsY + 26, 7, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ff3366';
+      ctx.fillRect(panX + 37, rsY + 23, 2, 6);
+      ctx.fillRect(panX + 42, rsY + 23, 2, 6);
+    }
+    ctx.restore();
+    ctx.fillStyle = isPowered ? '#ffffff' : '#4a5264';
+    ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('RUN / STOP', panX + 50, rsY + 11);
+    ctx.fillText('POWER', panX + 40, rsY + 13);
+
+    // ── Power toggle switch ──
+    function drawToggleSwitch(tx, ty, tw, th, isOn, label) {
+      ctx.fillStyle = '#0e1114';
+      roundRect(ctx, tx, ty, tw, th, 3);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(80,90,100,0.4)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      const trackW = tw * 0.7;
+      const trackH = 8;
+      const trackX = tx + (tw - trackW) / 2;
+      const trackY = ty + th / 2 - 2;
+      ctx.fillStyle = '#080a0c';
+      roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+      ctx.fill();
+
+      if (isOn) {
+        const grad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+        grad.addColorStop(0, 'rgba(0,230,118,0.2)');
+        grad.addColorStop(1, 'rgba(0,230,118,0.65)');
+        ctx.fillStyle = grad;
+        roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+        ctx.fill();
+      }
+
+      const thumbR = 5;
+      const thumbX = isOn ? trackX + trackW - thumbR - 1 : trackX + thumbR + 1;
+      const thumbY = trackY + trackH / 2;
+      if (isFinite(thumbX) && isFinite(thumbY)) {
+        const thumbGrad = ctx.createRadialGradient(thumbX - 1, thumbY - 1, 0.5, thumbX, thumbY, thumbR);
+        thumbGrad.addColorStop(0, isOn ? '#c8e6c9' : '#b0bec5');
+        thumbGrad.addColorStop(1, isOn ? '#2e7d32' : '#546e7a');
+        ctx.fillStyle = thumbGrad;
+        ctx.beginPath();
+        ctx.arc(thumbX, thumbY, thumbR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      }
+
+      const ledX = tx + tw / 2;
+      const ledY = ty + 5;
+      ctx.fillStyle = isOn ? '#00e676' : '#1b3a24';
+      ctx.beginPath(); ctx.arc(ledX, ledY, 2, 0, Math.PI * 2); ctx.fill();
+      if (isOn) {
+        ctx.fillStyle = 'rgba(0,230,118,0.3)';
+        ctx.beginPath(); ctx.arc(ledX, ledY, 4.5, 0, Math.PI * 2); ctx.fill();
+      }
+
+      ctx.fillStyle = isOn ? '#eceff1' : '#78909c';
+      ctx.font = 'bold 5.5px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, tx + tw / 2, ty + th - 3);
+    }
+
+    drawToggleSwitch(388, 38, 26, 42, isPowered, 'POWER');
 
     // ── BNC Connectors ──
     const _bnc = (bx, by, lbl, col) => {
@@ -495,16 +590,24 @@ defComp({
     };
 
     const bncY = 248;
-    _bnc(50,  bncY, 'CH1', '#ffe600');
-    _bnc(120, bncY, 'CH2', '#00e5ff');
-    _bnc(190, bncY, 'CH3', '#ff3090');
-    _bnc(260, bncY, 'CH4', '#30ff60');
-    _bnc(350, bncY, 'GND', '#7a889b');
+    if (isPowered) {
+      _bnc(50,  bncY, 'CH1', '#ffe600');
+      _bnc(120, bncY, 'CH2', '#00e5ff');
+      _bnc(190, bncY, 'CH3', '#ff3090');
+      _bnc(260, bncY, 'CH4', '#30ff60');
+      _bnc(350, bncY, 'GND', '#7a889b');
+    } else {
+      _bnc(50,  bncY, 'CH1', '#3a4050');
+      _bnc(120, bncY, 'CH2', '#3a4050');
+      _bnc(190, bncY, 'CH3', '#3a4050');
+      _bnc(260, bncY, 'CH4', '#3a4050');
+      _bnc(350, bncY, 'GND', '#3a4050');
+    }
 
     // ── Bottom Edge Label ──
     ctx.fillStyle = '#2a2e38';
     ctx.fillRect(10, H - 38, W - 20, 1);
-    ctx.fillStyle = '#3a4050';
+    ctx.fillStyle = isPowered ? '#3a4050' : '#22262f';
     ctx.font = '5px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('4-CHANNEL DIGITAL STORAGE OSCILLOSCOPE  |  100MHz  |  1 GSa/s', W / 2, H - 28);

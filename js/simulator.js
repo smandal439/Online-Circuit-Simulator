@@ -2617,7 +2617,8 @@ window.loadExamplesFromFiles = async function () {
     'bmp280_altitude', 'dso_oscilloscope', 'simplebme280_basic', 'simplebme280_altitude',
     'max7219', 'ili9341', 'astable_555', 'neopixel_strip_chase', 'ir_obstacle_led',
     'l298n_dc_motor', 'servo_continuous_spin', 'rotary_encoder_counter',
-    'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo'];
+    'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo',
+    'opamp_741_non_inverting'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {
