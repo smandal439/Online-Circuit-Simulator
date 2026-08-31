@@ -5,26 +5,31 @@ defComp({
   name: '4-Channel Digital Storage Oscilloscope',
   category: 'Instruments',
   icon: '∿',
-  desc: '4-Channel DSO with phosphor display, AC/DC coupling, trigger, and interactive controls.',
+  desc: '4-Channel DSO with phosphor display, AC/DC coupling, trigger, measurements, cursors, math channel, and fullscreen mode.',
 
   width: 440,
   height: 300,
 
   defaultProps: {
     powered: 1,
+    runStop: 1,
+    singleTrigger: 0,
     timebase: 0.001,
     trig_source: 'ch1',
     trig_level: 0.0,
     trig_mode: 'auto',
     trig_slope: 'rising',
-    ch1_en: true,  ch1_vdiv: 1.0,  ch1_pos: 2.0,  ch1_coupling: 'dc',
-    ch2_en: true,  ch2_vdiv: 2.0,  ch2_pos: 0.0,  ch2_coupling: 'dc',
-    ch3_en: false, ch3_vdiv: 5.0,  ch3_pos: -2.0, ch3_coupling: 'dc',
-    ch4_en: false, ch4_vdiv: 0.5,  ch4_pos: -3.0, ch4_coupling: 'dc',
+    ch1_en: true,  ch1_vdiv: 1.0,  ch1_pos: 2.0,  ch1_coupling: 'dc', ch1_probe: 1,
+    ch2_en: true,  ch2_vdiv: 2.0,  ch2_pos: 0.0,  ch2_coupling: 'dc', ch2_probe: 1,
+    ch3_en: false, ch3_vdiv: 5.0,  ch3_pos: -2.0, ch3_coupling: 'dc', ch3_probe: 1,
+    ch4_en: false, ch4_vdiv: 0.5,  ch4_pos: -3.0, ch4_coupling: 'dc', ch4_probe: 1,
+    math_op: 'off',
   },
 
   interactive: [
     { field: 'powered',     label: 'Power',      type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 388, y: 38, w: 26, h: 42 } },
+    { field: 'runStop',     label: 'Run/Stop',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 306, y: 224, w: 40, h: 18 } },
+    { field: 'singleTrigger', label: 'Single',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 350, y: 224, w: 40, h: 18 } },
     { field: 'timebase',    label: 'Time/Div',     min: 0.00001, max: 0.1, step: 0.0001, unit: 's' },
     { field: 'trig_source', label: 'Trig Source',  type: 'select', options: [
       { value: 'ch1', label: 'CH1' }, { value: 'ch2', label: 'CH2' },
@@ -71,9 +76,16 @@ defComp({
   step(inst, sim) {
     const isPowered = Boolean(inst.runtimeState?.powered ?? inst.props.powered ?? 1);
     if (!isPowered) return;
+
+    const rs = inst.runtimeState || {};
+    const isRunning = rs.runStop !== undefined ? Boolean(rs.runStop) : Boolean(inst.props.runStop ?? 1);
+    const isSingleArmed = rs.singleTrigger !== undefined ? Boolean(rs.singleTrigger) : Boolean(inst.props.singleTrigger ?? 0);
+
     if (!inst._buffers) {
       inst._buffers = { ch1: [], ch2: [], ch3: [], ch4: [], t: [] };
+      inst._triggered = false;
     }
+
     const t = sim && typeof sim.time === 'number' ? sim.time : performance.now() / 1000;
     const avSim = window.ArduinoSim;
     const readV = (pin) => {
@@ -82,31 +94,85 @@ defComp({
       return 0;
     };
     const readChannel = (pin, probeType) => {
-      // Wire-based reading (existing)
       const wireV = readV(pin);
       if (Math.abs(wireV) > 0.001) return wireV;
-      // Dedicated DSO probe reading (no wire needed)
       const probe = _dsoFindProbe(probeType);
       return probe && probe.runtimeState ? (probe.runtimeState.voltage || 0) : 0;
     };
-    inst._buffers.ch1.push(readChannel('ch1_in', 'dso_probe_ch1'));
-    inst._buffers.ch2.push(readChannel('ch2_in', 'dso_probe_ch2'));
-    inst._buffers.ch3.push(readChannel('ch3_in', 'dso_probe_ch3'));
-    inst._buffers.ch4.push(readChannel('ch4_in', 'dso_probe_ch4'));
-    inst._buffers.t.push(t);
-    if (inst._buffers.t.length > 500) {
-      inst._buffers.ch1.shift(); inst._buffers.ch2.shift();
-      inst._buffers.ch3.shift(); inst._buffers.ch4.shift();
-      inst._buffers.t.shift();
+
+    const buf = inst._buffers;
+
+    if (!isRunning && !isSingleArmed) {
+      // Stopped — don't append, but still compute measurements
+      inst._computeMeas = inst._computeMeas || {};
+      const divsX = 12;
+      ['ch1', 'ch2', 'ch3', 'ch4'].forEach((chId, i) => {
+        const probeFactor = P(rs, inst.props, chId + '_probe', 1);
+        const rawSamples = buf[chId] && buf[chId].length > 0 ? buf[chId] : null;
+        const samples = rawSamples ? rawSamples.map(v => v * probeFactor) : null;
+        inst._computeMeas[chId] = dsoComputeMeasurements(samples, P(rs, inst.props, 'timebase', 0.001), divsX);
+      });
+      return;
     }
+
+    // Append samples
+    const probeFactor1 = P(rs, inst.props, 'ch1_probe', 1);
+    const probeFactor2 = P(rs, inst.props, 'ch2_probe', 1);
+    const probeFactor3 = P(rs, inst.props, 'ch3_probe', 1);
+    const probeFactor4 = P(rs, inst.props, 'ch4_probe', 1);
+    buf.ch1.push(readChannel('ch1_in', 'dso_probe_ch1') * probeFactor1);
+    buf.ch2.push(readChannel('ch2_in', 'dso_probe_ch2') * probeFactor2);
+    buf.ch3.push(readChannel('ch3_in', 'dso_probe_ch3') * probeFactor3);
+    buf.ch4.push(readChannel('ch4_in', 'dso_probe_ch4') * probeFactor4);
+    buf.t.push(t);
+    if (buf.t.length > 500) {
+      buf.ch1.shift(); buf.ch2.shift();
+      buf.ch3.shift(); buf.ch4.shift();
+      buf.t.shift();
+    }
+
+    // Single trigger logic
+    if (isSingleArmed && !inst._triggered) {
+      const trigSource = P(rs, inst.props, 'trig_source', 'ch1');
+      const trigLevel = P(rs, inst.props, 'trig_level', 0);
+      const trigSlope = P(rs, inst.props, 'trig_slope', 'rising');
+      const chSamples = buf[trigSource];
+      if (chSamples && chSamples.length >= 2) {
+        const prev = chSamples[chSamples.length - 2];
+        const curr = chSamples[chSamples.length - 1];
+        const triggered = trigSlope === 'rising'
+          ? (prev < trigLevel && curr >= trigLevel)
+          : (prev > trigLevel && curr <= trigLevel);
+        if (triggered) {
+          inst._triggered = true;
+          rs.singleTrigger = 0;
+          rs.runStop = 0;
+        }
+      }
+    }
+
+    // Compute measurements for each enabled channel
+    inst._computeMeas = inst._computeMeas || {};
+    const divsX = 12;
+    ['ch1', 'ch2', 'ch3', 'ch4'].forEach((chId) => {
+      const probeFactor = P(rs, inst.props, chId + '_probe', 1);
+      const rawSamples = buf[chId] && buf[chId].length > 0 ? buf[chId] : null;
+      const samples = rawSamples ? rawSamples.map(v => v * probeFactor) : null;
+      inst._computeMeas[chId] = dsoComputeMeasurements(samples, P(rs, inst.props, 'timebase', 0.001), divsX);
+    });
   },
 
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const props = inst.props || {};
+    const rs = inst.runtimeState || {};
     const W = 440, H = 300;
     const t = sim && typeof sim.time === 'number' ? sim.time : performance.now() / 1000;
     const isPowered = Boolean(inst.runtimeState?.powered ?? inst.props.powered ?? 1);
+    const isRunning = rs.runStop !== undefined ? Boolean(rs.runStop) : Boolean(inst.props.runStop ?? 1);
+    const isSingleArmed = rs.singleTrigger !== undefined ? Boolean(rs.singleTrigger) : Boolean(inst.props.singleTrigger ?? 0);
+
+    const P = (field, def) => (rs[field] !== undefined) ? rs[field] : (props[field] ?? def);
 
     const _rr = (c, rx, ry, rw, rh, rad) => {
       if (typeof roundRect === 'function') { roundRect(c, rx, ry, rw, rh, rad); return; }
@@ -116,10 +182,6 @@ defComp({
       c.arcTo(rx, ry + rh, rx, ry, rad);
       c.arcTo(rx, ry, rx + rw, ry, rad); c.closePath();
     };
-
-    // Read interactive value from runtimeState (slider) first, then props (default)
-    const rs = inst.runtimeState || {};
-    const P = (field, def) => (rs[field] !== undefined) ? rs[field] : (props[field] ?? def);
 
     ctx.save();
     ctx.translate(x, y);
@@ -155,11 +217,21 @@ defComp({
     ctx.font = '7px sans-serif';
     ctx.fillText('4-CH DIGITAL STORAGE OSCILLOSCOPE', 82, 20);
 
-    // Trigger Status
-    ctx.fillStyle = isPowered ? '#00ff66' : '#1a2a20';
-    ctx.font = 'bold 8px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('TRIG\'D', W - 48, 20);
+    // Run/Stop status
+    if (isPowered) {
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'right';
+      if (!isRunning) {
+        ctx.fillStyle = '#ff3366';
+        ctx.fillText('STOP', W - 80, 20);
+      } else if (isSingleArmed) {
+        ctx.fillStyle = '#ffaa00';
+        ctx.fillText('READY', W - 80, 20);
+      } else {
+        ctx.fillStyle = '#00ff66';
+        ctx.fillText('TRIG\'D', W - 80, 20);
+      }
+    }
 
     // Power LED
     ctx.fillStyle = isPowered ? '#00e676' : '#1b3a24';
@@ -182,7 +254,7 @@ defComp({
     _rr(ctx, scrX, scrY, scrW, scrH, 3);
     ctx.clip();
 
-    // Screen Background Gradient (subtle vignette)
+    // Screen Background Gradient
     const scrGrad = ctx.createRadialGradient(scrX + scrW / 2, scrY + scrH / 2, 20, scrX + scrW / 2, scrY + scrH / 2, scrW * 0.6);
     scrGrad.addColorStop(0, '#060a10');
     scrGrad.addColorStop(1, '#020306');
@@ -195,7 +267,6 @@ defComp({
     const cy = scrY + scrH / 2;
     const cx = scrX + scrW / 2;
 
-    // Main grid lines
     ctx.strokeStyle = '#0c1420';
     ctx.lineWidth = 0.6;
     for (let i = 1; i < divsX; i++) {
@@ -207,13 +278,13 @@ defComp({
       ctx.beginPath(); ctx.moveTo(scrX, py); ctx.lineTo(scrX + scrW, py); ctx.stroke();
     }
 
-    // Center crosshair (brighter)
+    // Center crosshair
     ctx.strokeStyle = '#182838';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(scrX, cy); ctx.lineTo(scrX + scrW, cy); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx, scrY); ctx.lineTo(cx, scrY + scrH); ctx.stroke();
 
-    // Sub-tick marks on center axes
+    // Sub-tick marks
     ctx.fillStyle = '#203040';
     for (let i = 0; i <= divsX * 4; i++) {
       const tx = scrX + (scrW / (divsX * 4)) * i;
@@ -246,7 +317,6 @@ defComp({
         meanV = samples.reduce((a, b) => a + b, 0) / samples.length;
       }
 
-      // Build path points
       const pts = [];
       for (let px = 0; px < scrW; px++) {
         let v = 0;
@@ -269,7 +339,7 @@ defComp({
         pts.push({ px: scrX + px, py: cy - (v * (dH / ch.vdiv)) - (ch.pos * dH) });
       }
 
-      // Glow layer (wider, dimmer)
+      // Glow layer
       ctx.strokeStyle = ch.glow;
       ctx.globalAlpha = 0.3;
       ctx.lineWidth = 4;
@@ -298,7 +368,7 @@ defComp({
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
 
-      // Ground reference marker (left edge triangle)
+      // Ground reference marker
       const baseY = cy - (ch.pos * dH);
       if (baseY >= scrY && baseY <= scrY + scrH) {
         ctx.fillStyle = ch.col;
@@ -309,6 +379,48 @@ defComp({
         ctx.closePath(); ctx.fill();
       }
     });
+
+    // ── Math Channel ──
+    const mathOp = P('math_op', 'off');
+    if (mathOp !== 'off' && buf && buf.ch1 && buf.ch1.length > 1) {
+      const ch1Samples = buf.ch1;
+      const ch2Samples = buf.ch2 || [];
+      const mathPts = [];
+      const minLen = Math.min(ch1Samples.length, ch2Samples.length);
+      if (minLen > 0) {
+        const pf1 = P('ch1_probe', 1);
+        const pf2 = P('ch2_probe', 1);
+        const vdiv = P('ch1_vdiv', 1);
+        const pos = 0;
+        for (let px = 0; px < scrW; px++) {
+          const idx = Math.floor((px / scrW) * (minLen - 1));
+          const v1 = (ch1Samples[idx] || 0) * pf1;
+          const v2 = (ch2Samples[idx] || 0) * pf2;
+          let vm = 0;
+          if (mathOp === 'add') vm = v1 + v2;
+          else if (mathOp === 'sub') vm = v1 - v2;
+          else if (mathOp === 'abs') vm = Math.abs(v1 - v2);
+          mathPts.push({ px: scrX + px, py: cy - (vm * (dH / vdiv)) - (pos * dH) });
+        }
+        // Math trace (magenta)
+        ctx.strokeStyle = '#ff00ff';
+        ctx.globalAlpha = 0.3;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#ff00ff';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        mathPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
+        ctx.stroke();
+        ctx.globalAlpha = 0.85;
+        ctx.lineWidth = 1.2;
+        ctx.shadowBlur = 3;
+        ctx.beginPath();
+        mathPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    }
 
     // ── Trigger Level Line ──
     const trigV = P('trig_level', 0);
@@ -321,7 +433,6 @@ defComp({
         ctx.lineWidth = 0.8;
         ctx.beginPath(); ctx.moveTo(scrX, trigY); ctx.lineTo(scrX + scrW, trigY); ctx.stroke();
         ctx.setLineDash([]);
-        // Trigger arrow marker
         ctx.fillStyle = '#ffaa00';
         ctx.beginPath();
         ctx.moveTo(scrX + scrW, trigY);
@@ -331,13 +442,12 @@ defComp({
       }
     }
 
-    // Scan line effect (subtle horizontal lines)
+    // Scan line effect
     ctx.fillStyle = 'rgba(0,0,0,0.08)';
     for (let sy = scrY; sy < scrY + scrH; sy += 2) {
       ctx.fillRect(scrX, sy, scrW, 1);
     }
     } else {
-      // Standby state
       ctx.fillStyle = '#111418';
       ctx.font = 'bold 13px monospace';
       ctx.textAlign = 'center';
@@ -368,12 +478,20 @@ defComp({
     ctx.textAlign = 'right';
     ctx.fillText(_fmtT(P('timebase', 0.001)) + '/div', scrX + scrW - 8, osdY + 10);
 
+    // Math channel label
+    if (P('math_op', 'off') !== 'off') {
+      ctx.fillStyle = '#ff00ff';
+      ctx.font = 'bold 7px monospace';
+      ctx.textAlign = 'left';
+      const mathLabel = P('math_op', 'off') === 'add' ? 'M:CH1+CH2' : P('math_op', 'off') === 'sub' ? 'M:CH1-CH2' : 'M:|CH1-CH2|';
+      ctx.fillText(mathLabel, scrX + 8, osdY + 22);
+    }
+
     // ── Bottom OSD Bar ──
     const osdBotY = scrY + scrH - 16;
     ctx.fillStyle = 'rgba(2, 4, 8, 0.75)';
     _rr(ctx, scrX + 2, osdBotY, scrW - 4, 14, 2); ctx.fill();
 
-    // Trigger info
     ctx.fillStyle = '#ffaa00';
     ctx.font = '7px monospace';
     ctx.textAlign = 'left';
@@ -381,20 +499,47 @@ defComp({
     const trigSlope = P('trig_slope', 'rising') === 'falling' ? '\\' : '/';
     ctx.fillText('T:' + trigSrc + ' ' + trigSlope + ' ' + _fmtV(P('trig_level', 0)), scrX + 8, osdBotY + 10);
 
-    // Trigger mode
     ctx.fillStyle = '#7a889b';
     ctx.textAlign = 'right';
-    ctx.fillText(P('trig_mode', 'auto') === 'norm' ? 'NORM' : 'AUTO', scrX + scrW - 8, osdBotY + 10);
+    ctx.fillText(P('trig_mode', 'auto') === 'norm' ? 'NORM' : P('trig_mode', 'auto') === 'single' ? 'SINGLE' : 'AUTO', scrX + scrW - 8, osdBotY + 10);
+
+    // Sample rate
+    if (buf && buf.t && buf.t.length > 1) {
+      const totalTimeBuf = buf.t[buf.t.length - 1] - buf.t[0];
+      const sampleRate = totalTimeBuf > 0 ? buf.t.length / totalTimeBuf : 0;
+      if (sampleRate > 0) {
+        ctx.fillStyle = '#4a5264';
+        ctx.font = '6px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(_fmtRate(sampleRate), scrX + scrW / 2, osdBotY + 10);
+      }
+    }
+
+    // ── Measurement Display (below screen) ──
+    const measY = scrY + scrH + 4;
+    const meas = inst._computeMeas || {};
+    const measCh = channels.find(c => c.en) || channels[0];
+    const m = meas[measCh.id];
+    if (m && isPowered) {
+      ctx.fillStyle = 'rgba(2, 4, 8, 0.6)';
+      _rr(ctx, scrX, measY, scrW, 16, 2); ctx.fill();
+      ctx.font = '6.5px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = measCh.col;
+      const freqStr = m.frequency > 0 ? ' f=' + _fmtFreq(m.frequency) : '';
+      const vppStr = ' Vpp=' + _fmtV(m.vpp);
+      const vrmsStr = ' Vrms=' + _fmtV(m.vrms);
+      const dutyStr = m.dutyCycle > 0 ? ' D=' + m.dutyCycle.toFixed(1) + '%' : '';
+      ctx.fillText(vppStr + vrmsStr + freqStr + dutyStr, scrX + 4, measY + 11);
+    }
 
     // ── Right Panel Controls ──
     const panX = 306;
 
-    // Panel background
     ctx.fillStyle = isPowered ? '#1a1d24' : '#13151a';
     _rr(ctx, panX - 4, 32, W - panX + 4, scrH + 20, 6); ctx.fill();
     ctx.strokeStyle = '#2a2e38'; ctx.lineWidth = 0.8; ctx.stroke();
 
-    // Panel label
     ctx.fillStyle = isPowered ? '#4a5264' : '#2a2e38';
     ctx.font = 'bold 6px sans-serif';
     ctx.textAlign = 'center';
@@ -402,14 +547,12 @@ defComp({
 
     // ── Rotary Knobs ──
     const _knob = (kx, ky, r, label, col) => {
-      // Knob body
       const kg = ctx.createRadialGradient(kx - 1.5, ky - 1.5, 0.5, kx, ky, r);
       kg.addColorStop(0, '#4a5060'); kg.addColorStop(0.6, '#282d38'); kg.addColorStop(1, '#14171e');
       ctx.fillStyle = kg;
       ctx.beginPath(); ctx.arc(kx, ky, r, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1.5; ctx.stroke();
 
-      // Knurled ring
       ctx.strokeStyle = '#3a3f4a'; ctx.lineWidth = 0.4;
       for (let a = 0; a < Math.PI * 2; a += 0.3) {
         ctx.beginPath();
@@ -418,18 +561,15 @@ defComp({
         ctx.stroke();
       }
 
-      // Position indicator line
       ctx.strokeStyle = col; ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(kx, ky);
       ctx.lineTo(kx, ky - r + 3);
       ctx.stroke();
 
-      // Center dot
       ctx.fillStyle = '#5a6070';
       ctx.beginPath(); ctx.arc(kx, ky, 2, 0, Math.PI * 2); ctx.fill();
 
-      // Label
       ctx.fillStyle = '#6a7488';
       ctx.font = '5.5px sans-serif';
       ctx.textAlign = 'center';
@@ -442,7 +582,6 @@ defComp({
 
     // ── Channel Buttons ──
     const _chBtn = (bx, by, lbl, col, active) => {
-      // Button body
       const cbg = ctx.createLinearGradient(bx, by, bx, by + 16);
       cbg.addColorStop(0, active ? col : '#222830');
       cbg.addColorStop(1, active ? _darken(col, 0.3) : '#181c22');
@@ -450,12 +589,10 @@ defComp({
       _rr(ctx, bx, by, 20, 16, 3); ctx.fill();
       ctx.strokeStyle = active ? '#0a0c10' : '#1a1e28'; ctx.lineWidth = 1; ctx.stroke();
 
-      // LED indicator
       ctx.fillStyle = active ? col : '#2a3040';
       ctx.beginPath(); ctx.arc(bx + 10, by - 3, 2.5, 0, Math.PI * 2); ctx.fill();
       if (active) { ctx.shadowColor = col; ctx.shadowBlur = 4; ctx.beginPath(); ctx.arc(bx + 10, by - 3, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
 
-      // Label
       ctx.fillStyle = active ? '#000000' : '#6a7488';
       ctx.font = 'bold 8px sans-serif';
       ctx.textAlign = 'center';
@@ -470,30 +607,38 @@ defComp({
 
     // ── Run/Stop Button ──
     const rsY = 185;
-    ctx.fillStyle = isPowered ? '#1a2550' : '#15181e';
     const rsBg = ctx.createLinearGradient(panX + 10, rsY, panX + 10, rsY + 30);
-    if (isPowered) { rsBg.addColorStop(0, '#28305f'); rsBg.addColorStop(1, '#1a2040'); }
-    else { rsBg.addColorStop(0, '#22262f'); rsBg.addColorStop(1, '#181b22'); }
+    if (isRunning) { rsBg.addColorStop(0, '#1a3520'); rsBg.addColorStop(1, '#0e2210'); }
+    else { rsBg.addColorStop(0, '#351a1a'); rsBg.addColorStop(1, '#220e0e'); }
     ctx.fillStyle = rsBg;
-    _rr(ctx, panX + 30, rsY + 16, 20, 20, 4); ctx.fill();
+    _rr(ctx, panX + 10, rsY, 38, 18, 4); ctx.fill();
     ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.save();
-    if (isPowered) {
-      ctx.shadowColor = '#ff3366';
-      ctx.shadowBlur = 8;
-      ctx.strokeStyle = '#ff3366';
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(panX + 40, rsY + 26, 7, 0, Math.PI * 2); ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#ff3366';
-      ctx.fillRect(panX + 37, rsY + 23, 2, 6);
-      ctx.fillRect(panX + 42, rsY + 23, 2, 6);
-    }
-    ctx.restore();
-    ctx.fillStyle = isPowered ? '#ffffff' : '#4a5264';
+    ctx.fillStyle = isRunning ? '#00ff66' : '#ff3366';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(isRunning ? 'RUN' : 'STOP', panX + 29, rsY + 12);
+
+    // Single button
+    const sglBg = ctx.createLinearGradient(panX + 52, rsY, panX + 52, rsY + 18);
+    if (isSingleArmed) { sglBg.addColorStop(0, '#35351a'); sglBg.addColorStop(1, '#22220e'); }
+    else { sglBg.addColorStop(0, '#222830'); sglBg.addColorStop(1, '#181c22'); }
+    ctx.fillStyle = sglBg;
+    _rr(ctx, panX + 52, rsY, 38, 18, 4); ctx.fill();
+    ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = isSingleArmed ? '#ffaa00' : '#6a7488';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('SINGLE', panX + 71, rsY + 12);
+
+    // ── Fullscreen Button ──
+    const fsX = panX + 52, fsY = rsY + 24;
+    ctx.fillStyle = isPowered ? '#1a2550' : '#181c22';
+    _rr(ctx, fsX - 20, fsY, 80, 16, 3); ctx.fill();
+    ctx.strokeStyle = isPowered ? '#00979c' : '#2a2e38'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.fillStyle = isPowered ? '#00d4e6' : '#4a5264';
     ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('POWER', panX + 40, rsY + 13);
+    ctx.fillText('\u26F6 FULLSCREEN', fsX + 20, fsY + 11);
 
     // ── Power toggle switch ──
     function drawToggleSwitch(tx, ty, tw, th, isOn, label) {
@@ -556,37 +701,24 @@ defComp({
 
     // ── BNC Connectors ──
     const _bnc = (bx, by, lbl, col) => {
-      // Mounting hole
       ctx.fillStyle = '#2a2e38';
       ctx.beginPath(); ctx.arc(bx, by, 12, 0, Math.PI * 2); ctx.fill();
-
-      // Outer hex ring
       ctx.fillStyle = '#3a4050';
       ctx.beginPath(); ctx.arc(bx, by, 10, 0, Math.PI * 2); ctx.fill();
-
-      // Metallic shield
       const mg = ctx.createLinearGradient(bx - 7, by - 7, bx + 7, by + 7);
       mg.addColorStop(0, '#c8d0da'); mg.addColorStop(0.4, '#8090a0');
       mg.addColorStop(0.6, '#606878'); mg.addColorStop(1, '#3a4050');
       ctx.fillStyle = mg;
       ctx.beginPath(); ctx.arc(bx, by, 8, 0, Math.PI * 2); ctx.fill();
-
-      // Inner dielectric
       ctx.fillStyle = '#0c0e12';
       ctx.beginPath(); ctx.arc(bx, by, 5, 0, Math.PI * 2); ctx.fill();
-
-      // Center pin
       ctx.fillStyle = col;
       ctx.beginPath(); ctx.arc(bx, by, 2, 0, Math.PI * 2); ctx.fill();
-
-      // Color ring around BNC
       ctx.strokeStyle = col;
       ctx.lineWidth = 1.5;
       ctx.globalAlpha = 0.4;
       ctx.beginPath(); ctx.arc(bx, by, 10.5, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
-
-      // Label
       ctx.fillStyle = col;
       ctx.font = 'bold 7px sans-serif';
       ctx.textAlign = 'center';
@@ -625,6 +757,45 @@ defComp({
   }
 });
 
+/* ── Measurement Engine ── */
+function dsoComputeMeasurements(samples, timebase, divsX) {
+  if (!samples || samples.length < 2) return { vmax: 0, vmin: 0, vpp: 0, vrms: 0, mean: 0, frequency: 0, period: 0, dutyCycle: 0 };
+  let vmax = -Infinity, vmin = Infinity, sum = 0, sumSq = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const v = samples[i];
+    if (v > vmax) vmax = v;
+    if (v < vmin) vmin = v;
+    sum += v;
+    sumSq += v * v;
+  }
+  if (!isFinite(vmax)) vmax = 0;
+  if (!isFinite(vmin)) vmin = 0;
+  const vpp = vmax - vmin;
+  const mean = samples.length > 0 ? sum / samples.length : 0;
+  const vrms = samples.length > 0 ? Math.sqrt(sumSq / samples.length) : 0;
+
+  // Frequency from zero crossings
+  let crossings = 0;
+  for (let i = 1; i < samples.length; i++) {
+    if ((samples[i - 1] < 0 && samples[i] >= 0) || (samples[i - 1] >= 0 && samples[i] < 0)) {
+      crossings++;
+    }
+  }
+  const totalTime = timebase * divsX;
+  const frequency = crossings > 1 ? (crossings / 2) / totalTime : 0;
+  const period = frequency > 0 ? 1 / frequency : 0;
+
+  // Duty cycle
+  let highCount = 0;
+  for (let i = 0; i < samples.length; i++) {
+    if (samples[i] > 0) highCount++;
+  }
+  const dutyCycle = samples.length > 0 ? (highCount / samples.length) * 100 : 0;
+
+  return { vmax, vmin, vpp, vrms, mean, frequency, period, dutyCycle };
+}
+
+/* ── Probe Finder ── */
 function _dsoFindProbe(probeType) {
   const canvas = window.CircuitCanvas;
   if (!canvas) return null;
@@ -635,6 +806,7 @@ function _dsoFindProbe(probeType) {
   return null;
 }
 
+/* ── Helpers ── */
 function _darken(hex, amt) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -652,4 +824,17 @@ function _fmtT(s) {
 function _fmtV(v) {
   if (Math.abs(v) >= 1) return v.toFixed(v % 1 === 0 ? 0 : 1) + 'V';
   return (v * 1000).toFixed(0) + 'mV';
+}
+
+function _fmtFreq(f) {
+  if (f >= 1e6) return (f / 1e6).toFixed(2) + 'MHz';
+  if (f >= 1e3) return (f / 1e3).toFixed(2) + 'kHz';
+  return f.toFixed(1) + 'Hz';
+}
+
+function _fmtRate(r) {
+  if (r >= 1e9) return (r / 1e9).toFixed(1) + 'GSa/s';
+  if (r >= 1e6) return (r / 1e6).toFixed(1) + 'MSa/s';
+  if (r >= 1e3) return (r / 1e3).toFixed(1) + 'KSa/s';
+  return r.toFixed(0) + 'Sa/s';
 }
