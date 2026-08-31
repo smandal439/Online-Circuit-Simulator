@@ -1992,6 +1992,19 @@ _newProject() {
     this.osc = new window.OscilloscopeClass(oscCanvas);
   }
 
+  /* ══════════════════════ DSO FULLSCREEN ══════════════════════ */
+  openDSOFullscreen(comp) {
+    if (!window.DSOFullscreen) return;
+    if (!this._dsoFS) {
+      this._dsoFS = new window.DSOFullscreen();
+    }
+    this._dsoFS.open(comp);
+  }
+
+  closeDSOFullscreen() {
+    if (this._dsoFS) this._dsoFS.close();
+  }
+
   /* ══════════════════════ LOGIC ANALYZER ══════════════════════ */
   _initLogicAnalyzer() {
     const laCanvas = document.getElementById('logic-analyzer-canvas');

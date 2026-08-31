@@ -1519,6 +1519,10 @@ class CircuitCanvas {
     const world = this._toWorld(e.offsetX, e.offsetY);
     const comp = this._hitTestComp(world.x, world.y);
     if (comp && window.App) {
+      if (comp.type === 'dso_4ch') {
+        window.App.openDSOFullscreen(comp);
+        return;
+      }
       window.App.openPropsModal(comp);
     }
   }

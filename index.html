@@ -907,7 +907,25 @@
             <button class="hdr-dropdown-item mobile-more-btn" data-more-action="guide">Guide</button>
             <button class="hdr-dropdown-item mobile-more-btn" data-more-action="project-guide">Project Guide</button>
         </div>
-    </div> <!-- ════════════════════ SCRIPTS ════════════════════ -->
+    </div> <!-- ════════════════════ DSO FULLSCREEN OVERLAY ════════════════════ -->
+    <div id="dso-fullscreen-overlay" class="dso-fullscreen-overlay hidden">
+        <div class="dso-fullscreen-container">
+            <div class="dso-fs-header">
+                <span class="dso-fs-title">DSO-4100 — 4CH Digital Storage Oscilloscope</span>
+                <div class="dso-fs-header-controls">
+                    <button id="dso-fs-autoset" class="dso-fs-btn">Auto Set</button>
+                    <button id="dso-fs-save" class="dso-fs-btn">Save CSV</button>
+                    <button id="dso-fs-close" class="dso-fs-btn dso-fs-close-btn">&times;</button>
+                </div>
+            </div>
+            <div class="dso-fs-body">
+                <div class="dso-fs-screen-wrap">
+                    <canvas id="dso-fullscreen-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ════════════════════ SCRIPTS ════════════════════ -->
     <script>window.require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } };</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
@@ -921,7 +939,8 @@
     <script src="js/components/passive.js?v=20260826-1"></script>
     <script src="js/components/power.js?v=20260825-2"></script>
     <script src="js/components/ics.js?v=20260825-2"></script>
-    <script src="js/components/dso.js?v=20260826-1"></script>
+    <script src="js/components/dso.js?v=20260831-1"></script>
+    <script src="js/dso-fullscreen.js?v=20260831-1"></script>
     <script src="js/components/multimeter.js?v=20260825-2"></script>
     <script src="js/components/probe.js?v=20260831-1"></script>
     <script src="js/components/function_generator.js?v=20260825-2"></script>
