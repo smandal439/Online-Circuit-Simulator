@@ -316,16 +316,8 @@ defComp({
     ctx.fillText('A', dialX + 28, dialY + 14);
     ctx.fillText('OFF', dialX - 26, dialY + 14);
 
-    // ── Bottom Connector Panel (flush with body) ──
+    // ── Bottom Connectors (flush with body) ──
     const connY = H - 28;
-
-    // Connector panel background
-    ctx.fillStyle = '#1a1d22';
-    drawRRect(ctx, 38, connY - 2, W - 44, 24, 4);
-    ctx.fill();
-    ctx.strokeStyle = '#111417';
-    ctx.lineWidth = 1;
-    ctx.stroke();
 
     const _drawTerminal = (tx, color, label) => {
       // Terminal ring
