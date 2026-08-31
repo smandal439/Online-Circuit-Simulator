@@ -3621,7 +3621,7 @@ class CircuitCanvas {
 
       // 3. Resistor internal pass-through (p1 <-> p2)
       if (inst.type === 'resistor') {
-        const rVal = Number(inst.props.value) || 220;
+        const rVal = (Number(inst.props.value) || 220) * (inst.props.unit === 'kΩ' ? 1e3 : inst.props.unit === 'MΩ' ? 1e6 : 1);
         const otherPin = current.pinId === 'p1' ? 'p2' : 'p1';
         queue.push({
           instId: inst.id,
@@ -3832,7 +3832,7 @@ class CircuitCanvas {
 
       // Resistor pass-through — add resistance
       if (inst.type === 'resistor') {
-        const rVal = Number(inst.props && inst.props.value) || 220;
+        const rVal = (Number(inst.props && inst.props.value) || 220) * (inst.props.unit === 'kΩ' ? 1e3 : inst.props.unit === 'MΩ' ? 1e6 : 1);
         const otherPin = current.pinId === 'p1' ? 'p2' : 'p1';
         queue.push({ instId: inst.id, pinId: otherPin, resistance: current.resistance + rVal });
         // Also skip past the resistor to the next connected component
