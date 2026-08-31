@@ -336,11 +336,11 @@ defComp({
       // Gold contact bore
       ctx.fillStyle = '#d4af37';
       ctx.beginPath(); ctx.arc(tx, connY + 8, 2.5, 0, Math.PI * 2); ctx.fill();
-      // Label
+      // Label above terminal
       ctx.fillStyle = color;
       ctx.font = 'bold 7px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(label, tx, connY + 22);
+      ctx.fillText(label, tx, connY - 4);
     };
 
     _drawTerminal(72, '#eccc68', '10A');
