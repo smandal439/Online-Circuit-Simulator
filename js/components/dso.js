@@ -117,6 +117,10 @@ defComp({
       c.arcTo(rx, ry, rx + rw, ry, rad); c.closePath();
     };
 
+    // Read interactive value from runtimeState (slider) first, then props (default)
+    const rs = inst.runtimeState || {};
+    const P = (field, def) => (rs[field] !== undefined) ? rs[field] : (props[field] ?? def);
+
     ctx.save();
     ctx.translate(x, y);
 
@@ -223,14 +227,14 @@ defComp({
     // ── Waveform Rendering ──
     if (isPowered) {
     const channels = [
-      { id: 'ch1', en: props.ch1_en !== false, col: '#ffe600', glow: '#ffe600', vdiv: props.ch1_vdiv || 1, pos: props.ch1_pos || 0, coup: props.ch1_coupling || 'dc' },
-      { id: 'ch2', en: props.ch2_en !== false, col: '#00e5ff', glow: '#00e5ff', vdiv: props.ch2_vdiv || 2, pos: props.ch2_pos || 0, coup: props.ch2_coupling || 'dc' },
-      { id: 'ch3', en: props.ch3_en !== false, col: '#ff3090', glow: '#ff3090', vdiv: props.ch3_vdiv || 5, pos: props.ch3_pos || 0, coup: props.ch3_coupling || 'dc' },
-      { id: 'ch4', en: props.ch4_en !== false, col: '#30ff60', glow: '#30ff60', vdiv: props.ch4_vdiv || 0.5, pos: props.ch4_pos || 0, coup: props.ch4_coupling || 'dc' },
+      { id: 'ch1', en: P('ch1_en', true) !== false, col: '#ffe600', glow: '#ffe600', vdiv: P('ch1_vdiv', 1), pos: P('ch1_pos', 2), coup: P('ch1_coupling', 'dc') },
+      { id: 'ch2', en: P('ch2_en', true) !== false, col: '#00e5ff', glow: '#00e5ff', vdiv: P('ch2_vdiv', 2), pos: P('ch2_pos', 0), coup: P('ch2_coupling', 'dc') },
+      { id: 'ch3', en: P('ch3_en', false) !== false, col: '#ff3090', glow: '#ff3090', vdiv: P('ch3_vdiv', 5), pos: P('ch3_pos', -2), coup: P('ch3_coupling', 'dc') },
+      { id: 'ch4', en: P('ch4_en', false) !== false, col: '#30ff60', glow: '#30ff60', vdiv: P('ch4_vdiv', 0.5), pos: P('ch4_pos', -3), coup: P('ch4_coupling', 'dc') },
     ];
 
     const buf = inst._buffers;
-    const totalTime = (props.timebase || 0.001) * divsX;
+    const totalTime = P('timebase', 0.001) * divsX;
 
     channels.forEach((ch) => {
       if (!ch.en) return;
@@ -307,8 +311,8 @@ defComp({
     });
 
     // ── Trigger Level Line ──
-    const trigV = props.trig_level || 0;
-    const trigCh = channels.find(c => c.id === (props.trig_source || 'ch1'));
+    const trigV = P('trig_level', 0);
+    const trigCh = channels.find(c => c.id === (P('trig_source', 'ch1')));
     if (trigCh) {
       const trigY = cy - (trigV * (dH / trigCh.vdiv)) - (trigCh.pos * dH);
       if (trigY >= scrY && trigY <= scrY + scrH) {
@@ -353,16 +357,16 @@ defComp({
       ctx.textAlign = 'left';
       ctx.fillText(txt, ox, osdY + 10);
     };
-    _osd(scrX + 8, '1:' + _fmtV(props.ch1_vdiv || 1) + (props.ch1_coupling === 'ac' ? '~' : '='), '#ffe600', props.ch1_en !== false);
-    _osd(scrX + 72, '2:' + _fmtV(props.ch2_vdiv || 2) + (props.ch2_coupling === 'ac' ? '~' : '='), '#00e5ff', props.ch2_en !== false);
-    _osd(scrX + 136, '3:' + _fmtV(props.ch3_vdiv || 5) + (props.ch3_coupling === 'ac' ? '~' : '='), '#ff3090', props.ch3_en !== false);
-    _osd(scrX + 200, '4:' + _fmtV(props.ch4_vdiv || 0.5) + (props.ch4_coupling === 'ac' ? '~' : '='), '#30ff60', props.ch4_en !== false);
+    _osd(scrX + 8, '1:' + _fmtV(P('ch1_vdiv', 1)) + (P('ch1_coupling', 'dc') === 'ac' ? '~' : '='), '#ffe600', P('ch1_en', true) !== false);
+    _osd(scrX + 72, '2:' + _fmtV(P('ch2_vdiv', 2)) + (P('ch2_coupling', 'dc') === 'ac' ? '~' : '='), '#00e5ff', P('ch2_en', true) !== false);
+    _osd(scrX + 136, '3:' + _fmtV(P('ch3_vdiv', 5)) + (P('ch3_coupling', 'dc') === 'ac' ? '~' : '='), '#ff3090', P('ch3_en', false) !== false);
+    _osd(scrX + 200, '4:' + _fmtV(P('ch4_vdiv', 0.5)) + (P('ch4_coupling', 'dc') === 'ac' ? '~' : '='), '#30ff60', P('ch4_en', false) !== false);
 
     // Timebase on right
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 8px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(_fmtT(props.timebase || 0.001) + '/div', scrX + scrW - 8, osdY + 10);
+    ctx.fillText(_fmtT(P('timebase', 0.001)) + '/div', scrX + scrW - 8, osdY + 10);
 
     // ── Bottom OSD Bar ──
     const osdBotY = scrY + scrH - 16;
@@ -373,14 +377,14 @@ defComp({
     ctx.fillStyle = '#ffaa00';
     ctx.font = '7px monospace';
     ctx.textAlign = 'left';
-    const trigSrc = (props.trig_source || 'ch1').toUpperCase();
-    const trigSlope = props.trig_slope === 'falling' ? '\\' : '/';
-    ctx.fillText('T:' + trigSrc + ' ' + trigSlope + ' ' + _fmtV(props.trig_level || 0), scrX + 8, osdBotY + 10);
+    const trigSrc = (P('trig_source', 'ch1')).toUpperCase();
+    const trigSlope = P('trig_slope', 'rising') === 'falling' ? '\\' : '/';
+    ctx.fillText('T:' + trigSrc + ' ' + trigSlope + ' ' + _fmtV(P('trig_level', 0)), scrX + 8, osdBotY + 10);
 
     // Trigger mode
     ctx.fillStyle = '#7a889b';
     ctx.textAlign = 'right';
-    ctx.fillText(props.trig_mode === 'norm' ? 'NORM' : 'AUTO', scrX + scrW - 8, osdBotY + 10);
+    ctx.fillText(P('trig_mode', 'auto') === 'norm' ? 'NORM' : 'AUTO', scrX + scrW - 8, osdBotY + 10);
 
     // ── Right Panel Controls ──
     const panX = 306;
@@ -459,10 +463,10 @@ defComp({
     };
 
     const btnY = 155;
-    _chBtn(panX + 4,  btnY, 'CH1', '#ffe600', isPowered && props.ch1_en !== false);
-    _chBtn(panX + 28, btnY, 'CH2', '#00e5ff', isPowered && props.ch2_en !== false);
-    _chBtn(panX + 52, btnY, 'CH3', '#ff3090', isPowered && props.ch3_en !== false);
-    _chBtn(panX + 76, btnY, 'CH4', '#30ff60', isPowered && props.ch4_en !== false);
+    _chBtn(panX + 4,  btnY, 'CH1', '#ffe600', isPowered && P('ch1_en', true) !== false);
+    _chBtn(panX + 28, btnY, 'CH2', '#00e5ff', isPowered && P('ch2_en', true) !== false);
+    _chBtn(panX + 52, btnY, 'CH3', '#ff3090', isPowered && P('ch3_en', false) !== false);
+    _chBtn(panX + 76, btnY, 'CH4', '#30ff60', isPowered && P('ch4_en', false) !== false);
 
     // ── Run/Stop Button ──
     const rsY = 185;
