@@ -236,12 +236,40 @@ defComp({
     ctx.font = 'bold 10px monospace';
     ctx.fillText(readoutUnit, lcdX + lcdW - 4, lcdY + 36);
 
-    // Continuity Beeper Icon
+    // Continuity Beeper Icon + Sound
     if (rs.displayBeep && mode === 'CONT') {
       ctx.fillStyle = '#0f1710';
       ctx.font = 'bold 9px system-ui';
       ctx.textAlign = 'left';
       ctx.fillText('\uD83D\uDD0A BEEP', lcdX + 4, lcdY + 36);
+
+      // Play beep tone (only on rising edge to avoid restarting every frame)
+      if (!rs._beepOsc) {
+        try {
+          if (!rs._audioCtx) rs._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const ctx2 = rs._audioCtx;
+          if (ctx2.state === 'suspended') ctx2.resume();
+          const osc = ctx2.createOscillator();
+          const gain = ctx2.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = 1000;
+          gain.gain.value = 0.3;
+          osc.connect(gain);
+          gain.connect(ctx2.destination);
+          osc.start();
+          rs._beepOsc = osc;
+          rs._beepGain = gain;
+        } catch (e) { /* audio not available */ }
+      }
+    } else {
+      // Stop beep when condition clears
+      if (rs._beepOsc) {
+        try {
+          rs._beepGain.gain.setValueAtTime(rs._beepGain.gain.value, rs._audioCtx.currentTime);
+          rs._beepGain.gain.linearRampToValueAtTime(0, rs._audioCtx.currentTime + 0.05);
+          setTimeout(() => { try { rs._beepOsc.stop(); } catch(e) {} rs._beepOsc = null; rs._beepGain = null; }, 60);
+        } catch (e) { rs._beepOsc = null; rs._beepGain = null; }
+      }
     }
 
     // ── Analog Segmented Bar Graph ──
