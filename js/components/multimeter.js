@@ -336,7 +336,7 @@ defComp({
     };
 
     _drawTerminal(72, '#eccc68', '10A');
-    _drawTerminal(110, '#f1f3f8', 'COM');
+    _drawTerminal(110, '#484f63', 'COM');
     _drawTerminal(148, '#ff3838', 'V\u03A9\mA');
 
     // Selection Highlight
