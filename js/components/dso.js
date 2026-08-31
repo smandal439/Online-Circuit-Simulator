@@ -78,6 +78,7 @@ defComp({
     if (!isPowered) return;
 
     const rs = inst.runtimeState || {};
+    const P = (runtime, pr, field, def) => (runtime[field] !== undefined) ? runtime[field] : (pr[field] ?? def);
     const isRunning = rs.runStop !== undefined ? Boolean(rs.runStop) : Boolean(inst.props.runStop ?? 1);
     const isSingleArmed = rs.singleTrigger !== undefined ? Boolean(rs.singleTrigger) : Boolean(inst.props.singleTrigger ?? 0);
 
