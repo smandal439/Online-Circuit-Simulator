@@ -297,7 +297,6 @@ defComp({
     }
 
     // ── Waveform Rendering ──
-    if (isPowered) {
     const channels = [
       { id: 'ch1', en: P('ch1_en', true) !== false, col: '#ffe600', glow: '#ffe600', vdiv: P('ch1_vdiv', 1), pos: P('ch1_pos', 2), coup: P('ch1_coupling', 'dc') },
       { id: 'ch2', en: P('ch2_en', true) !== false, col: '#00e5ff', glow: '#00e5ff', vdiv: P('ch2_vdiv', 2), pos: P('ch2_pos', 0), coup: P('ch2_coupling', 'dc') },
@@ -307,6 +306,8 @@ defComp({
 
     const buf = inst._buffers;
     const totalTime = P('timebase', 0.001) * divsX;
+
+    if (isPowered) {
 
     channels.forEach((ch) => {
       if (!ch.en) return;
