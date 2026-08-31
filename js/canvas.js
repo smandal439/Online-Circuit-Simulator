@@ -3333,6 +3333,44 @@ class CircuitCanvas {
               displayMode = 'CONT';
               break;
             }
+            case 'MV_DC': {
+              const vRed = getNetVoltage(redNet);
+              const vCom = getNetVoltage(comNet);
+              const diff = (vRed - vCom) * 1000;
+              const sign = diff < 0 ? '-' : '';
+              displayText = sign + Math.abs(diff).toFixed(1);
+              displayUnit = 'mV';
+              displayMode = 'DC';
+              break;
+            }
+            case 'DIODE': {
+              const vRed = getNetVoltage(redNet);
+              const vCom = getNetVoltage(comNet);
+              const diff = vRed - vCom;
+              if (diff > 0.05 && diff < 3.0) {
+                displayText = diff.toFixed(3);
+              } else {
+                displayText = 'O.L';
+              }
+              displayUnit = 'V';
+              displayMode = 'DIODE';
+              break;
+            }
+            case 'A_AC': {
+              const ampNet = this._tracePinNet(inst.id, 'probe_amp');
+              const vAmp = getNetVoltage(ampNet);
+              const vCom = getNetVoltage(comNet);
+              const amps = Math.abs(vAmp - vCom) / 0.01;
+              let disp, pfx;
+              if (amps >= 1) { disp = amps; pfx = 'A'; }
+              else if (amps >= 0.001) { disp = amps * 1000; pfx = 'mA'; }
+              else { disp = amps * 1e6; pfx = 'µA'; }
+              const decimals = disp >= 100 ? 1 : 3;
+              displayText = disp.toFixed(decimals);
+              displayUnit = pfx;
+              displayMode = 'AC';
+              break;
+            }
           }
 
           inst.runtimeState.displayText = displayText;

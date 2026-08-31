@@ -98,120 +98,31 @@ defComp({
     }
     rs.isHeld = false;
 
-    // Measurement Evaluation
-    let displayVal = 0;
-    let unit = 'V';
-    let sub = 'DC';
-    let beep = false;
-    let bargraph = 0; // 0.0 to 1.0
+    // Display values are computed by updateSimState() in canvas.js using
+    // _tracePinNet and _measureResistanceBetween — do NOT overwrite here.
+    // Only compute bar graph and mode indicator for this step.
 
+    let bargraph = 0;
     switch (mode) {
-      case 'V_DC': {
-        sub = 'DC';
-        displayVal = vDiff;
-        bargraph = Math.min(Math.abs(displayVal) / 10.0, 1.0);
-        const fmt = this._autoScale(displayVal, 'V');
-        rs.displayText = fmt.text;
-        rs.displayUnit = fmt.unit;
+      case 'V_DC': case 'MV_DC':
+        bargraph = Math.min(Math.abs(mode === 'MV_DC' ? vDiff * 1000 : vDiff) / 10.0, 1.0);
         break;
-      }
-
-      case 'MV_DC': {
-        sub = 'DC';
-        displayVal = vDiff * 1000.0;
-        bargraph = Math.min(Math.abs(displayVal) / 600.0, 1.0);
-        rs.displayText = displayVal.toFixed(1);
-        rs.displayUnit = 'mV';
-        break;
-      }
-
-      case 'V_AC': {
-        sub = 'AC';
+      case 'V_AC': case 'A_AC': {
         let sumSq = 0;
         for (let i = 0; i < 128; i++) sumSq += rs.buffer[i] * rs.buffer[i];
-        displayVal = Math.sqrt(sumSq / 128);
-        bargraph = Math.min(displayVal / 10.0, 1.0);
-        const fmt = this._autoScale(displayVal, 'V');
-        rs.displayText = fmt.text;
-        rs.displayUnit = fmt.unit;
+        const rms = Math.sqrt(sumSq / 128);
+        bargraph = Math.min(rms / 10.0, 1.0);
         break;
       }
-
-      case 'RES': {
-        sub = 'AUTO';
-        // Virtual Constant Current Injection for Test: 1mA
-        const testCurrent = 0.001;
-        const calcR = Math.abs(vDiff) / testCurrent;
-        if (calcR > 40e6 || isNaN(calcR)) {
-          rs.displayText = 'O.L';
-          rs.displayUnit = 'MΩ';
-          bargraph = 1.0;
-        } else {
-          const fmt = this._autoScale(calcR, 'Ω');
-          rs.displayText = fmt.text;
-          rs.displayUnit = fmt.unit;
-          bargraph = Math.min(calcR / 10000.0, 1.0);
-        }
+      case 'A_DC':
+        bargraph = Math.min(Math.abs((vAmp - vCom) / 0.01) / 10.0, 1.0);
         break;
-      }
-
-      case 'CONT': {
-        sub = 'CONT';
-        unit = 'Ω';
-        const res = Math.abs(vDiff) / 0.001;
-        if (res < 35.0) {
-          beep = true;
-          rs.displayText = res.toFixed(1);
-          bargraph = res / 35.0;
-        } else if (res > 2000) {
-          rs.displayText = 'O.L';
-          bargraph = 1.0;
-        } else {
-          rs.displayText = res.toFixed(0);
-          bargraph = Math.min(res / 500, 1.0);
-        }
-        rs.displayUnit = 'Ω';
+      case 'DIODE':
+        bargraph = Math.min(Math.max(0, vDiff) / 2.0, 1.0);
         break;
-      }
-
-      case 'DIODE': {
-        sub = 'DIODE';
-        if (vDiff > 0.05 && vDiff < 3.0) {
-          rs.displayText = vDiff.toFixed(3);
-        } else {
-          rs.displayText = 'O.L';
-        }
-        rs.displayUnit = 'V';
-        bargraph = Math.min(vDiff / 2.0, 1.0);
-        break;
-      }
-
-      case 'A_DC': {
-        sub = 'DC';
-        // Shunt resistance: 0.01 Ohm
-        displayVal = (vAmp - vCom) / 0.01;
-        bargraph = Math.min(Math.abs(displayVal) / 10.0, 1.0);
-        const fmt = this._autoScale(displayVal, 'A');
-        rs.displayText = fmt.text;
-        rs.displayUnit = fmt.unit;
-        break;
-      }
-
-      case 'A_AC': {
-        sub = 'AC';
-        let sumSq = 0;
-        for (let i = 0; i < 128; i++) sumSq += rs.buffer[i] * rs.buffer[i];
-        displayVal = (Math.sqrt(sumSq / 128)) / 0.01;
-        bargraph = Math.min(displayVal / 10.0, 1.0);
-        const fmt = this._autoScale(displayVal, 'A');
-        rs.displayText = fmt.text;
-        rs.displayUnit = fmt.unit;
-        break;
-      }
+      default:
+        bargraph = 0;
     }
-
-    rs.displayMode = sub;
-    rs.displayBeep = beep;
     rs.barPct = isNaN(bargraph) ? 0 : Math.max(0, Math.min(1, bargraph));
   },
 
