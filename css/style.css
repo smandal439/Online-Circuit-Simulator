@@ -2895,3 +2895,32 @@ body.view-serial #resizer-bottom { display: none; }
   cursor: crosshair;
 }
 
+/* ── Responsive breakpoints ── */
+@media (max-width: 900px) {
+  .dso-fullscreen-container {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    border: none;
+  }
+  .dso-fs-title { font-size: 11px; }
+  .dso-fs-btn { font-size: 10px; padding: 4px 8px; }
+}
+
+@media (max-width: 600px) {
+  .dso-fs-header { padding: 6px 10px; }
+  .dso-fs-title { font-size: 10px; }
+  .dso-fs-header-controls { gap: 4px; }
+  .dso-fs-btn { font-size: 9px; padding: 3px 6px; }
+}
+
+/* Touch-friendly cursor interaction on mobile */
+@media (pointer: coarse) {
+  #dso-fullscreen-canvas {
+    cursor: default;
+    touch-action: none;
+  }
+}
+

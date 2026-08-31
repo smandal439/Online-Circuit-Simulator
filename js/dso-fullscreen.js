@@ -2,7 +2,8 @@
 
 /* ═══════════════════════════════════════════════════════
    dso-fullscreen.js — Fullscreen DSO Overlay
-   High-resolution rendering, cursors, measurements, controls
+   High-resolution rendering, smooth cursors, keyboard shortcuts,
+   measurements, controls, responsive layout
    ═══════════════════════════════════════════════════════ */
 
 class DSOFullscreen {
@@ -13,17 +14,39 @@ class DSOFullscreen {
     this.inst = null;
     this.visible = false;
 
-    // Cursor state (pixel positions on the screen area)
+    // Cursor target positions (where we're animating to)
     this.timeCursorA = null;
     this.timeCursorB = null;
     this.voltCursorA = null;
     this.voltCursorB = null;
+
+    // Smooth cursor interpolated positions
+    this._smoothTCA = null;
+    this._smoothTCB = null;
+    this._smoothVCA = null;
+    this._smoothVCB = null;
+
+    // Cursor dragging state
+    this._dragCursor = null;
+    this._dragOffset = 0;
 
     // Screen geometry (computed on render)
     this._scrX = 0;
     this._scrY = 0;
     this._scrW = 0;
     this._scrH = 0;
+    this._dW = 0;
+    this._dH = 0;
+    this._cy = 0;
+    this._cx = 0;
+
+    // Layout info for responsive design
+    this._ctrlW = 260;
+    this._fontSize = 1;
+    this._isCompact = false;
+
+    // ResizeObserver for responsive layout
+    this._ro = null;
 
     this._bindEvents();
     this._bindControls();
@@ -38,16 +61,27 @@ class DSOFullscreen {
     this.timeCursorB = null;
     this.voltCursorA = null;
     this.voltCursorB = null;
+    this._smoothTCA = null;
+    this._smoothTCB = null;
+    this._smoothVCA = null;
+    this._smoothVCB = null;
     this.overlay.classList.remove('hidden');
     this._resize();
     this._syncControlsFromInst();
     this._startRender();
+
+    // Re-create ResizeObserver if needed
+    if (window.ResizeObserver && this.canvas?.parentElement && !this._ro) {
+      this._ro = new ResizeObserver(() => { if (this.visible) this._resize(); });
+      this._ro.observe(this.canvas.parentElement);
+    }
   }
 
   close() {
     this.visible = false;
     this.overlay.classList.add('hidden');
     this._stopRender();
+    if (this._ro) { this._ro.disconnect(); this._ro = null; }
   }
 
   _resize() {
@@ -64,6 +98,21 @@ class DSOFullscreen {
     this.ctx.scale(dpr, dpr);
     this._canvasW = w;
     this._canvasH = h;
+
+    // Responsive layout calculations
+    if (w < 700) {
+      this._ctrlW = 180;
+      this._fontSize = 0.75;
+      this._isCompact = true;
+    } else if (w < 1000) {
+      this._ctrlW = 220;
+      this._fontSize = 0.85;
+      this._isCompact = false;
+    } else {
+      this._ctrlW = 260;
+      this._fontSize = 1;
+      this._isCompact = false;
+    }
   }
 
   _startRender() {
@@ -91,18 +140,20 @@ class DSOFullscreen {
     const rs = inst.runtimeState || {};
     const props = inst.props || {};
     const P = (field, def) => (rs[field] !== undefined) ? rs[field] : (props[field] ?? def);
+    const fs = this._fontSize;
 
     const isPowered = Boolean(rs.powered ?? props.powered ?? 1);
     const isRunning = rs.runStop !== undefined ? Boolean(rs.runStop) : Boolean(props.runStop ?? 1);
     const isSingleArmed = rs.singleTrigger !== undefined ? Boolean(rs.singleTrigger) : Boolean(props.singleTrigger ?? 0);
 
     // Screen area (fills most of the canvas, leaving room for controls on right)
-    const ctrlW = 260;
-    const scrPadding = 16;
+    const ctrlW = this._ctrlW;
+    const scrPadding = this._isCompact ? 8 : 16;
     const scrX = scrPadding;
     const scrY = scrPadding;
-    const scrW = Math.max(200, W - ctrlW - scrPadding * 3);
-    const scrH = Math.max(120, H - scrPadding * 2 - 60);
+    const scrW = Math.max(150, W - ctrlW - scrPadding * 3);
+    const measH = this._isCompact ? 0 : 80;
+    const scrH = Math.max(80, H - scrPadding * 2 - 60 - measH);
     this._scrX = scrX;
     this._scrY = scrY;
     this._scrW = scrW;
@@ -138,6 +189,10 @@ class DSOFullscreen {
     const dW = scrW / divsX, dH = scrH / divsY;
     const cy = scrY + scrH / 2;
     const cx = scrX + scrW / 2;
+    this._dW = dW;
+    this._dH = dH;
+    this._cy = cy;
+    this._cx = cx;
 
     ctx.strokeStyle = '#0c1420';
     ctx.lineWidth = 0.5;
@@ -168,9 +223,19 @@ class DSOFullscreen {
     }
 
     // ── Waveforms ──
-    const t = performance.now() / 1000;
+    const t = inst._lastSimTime || performance.now() / 1000;
     const buf = inst._buffers;
     const totalTime = P('timebase', 0.001) * divsX;
+
+    // Binary search: find index i where tS[i] <= target < tS[i+1]
+    const _fsBinSearch = (tS, target) => {
+      let lo = 0, hi = tS.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if (tS[mid] <= target) lo = mid; else hi = mid - 1;
+      }
+      return lo;
+    };
 
     if (isPowered) {
       const channels = [
@@ -197,11 +262,14 @@ class DSOFullscreen {
             v = 0;
           } else if (samples && tS && samples.length > 1) {
             const target = t - totalTime * (1 - px / scrW);
-            let idx = samples.length - 1;
-            for (let i = samples.length - 1; i >= 0; i--) {
-              if (tS[i] <= target) { idx = i; break; }
+            const idx = _fsBinSearch(tS, target);
+            // Linear interpolation between bracketing samples
+            if (idx < samples.length - 1 && tS[idx + 1] !== tS[idx]) {
+              const frac = (target - tS[idx]) / (tS[idx + 1] - tS[idx]);
+              v = samples[idx] + (samples[idx + 1] - samples[idx]) * Math.max(0, Math.min(1, frac));
+            } else {
+              v = samples[idx];
             }
-            v = samples[idx];
             if (ch.coup === 'ac') v -= meanV;
           } else {
             const omega = 2 * Math.PI / (totalTime * 0.4);
@@ -255,42 +323,40 @@ class DSOFullscreen {
 
       // ── Math Channel ──
       const mathOp = P('math_op', 'off');
-      if (mathOp !== 'off' && buf && buf.ch1 && buf.ch1.length > 1) {
+      if (mathOp !== 'off' && buf && buf.ch1 && buf.ch1.length > 1 && tS) {
         const ch1Samples = buf.ch1;
         const ch2Samples = buf.ch2 || [];
         const mathPts = [];
-        const minLen = Math.min(ch1Samples.length, ch2Samples.length);
-        if (minLen > 0) {
-          const pf1 = P('ch1_probe', 1);
-          const pf2 = P('ch2_probe', 1);
-          const vdiv = P('ch1_vdiv', 1);
-          for (let px = 0; px < scrW; px++) {
-            const idx = Math.floor((px / scrW) * (minLen - 1));
-            const v1 = (ch1Samples[idx] || 0) * pf1;
-            const v2 = (ch2Samples[idx] || 0) * pf2;
-            let vm = 0;
-            if (mathOp === 'add') vm = v1 + v2;
-            else if (mathOp === 'sub') vm = v1 - v2;
-            else if (mathOp === 'abs') vm = Math.abs(v1 - v2);
-            mathPts.push({ px: scrX + px, py: cy - (vm * (dH / vdiv)) });
-          }
-          ctx.strokeStyle = '#ff00ff';
-          ctx.globalAlpha = 0.35;
-          ctx.lineWidth = 4;
-          ctx.shadowColor = '#ff00ff';
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          mathPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
-          ctx.stroke();
-          ctx.globalAlpha = 0.85;
-          ctx.lineWidth = 1.5;
-          ctx.shadowBlur = 4;
-          ctx.beginPath();
-          mathPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-          ctx.globalAlpha = 1;
+        const pf1 = P('ch1_probe', 1);
+        const pf2 = P('ch2_probe', 1);
+        const vdiv = P('ch1_vdiv', 1);
+        for (let px = 0; px < scrW; px++) {
+          const target = t - totalTime * (1 - px / scrW);
+          const idx = _fsBinSearch(tS, target);
+          const v1 = (ch1Samples[idx] || 0) * pf1;
+          const v2 = (ch2Samples[idx] || 0) * pf2;
+          let vm = 0;
+          if (mathOp === 'add') vm = v1 + v2;
+          else if (mathOp === 'sub') vm = v1 - v2;
+          else if (mathOp === 'abs') vm = Math.abs(v1 - v2);
+          mathPts.push({ px: scrX + px, py: cy - (vm * (dH / vdiv)) });
         }
+        ctx.strokeStyle = '#ff00ff';
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#ff00ff';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        mathPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
+        ctx.stroke();
+        ctx.globalAlpha = 0.85;
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+        mathPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
       }
 
       // ── Trigger Level Line ──
@@ -320,45 +386,74 @@ class DSOFullscreen {
       }
     } else {
       ctx.fillStyle = '#111418';
-      ctx.font = 'bold 16px monospace';
+      ctx.font = `bold ${Math.round(16 * this._fontSize)}px monospace`;
       ctx.textAlign = 'center';
       ctx.fillText('\u2014 STANDBY \u2014', scrX + scrW / 2, scrY + scrH / 2 + 5);
     }
 
+    // ── Smooth Cursor Interpolation (lerp) ──
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const smoothing = 0.25;
+    if (this.timeCursorA !== null) this._smoothTCA = lerp(this._smoothTCA ?? this.timeCursorA, this.timeCursorA, smoothing);
+    else this._smoothTCA = null;
+    if (this.timeCursorB !== null) this._smoothTCB = lerp(this._smoothTCB ?? this.timeCursorB, this.timeCursorB, smoothing);
+    else this._smoothTCB = null;
+    if (this.voltCursorA !== null) this._smoothVCA = lerp(this._smoothVCA ?? this.voltCursorA, this.voltCursorA, smoothing);
+    else this._smoothVCA = null;
+    if (this.voltCursorB !== null) this._smoothVCB = lerp(this._smoothVCB ?? this.voltCursorB, this.voltCursorB, smoothing);
+    else this._smoothVCB = null;
+
     // ── Time Cursors ──
-    if (this.timeCursorA !== null) {
-      const xA = this.timeCursorA;
+    if (this._smoothTCA !== null) {
+      const xA = this._smoothTCA;
       ctx.strokeStyle = 'rgba(255, 230, 0, 0.7)';
       ctx.setLineDash([3, 3]);
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(xA, scrY); ctx.lineTo(xA, scrY + scrH); ctx.stroke();
       ctx.setLineDash([]);
+      // Cursor label
+      ctx.fillStyle = 'rgba(255, 230, 0, 0.9)';
+      ctx.font = `${Math.round(8 * fs)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('A', xA, scrY - 4);
     }
-    if (this.timeCursorB !== null) {
-      const xB = this.timeCursorB;
+    if (this._smoothTCB !== null) {
+      const xB = this._smoothTCB;
       ctx.strokeStyle = 'rgba(0, 229, 255, 0.7)';
       ctx.setLineDash([3, 3]);
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(xB, scrY); ctx.lineTo(xB, scrY + scrH); ctx.stroke();
       ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.9)';
+      ctx.font = `${Math.round(8 * fs)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('B', xB, scrY - 4);
     }
 
     // ── Voltage Cursors ──
-    if (this.voltCursorA !== null) {
-      const yA = this.voltCursorA;
+    if (this._smoothVCA !== null) {
+      const yA = this._smoothVCA;
       ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)';
       ctx.setLineDash([3, 3]);
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(scrX, yA); ctx.lineTo(scrX + scrW, yA); ctx.stroke();
       ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
+      ctx.font = `${Math.round(8 * fs)}px monospace`;
+      ctx.textAlign = 'left';
+      ctx.fillText('A', scrX + scrW + 4, yA + 3);
     }
-    if (this.voltCursorB !== null) {
-      const yB = this.voltCursorB;
+    if (this._smoothVCB !== null) {
+      const yB = this._smoothVCB;
       ctx.strokeStyle = 'rgba(100, 200, 255, 0.7)';
       ctx.setLineDash([3, 3]);
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(scrX, yB); ctx.lineTo(scrX + scrW, yB); ctx.stroke();
       ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(100, 200, 255, 0.9)';
+      ctx.font = `${Math.round(8 * fs)}px monospace`;
+      ctx.textAlign = 'left';
+      ctx.fillText('B', scrX + scrW + 4, yB + 3);
     }
 
     ctx.restore(); // End screen clip
@@ -371,24 +466,25 @@ class DSOFullscreen {
 
     const _osd = (ox, txt, col, en) => {
       ctx.fillStyle = en ? col : '#303848';
-      ctx.font = 'bold 10px monospace';
+      ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
       ctx.textAlign = 'left';
       ctx.fillText(txt, ox, osdY + 12);
     };
+    const osdGap = this._isCompact ? 60 : 80;
     _osd(scrX + 10, '1:' + this._fmtV(P('ch1_vdiv', 1)) + (P('ch1_coupling', 'dc') === 'ac' ? '~' : '='), '#ffe600', P('ch1_en', true) !== false);
-    _osd(scrX + 90, '2:' + this._fmtV(P('ch2_vdiv', 2)) + (P('ch2_coupling', 'dc') === 'ac' ? '~' : '='), '#00e5ff', P('ch2_en', true) !== false);
-    _osd(scrX + 170, '3:' + this._fmtV(P('ch3_vdiv', 5)) + (P('ch3_coupling', 'dc') === 'ac' ? '~' : '='), '#ff3090', P('ch3_en', false) !== false);
-    _osd(scrX + 250, '4:' + this._fmtV(P('ch4_vdiv', 0.5)) + (P('ch4_coupling', 'dc') === 'ac' ? '~' : '='), '#30ff60', P('ch4_en', false) !== false);
+    _osd(scrX + osdGap, '2:' + this._fmtV(P('ch2_vdiv', 2)) + (P('ch2_coupling', 'dc') === 'ac' ? '~' : '='), '#00e5ff', P('ch2_en', true) !== false);
+    _osd(scrX + osdGap * 2, '3:' + this._fmtV(P('ch3_vdiv', 5)) + (P('ch3_coupling', 'dc') === 'ac' ? '~' : '='), '#ff3090', P('ch3_en', false) !== false);
+    _osd(scrX + osdGap * 3, '4:' + this._fmtV(P('ch4_vdiv', 0.5)) + (P('ch4_coupling', 'dc') === 'ac' ? '~' : '='), '#30ff60', P('ch4_en', false) !== false);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 10px monospace';
+    ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
     ctx.textAlign = 'right';
     ctx.fillText(this._fmtT(P('timebase', 0.001)) + '/div', scrX + scrW - 10, osdY + 12);
 
     // Math label
     if (P('math_op', 'off') !== 'off') {
       ctx.fillStyle = '#ff00ff';
-      ctx.font = 'bold 9px monospace';
+      ctx.font = `bold ${Math.round(9 * fs)}px monospace`;
       ctx.textAlign = 'left';
       const ml = P('math_op') === 'add' ? 'M:CH1+CH2' : P('math_op') === 'sub' ? 'M:CH1-CH2' : 'M:|CH1-CH2|';
       ctx.fillText(ml, scrX + 10, osdY + 26);
@@ -401,7 +497,7 @@ class DSOFullscreen {
     ctx.fill();
 
     ctx.fillStyle = '#ffaa00';
-    ctx.font = '9px monospace';
+    ctx.font = `${Math.round(9 * fs)}px monospace`;
     ctx.textAlign = 'left';
     const trigSrc = (P('trig_source', 'ch1')).toUpperCase();
     const trigSlope = P('trig_slope', 'rising') === 'falling' ? '\\' : '/';
@@ -415,15 +511,15 @@ class DSOFullscreen {
     ctx.textAlign = 'center';
     if (!isRunning) {
       ctx.fillStyle = '#ff3366';
-      ctx.font = 'bold 10px monospace';
+      ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
       ctx.fillText('STOP', scrX + scrW / 2, osdBotY + 12);
     } else if (isSingleArmed) {
       ctx.fillStyle = '#ffaa00';
-      ctx.font = 'bold 10px monospace';
+      ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
       ctx.fillText('READY', scrX + scrW / 2, osdBotY + 12);
     } else {
       ctx.fillStyle = '#00ff66';
-      ctx.font = 'bold 10px monospace';
+      ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
       ctx.fillText('TRIG\'D', scrX + scrW / 2, osdBotY + 12);
     }
 
@@ -433,7 +529,7 @@ class DSOFullscreen {
       const sampleRate = totalTimeBuf > 0 ? buf.t.length / totalTimeBuf : 0;
       if (sampleRate > 0) {
         ctx.fillStyle = '#4a5264';
-        ctx.font = '8px monospace';
+        ctx.font = `${Math.round(8 * fs)}px monospace`;
         ctx.textAlign = 'right';
         ctx.fillText(this._fmtRate(sampleRate), scrX + scrW - 10, scrY + scrH - 26);
       }
@@ -442,9 +538,11 @@ class DSOFullscreen {
     // ── Cursor Readout ──
     this._drawCursorReadout(ctx, scrX, scrY, scrW, scrH, dW, dH, cy, cx, divsX, divsY, P, buf, totalTime);
 
-    // ── Measurement Panel (below screen) ──
-    const measY = scrY + scrH + 12;
-    this._drawMeasurements(ctx, scrX, measY, scrW, P, inst);
+    // ── Measurement Panel (below screen) — skip if compact ──
+    if (!this._isCompact) {
+      const measY = scrY + scrH + 12;
+      this._drawMeasurements(ctx, scrX, measY, scrW, P, inst);
+    }
 
     // ── Right Control Panel ──
     this._drawControlPanel(ctx, scrX + scrW + 16, scrY, ctrlW - 16, scrH, P, isPowered, isRunning, isSingleArmed);
@@ -452,7 +550,8 @@ class DSOFullscreen {
 
   _drawCursorReadout(ctx, scrX, scrY, scrW, scrH, dW, dH, cy, cx, divsX, divsY, P, buf, totalTime) {
     const readoutY = scrY + scrH + 4;
-    ctx.font = '9px monospace';
+    const fs = this._fontSize;
+    ctx.font = `${Math.round(9 * fs)}px monospace`;
     ctx.textAlign = 'left';
 
     if (this.timeCursorA !== null || this.timeCursorB !== null) {
@@ -505,6 +604,7 @@ class DSOFullscreen {
 
   _drawMeasurements(ctx, x, y, w, P, inst) {
     const meas = inst._computeMeas || {};
+    const fs = this._fontSize;
     const channels = [
       { id: 'ch1', en: P('ch1_en', true) !== false, col: '#ffe600', label: 'CH1' },
       { id: 'ch2', en: P('ch2_en', true) !== false, col: '#00e5ff', label: 'CH2' },
@@ -520,11 +620,11 @@ class DSOFullscreen {
       if (!m) return;
       const cx = x + colIdx * colW;
       ctx.fillStyle = ch.col;
-      ctx.font = 'bold 10px monospace';
+      ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
       ctx.textAlign = 'left';
       ctx.fillText(ch.label, cx, y + 12);
 
-      ctx.font = '8px monospace';
+      ctx.font = `${Math.round(8 * fs)}px monospace`;
       ctx.fillStyle = '#b0bec5';
       const lines = [
         'Vpp:  ' + this._fmtV(m.vpp),
@@ -542,6 +642,7 @@ class DSOFullscreen {
   }
 
   _drawControlPanel(ctx, x, y, w, h, P, isPowered, isRunning, isSingleArmed) {
+    const fs = this._fontSize;
     // Panel background
     ctx.fillStyle = '#14171e';
     this._rr(ctx, x, y, w, h, 6);
@@ -551,7 +652,7 @@ class DSOFullscreen {
     ctx.stroke();
 
     ctx.fillStyle = '#4a5264';
-    ctx.font = 'bold 9px sans-serif';
+    ctx.font = `bold ${Math.round(9 * fs)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillText('CONTROLS', x + w / 2, y + 16);
 
@@ -622,7 +723,7 @@ class DSOFullscreen {
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.fillStyle = isRunning ? '#00ff66' : '#ff3366';
-    ctx.font = 'bold 10px monospace';
+    ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
     ctx.textAlign = 'center';
     ctx.fillText(isRunning ? 'RUN' : 'STOP', x + 8 + (w - 20) / 4, yPos + 15);
 
@@ -634,14 +735,31 @@ class DSOFullscreen {
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.fillStyle = isSingleArmed ? '#ffaa00' : '#7a889b';
-    ctx.font = 'bold 10px monospace';
+    ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
     ctx.textAlign = 'center';
     ctx.fillText('SINGLE', x + 8 + (w - 20) * 3 / 4 + 4, yPos + 15);
+
+    // Auto-set button
+    yPos += 26;
+    ctx.fillStyle = '#1a2550';
+    this._rr(ctx, x + 8, yPos, w - 20, 22, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#3070a0';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#40a0ff';
+    ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('AUTO SET', x + 8 + (w - 20) / 2, yPos + 15);
+
+    if (!this._elements) this._elements = {};
+    this._elements['dso-fs-autoset-canvas'] = { x: x + 8, y: yPos, w: w - 20, h: 22, type: 'button', field: '_autoSet' };
   }
 
   _drawSection(ctx, x, y, w, label, col) {
+    const fs = this._fontSize;
     ctx.fillStyle = col || '#4a5264';
-    ctx.font = 'bold 8px sans-serif';
+    ctx.font = `bold ${Math.round(8 * fs)}px sans-serif`;
     ctx.textAlign = 'left';
     ctx.fillText(label, x, y + 8);
     ctx.strokeStyle = '#2a2e38';
@@ -653,12 +771,13 @@ class DSOFullscreen {
   }
 
   _drawSelect(ctx, x, y, w, label, value, options, id) {
+    const fs = this._fontSize;
     ctx.fillStyle = '#6a7488';
-    ctx.font = '8px sans-serif';
+    ctx.font = `${Math.round(8 * fs)}px sans-serif`;
     ctx.textAlign = 'left';
     ctx.fillText(label, x, y + 8);
 
-    const selW = 80;
+    const selW = this._isCompact ? 60 : 80;
     const selX = x + w - selW;
     ctx.fillStyle = '#0d1114';
     this._rr(ctx, selX, y - 2, selW, 14, 3);
@@ -669,7 +788,7 @@ class DSOFullscreen {
 
     const opt = options.find(o => o.value == value) || options[0];
     ctx.fillStyle = '#e0e0e0';
-    ctx.font = '8px monospace';
+    ctx.font = `${Math.round(8 * fs)}px monospace`;
     ctx.textAlign = 'center';
     ctx.fillText(opt.label, selX + selW / 2, y + 8);
 
@@ -681,14 +800,15 @@ class DSOFullscreen {
   }
 
   _drawSlider(ctx, x, y, w, label, value, min, max, step, unit, id) {
+    const fs = this._fontSize;
     ctx.fillStyle = '#6a7488';
-    ctx.font = '8px sans-serif';
+    ctx.font = `${Math.round(8 * fs)}px sans-serif`;
     ctx.textAlign = 'left';
     ctx.fillText(label, x, y + 8);
 
     // Value
     ctx.fillStyle = '#00d4e6';
-    ctx.font = 'bold 8px monospace';
+    ctx.font = `bold ${Math.round(8 * fs)}px monospace`;
     ctx.textAlign = 'right';
     ctx.fillText(this._fmtSliderVal(value, unit), x + w, y + 8);
 
@@ -734,8 +854,9 @@ class DSOFullscreen {
   }
 
   _drawCheckbox(ctx, x, y, w, label, value, id) {
+    const fs = this._fontSize;
     ctx.fillStyle = '#6a7488';
-    ctx.font = '8px sans-serif';
+    ctx.font = `${Math.round(8 * fs)}px sans-serif`;
     ctx.textAlign = 'left';
     ctx.fillText(label, x + 18, y + 8);
 
@@ -824,16 +945,197 @@ class DSOFullscreen {
       this.canvas.addEventListener('click', (e) => this._onClick(e));
       this.canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); this._onRightClick(e); });
       this.canvas.addEventListener('dblclick', () => { this.timeCursorA = null; this.timeCursorB = null; this.voltCursorA = null; this.voltCursorB = null; });
+
+      // Cursor drag support
+      this.canvas.addEventListener('mousedown', (e) => this._onCursorDragStart(e));
+      this.canvas.addEventListener('mousemove', (e) => this._onCursorDragMove(e));
+      this.canvas.addEventListener('mouseup', () => { this._dragCursor = null; });
+
+      // Touch support for mobile
+      this.canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          this._onCursorDragStart({ clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => e.preventDefault() });
+        }
+      }, { passive: false });
+      this.canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          const touch = e.touches[0];
+          this._onCursorDragMove({ clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => e.preventDefault() });
+        }
+      }, { passive: false });
+      this.canvas.addEventListener('touchend', () => { this._dragCursor = null; });
     }
 
-    // Keyboard
-    document.addEventListener('keydown', (e) => {
-      if (!this.visible) return;
-      if (e.key === 'Escape') this.close();
-    });
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => this._onKeyDown(e));
 
-    // Resize
+    // ResizeObserver for responsive layout
+    if (window.ResizeObserver && this.canvas?.parentElement) {
+      this._ro = new ResizeObserver(() => { if (this.visible) this._resize(); });
+      this._ro.observe(this.canvas.parentElement);
+    }
     window.addEventListener('resize', () => { if (this.visible) this._resize(); });
+  }
+
+  /* ══════════════ KEYBOARD SHORTCUTS ══════════════ */
+  _onKeyDown(e) {
+    if (!this.visible || !this.inst) return;
+    const rs = this.inst.runtimeState || {};
+    const props = this.inst.props || {};
+
+    // Escape — close
+    if (e.key === 'Escape') { this.close(); return; }
+
+    // R — toggle Run/Stop
+    if (e.key === 'r' || e.key === 'R') {
+      const cur = rs.runStop !== undefined ? rs.runStop : (props.runStop ?? 1);
+      rs.runStop = cur ? 0 : 1;
+      props.runStop = rs.runStop;
+      e.preventDefault(); return;
+    }
+
+    // S — toggle Single trigger
+    if (e.key === 's' || e.key === 'S') {
+      const cur = rs.singleTrigger !== undefined ? rs.singleTrigger : (props.singleTrigger ?? 0);
+      rs.singleTrigger = cur ? 0 : 1;
+      props.singleTrigger = rs.singleTrigger;
+      e.preventDefault(); return;
+    }
+
+    // A — auto-set
+    if (e.key === 'a' || e.key === 'A') {
+      this._autoSet();
+      e.preventDefault(); return;
+    }
+
+    // 1-4 — toggle channel enable
+    const chKeys = { '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4' };
+    if (chKeys[e.key]) {
+      const chId = chKeys[e.key];
+      const cur = rs[chId + '_en'] !== undefined ? rs[chId + '_en'] : (props[chId + '_en'] ?? (chId === 'ch1' || chId === 'ch2'));
+      rs[chId + '_en'] = !cur;
+      props[chId + '_en'] = rs[chId + '_en'];
+      e.preventDefault(); return;
+    }
+
+    // +/= — zoom in timebase
+    if (e.key === '+' || e.key === '=') {
+      const tb = rs.timebase !== undefined ? rs.timebase : (props.timebase ?? 0.001);
+      const steps = [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1];
+      const idx = steps.findIndex(s => s >= tb * 0.8);
+      const newTb = idx > 0 ? steps[idx - 1] : steps[0];
+      rs.timebase = newTb;
+      props.timebase = newTb;
+      e.preventDefault(); return;
+    }
+
+    // - — zoom out timebase
+    if (e.key === '-') {
+      const tb = rs.timebase !== undefined ? rs.timebase : (props.timebase ?? 0.001);
+      const steps = [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1];
+      const idx = steps.findIndex(s => s >= tb * 1.2);
+      const newTb = idx >= 0 ? steps[idx] : steps[steps.length - 1];
+      rs.timebase = newTb;
+      props.timebase = newTb;
+      e.preventDefault(); return;
+    }
+
+    // T — set trigger level to center of first enabled channel signal
+    if (e.key === 't' || e.key === 'T') {
+      const buf = this.inst._buffers;
+      const trigCh = rs.trig_source || props.trig_source || 'ch1';
+      const samples = buf && buf[trigCh] ? buf[trigCh] : null;
+      if (samples && samples.length > 10) {
+        let vmin = Infinity, vmax = -Infinity;
+        for (let i = 0; i < samples.length; i++) {
+          if (samples[i] < vmin) vmin = samples[i];
+          if (samples[i] > vmax) vmax = samples[i];
+        }
+        const center = (vmax + vmin) / 2;
+        rs.trig_level = center;
+        props.trig_level = center;
+      }
+      e.preventDefault(); return;
+    }
+
+    // Arrow keys — nudge cursors
+    const inScreen = true;
+    if (inScreen) {
+      const nudge = e.shiftKey ? 0.1 : 1;
+      const timeNudge = (this._scrW / 12) * nudge;
+      const voltNudge = (this._dH) * nudge;
+
+      // Left/Right — nudge time cursors (A selected first, then B)
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const dir = e.key === 'ArrowLeft' ? -1 : 1;
+        const delta = timeNudge * dir;
+        if (this.timeCursorA !== null) {
+          this.timeCursorA = Math.max(this._scrX, Math.min(this._scrX + this._scrW, this.timeCursorA + delta));
+        } else if (this.timeCursorB !== null) {
+          this.timeCursorB = Math.max(this._scrX, Math.min(this._scrX + this._scrW, this.timeCursorB + delta));
+        }
+        e.preventDefault(); return;
+      }
+
+      // Up/Down — nudge voltage cursors
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        const dir = e.key === 'ArrowUp' ? -1 : 1;
+        const delta = voltNudge * dir;
+        if (this.voltCursorA !== null) {
+          this.voltCursorA = Math.max(this._scrY, Math.min(this._scrY + this._scrH, this.voltCursorA + delta));
+        } else if (this.voltCursorB !== null) {
+          this.voltCursorB = Math.max(this._scrY, Math.min(this._scrY + this._scrH, this.voltCursorB + delta));
+        }
+        e.preventDefault(); return;
+      }
+    }
+  }
+
+  /* ══════════════ CURSOR DRAG ══════════════ */
+  _onCursorDragStart(e) {
+    if (!this.canvas) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const threshold = 8;
+
+    // Check if clicking near a cursor to start dragging
+    if (this.timeCursorA !== null && Math.abs(mx - this.timeCursorA) < threshold && my >= this._scrY && my <= this._scrY + this._scrH) {
+      this._dragCursor = 'timeA';
+      this._dragOffset = mx - this.timeCursorA;
+      e.preventDefault();
+    } else if (this.timeCursorB !== null && Math.abs(mx - this.timeCursorB) < threshold && my >= this._scrY && my <= this._scrY + this._scrH) {
+      this._dragCursor = 'timeB';
+      this._dragOffset = mx - this.timeCursorB;
+      e.preventDefault();
+    } else if (this.voltCursorA !== null && Math.abs(my - this.voltCursorA) < threshold && mx >= this._scrX && mx <= this._scrX + this._scrW) {
+      this._dragCursor = 'voltA';
+      this._dragOffset = my - this.voltCursorA;
+      e.preventDefault();
+    } else if (this.voltCursorB !== null && Math.abs(my - this.voltCursorB) < threshold && mx >= this._scrX && mx <= this._scrX + this._scrW) {
+      this._dragCursor = 'voltB';
+      this._dragOffset = my - this.voltCursorB;
+      e.preventDefault();
+    }
+  }
+
+  _onCursorDragMove(e) {
+    if (!this.canvas || !this._dragCursor) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    if (this._dragCursor === 'timeA') {
+      this.timeCursorA = Math.max(this._scrX, Math.min(this._scrX + this._scrW, mx - this._dragOffset));
+    } else if (this._dragCursor === 'timeB') {
+      this.timeCursorB = Math.max(this._scrX, Math.min(this._scrX + this._scrW, mx - this._dragOffset));
+    } else if (this._dragCursor === 'voltA') {
+      this.voltCursorA = Math.max(this._scrY, Math.min(this._scrY + this._scrH, my - this._dragOffset));
+    } else if (this._dragCursor === 'voltB') {
+      this.voltCursorB = Math.max(this._scrY, Math.min(this._scrY + this._scrH, my - this._dragOffset));
+    }
+    e.preventDefault();
   }
 
   _bindControls() {
@@ -866,6 +1168,8 @@ class DSOFullscreen {
             val = Math.max(el.min, Math.min(el.max, val));
             rs[el.field] = val;
             this.inst.props[el.field] = val;
+          } else if (el.type === 'button') {
+            this._autoSet();
           }
           this._syncControlsFromInst();
           e.stopPropagation();

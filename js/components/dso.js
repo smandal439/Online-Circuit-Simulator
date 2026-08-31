@@ -14,6 +14,7 @@ defComp({
     powered: 1,
     runStop: 1,
     singleTrigger: 0,
+    autoSet: 0,
     timebase: 0.001,
     trig_source: 'ch1',
     trig_level: 0.0,
@@ -28,8 +29,9 @@ defComp({
 
   interactive: [
     { field: 'powered',     label: 'Power',      type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 388, y: 38, w: 26, h: 42 } },
-    { field: 'runStop',     label: 'Run/Stop',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 306, y: 224, w: 40, h: 18 } },
-    { field: 'singleTrigger', label: 'Single',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 350, y: 224, w: 40, h: 18 } },
+    { field: 'runStop',     label: 'Run/Stop',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 316, y: 185, w: 38, h: 18 } },
+    { field: 'singleTrigger', label: 'Single',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 358, y: 185, w: 38, h: 18 } },
+    { field: 'autoSet',     label: 'Auto Set',    type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 316, y: 209, w: 38, h: 16 } },
     { field: 'timebase',    label: 'Time/Div',     min: 0.00001, max: 0.1, step: 0.0001, unit: 's' },
     { field: 'trig_source', label: 'Trig Source',  type: 'select', options: [
       { value: 'ch1', label: 'CH1' }, { value: 'ch2', label: 'CH2' },
@@ -88,6 +90,7 @@ defComp({
     }
 
     const t = sim && typeof sim.time === 'number' ? sim.time : performance.now() / 1000;
+    inst._lastSimTime = t;
     const avSim = window.ArduinoSim;
     const readV = (pin) => {
       if (sim && typeof sim.getPinVoltage === 'function') return sim.getPinVoltage(inst, pin);
@@ -102,31 +105,47 @@ defComp({
     };
 
     const buf = inst._buffers;
+    const divsX = 12;
+    const scrW = 280;
+    const timebase = P(rs, inst.props, 'timebase', 0.001);
+    const totalTime = timebase * divsX;
 
     if (!isRunning && !isSingleArmed) {
-      // Stopped — don't append, but still compute measurements
       inst._computeMeas = inst._computeMeas || {};
-      const divsX = 12;
       ['ch1', 'ch2', 'ch3', 'ch4'].forEach((chId, i) => {
         const probeFactor = P(rs, inst.props, chId + '_probe', 1);
         const rawSamples = buf[chId] && buf[chId].length > 0 ? buf[chId] : null;
         const samples = rawSamples ? rawSamples.map(v => v * probeFactor) : null;
-        inst._computeMeas[chId] = dsoComputeMeasurements(samples, P(rs, inst.props, 'timebase', 0.001), divsX);
+        inst._computeMeas[chId] = dsoComputeMeasurements(samples, timebase, divsX);
       });
       return;
     }
 
-    // Append samples
     const probeFactor1 = P(rs, inst.props, 'ch1_probe', 1);
     const probeFactor2 = P(rs, inst.props, 'ch2_probe', 1);
     const probeFactor3 = P(rs, inst.props, 'ch3_probe', 1);
     const probeFactor4 = P(rs, inst.props, 'ch4_probe', 1);
-    buf.ch1.push(readChannel('ch1_in', 'dso_probe_ch1') * probeFactor1);
-    buf.ch2.push(readChannel('ch2_in', 'dso_probe_ch2') * probeFactor2);
-    buf.ch3.push(readChannel('ch3_in', 'dso_probe_ch3') * probeFactor3);
-    buf.ch4.push(readChannel('ch4_in', 'dso_probe_ch4') * probeFactor4);
+
+    // Cache raw (un-probed) voltages so trigger and measurement can access them
+    const v1 = readChannel('ch1_in', 'dso_probe_ch1');
+    const v2 = readChannel('ch2_in', 'dso_probe_ch2');
+    const v3 = readChannel('ch3_in', 'dso_probe_ch3');
+    const v4 = readChannel('ch4_in', 'dso_probe_ch4');
+    inst._lastRawV = [v1, v2, v3, v4];
+
+    // Rate-limit: target ~2 samples per pixel minimum for smooth rendering
+    const maxSamples = scrW * 4;
+    const minInterval = totalTime / maxSamples;
+    const lastT = inst._lastSampleTime || 0;
+    if (t - lastT < minInterval && buf.t.length > 0) return;
+    inst._lastSampleTime = t;
+
+    buf.ch1.push(v1 * probeFactor1);
+    buf.ch2.push(v2 * probeFactor2);
+    buf.ch3.push(v3 * probeFactor3);
+    buf.ch4.push(v4 * probeFactor4);
     buf.t.push(t);
-    if (buf.t.length > 500) {
+    while (buf.t.length > maxSamples) {
       buf.ch1.shift(); buf.ch2.shift();
       buf.ch3.shift(); buf.ch4.shift();
       buf.t.shift();
@@ -154,13 +173,20 @@ defComp({
 
     // Compute measurements for each enabled channel
     inst._computeMeas = inst._computeMeas || {};
-    const divsX = 12;
     ['ch1', 'ch2', 'ch3', 'ch4'].forEach((chId) => {
       const probeFactor = P(rs, inst.props, chId + '_probe', 1);
       const rawSamples = buf[chId] && buf[chId].length > 0 ? buf[chId] : null;
       const samples = rawSamples ? rawSamples.map(v => v * probeFactor) : null;
       inst._computeMeas[chId] = dsoComputeMeasurements(samples, P(rs, inst.props, 'timebase', 0.001), divsX);
     });
+
+    // Auto-set: triggered when autoSet prop toggles to 1
+    const isAutoSet = rs.autoSet !== undefined ? Boolean(rs.autoSet) : Boolean(inst.props.autoSet ?? 0);
+    if (isAutoSet) {
+      _dsoAutoSet(inst, rs, buf, P);
+      rs.autoSet = 0;
+      inst.props.autoSet = 0;
+    }
   },
 
   draw(ctx, inst, sim) {
@@ -307,6 +333,16 @@ defComp({
     const buf = inst._buffers;
     const totalTime = P('timebase', 0.001) * divsX;
 
+    // Binary search: find index i where tS[i] <= target < tS[i+1]
+    const _dsoBinSearch = (tS, target) => {
+      let lo = 0, hi = tS.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if (tS[mid] <= target) lo = mid; else hi = mid - 1;
+      }
+      return lo;
+    };
+
     if (isPowered) {
 
     channels.forEach((ch) => {
@@ -319,20 +355,23 @@ defComp({
         meanV = samples.reduce((a, b) => a + b, 0) / samples.length;
       }
 
-      const pts = [];
-      for (let px = 0; px < scrW; px++) {
-        let v = 0;
-        if (ch.coup === 'gnd') {
-          v = 0;
-        } else if (samples && tS && samples.length > 1) {
-          const target = t - totalTime * (1 - px / scrW);
-          let idx = samples.length - 1;
-          for (let i = samples.length - 1; i >= 0; i--) {
-            if (tS[i] <= target) { idx = i; break; }
-          }
-          v = samples[idx];
-          if (ch.coup === 'ac') v -= meanV;
-        } else {
+        const pts = [];
+        for (let px = 0; px < scrW; px++) {
+          let v = 0;
+          if (ch.coup === 'gnd') {
+            v = 0;
+          } else if (samples && tS && samples.length > 1) {
+            const target = t - totalTime * (1 - px / scrW);
+            const idx = _dsoBinSearch(tS, target);
+            // Linear interpolation between bracketing samples
+            if (idx < samples.length - 1 && tS[idx + 1] !== tS[idx]) {
+              const frac = (target - tS[idx]) / (tS[idx + 1] - tS[idx]);
+              v = samples[idx] + (samples[idx + 1] - samples[idx]) * Math.max(0, Math.min(1, frac));
+            } else {
+              v = samples[idx];
+            }
+            if (ch.coup === 'ac') v -= meanV;
+          } else {
           const omega = 2 * Math.PI / (totalTime * 0.4);
           const wavePhase = (t + (px / scrW) * totalTime) * omega;
           v = ch.id === 'ch1' ? Math.sin(wavePhase) * ch.vdiv * 1.5 :
@@ -384,26 +423,26 @@ defComp({
 
     // ── Math Channel ──
     const mathOp = P('math_op', 'off');
-    if (mathOp !== 'off' && buf && buf.ch1 && buf.ch1.length > 1) {
+    const tS = buf && buf.t && buf.t.length > 0 ? buf.t : null;
+    if (mathOp !== 'off' && buf && buf.ch1 && buf.ch1.length > 1 && tS) {
       const ch1Samples = buf.ch1;
       const ch2Samples = buf.ch2 || [];
       const mathPts = [];
-      const minLen = Math.min(ch1Samples.length, ch2Samples.length);
-      if (minLen > 0) {
-        const pf1 = P('ch1_probe', 1);
-        const pf2 = P('ch2_probe', 1);
-        const vdiv = P('ch1_vdiv', 1);
-        const pos = 0;
-        for (let px = 0; px < scrW; px++) {
-          const idx = Math.floor((px / scrW) * (minLen - 1));
-          const v1 = (ch1Samples[idx] || 0) * pf1;
-          const v2 = (ch2Samples[idx] || 0) * pf2;
-          let vm = 0;
-          if (mathOp === 'add') vm = v1 + v2;
-          else if (mathOp === 'sub') vm = v1 - v2;
-          else if (mathOp === 'abs') vm = Math.abs(v1 - v2);
-          mathPts.push({ px: scrX + px, py: cy - (vm * (dH / vdiv)) - (pos * dH) });
-        }
+      const pf1 = P('ch1_probe', 1);
+      const pf2 = P('ch2_probe', 1);
+      const vdiv = P('ch1_vdiv', 1);
+      const pos = 0;
+      for (let px = 0; px < scrW; px++) {
+        const target = t - totalTime * (1 - px / scrW);
+        const idx = _dsoBinSearch(tS, target);
+        const v1 = (ch1Samples[idx] || 0) * pf1;
+        const v2 = (ch2Samples[idx] || 0) * pf2;
+        let vm = 0;
+        if (mathOp === 'add') vm = v1 + v2;
+        else if (mathOp === 'sub') vm = v1 - v2;
+        else if (mathOp === 'abs') vm = Math.abs(v1 - v2);
+        mathPts.push({ px: scrX + px, py: cy - (vm * (dH / vdiv)) - (pos * dH) });
+      }
         // Math trace (magenta)
         ctx.strokeStyle = '#ff00ff';
         ctx.globalAlpha = 0.3;
@@ -421,7 +460,6 @@ defComp({
         ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
-      }
     }
 
     // ── Trigger Level Line ──
@@ -632,6 +670,19 @@ defComp({
     ctx.textAlign = 'center';
     ctx.fillText('SINGLE', panX + 71, rsY + 12);
 
+    // ── Auto Set Button ──
+    const autoY = rsY + 24;
+    const autoBg = ctx.createLinearGradient(panX + 10, autoY, panX + 10, autoY + 16);
+    autoBg.addColorStop(0, '#1a2550');
+    autoBg.addColorStop(1, '#0e1a30');
+    ctx.fillStyle = autoBg;
+    _rr(ctx, panX + 10, autoY, 38, 16, 3); ctx.fill();
+    ctx.strokeStyle = isPowered ? '#3070a0' : '#2a2e38'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.fillStyle = isPowered ? '#40a0ff' : '#4a5264';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('AUTO', panX + 29, autoY + 11);
+
     // ── Fullscreen Button ──
     const fsX = panX + 52, fsY = rsY + 24;
     ctx.fillStyle = isPowered ? '#1a2550' : '#181c22';
@@ -795,6 +846,60 @@ function dsoComputeMeasurements(samples, timebase, divsX) {
   const dutyCycle = samples.length > 0 ? (highCount / samples.length) * 100 : 0;
 
   return { vmax, vmin, vpp, vrms, mean, frequency, period, dutyCycle };
+}
+
+/* ── Auto-Set Engine ── */
+function _dsoAutoSet(inst, rs, buf, P) {
+  const chIds = ['ch1', 'ch2', 'ch3', 'ch4'];
+  for (const chId of chIds) {
+    if (!P(rs, inst.props, chId + '_en', chId === 'ch1' || chId === 'ch2')) continue;
+    const samples = buf && buf[chId] && buf[chId].length > 10 ? buf[chId] : null;
+    if (!samples) continue;
+
+    let vmin = Infinity, vmax = -Infinity;
+    for (let i = 0; i < samples.length; i++) {
+      if (samples[i] < vmin) vmin = samples[i];
+      if (samples[i] > vmax) vmax = samples[i];
+    }
+    if (!isFinite(vmin) || !isFinite(vmax)) continue;
+
+    const vpp = vmax - vmin;
+    const vCenter = (vmax + vmin) / 2;
+
+    const targetVdiv = vpp / 6;
+    const vdivSteps = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20];
+    let autoVdiv = vdivSteps[0];
+    for (const s of vdivSteps) { if (s >= targetVdiv) { autoVdiv = s; break; } }
+    rs[chId + '_vdiv'] = autoVdiv;
+    inst.props[chId + '_vdiv'] = autoVdiv;
+
+    const autoPos = -(vCenter / autoVdiv) * 4;
+    rs[chId + '_pos'] = Math.max(-4, Math.min(4, autoPos));
+    inst.props[chId + '_pos'] = rs[chId + '_pos'];
+
+    rs.trig_level = vCenter;
+    inst.props.trig_level = vCenter;
+    rs.trig_source = chId;
+    inst.props.trig_source = chId;
+
+    const trigCh = chId;
+    let crossings = 0;
+    for (let i = 1; i < samples.length; i++) {
+      if ((samples[i - 1] < 0 && samples[i] >= 0) || (samples[i - 1] >= 0 && samples[i] < 0)) crossings++;
+    }
+    const totalT = buf.t && buf.t.length > 1 ? buf.t[buf.t.length - 1] - buf.t[0] : 1;
+    const freq = crossings > 1 ? (crossings / 2) / totalT : 0;
+    if (freq > 0) {
+      const period = 1 / freq;
+      const targetTimebase = (period * 3) / 12;
+      const timebaseSteps = [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1];
+      let autoTimebase = timebaseSteps[0];
+      for (const s of timebaseSteps) { if (s >= targetTimebase) { autoTimebase = s; break; } }
+      rs.timebase = autoTimebase;
+      inst.props.timebase = autoTimebase;
+    }
+    break;
+  }
 }
 
 /* ── Probe Finder ── */

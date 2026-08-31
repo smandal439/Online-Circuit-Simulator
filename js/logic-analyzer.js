@@ -56,13 +56,48 @@ class LogicAnalyzer {
     this._ro.observe(canvasEl.parentElement || canvasEl);
     this._resize();
 
-    /* Mouse events — left click = Cursor A, right click = Cursor B */
+    /* Drag state */
+    this._dragging = null; // 'A' or 'B' or null
+    this._dragOffsetX = 0;
+    this._dragThreshold = 8; // px proximity to grab a cursor
+    this._wasDragged = false; // suppress click after drag
+    this._clickSuppressed = false; // suppress click when mousedown hit a cursor
+
+    /* Mouse events — left click = Cursor A, right click = Cursor B, drag to reposition */
+    canvasEl.addEventListener('mousedown', (e) => {
+      const rect = canvasEl.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const hit = this._hitTestCursor(x);
+      if (hit) {
+        this._dragging = hit;
+        this._wasDragged = false;
+        this._clickSuppressed = true;
+        const cursorX = hit === 'A' ? this._cursorAx : this._cursorBx;
+        this._dragOffsetX = x - (cursorX || x);
+        e.preventDefault();
+        canvasEl.style.cursor = 'ew-resize';
+      }
+    });
+
+    canvasEl.addEventListener('mouseup', (e) => {
+      if (this._dragging) {
+        this._dragging = null;
+        canvasEl.style.cursor = 'default';
+        e.preventDefault();
+        return;
+      }
+    });
+
     canvasEl.addEventListener('click', (e) => {
+      if (this._clickSuppressed) { this._clickSuppressed = false; return; }
+      if (this._wasDragged) { this._wasDragged = false; return; }
       const rect = canvasEl.getBoundingClientRect();
       const x = e.clientX - rect.left;
       this._setCursorA(x);
     });
     canvasEl.addEventListener('contextmenu', (e) => {
+      if (this._clickSuppressed) { this._clickSuppressed = false; e.preventDefault(); return; }
+      if (this._wasDragged) { this._wasDragged = false; e.preventDefault(); return; }
       e.preventDefault();
       const rect = canvasEl.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -70,9 +105,42 @@ class LogicAnalyzer {
     });
     canvasEl.addEventListener('mousemove', (e) => {
       const rect = canvasEl.getBoundingClientRect();
-      this._mouseX = e.clientX - rect.left;
+      const x = e.clientX - rect.left;
+      this._mouseX = x;
+
+      if (this._dragging) {
+        const labelW = 60;
+        const plotW = canvasEl.width - labelW;
+        const clampedX = Math.max(labelW, Math.min(labelW + plotW, x - this._dragOffsetX));
+        const t = this._pixelToTime(clampedX);
+        if (t !== null) {
+          this._wasDragged = true;
+          if (this._dragging === 'A') {
+            this.cursorA = t;
+            this._cursorAx = clampedX;
+          } else {
+            this.cursorB = t;
+            this._cursorBx = clampedX;
+          }
+          // Keep A < B
+          if (this.cursorA !== null && this.cursorB !== null && this.cursorA > this.cursorB) {
+            [this.cursorA, this.cursorB] = [this.cursorB, this.cursorA];
+            [this._cursorAx, this._cursorBx] = [this._cursorBx, this._cursorAx];
+            this._dragging = this._dragging === 'A' ? 'B' : 'A';
+          }
+        }
+        e.preventDefault();
+      } else {
+        canvasEl.style.cursor = this._hitTestCursor(x) ? 'ew-resize' : 'default';
+      }
     });
-    canvasEl.addEventListener('mouseleave', () => { this._mouseX = null; });
+    canvasEl.addEventListener('mouseleave', () => {
+      this._mouseX = null;
+      if (this._dragging) {
+        this._dragging = null;
+        canvasEl.style.cursor = 'default';
+      }
+    });
 
     this._startRender();
   }
@@ -90,6 +158,14 @@ class LogicAnalyzer {
       this._rafId = requestAnimationFrame(loop);
     };
     this._rafId = requestAnimationFrame(loop);
+  }
+
+  /* ── Cursor hit testing for drag ── */
+  _hitTestCursor(x) {
+    const threshold = this._dragThreshold;
+    if (this._cursorAx !== null && Math.abs(x - this._cursorAx) <= threshold) return 'A';
+    if (this._cursorBx !== null && Math.abs(x - this._cursorBx) <= threshold) return 'B';
+    return null;
   }
 
   /* ── Cursor placement ── */
@@ -668,7 +744,7 @@ class LogicAnalyzer {
     if (this.cursorA === null && this.cursorB === null) {
       ctx.fillStyle = 'rgba(255,255,255,0.2)';
       ctx.textAlign = 'center';
-      ctx.fillText('Click: Cursor A · Right-click: Cursor B', W / 2, H - 4);
+      ctx.fillText('Click: Cursor A · Right-click: Cursor B · Drag to move', W / 2, H - 4);
     }
 
     if (this.paused) {
