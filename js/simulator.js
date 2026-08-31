@@ -2550,6 +2550,9 @@ class ArduinoSimulator {
           lm741: ['OUT'],
         };
         if (IC_OUT[other.type] && IC_OUT[other.type].includes(target.pinId)) {
+          if (other.type === 'lm741') {
+            return other.runtimeState ? (other.runtimeState.vOut || 0) : 0;
+          }
           const raw = other.runtimeState && other.runtimeState[target.pinId] != null
             ? other.runtimeState[target.pinId] : 0;
           return raw > 1 ? (raw / 255) * 5.0 : raw > 0 ? 5.0 : 0;

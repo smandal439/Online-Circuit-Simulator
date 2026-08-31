@@ -21,12 +21,19 @@
       { "id": "led1", "type": "led",          "x": 690, "y": 210, "props": { "color": "#ff3333", "colorName": "Red" } },
       { "id": "p5v",  "type": "power_5v",     "x": 300, "y": 150 },
       { "id": "gnd",  "type": "power_gnd",    "x": 180, "y": 390 },
+      { "id": "gnd2", "type": "power_gnd",    "x": 30,  "y": 330 },
       { "id": "dso",  "type": "dso_4ch",      "x": 60,  "y": 480 }
     ],
     "wires": [
       { "id": "w1",
         "from": { "instId": "pot1", "pinId": "wiper" },
         "to":   { "instId": "u1",   "pinId": "INP" } },
+      { "id": "w1a",
+        "from": { "instId": "pot1", "pinId": "vcc" },
+        "to":   { "instId": "p5v",  "pinId": "vcc" } },
+      { "id": "w1b",
+        "from": { "instId": "pot1", "pinId": "gnd" },
+        "to":   { "instId": "gnd2", "pinId": "gnd" } },
       { "id": "w2",
         "from": { "instId": "u1",   "pinId": "INN" },
         "to":   { "instId": "r1",   "pinId": "p1" } },
@@ -65,5 +72,5 @@
         "waypoints": [ { "x": 180, "y": 780 }, { "x": 410, "y": 780 } ] }
     ]
   },
-  "code": "/*\n * LM741 Non-Inverting Amplifier\n *\n * Gain = 1 + (R2 / R1) = 1 + (10k / 10k) = 2\n *\n * Signal path:\n *   Potentiometer wiper  →  LM741 non-inverting input (+) pin 3\n *   R1 (10k) connects inverting input (-) pin 2 to GND\n *   R2 (10k) provides negative feedback from OUT (pin 6) to IN(-) pin 2\n *   Output drives an LED (through a 220 ohm current-limiting resistor)\n *   Output is also shown on DSO channel 1\n *\n * Layout:\n *   LM741 pin 6 (OUT)   -> top\n *   LM741 pin 7 (Vs+)   -> +5V\n *   LM741 pin 4 (Vs-)   -> GND\n *   LM741 pin 2 (IN-)   -> bottom-left\n *   LM741 pin 3 (IN+)   -> bottom-middle\n *\n * Adjust the potentiometer to change the DC input level and watch the\n * op-amp buffer/amplify it on the LED and DSO. With a gain of 2 the\n * output will quickly hit the +5V rail for mid/high input levels — try\n * setting R2 = 0 (unity-gain buffer) for an exact copy of the input.\n */\n\nvoid setup() {\n  Serial.println(\"LM741 Non-Inverting Amplifier\");\n  Serial.println(\"Gain = 1 + R2/R1 = 2\");\n}\n\nvoid loop() {\n  delay(1000);\n}"
+  "code": "/*\n * LM741 Non-Inverting Amplifier\n *\n * Gain = 1 + (R2 / R1) = 1 + (10k / 10k) = 2\n *\n * Signal path:\n *   Potentiometer VCC  →  +5V\n *   Potentiometer GND  →  GND\n *   Potentiometer wiper →  LM741 non-inverting input (+) pin 3\n *   R1 (10k) connects inverting input (-) pin 2 to GND\n *   R2 (10k) provides negative feedback from OUT (pin 6) to IN(-) pin 2\n *   Output drives an LED (through a 220 ohm current-limiting resistor)\n *   Output is also shown on DSO channel 1\n *\n * Adjust the potentiometer to change the DC input level and watch the\n * op-amp buffer/amplify it on the LED and DSO. With a gain of 2 the\n * output will quickly hit the +5V rail for mid/high input levels.\n */\n\nvoid setup() {\n  Serial.println(\"LM741 Non-Inverting Amplifier\");\n  Serial.println(\"Gain = 1 + R2/R1 = 2\");\n}\n\nvoid loop() {\n  delay(1000);\n}"
 }
