@@ -111,7 +111,6 @@ class ArduinoSimulator {
     // only inside Adafruit_SSD1306 constructors to avoid breaking `a & b`.
     js = js.replace(/new\s+Adafruit_SSD1306\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_SSD1306(${args.replace(/&\s*/g, '')})`);
     js = js.replace(/new\s+Adafruit_ILI9341\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_ILI9341(${args.replace(/&\s*/g, '')})`);
-    js = js.replace(/new\s+Adafruit_VL53L0X\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_VL53L0X(${args.replace(/&\s*/g, '')})`);
 
     // 6. Handle arrays: int arr[10] → let arr = new Array(10).fill(0)
     js = js.replace(/let\s+(\w+)\s*\[(\d+)\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$3]');
@@ -587,16 +586,11 @@ class ArduinoSimulator {
 
     // Adafruit_VL53L0X ToF ranging sensor library
     js = js.replace(/\bVL53L0X_RangingMeasurementData_t\s+(\w+)\s*;/g, 'let $1 = { RangeStatus: 0, RangeMilliMeter: 0 };');
-    js = js.replace(/\b(\w+)\.begin\s*\(\s*\)\s*;/g, function (match, varName) {
+    // rangingTest: handle &measure pass-by-reference, route to _a.vl53l0xRangingTest
+    js = js.replace(/\b(\w+)\.rangingTest\s*\(([^)]+)\)/g, function (match, varName, args) {
       if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
-      return '_a.vl53l0xBegin(' + varName + ');';
+      return '_a.vl53l0xRangingTest(' + varName + ', ' + args.replace(/&\s*/g, '') + ')';
     });
-    js = js.replace(/\b(\w+)\.rangingTest\s*\(/g, function (match, varName) {
-      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
-      return '_a.vl53l0xRangingTest(' + varName + ', ';
-    });
-    // Strip C++ pass-by-reference `&` in rangingTest args (e.g. &measure → measure)
-    js = js.replace(/\bvl53l0xRangingTest\s*\(([^)]+)\)/g, (_, args) => `vl53l0xRangingTest(${args.replace(/&\s*/g, '')})`);
 
     // Servo library
     js = js.replace(/\b(\w+)\.attach\s*\(/g, '_a.servoAttach($1, ');
