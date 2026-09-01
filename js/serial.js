@@ -182,7 +182,9 @@ class SerialMonitor {
     if (!this.inputEl) return;
     const text = this.inputEl.value;
     if (!text) return;
-    const eol = (this.eolSel && this.eolSel.value) || '\n';
+    let eol = (this.eolSel && this.eolSel.value) || '';
+    // HTML option values store literal "\n" / "\r\n" — interpret as actual control characters
+    eol = eol.replace(/\\r\\n/g, '\r\n').replace(/\\r/g, '\r').replace(/\\n/g, '\n');
     const toSend = text + eol;
     this.inputEl.value = '';
 
