@@ -306,15 +306,15 @@ defComp({
   }
 });
 
-/* -------------- Programmable Benchtop DC Power Supply (0–32V / 0–5A) ------------------ */
+/* -------------- Dual-Channel Benchtop DC Power Supply (5V/5A Fixed + ±0–32V/0–5A Variable) ------------------ */
 defComp({
   id: 'bench_power_supply',
   name: 'Benchtop Power Supply',
   category: 'Power',
   icon: '🎛️',
-  desc: 'Precision adjustable 0–32V / 0–5A DC benchtop power supply with digital LED readout, Constant Voltage (CV) / Constant Current (CC) modes, and 4mm banana binding posts',
-  width: 270,
-  height: 200,
+  desc: 'Dual-channel bench supply: fixed 5V/5A output plus adjustable ±0–32V / 0–5A variable output with digital LED readout, CV/CC modes, and 4mm banana posts',
+  width: 310,
+  height: 210,
   defaultProps: {
     powered: 1,
     outputEnabled: 1,
@@ -322,17 +322,20 @@ defComp({
     currentLimit: 2.5,
     actualCurrent: 0.0,
     mode: 'CV',
+    actualCurrent5V: 0.0,
   },
   interactive: [
-    { field: 'powered',       label: 'Power',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 78, y: 138, w: 32, h: 42 } },
-    { field: 'outputEnabled', label: 'Output',  type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 26, y: 138, w: 32, h: 42 } },
-    { field: 'voltageSet',    label: 'Voltage',  min: 0.0, max: 32.0, step: 0.1, unit: 'V' },
+    { field: 'powered',       label: 'Power',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 78, y: 148, w: 32, h: 42 } },
+    { field: 'outputEnabled', label: 'Output',  type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 26, y: 148, w: 32, h: 42 } },
+    { field: 'voltageSet',    label: 'Voltage',  min: -32.0, max: 32.0, step: 0.1, unit: 'V' },
     { field: 'currentLimit',  label: 'Current',  min: 0.0, max: 5.0,  step: 0.05, unit: 'A' },
   ],
   pins: [
-    { id: 'POS', label: '+ (0-32V)', type: PIN_TYPE.POWER, x: 195, y: 172, side: 'bottom' },
-    { id: 'GND', label: 'EARTH ⏚',   type: PIN_TYPE.GND,   x: 222, y: 172, side: 'bottom' },
-    { id: 'NEG', label: '- (GND)',   type: PIN_TYPE.GND,   x: 249, y: 172, side: 'bottom' },
+    { id: 'POS',     label: 'VAR +',     type: PIN_TYPE.POWER, x: 205, y: 182, side: 'bottom' },
+    { id: 'GND',     label: 'EARTH ⏚',  type: PIN_TYPE.GND,   x: 232, y: 182, side: 'bottom' },
+    { id: 'NEG',     label: 'VAR −',     type: PIN_TYPE.GND,   x: 259, y: 182, side: 'bottom' },
+    { id: 'VCC_5V',  label: '5V',        type: PIN_TYPE.POWER, x: 160, y: 182, side: 'bottom' },
+    { id: 'GND_5V',  label: '5V GND',    type: PIN_TYPE.GND,   x: 183, y: 182, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -341,29 +344,30 @@ defComp({
     const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props.voltageSet ?? 12.0);
     const iLim = Number(inst.runtimeState?.currentLimit ?? inst.props.currentLimit ?? 2.5);
     const iAct = isOutOn ? Number(inst.runtimeState?.actualCurrent ?? inst.props.actualCurrent ?? 0.0) : 0.0;
+    const iAct5V = isPowered ? Number(inst.runtimeState?.actualCurrent5V ?? inst.props.actualCurrent5V ?? 0.0) : 0.0;
     const mode = inst.runtimeState?.mode ?? inst.props.mode ?? 'CV';
-    const pOut = isOutOn ? vSet * iAct : 0.0;
+    const pOut = isOutOn ? Math.abs(vSet) * iAct : 0.0;
 
     ctx.save();
     ctx.translate(x, y);
 
     ctx.fillStyle = '#1c2024';
-    roundRect(ctx, 0, 0, 270, 200, 8);
+    roundRect(ctx, 0, 0, 310, 210, 8);
     ctx.fill();
 
-    const panelGrad = ctx.createLinearGradient(0, 4, 0, 196);
+    const panelGrad = ctx.createLinearGradient(0, 4, 0, 206);
     panelGrad.addColorStop(0, '#32383e');
     panelGrad.addColorStop(0.3, '#262b30');
     panelGrad.addColorStop(1, '#1e2226');
     ctx.fillStyle = panelGrad;
-    roundRect(ctx, 4, 4, 262, 192, 6);
+    roundRect(ctx, 4, 4, 302, 202, 6);
     ctx.fill();
 
     ctx.fillStyle = '#0f1214';
     roundRect(ctx, 8, 2, 26, 4, 1); ctx.fill();
-    roundRect(ctx, 236, 2, 26, 4, 1); ctx.fill();
-    roundRect(ctx, 8, 194, 26, 4, 1); ctx.fill();
-    roundRect(ctx, 236, 194, 26, 4, 1); ctx.fill();
+    roundRect(ctx, 276, 2, 26, 4, 1); ctx.fill();
+    roundRect(ctx, 8, 204, 26, 4, 1); ctx.fill();
+    roundRect(ctx, 276, 204, 26, 4, 1); ctx.fill();
 
     ctx.fillStyle = '#eceff1';
     ctx.font = 'bold 9px "JetBrains Mono", sans-serif';
@@ -372,15 +376,15 @@ defComp({
 
     ctx.fillStyle = '#78909c';
     ctx.font = 'bold 7px "JetBrains Mono", monospace';
-    ctx.fillText('DPS-3205 PRO • 32V / 5A', 14, 28);
+    ctx.fillText('DPS-DUAL PRO \u00b7 5V/5A + \u00b132V/5A', 14, 28);
 
     ctx.fillStyle = '#121518';
     for (let i = 0; i < 4; i++) {
-      ctx.fillRect(190 + i * 16, 14, 11, 2.5);
+      ctx.fillRect(230 + i * 16, 14, 11, 2.5);
     }
 
     ctx.fillStyle = '#0a0d0f';
-    roundRect(ctx, 12, 34, 160, 96, 4);
+    roundRect(ctx, 12, 34, 160, 106, 4);
     ctx.fill();
     ctx.strokeStyle = '#455a64';
     ctx.lineWidth = 1;
@@ -391,55 +395,65 @@ defComp({
       ctx.textAlign = 'right';
 
       ctx.fillStyle = 'rgba(0, 229, 255, 0.06)';
-      ctx.fillText('88.88', 115, 68);
+      ctx.fillText('88.88', 115, 62);
       ctx.fillStyle = 'rgba(0, 230, 118, 0.06)';
-      ctx.fillText('8.888', 115, 98);
+      ctx.fillText('8.888', 115, 88);
       ctx.fillStyle = 'rgba(255, 171, 0, 0.06)';
       ctx.font = 'bold 15px "JetBrains Mono", monospace';
-      ctx.fillText('888.8', 115, 122);
+      ctx.fillText('888.8', 115, 110);
+      ctx.fillStyle = 'rgba(255, 171, 0, 0.06)';
+      ctx.fillText('888.8', 115, 130);
 
       ctx.fillStyle = isOutOn ? '#00e5ff' : '#0097a7';
       ctx.font = 'bold 24px "JetBrains Mono", monospace';
-      ctx.fillText(vSet.toFixed(2).padStart(5, '0'), 115, 68);
+      ctx.fillText(vSet.toFixed(2).padStart(6, '0'), 115, 62);
 
       ctx.fillStyle = isOutOn ? '#00e676' : '#2e7d32';
-      ctx.fillText(iAct.toFixed(3), 115, 98);
+      ctx.font = 'bold 18px "JetBrains Mono", monospace';
+      ctx.fillText(iAct.toFixed(3), 115, 88);
 
       ctx.fillStyle = isOutOn ? '#ffab00' : '#c67c00';
       ctx.font = 'bold 15px "JetBrains Mono", monospace';
-      ctx.fillText(pOut.toFixed(2).padStart(5, '0'), 115, 122);
+      ctx.fillText(pOut.toFixed(1).padStart(5, '0'), 115, 110);
+
+      ctx.fillStyle = '#78909c';
+      ctx.font = 'bold 10px "JetBrains Mono", monospace';
+      ctx.fillText('5V:', 36, 128);
+      ctx.fillStyle = isPowered ? '#ff9100' : '#5d4037';
+      ctx.font = 'bold 12px "JetBrains Mono", monospace';
+      ctx.fillText(iAct5V.toFixed(2) + 'A', 62, 128);
 
       ctx.font = 'bold 13px "JetBrains Mono", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#00e5ff'; ctx.fillText('V', 122, 66);
-      ctx.fillStyle = '#00e676'; ctx.fillText('A', 122, 96);
+      ctx.fillStyle = '#00e5ff'; ctx.fillText('V', 122, 60);
+      ctx.fillStyle = '#00e676'; ctx.fillText('A', 122, 86);
       ctx.font = 'bold 10px "JetBrains Mono", sans-serif';
-      ctx.fillStyle = '#ffab00'; ctx.fillText('W', 122, 121);
+      ctx.fillStyle = '#ffab00'; ctx.fillText('W', 122, 109);
 
       const isCV = mode === 'CV' && isOutOn;
       ctx.fillStyle = isCV ? '#00e676' : '#1b3a24';
-      ctx.beginPath(); ctx.arc(148, 50, 3, 0, Math.PI * 2); ctx.fill();
-      if (isCV) { ctx.fillStyle = 'rgba(0, 230, 118, 0.4)'; ctx.beginPath(); ctx.arc(148, 50, 6, 0, Math.PI * 2); ctx.fill(); }
+      ctx.beginPath(); ctx.arc(148, 44, 3, 0, Math.PI * 2); ctx.fill();
+      if (isCV) { ctx.fillStyle = 'rgba(0, 230, 118, 0.4)'; ctx.beginPath(); ctx.arc(148, 44, 6, 0, Math.PI * 2); ctx.fill(); }
       ctx.font = 'bold 6.5px "JetBrains Mono", sans-serif';
       ctx.fillStyle = isCV ? '#ffffff' : '#546e7a';
-      ctx.fillText('CV', 154, 52);
+      ctx.fillText('CV', 154, 46);
 
       const isCC = mode === 'CC' && isOutOn;
       ctx.fillStyle = isCC ? '#ff1744' : '#3a141a';
-      ctx.beginPath(); ctx.arc(148, 64, 3, 0, Math.PI * 2); ctx.fill();
-      if (isCC) { ctx.fillStyle = 'rgba(255, 23, 68, 0.4)'; ctx.beginPath(); ctx.arc(148, 64, 6, 0, Math.PI * 2); ctx.fill(); }
+      ctx.beginPath(); ctx.arc(148, 58, 3, 0, Math.PI * 2); ctx.fill();
+      if (isCC) { ctx.fillStyle = 'rgba(255, 23, 68, 0.4)'; ctx.beginPath(); ctx.arc(148, 58, 6, 0, Math.PI * 2); ctx.fill(); }
       ctx.fillStyle = isCC ? '#ffffff' : '#546e7a';
-      ctx.fillText('CC', 154, 66);
+      ctx.fillText('CC', 154, 60);
 
       ctx.fillStyle = isOutOn ? '#29b6f6' : '#132836';
-      ctx.beginPath(); ctx.arc(148, 78, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(148, 72, 3, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = isOutOn ? '#ffffff' : '#546e7a';
-      ctx.fillText('ON', 154, 80);
+      ctx.fillText('ON', 154, 74);
     } else {
       ctx.fillStyle = '#1a2327';
       ctx.font = 'bold 11px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('— STANDBY —', 92, 85);
+      ctx.fillText('\u2014 STANDBY \u2014', 92, 90);
     }
 
     function drawRotaryKnob(kx, ky, label, valueText, accentColor) {
@@ -475,11 +489,10 @@ defComp({
       ctx.fillText(valueText, kx, ky - 23);
     }
 
-    drawRotaryKnob(220, 56, 'VOLTAGE', `${vSet.toFixed(1)}V`, '#00e5ff');
-    drawRotaryKnob(220, 116, 'CURRENT', `${iLim.toFixed(2)}A`, '#00e676');
+    drawRotaryKnob(240, 56, 'VOLTAGE', `${vSet >= 0 ? '+' : ''}${vSet.toFixed(1)}V`, '#00e5ff');
+    drawRotaryKnob(240, 116, 'CURRENT', `${iLim.toFixed(2)}A`, '#00e676');
 
     function drawToggleSwitch(tx, ty, tw, th, isOn, label) {
-      // Background plate
       ctx.fillStyle = '#0e1114';
       roundRect(ctx, tx, ty, tw, th, 3);
       ctx.fill();
@@ -487,7 +500,6 @@ defComp({
       ctx.lineWidth = 0.8;
       ctx.stroke();
 
-      // Track groove
       const trackW = tw * 0.7;
       const trackH = 8;
       const trackX = tx + (tw - trackW) / 2;
@@ -496,7 +508,6 @@ defComp({
       roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
       ctx.fill();
 
-      // Lit fill when ON
       if (isOn) {
         const grad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
         grad.addColorStop(0, 'rgba(0,230,118,0.2)');
@@ -506,7 +517,6 @@ defComp({
         ctx.fill();
       }
 
-      // Thumb
       const thumbR = 5;
       const thumbX = isOn ? trackX + trackW - thumbR - 1 : trackX + thumbR + 1;
       const thumbY = trackY + trackH / 2;
@@ -523,7 +533,6 @@ defComp({
         ctx.stroke();
       }
 
-      // Status LED
       const ledX = tx + tw / 2;
       const ledY = ty + 5;
       ctx.fillStyle = isOn ? '#00e676' : '#1b3a24';
@@ -533,15 +542,14 @@ defComp({
         ctx.beginPath(); ctx.arc(ledX, ledY, 4.5, 0, Math.PI * 2); ctx.fill();
       }
 
-      // Label below
       ctx.fillStyle = isOn ? '#eceff1' : '#78909c';
       ctx.font = 'bold 5.5px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
       ctx.fillText(label, tx + tw / 2, ty + th - 3);
     }
 
-    drawToggleSwitch(78, 138, 32, 42, isPowered, 'POWER');
-    drawToggleSwitch(26, 138, 32, 42, isOutOn, 'OUTPUT');
+    drawToggleSwitch(78, 148, 32, 42, isPowered, 'POWER');
+    drawToggleSwitch(26, 148, 32, 42, isOutOn, 'OUTPUT');
 
     function drawBindingPost(bx, by, colorHex, rimColor, symbol, label) {
       ctx.fillStyle = '#14181b';
@@ -570,11 +578,19 @@ defComp({
       ctx.fillText(label, bx, by - 14);
     }
 
-    drawBindingPost(195, 154, '#d50000', '#ff5252', '+', 'POS');
-    drawBindingPost(222, 154, '#2e7d32', '#00e676', '⏚', 'EARTH');
-    drawBindingPost(249, 154, '#212121', '#546e7a', '−', 'NEG');
+    ctx.fillStyle = '#455a64';
+    ctx.font = 'bold 6px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('FIXED 5V/5A', 171, 156);
+    ctx.fillText('VARIABLE \u00b132V/5A', 232, 156);
 
-    if (inst.selected) drawSelectionRect(ctx, -2, -2, 274, 204);
+    drawBindingPost(160, 166, '#ff6d00', '#ffab40', '5V', '5V');
+    drawBindingPost(183, 166, '#2e7d32', '#66bb6a', '\u2300', '5VGND');
+    drawBindingPost(205, 166, '#d50000', '#ff5252', '+', 'VAR+');
+    drawBindingPost(232, 166, '#2e7d32', '#00e676', '\u2300', 'EARTH');
+    drawBindingPost(259, 166, '#212121', '#546e7a', '\u2212', 'VAR\u2212');
+
+    if (inst.selected) drawSelectionRect(ctx, -2, -2, 314, 214);
     ctx.restore();
   }
 });

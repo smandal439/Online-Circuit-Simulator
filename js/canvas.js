@@ -2241,8 +2241,7 @@ class CircuitCanvas {
           const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props?.voltageSet ?? 12.0);
           const iLim = Number(inst.runtimeState?.currentLimit ?? inst.props?.currentLimit ?? 2.5);
 
-          if (bsOutOn && vSet > 0) {
-            // Trace from POS pin through load to find ground path
+          if (bsOutOn && vSet !== 0) {
             const posNet = this._tracePinNet(inst.id, 'POS');
             const gndNet = this._tracePinNet(inst.id, 'NEG');
 
@@ -2250,15 +2249,13 @@ class CircuitCanvas {
             const posSources = posNet.sources;
 
             if (posGrounds.length > 0) {
-              // Calculate parallel resistance from ALL ground paths
-              // 1/R_total = 1/R1 + 1/R2 + ... + 1/Rn
               let invRSum = 0;
               for (const g of posGrounds) {
                 const r = Math.max(0.1, g.resistance || 0.1);
                 invRSum += 1 / r;
               }
               const loadR = invRSum > 0 ? 1 / invRSum : 999999;
-              let iAct = vSet / Math.max(0.1, loadR);
+              let iAct = Math.abs(vSet) / Math.max(0.1, loadR);
 
               if (iAct > iLim) {
                 iAct = iLim;
@@ -2268,7 +2265,6 @@ class CircuitCanvas {
               }
               inst.runtimeState.actualCurrent = Math.round(iAct * 1000) / 1000;
             } else if (posSources.length <= 1) {
-              // Only our own source found, no path to ground = open circuit
               inst.runtimeState.actualCurrent = 0;
               inst.runtimeState.mode = 'CV';
             } else {
@@ -2278,6 +2274,31 @@ class CircuitCanvas {
           } else {
             inst.runtimeState.actualCurrent = 0;
             inst.runtimeState.mode = 'CV';
+          }
+
+          if (bsPowered) {
+            const vcc5vNet = this._tracePinNet(inst.id, 'VCC_5V');
+            const gnd5vNet = this._tracePinNet(inst.id, 'GND_5V');
+            const gnd5vGrounds = gnd5vNet.grounds;
+            const gnd5vSources = gnd5vNet.sources;
+
+            if (gnd5vGrounds.length > 0) {
+              let invRSum5V = 0;
+              for (const g of gnd5vGrounds) {
+                const r = Math.max(0.1, g.resistance || 0.1);
+                invRSum5V += 1 / r;
+              }
+              const loadR5V = invRSum5V > 0 ? 1 / invRSum5V : 999999;
+              let iAct5V = 5.0 / Math.max(0.1, loadR5V);
+              if (iAct5V > 5.0) iAct5V = 5.0;
+              inst.runtimeState.actualCurrent5V = Math.round(iAct5V * 1000) / 1000;
+            } else if (gnd5vSources.length <= 1) {
+              inst.runtimeState.actualCurrent5V = 0;
+            } else {
+              inst.runtimeState.actualCurrent5V = 0;
+            }
+          } else {
+            inst.runtimeState.actualCurrent5V = 0;
           }
           break;
         }
@@ -3609,10 +3630,17 @@ class CircuitCanvas {
         const bsOutOn = bsPowered && Boolean(inst.runtimeState?.outputEnabled ?? inst.props?.outputEnabled ?? 1);
         const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props?.voltageSet ?? 12.0);
 
-        if (current.pinId === 'POS' && bsOutOn && vSet > 0) {
+        if (current.pinId === 'POS' && bsOutOn && vSet !== 0) {
           sources.push({ type: 'bench_v', voltage: vSet, rawVal: 255, resistance: current.resistance });
         }
         if (current.pinId === 'GND' || current.pinId === 'NEG') {
+          grounds.push({ type: 'gnd', instId: inst.id, pinId: current.pinId, resistance: current.resistance });
+        }
+
+        if (bsPowered && current.pinId === 'VCC_5V') {
+          sources.push({ type: '5V_fixed', voltage: 5.0, rawVal: 255, resistance: current.resistance });
+        }
+        if (bsPowered && current.pinId === 'GND_5V') {
           grounds.push({ type: 'gnd', instId: inst.id, pinId: current.pinId, resistance: current.resistance });
         }
         // Do NOT continue — let wire-following at bottom of loop execute
@@ -3776,7 +3804,7 @@ class CircuitCanvas {
       return pinId === 'GND1' || pinId === 'GND2' || pinId === 'GND';
     }
     if (inst.type === 'power_gnd') return true;
-    if (inst.type === 'bench_power_supply') return pinId === 'NEG' || pinId === 'GND';
+    if (inst.type === 'bench_power_supply') return pinId === 'NEG' || pinId === 'GND' || pinId === 'GND_5V';
     if (inst.type === 'mb102_power') return pinId === 'gnd_t' || pinId === 'gnd_b' || pinId === 'aux_gnd';
     if (inst.type === 'battery') return pinId === 'neg';
     // Arduino digital pin LOW acts as ground
