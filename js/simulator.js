@@ -965,7 +965,7 @@ class ArduinoSimulator {
         serialPeek() { return self.serialInputBuffer.length > 0 ? self.serialInputBuffer[0].charCodeAt(0) : -1; },
         serialReadString() { const s = self.serialInputBuffer.join(''); self.serialInputBuffer = []; return s; },
         serialReadStringUntil(terminator) {
-          const t = String(terminator);
+          const t = typeof terminator === 'number' ? String.fromCharCode(terminator) : String(terminator);
           const currentString = self.serialInputBuffer.join('');
           const index = currentString.indexOf(t);
 
@@ -989,7 +989,7 @@ class ArduinoSimulator {
           return chars.map(c => c.charCodeAt(0));
         },
         serialReadBytesUntil(terminator) {
-          const t = String(terminator);
+          const t = typeof terminator === 'number' ? String.fromCharCode(terminator) : String(terminator);
           const result = [];
           while (self.serialInputBuffer.length > 0) {
             const ch = self.serialInputBuffer.shift();
