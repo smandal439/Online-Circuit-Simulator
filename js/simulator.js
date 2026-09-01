@@ -964,6 +964,13 @@ class ArduinoSimulator {
           const index = currentString.indexOf(t);
 
           if (index === -1) {
+            // Terminator not found yet — Arduino would block until timeout.
+            // Simulator returns what's available so the loop doesn't spin forever.
+            if (currentString.length > 0) {
+              const partial = currentString;
+              self.serialInputBuffer = [];
+              return partial;
+            }
             return '';
           }
 
