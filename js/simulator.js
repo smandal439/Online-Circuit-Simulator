@@ -76,6 +76,7 @@ class ArduinoSimulator {
 
     // 4. Replace function declarations (return type + name + params + brace)
     const userFnNames = new Set();
+    js = js.replace(/\bF\s*\(\s*("[^"]*"|'[^']*')\s*\)/g, '$1');
     js = js.replace(
       /\b(?:void|int|float|double|long|unsigned\s+long|unsigned\s+int|byte|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+(\w+)\s*\(([^)]*)\)\s*\{/g,
       (match, name, params) => {
@@ -102,12 +103,13 @@ class ArduinoSimulator {
     // WebServer server(80);  →  let server = new WebServer(80);
     // Adafruit_SSD1306 display(128, 64, &Wire, -1);  →  let display = new Adafruit_SSD1306(128, 64, Wire, -1);
     // Adafruit_ILI9341 tft(CS, DC, MOSI, SCK, RESET);  →  let tft = new Adafruit_ILI9341(CS, DC, MOSI, SCK, RESET);
-    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|Adafruit_ILI9341|SimpleBME280)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
+    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|Adafruit_ILI9341|SimpleBME280|Adafruit_VL53L0X)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
 
     // C++ passes I2C objects by reference: `&Wire` is invalid JS. Strip the `&`
     // only inside Adafruit_SSD1306 constructors to avoid breaking `a & b`.
     js = js.replace(/new\s+Adafruit_SSD1306\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_SSD1306(${args.replace(/&\s*/g, '')})`);
     js = js.replace(/new\s+Adafruit_ILI9341\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_ILI9341(${args.replace(/&\s*/g, '')})`);
+    js = js.replace(/new\s+Adafruit_VL53L0X\s*\(([^)]*)\)/g, (_, args) => `new Adafruit_VL53L0X(${args.replace(/&\s*/g, '')})`);
 
     // 6. Handle arrays: int arr[10] → let arr = new Array(10).fill(0)
     js = js.replace(/let\s+(\w+)\s*\[(\d+)\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$3]');
@@ -580,6 +582,19 @@ class ArduinoSimulator {
     js = js.replace(/\bSTATUS_INVALID\b/g, '6');
     js = js.replace(/\bSTATUS_CRC_WRONG\b/g, '7');
     js = js.replace(/\bSTATUS_MIFARE_NACK\b/g, '8');
+
+    // Adafruit_VL53L0X ToF ranging sensor library
+    js = js.replace(/\bVL53L0X_RangingMeasurementData_t\s+(\w+)\s*;/g, 'let $1 = { RangeStatus: 0, RangeMilliMeter: 0 };');
+    js = js.replace(/\b(\w+)\.begin\s*\(\s*\)\s*;/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.vl53l0xBegin(' + varName + ');';
+    });
+    js = js.replace(/\b(\w+)\.rangingTest\s*\(/g, function (match, varName) {
+      if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
+      return '_a.vl53l0xRangingTest(' + varName + ', ';
+    });
+    // Strip C++ pass-by-reference `&` in rangingTest args (e.g. &measure → measure)
+    js = js.replace(/\bvl53l0xRangingTest\s*\(([^)]+)\)/g, (_, args) => `vl53l0xRangingTest(${args.replace(/&\s*/g, '')})`);
 
     // Servo library
     js = js.replace(/\b(\w+)\.attach\s*\(/g, '_a.servoAttach($1, ');
@@ -1847,6 +1862,23 @@ class ArduinoSimulator {
         };
       },
       SimpleBME280: function () { return {}; },
+      /* Adafruit_VL53L0X Time-of-Flight ranging sensor (I2C).
+         Emulates begin() and rangingTest() with simulated distance values. */
+      Adafruit_VL53L0X: function () {
+        return {
+          __vl53l0x: true,
+          begin() { self._serialLog('[VL53L0X] I2C sensor initialized\n', 'system'); return true; },
+          rangingTest(measure, debug) {
+            // Simulate a distance reading: 50–800 mm range with slight jitter
+            const dist = Math.floor(200 + Math.random() * 300);
+            measure.RangeStatus = 0;
+            measure.RangeMilliMeter = dist;
+            if (debug) {
+              self._serialLog(`[VL53L0X] Range: ${dist}mm (status=0)\n`, 'system');
+            }
+          },
+        };
+      },
       /* OLED 128×64 (SSD1306, I2C) — Adafruit_SSD1306 library stub.
          Text/setCursor calls are transpiled to _a.lcd* and dispatched here via
          the __oled tag; the remaining GFX drawing calls emit oled_draw events. */
