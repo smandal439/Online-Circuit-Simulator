@@ -578,20 +578,20 @@ defComp({
       ctx.beginPath(); ctx.arc(bx, by, 2.8, 0, Math.PI * 2); ctx.fill();
 
       ctx.fillStyle = '#eceff1';
-      ctx.font = 'bold 10px "JetBrains Mono", monospace';
+      ctx.font = 'bold 9px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(symbol, bx, by + 18);
+      ctx.fillText(symbol, bx, by + 3);
 
       ctx.fillStyle = '#78909c';
-      ctx.font = 'bold 5.5px "JetBrains Mono", sans-serif';
-      ctx.fillText(label, bx, by - 14);
+      ctx.font = 'bold 6px "JetBrains Mono", sans-serif';
+      ctx.fillText(label, bx, by - 15);
     }
 
-    ctx.fillStyle = '#455a64';
-    ctx.font = 'bold 6px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#546e7a';
+    ctx.font = 'bold 7px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('FIXED 5V/5A', 171, 156);
-    ctx.fillText('SPLIT RAIL \u00b132V/5A', 232, 156);
+    ctx.fillText('FIXED 5V/5A', 171, 147);
+    ctx.fillText('SPLIT RAIL \u00b132V/5A', 232, 147);
 
     drawBindingPost(160, 166, '#ff6d00', '#ffab40', '5V', '5V');
     drawBindingPost(183, 166, '#2e7d32', '#66bb6a', '\u2300', '5VGND');
