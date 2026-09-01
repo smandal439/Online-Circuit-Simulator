@@ -2241,10 +2241,13 @@ class CircuitCanvas {
           const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props?.voltageSet ?? 12.0);
           const iLim = Number(inst.runtimeState?.currentLimit ?? inst.props?.currentLimit ?? 2.5);
 
-          if (bsOutOn && vSet !== 0) {
-            const posNet = this._tracePinNet(inst.id, 'POS');
-            const gndNet = this._tracePinNet(inst.id, 'NEG');
+          inst.runtimeState.actualCurrentPos = 0;
+          inst.runtimeState.actualCurrentNeg = 0;
+          inst.runtimeState.actualCurrent5V = 0;
+          inst.runtimeState.mode = 'CV';
 
+          if (bsOutOn && vSet > 0) {
+            const posNet = this._tracePinNet(inst.id, 'POS');
             const posGrounds = posNet.grounds;
             const posSources = posNet.sources;
 
@@ -2255,25 +2258,30 @@ class CircuitCanvas {
                 invRSum += 1 / r;
               }
               const loadR = invRSum > 0 ? 1 / invRSum : 999999;
-              let iAct = Math.abs(vSet) / Math.max(0.1, loadR);
-
-              if (iAct > iLim) {
-                iAct = iLim;
-                inst.runtimeState.mode = 'CC';
-              } else {
-                inst.runtimeState.mode = 'CV';
-              }
-              inst.runtimeState.actualCurrent = Math.round(iAct * 1000) / 1000;
+              let iAct = vSet / Math.max(0.1, loadR);
+              if (iAct > iLim) { iAct = iLim; inst.runtimeState.mode = 'CC'; }
+              inst.runtimeState.actualCurrentPos = Math.round(iAct * 1000) / 1000;
             } else if (posSources.length <= 1) {
-              inst.runtimeState.actualCurrent = 0;
-              inst.runtimeState.mode = 'CV';
-            } else {
-              inst.runtimeState.actualCurrent = 0;
-              inst.runtimeState.mode = 'CV';
+              inst.runtimeState.actualCurrentPos = 0;
             }
-          } else {
-            inst.runtimeState.actualCurrent = 0;
-            inst.runtimeState.mode = 'CV';
+
+            const negNet = this._tracePinNet(inst.id, 'NEG');
+            const negGrounds = negNet.grounds;
+            const negSources = negNet.sources;
+
+            if (negGrounds.length > 0) {
+              let invRSumN = 0;
+              for (const g of negGrounds) {
+                const r = Math.max(0.1, g.resistance || 0.1);
+                invRSumN += 1 / r;
+              }
+              const loadRN = invRSumN > 0 ? 1 / invRSumN : 999999;
+              let iActN = vSet / Math.max(0.1, loadRN);
+              if (iActN > iLim) { iActN = iLim; inst.runtimeState.mode = 'CC'; }
+              inst.runtimeState.actualCurrentNeg = Math.round(iActN * 1000) / 1000;
+            } else if (negSources.length <= 1) {
+              inst.runtimeState.actualCurrentNeg = 0;
+            }
           }
 
           if (bsPowered) {
@@ -2294,11 +2302,7 @@ class CircuitCanvas {
               inst.runtimeState.actualCurrent5V = Math.round(iAct5V * 1000) / 1000;
             } else if (gnd5vSources.length <= 1) {
               inst.runtimeState.actualCurrent5V = 0;
-            } else {
-              inst.runtimeState.actualCurrent5V = 0;
             }
-          } else {
-            inst.runtimeState.actualCurrent5V = 0;
           }
           break;
         }
@@ -3624,16 +3628,19 @@ class CircuitCanvas {
         continue;
       }
 
-      // 2c. Benchtop DC Power Supply
+      // 2c. Benchtop DC Power Supply (split-rail: +V, -V, GND, 5V)
       if (inst.type === 'bench_power_supply') {
         const bsPowered = Boolean(inst.runtimeState?.powered ?? inst.props?.powered ?? 1);
         const bsOutOn = bsPowered && Boolean(inst.runtimeState?.outputEnabled ?? inst.props?.outputEnabled ?? 1);
         const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props?.voltageSet ?? 12.0);
 
-        if (current.pinId === 'POS' && bsOutOn && vSet !== 0) {
-          sources.push({ type: 'bench_v', voltage: vSet, rawVal: 255, resistance: current.resistance });
+        if (current.pinId === 'POS' && bsOutOn && vSet > 0) {
+          sources.push({ type: 'bench_v+', voltage: vSet, rawVal: 255, resistance: current.resistance });
         }
-        if (current.pinId === 'GND' || current.pinId === 'NEG') {
+        if (current.pinId === 'NEG' && bsOutOn && vSet > 0) {
+          sources.push({ type: 'bench_v-', voltage: -vSet, rawVal: 0, resistance: current.resistance });
+        }
+        if (current.pinId === 'GND') {
           grounds.push({ type: 'gnd', instId: inst.id, pinId: current.pinId, resistance: current.resistance });
         }
 
@@ -3804,7 +3811,7 @@ class CircuitCanvas {
       return pinId === 'GND1' || pinId === 'GND2' || pinId === 'GND';
     }
     if (inst.type === 'power_gnd') return true;
-    if (inst.type === 'bench_power_supply') return pinId === 'NEG' || pinId === 'GND' || pinId === 'GND_5V';
+    if (inst.type === 'bench_power_supply') return pinId === 'GND' || pinId === 'GND_5V';
     if (inst.type === 'mb102_power') return pinId === 'gnd_t' || pinId === 'gnd_b' || pinId === 'aux_gnd';
     if (inst.type === 'battery') return pinId === 'neg';
     // Arduino digital pin LOW acts as ground

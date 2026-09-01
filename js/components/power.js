@@ -306,13 +306,13 @@ defComp({
   }
 });
 
-/* -------------- Dual-Channel Benchtop DC Power Supply (5V/5A Fixed + ±0–32V/0–5A Variable) ------------------ */
+/* -------------- Dual-Rail Benchtop DC Power Supply (5V/5A Fixed + ±0–32V/0–5A Split-Rail) ------------------ */
 defComp({
   id: 'bench_power_supply',
   name: 'Benchtop Power Supply',
   category: 'Power',
   icon: '🎛️',
-  desc: 'Dual-channel bench supply: fixed 5V/5A output plus adjustable ±0–32V / 0–5A variable output with digital LED readout, CV/CC modes, and 4mm banana posts',
+  desc: 'Dual-rail bench supply: fixed 5V/5A output plus adjustable split ±0–32V / 0–5A rails for op-amp circuits — POS=+V, NEG=−V, GND=0V center-tap',
   width: 310,
   height: 210,
   defaultProps: {
@@ -320,22 +320,23 @@ defComp({
     outputEnabled: 1,
     voltageSet: 12.0,
     currentLimit: 2.5,
-    actualCurrent: 0.0,
+    actualCurrentPos: 0.0,
+    actualCurrentNeg: 0.0,
     mode: 'CV',
     actualCurrent5V: 0.0,
   },
   interactive: [
     { field: 'powered',       label: 'Power',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 78, y: 148, w: 32, h: 42 } },
     { field: 'outputEnabled', label: 'Output',  type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 26, y: 148, w: 32, h: 42 } },
-    { field: 'voltageSet',    label: 'Voltage',  min: -32.0, max: 32.0, step: 0.1, unit: 'V' },
-    { field: 'currentLimit',  label: 'Current',  min: 0.0, max: 5.0,  step: 0.05, unit: 'A' },
+    { field: 'voltageSet',    label: 'Voltage (\u00b1)',  min: 0.0, max: 32.0, step: 0.1, unit: 'V' },
+    { field: 'currentLimit',  label: 'Current (per rail)',  min: 0.0, max: 5.0,  step: 0.05, unit: 'A' },
   ],
   pins: [
-    { id: 'POS',     label: 'VAR +',     type: PIN_TYPE.POWER, x: 205, y: 182, side: 'bottom' },
-    { id: 'GND',     label: 'EARTH ⏚',  type: PIN_TYPE.GND,   x: 232, y: 182, side: 'bottom' },
-    { id: 'NEG',     label: 'VAR −',     type: PIN_TYPE.GND,   x: 259, y: 182, side: 'bottom' },
     { id: 'VCC_5V',  label: '5V',        type: PIN_TYPE.POWER, x: 160, y: 182, side: 'bottom' },
     { id: 'GND_5V',  label: '5V GND',    type: PIN_TYPE.GND,   x: 183, y: 182, side: 'bottom' },
+    { id: 'POS',     label: '+V',        type: PIN_TYPE.POWER, x: 205, y: 182, side: 'bottom' },
+    { id: 'GND',     label: 'GND',       type: PIN_TYPE.GND,   x: 232, y: 182, side: 'bottom' },
+    { id: 'NEG',     label: '\u2212V',   type: PIN_TYPE.POWER, x: 259, y: 182, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -343,10 +344,11 @@ defComp({
     const isOutOn = isPowered && Boolean(inst.runtimeState?.outputEnabled ?? inst.props.outputEnabled ?? 1);
     const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props.voltageSet ?? 12.0);
     const iLim = Number(inst.runtimeState?.currentLimit ?? inst.props.currentLimit ?? 2.5);
-    const iAct = isOutOn ? Number(inst.runtimeState?.actualCurrent ?? inst.props.actualCurrent ?? 0.0) : 0.0;
+    const iPos = isOutOn ? Number(inst.runtimeState?.actualCurrentPos ?? inst.props.actualCurrentPos ?? 0.0) : 0.0;
+    const iNeg = isOutOn ? Number(inst.runtimeState?.actualCurrentNeg ?? inst.props.actualCurrentNeg ?? 0.0) : 0.0;
     const iAct5V = isPowered ? Number(inst.runtimeState?.actualCurrent5V ?? inst.props.actualCurrent5V ?? 0.0) : 0.0;
     const mode = inst.runtimeState?.mode ?? inst.props.mode ?? 'CV';
-    const pOut = isOutOn ? Math.abs(vSet) * iAct : 0.0;
+    const pOut = isOutOn ? vSet * (iPos + iNeg) : 0.0;
 
     ctx.save();
     ctx.translate(x, y);
@@ -376,7 +378,7 @@ defComp({
 
     ctx.fillStyle = '#78909c';
     ctx.font = 'bold 7px "JetBrains Mono", monospace';
-    ctx.fillText('DPS-DUAL PRO \u00b7 5V/5A + \u00b132V/5A', 14, 28);
+    ctx.fillText('DPS-SPLIT PRO \u00b7 5V/5A + \u00b132V/5A', 14, 28);
 
     ctx.fillStyle = '#121518';
     for (let i = 0; i < 4; i++) {
@@ -384,51 +386,58 @@ defComp({
     }
 
     ctx.fillStyle = '#0a0d0f';
-    roundRect(ctx, 12, 34, 160, 106, 4);
+    roundRect(ctx, 12, 34, 160, 112, 4);
     ctx.fill();
     ctx.strokeStyle = '#455a64';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     if (isPowered) {
-      ctx.font = 'bold 24px "JetBrains Mono", monospace';
       ctx.textAlign = 'right';
 
       ctx.fillStyle = 'rgba(0, 229, 255, 0.06)';
-      ctx.fillText('88.88', 115, 62);
+      ctx.font = 'bold 20px "JetBrains Mono", monospace';
+      ctx.fillText('+88.8', 115, 56);
+      ctx.fillStyle = 'rgba(255, 80, 80, 0.06)';
+      ctx.fillText('\u221288.8', 115, 78);
       ctx.fillStyle = 'rgba(0, 230, 118, 0.06)';
-      ctx.fillText('8.888', 115, 88);
+      ctx.font = 'bold 12px "JetBrains Mono", monospace';
+      ctx.fillText('8.888', 98, 98);
       ctx.fillStyle = 'rgba(255, 171, 0, 0.06)';
-      ctx.font = 'bold 15px "JetBrains Mono", monospace';
-      ctx.fillText('888.8', 115, 110);
+      ctx.font = 'bold 14px "JetBrains Mono", monospace';
+      ctx.fillText('888.8', 115, 118);
       ctx.fillStyle = 'rgba(255, 171, 0, 0.06)';
-      ctx.fillText('888.8', 115, 130);
+      ctx.fillText('888.8', 115, 138);
 
       ctx.fillStyle = isOutOn ? '#00e5ff' : '#0097a7';
-      ctx.font = 'bold 24px "JetBrains Mono", monospace';
-      ctx.fillText(vSet.toFixed(2).padStart(6, '0'), 115, 62);
+      ctx.font = 'bold 20px "JetBrains Mono", monospace';
+      ctx.fillText('+' + vSet.toFixed(1), 115, 56);
+
+      ctx.fillStyle = isOutOn ? '#ff5252' : '#7f1d1d';
+      ctx.fillText('\u2212' + vSet.toFixed(1), 115, 78);
 
       ctx.fillStyle = isOutOn ? '#00e676' : '#2e7d32';
-      ctx.font = 'bold 18px "JetBrains Mono", monospace';
-      ctx.fillText(iAct.toFixed(3), 115, 88);
+      ctx.font = 'bold 12px "JetBrains Mono", monospace';
+      ctx.fillText('+' + iPos.toFixed(2) + '/' + '\u2212' + iNeg.toFixed(2), 115, 98);
 
       ctx.fillStyle = isOutOn ? '#ffab00' : '#c67c00';
-      ctx.font = 'bold 15px "JetBrains Mono", monospace';
-      ctx.fillText(pOut.toFixed(1).padStart(5, '0'), 115, 110);
+      ctx.font = 'bold 14px "JetBrains Mono", monospace';
+      ctx.fillText(pOut.toFixed(1).padStart(5, '0'), 115, 118);
 
       ctx.fillStyle = '#78909c';
-      ctx.font = 'bold 10px "JetBrains Mono", monospace';
-      ctx.fillText('5V:', 36, 128);
+      ctx.font = 'bold 9px "JetBrains Mono", monospace';
+      ctx.fillText('5V:', 36, 136);
       ctx.fillStyle = isPowered ? '#ff9100' : '#5d4037';
-      ctx.font = 'bold 12px "JetBrains Mono", monospace';
-      ctx.fillText(iAct5V.toFixed(2) + 'A', 62, 128);
+      ctx.font = 'bold 11px "JetBrains Mono", monospace';
+      ctx.fillText(iAct5V.toFixed(2) + 'A', 58, 136);
 
-      ctx.font = 'bold 13px "JetBrains Mono", sans-serif';
+      ctx.font = 'bold 11px "JetBrains Mono", sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#00e5ff'; ctx.fillText('V', 122, 60);
-      ctx.fillStyle = '#00e676'; ctx.fillText('A', 122, 86);
-      ctx.font = 'bold 10px "JetBrains Mono", sans-serif';
-      ctx.fillStyle = '#ffab00'; ctx.fillText('W', 122, 109);
+      ctx.fillStyle = '#00e5ff'; ctx.fillText('V+', 122, 54);
+      ctx.fillStyle = '#ff5252'; ctx.fillText('V\u2212', 122, 76);
+      ctx.fillStyle = '#00e676'; ctx.fillText('A', 122, 96);
+      ctx.font = 'bold 9px "JetBrains Mono", sans-serif';
+      ctx.fillStyle = '#ffab00'; ctx.fillText('W', 122, 117);
 
       const isCV = mode === 'CV' && isOutOn;
       ctx.fillStyle = isCV ? '#00e676' : '#1b3a24';
@@ -489,8 +498,8 @@ defComp({
       ctx.fillText(valueText, kx, ky - 23);
     }
 
-    drawRotaryKnob(240, 56, 'VOLTAGE', `${vSet >= 0 ? '+' : ''}${vSet.toFixed(1)}V`, '#00e5ff');
-    drawRotaryKnob(240, 116, 'CURRENT', `${iLim.toFixed(2)}A`, '#00e676');
+    drawRotaryKnob(240, 56, 'VOLTAGE', '\u00b1' + vSet.toFixed(1) + 'V', '#00e5ff');
+    drawRotaryKnob(240, 116, 'CURRENT', iLim.toFixed(2) + 'A', '#00e676');
 
     function drawToggleSwitch(tx, ty, tw, th, isOn, label) {
       ctx.fillStyle = '#0e1114';
@@ -582,13 +591,13 @@ defComp({
     ctx.font = 'bold 6px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
     ctx.fillText('FIXED 5V/5A', 171, 156);
-    ctx.fillText('VARIABLE \u00b132V/5A', 232, 156);
+    ctx.fillText('SPLIT RAIL \u00b132V/5A', 232, 156);
 
     drawBindingPost(160, 166, '#ff6d00', '#ffab40', '5V', '5V');
     drawBindingPost(183, 166, '#2e7d32', '#66bb6a', '\u2300', '5VGND');
-    drawBindingPost(205, 166, '#d50000', '#ff5252', '+', 'VAR+');
-    drawBindingPost(232, 166, '#2e7d32', '#00e676', '\u2300', 'EARTH');
-    drawBindingPost(259, 166, '#212121', '#546e7a', '\u2212', 'VAR\u2212');
+    drawBindingPost(205, 166, '#d50000', '#ff5252', '+', '+V');
+    drawBindingPost(232, 166, '#2e7d32', '#00e676', '\u2300', 'GND');
+    drawBindingPost(259, 166, '#1565c0', '#42a5f5', '\u2212', '\u2212V');
 
     if (inst.selected) drawSelectionRect(ctx, -2, -2, 314, 214);
     ctx.restore();
