@@ -103,7 +103,7 @@ class ArduinoSimulator {
     // WebServer server(80);  →  let server = new WebServer(80);
     // Adafruit_SSD1306 display(128, 64, &Wire, -1);  →  let display = new Adafruit_SSD1306(128, 64, Wire, -1);
     // Adafruit_ILI9341 tft(CS, DC, MOSI, SCK, RESET);  →  let tft = new Adafruit_ILI9341(CS, DC, MOSI, SCK, RESET);
-    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|Adafruit_ILI9341|SimpleBME280|Adafruit_VL53L0X)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
+    js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|Adafruit_ILI9341|SimpleBME280|Adafruit_VL53L0X|DHT)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
     // Adafruit_VL53L0X lox = Adafruit_VL53L0X();  →  let lox = new Adafruit_VL53L0X();
     js = js.replace(/\b(Adafruit_VL53L0X)\s+(\w+)\s*=\s*\1\s*\(([^)]*)\)\s*;/g, function(_, t, n, a) { return 'let ' + n + ' = new ' + t + '(' + a + ')'; });
 
@@ -584,6 +584,12 @@ class ArduinoSimulator {
     js = js.replace(/\bSTATUS_CRC_WRONG\b/g, '7');
     js = js.replace(/\bSTATUS_MIFARE_NACK\b/g, '8');
 
+    // DHT sensor type constants
+    js = js.replace(/\bDHT11\b/g, '11');
+    js = js.replace(/\bDHT22\b/g, '22');
+    js = js.replace(/\bDHT21\b/g, '21');
+    js = js.replace(/\bAM2301\b/g, '22');
+
     // Adafruit_VL53L0X ToF ranging sensor library
     js = js.replace(/\bVL53L0X_RangingMeasurementData_t\s+(\w+)\s*;/g, 'let $1 = { RangeStatus: 0, RangeMilliMeter: 0 };');
     // rangingTest: handle &measure pass-by-reference, route to _a.vl53l0xRangingTest
@@ -606,11 +612,28 @@ class ArduinoSimulator {
     js = js.replace(/\b(\w+)\.handleClient\s*\(/g, '_a.serverHandleClient($1, ');
 
     // SimpleBME280 library — map before generic `.begin` / `.read` rules
-    js = js.replace(/\b(\w+)\.begin\s*\(\s*\)\s*;/g, '_a.bme280Begin($1);');
-    js = js.replace(/\b(\w+)\.readTemperature\s*\(\s*\)/g, '_a.bme280ReadTemp($1)');
-    js = js.replace(/\b(\w+)\.readHumidity\s*\(\s*\)/g, '_a.bme280ReadHum($1)');
-    js = js.replace(/\b(\w+)\.readPressure\s*\(\s*\)/g, '_a.bme280ReadPres($1)');
-    js = js.replace(/\b(\w+)\.readAltitude\s*\(([^)]+)\)/g, '_a.bme280ReadAlt($1, $2)');
+    // Note: only match variables likely used for BME280 (bme*, sensor*) to avoid
+    // colliding with DHT library which also has begin/readTemperature/readHumidity.
+    js = js.replace(/\b(\w+)\.begin\s*\(\s*\)\s*;/g, function(m, v) {
+      if (/^(bme|sensor|bmp)/i.test(v)) return '_a.bme280Begin(' + v + ');';
+      return m;
+    });
+    js = js.replace(/\b(\w+)\.readTemperature\s*\(\s*\)/g, function(m, v) {
+      if (/^(bme|sensor|bmp)/i.test(v)) return '_a.bme280ReadTemp(' + v + ')';
+      return m;
+    });
+    js = js.replace(/\b(\w+)\.readHumidity\s*\(\s*\)/g, function(m, v) {
+      if (/^(bme|sensor|bmp)/i.test(v)) return '_a.bme280ReadHum(' + v + ')';
+      return m;
+    });
+    js = js.replace(/\b(\w+)\.readPressure\s*\(\s*\)/g, function(m, v) {
+      if (/^(bme|sensor|bmp)/i.test(v)) return '_a.bme280ReadPres(' + v + ')';
+      return m;
+    });
+    js = js.replace(/\b(\w+)\.readAltitude\s*\(([^)]+)\)/g, function(m, v, a) {
+      if (/^(bme|sensor|bmp)/i.test(v)) return '_a.bme280ReadAlt(' + v + ', ' + a + ')';
+      return m;
+    });
 
     // Adafruit_ILI9341 / Adafruit_GFX — map before generic LCD rules
     js = js.replace(/\b(\w+)\.drawPixel\s*\(/g, '_a.tftDrawPixel($1, ');
@@ -627,8 +650,15 @@ class ArduinoSimulator {
     js = js.replace(/\b(\w+)\.drawChar\s*\(/g, '_a.tftDrawChar($1, ');
 
     // LiquidCrystal
-    js = js.replace(/\b(\w+)\.begin\s*\(\s*\)/g, '_a.lcdBegin($1)');
-    js = js.replace(/\b(\w+)\.begin\s*\(/g, '_a.lcdBegin($1, ');
+    js = js.replace(/\b(\w+)\.begin\s*\(\s*\)/g, function(m, v) {
+      // Skip DHT objects (they have their own begin())
+      if (/^dht/i.test(v)) return m;
+      return '_a.lcdBegin(' + v + ')';
+    });
+    js = js.replace(/\b(\w+)\.begin\s*\(/g, function(m, v) {
+      if (/^dht/i.test(v)) return m;
+      return '_a.lcdBegin(' + v + ', ';
+    });
     js = js.replace(/\b(\w+)\.setCursor\s*\(/g, '_a.lcdSetCursor($1, ');
     js = js.replace(/\b(\w+)\.print\s*\(/g, '_a.lcdPrint($1, ');
     js = js.replace(/\b(\w+)\.clear\s*\(/g, '_a.lcdClear($1');
@@ -1922,6 +1952,33 @@ class ArduinoSimulator {
         };
       },
       SimpleBME280: function () { return {}; },
+      /* DHT temperature/humidity sensor library stub.
+         Reads values from a placed dht11 component on the canvas. */
+      DHT: function (pin, type) {
+        return {
+          __dht: true,
+          _pin: Number(pin) || 2,
+          _type: Number(type) || 11,
+          begin() { self._serialLog('[DHT] Sensor initialized on pin ' + (Number(pin) || 2) + '\n', 'system'); },
+          readTemperature(scale) {
+            var inst = self._dhtFindInst();
+            if (!inst) return NaN;
+            var t = (inst.runtimeState && inst.runtimeState.temperature !== undefined)
+              ? inst.runtimeState.temperature : (inst.props ? inst.props.temperature : 25);
+            if (scale === 'F' || scale === 1) t = t * 9.0 / 5.0 + 32;
+            return t;
+          },
+          readHumidity() {
+            var inst = self._dhtFindInst();
+            if (!inst) return NaN;
+            return (inst.runtimeState && inst.runtimeState.humidity !== undefined)
+              ? inst.runtimeState.humidity : (inst.props ? inst.props.humidity : 60);
+          },
+          convertCtoF(c) { return c * 9.0 / 5.0 + 32; },
+          convertFtoC(f) { return (f - 32) * 5.0 / 9.0; },
+          computeHeatIndex(t, h, si) { return si ? t : (t - 0.55 * (1 - h / 100) * (t - 14.5)); },
+        };
+      },
       /* Adafruit_VL53L0X Time-of-Flight ranging sensor (I2C).
          Emulates begin() and rangingTest() with simulated distance values. */
       Adafruit_VL53L0X: function () {
@@ -2676,6 +2733,15 @@ class ArduinoSimulator {
     var comps = window.CircuitCanvas.components || [];
     for (var i = 0; i < comps.length; i++) {
       if (comps[i].type === 'bme280') return comps[i];
+    }
+    return null;
+  }
+
+  _dhtFindInst() {
+    if (!window.CircuitCanvas) return null;
+    var comps = window.CircuitCanvas.components || [];
+    for (var i = 0; i < comps.length; i++) {
+      if (comps[i].type === 'dht11') return comps[i];
     }
     return null;
   }
