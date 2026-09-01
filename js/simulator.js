@@ -1026,9 +1026,58 @@ class ArduinoSimulator {
 
         /* Pulse */
         async pulseIn(pin, val, timeout) {
-          await new Promise(resolve => setTimeout(resolve, 10));
           const key = `pin_${pin}`;
-          return self.pinStates[key] ? 1000 : 0;
+          const targetHigh = (val === 1 || val === HIGH);
+
+          // Helper: advance simTime and yield (mirrors the context's delay())
+          const advanceMs = async (ms) => {
+            ms = Number(ms) || 0;
+            const realMs = ms / self.speed;
+            self.simTime += ms;
+            self._iterSinceDelay = 0;
+            await self._delayPromise(realMs);
+          };
+
+          // Try to find an HC-SR04 connected to this echo pin — compute directly
+          const canvas = window.CircuitCanvas;
+          if (canvas && canvas._getConnectedPinNum) {
+            for (const inst of (canvas.components || [])) {
+              if (inst.type === 'hcsr04') {
+                const echoPinNum = canvas._getConnectedPinNum(inst.id, 'echo');
+                if (echoPinNum === pin) {
+                  const dist = Number(inst.runtimeState && inst.runtimeState.distance !== undefined ? inst.runtimeState.distance : (inst.props && inst.props.distance)) || 20;
+                  const echoUs = Math.max(100, Math.round(dist * 58));
+                  // Simulate: set echo HIGH, advance time, set echo LOW
+                  self.pinStates[key] = targetHigh ? 1 : 0;
+                  self._emitPinChange(key, targetHigh ? 1 : 0);
+                  await advanceMs(echoUs / 1000);
+                  self.pinStates[key] = targetHigh ? 0 : 1;
+                  self._emitPinChange(key, targetHigh ? 0 : 1);
+                  return echoUs;
+                }
+              }
+            }
+          }
+
+          // Fallback: poll pinStates until pulse detected or timeout
+          const timeoutMs = timeout != null ? (timeout / 1000) : 1000;
+          const deadline = self.simTime + timeoutMs;
+          const target = targetHigh ? 1 : 0;
+
+          // Wait for pin to reach target state
+          while ((self.pinStates[key] || 0) !== target) {
+            if (self.simTime >= deadline) return 0;
+            await advanceMs(0.1);
+          }
+          const startMs = self.simTime;
+
+          // Wait for pin to leave target state
+          while ((self.pinStates[key] || 0) === target) {
+            if (self.simTime >= deadline) return Math.round((self.simTime - startMs) * 1000);
+            await advanceMs(0.1);
+          }
+
+          return Math.round((self.simTime - startMs) * 1000);
         },
 
         /* Servo */

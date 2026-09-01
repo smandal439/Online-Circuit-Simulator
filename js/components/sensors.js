@@ -165,57 +165,159 @@ defComp({
   name: 'HC-SR04 Ultrasonic',
   category: 'Sensors',
   icon: '📡',
-  desc: 'Ultrasonic distance sensor — measures 2cm to 400cm range',
-  width: 70,
-  height: 40,
+  desc: 'Ultrasonic distance sensor — measures 2cm to 400cm range. Drag the slider to set distance.',
+  width: 90,
+  height: 85,
   defaultProps: { distance: 20 },
   interactive: [
-    { field: 'distance', label: 'Dist', min: 2, max: 400, step: 1, unit: 'cm' },
+    { field: 'distance', label: 'Distance', min: 2, max: 400, step: 1, unit: ' cm' },
   ],
   pins: [
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 0, side: 'top' },
-    { id: 'trig', label: 'TRIG', type: PIN_TYPE.DIGITAL, x: 24, y: 0, side: 'top' },
-    { id: 'echo', label: 'ECHO', type: PIN_TYPE.DIGITAL, x: 46, y: 0, side: 'top' },
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 62, y: 0, side: 'top' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 10, y: 0, side: 'top' },
+    { id: 'trig', label: 'TRIG', type: PIN_TYPE.DIGITAL, x: 30, y: 0, side: 'top' },
+    { id: 'echo', label: 'ECHO', type: PIN_TYPE.DIGITAL, x: 54, y: 0, side: 'top' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 74, y: 0, side: 'top' },
   ],
+  step(inst, sim) {
+    if (!sim || !sim.isRunning) return;
+    const canvas = window.CircuitCanvas;
+    if (!canvas || !canvas._getConnectedPinNum) return;
+
+    const trigPin = canvas._getConnectedPinNum(inst.id, 'trig');
+    const echoPin = canvas._getConnectedPinNum(inst.id, 'echo');
+    if (trigPin === null || echoPin === null) return;
+
+    const trigKey = `pin_${trigPin}`;
+    const echoKey = `pin_${echoPin}`;
+    const trigHigh = !!sim.pinStates[trigKey];
+    const prevTrigHigh = !!inst.runtimeState._prevTrig;
+    const distance = Number(inst.runtimeState && inst.runtimeState.distance !== undefined ? inst.runtimeState.distance : inst.props.distance) || 20;
+    const simMs = sim.simTime || 0;
+
+    // Detect falling edge of trigger (end of 10 µs pulse)
+    if (prevTrigHigh && !trigHigh) {
+      const echoDurationUs = Math.max(100, Math.round(distance * 58));
+      inst.runtimeState._echoEndMs = simMs + (echoDurationUs / 1000);
+      sim.pinStates[echoKey] = 1;
+      sim._emitPinChange(echoKey, 1);
+    }
+
+    // End echo pulse when time expires
+    if (inst.runtimeState._echoEndMs && simMs >= inst.runtimeState._echoEndMs) {
+      sim.pinStates[echoKey] = 0;
+      sim._emitPinChange(echoKey, 0);
+      inst.runtimeState._echoEndMs = null;
+    }
+
+    inst.runtimeState._prevTrig = trigHigh;
+  },
   draw(ctx, inst, sim) {
     const { x, y } = inst;
+    const dist = (inst.runtimeState && inst.runtimeState.distance !== undefined)
+      ? inst.runtimeState.distance : ((inst.props && inst.props.distance) || 20);
+    const pct = Math.max(0, Math.min(1, (dist - 2) / 398));
+    const isRunning = !!(sim && sim.isRunning);
+
     ctx.save();
     ctx.translate(x, y);
 
+    // PCB shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    roundRect(ctx, 2, 10, 90, 34, 5);
+    ctx.fill();
+
     // PCB
-    ctx.fillStyle = '#1a5c1a';
-    roundRect(ctx, 0, 8, 70, 32, 4);
+    ctx.fillStyle = '#0d3d0d';
+    roundRect(ctx, 0, 8, 90, 34, 5);
     ctx.fill();
     ctx.strokeStyle = '#2d8c2d';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     // Transducer circles (eyes)
-    [18, 52].forEach(cx => {
-      ctx.fillStyle = '#888';
-      ctx.beginPath(); ctx.arc(cx, 24, 12, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1; ctx.stroke();
-      ctx.fillStyle = '#333';
-      ctx.beginPath(); ctx.arc(cx, 24, 8, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#555';
-      ctx.beginPath(); ctx.arc(cx, 24, 5, 0, Math.PI * 2); ctx.fill();
+    [20, 62].forEach(cx => {
+      ctx.fillStyle = '#999';
+      ctx.beginPath(); ctx.arc(cx, 24, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = '#444';
+      ctx.beginPath(); ctx.arc(cx, 24, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#666';
+      ctx.beginPath(); ctx.arc(cx, 24, 5.5, 0, Math.PI * 2); ctx.fill();
+      // Inner highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath(); ctx.arc(cx - 2, 22, 3, 0, Math.PI * 2); ctx.fill();
     });
 
-    // Text
-    ctx.fillStyle = '#c8c8c8';
-    ctx.font = 'bold 6px sans-serif';
+    // HC-SR04 label
+    ctx.fillStyle = '#b0b0b0';
+    ctx.font = 'bold 6.5px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('HC-SR04', 35, 37);
+    ctx.fillText('HC-SR04', 45, 37);
 
     // Pin leads
     ctx.strokeStyle = '#c8a84b';
     ctx.lineWidth = 1.5;
-    [8, 24, 46, 62].forEach(px => {
+    [10, 30, 54, 74].forEach(px => {
       ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, 8); ctx.stroke();
     });
 
-    if (inst.selected) drawSelectionRect(ctx, -3, 5, 76, 40);
+    // ── Distance display panel below the PCB ──
+    // Background
+    ctx.fillStyle = '#0a0e13';
+    roundRect(ctx, -2, 44, 94, 38, 4);
+    ctx.fill();
+    ctx.strokeStyle = isRunning ? 'rgba(0,229,255,0.35)' : 'rgba(60,65,75,0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // "DISTANCE" label
+    ctx.fillStyle = isRunning ? 'rgba(200,220,240,0.7)' : 'rgba(130,140,150,0.6)';
+    ctx.font = `bold ${6}px "JetBrains Mono", monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText('DISTANCE', 4, 55);
+
+    // Distance value (large)
+    ctx.fillStyle = isRunning ? '#00e5ff' : '#546e7a';
+    ctx.font = `bold ${14}px "JetBrains Mono", monospace`;
+    ctx.textAlign = 'right';
+    ctx.fillText(`${Math.round(dist)}`, 72, 58);
+
+    // Unit
+    ctx.fillStyle = isRunning ? 'rgba(0,229,255,0.7)' : 'rgba(100,120,130,0.6)';
+    ctx.font = `bold ${8}px "JetBrains Mono", monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText('cm', 75, 58);
+
+    // Range bar (2–400 cm)
+    const barX = 4, barY = 63, barW = 82, barH = 5;
+    ctx.fillStyle = '#1a2230';
+    roundRect(ctx, barX, barY, barW, barH, barH / 2);
+    ctx.fill();
+    if (pct > 0.01) {
+      const grad = ctx.createLinearGradient(barX, 0, barX + pct * barW, 0);
+      grad.addColorStop(0, isRunning ? 'rgba(0,200,255,0.4)' : 'rgba(80,100,110,0.3)');
+      grad.addColorStop(1, isRunning ? '#00e5ff' : '#546e7a');
+      ctx.fillStyle = grad;
+      roundRect(ctx, barX, barY, Math.max(barH, pct * barW), barH, barH / 2);
+      ctx.fill();
+    }
+    // Thumb dot
+    const thumbX = barX + pct * barW;
+    ctx.fillStyle = isRunning ? '#b2ebf2' : '#90a4ae';
+    ctx.beginPath(); ctx.arc(thumbX, barY + barH / 2, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+
+    // Min/Max labels
+    ctx.fillStyle = 'rgba(140,160,170,0.5)';
+    ctx.font = `${5}px "JetBrains Mono", monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText('2', barX, barY + barH + 7);
+    ctx.textAlign = 'right';
+    ctx.fillText('400 cm', barX + barW, barY + barH + 7);
+
+    if (inst.selected) drawSelectionRect(ctx, -5, 5, 100, 80);
     ctx.restore();
   }
 });

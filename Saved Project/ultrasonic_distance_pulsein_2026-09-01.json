@@ -1,8 +1,8 @@
 {
   "version": "1.1",
-  "savedAt": "2026-09-01T17:14:23.644Z",
+  "savedAt": "2026-09-01T17:54:45.141Z",
   "name": "Ultrasonic Distance pulseIn",
-  "code": "const int trigPin = 9;\nconst int echoPin = 10;\nlong duration;\nint distance;\n\nvoid setup() {\n  pinMode(trigPin, OUTPUT);\n  pinMode(echoPin, INPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  digitalWrite(trigPin, LOW);\n  delayMicroseconds(2);\n  digitalWrite(trigPin, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(trigPin, LOW);\n  \n  duration = pulseIn(echoPin, HIGH);\n  distance = duration * 0.034 / 2;\n  \n  Serial.print(\"Distance: \");\n  Serial.print(distance);\n  Serial.println(\" cm\");\n  delay(500);\n}\n",
+  "code": "const int trigPin = 7;\nconst int echoPin = 8;\nlong duration;\nint distance;\n\nvoid setup() {\n  pinMode(trigPin, OUTPUT);\n  pinMode(echoPin, INPUT);\n  Serial.begin(115200);\n}\n\nvoid loop() {\n  digitalWrite(trigPin, LOW);\n  delayMicroseconds(2);\n  digitalWrite(trigPin, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(trigPin, LOW);\n  \n  duration = pulseIn(echoPin, HIGH);\n  distance = duration * 0.034 / 2;  \n  Serial.print(\"Distance: \");\n  Serial.print(distance);\n  Serial.println(\" cm\");\n  delay(500);\n}\n",
   "circuit": {
     "components": [
       {
@@ -22,15 +22,17 @@
       {
         "id": "son1",
         "type": "hcsr04",
-        "x": 120,
-        "y": 300,
-        "width": 70,
-        "height": 40,
+        "x": 115,
+        "y": 285,
+        "width": 90,
+        "height": 85,
         "props": {
           "distance": 20
         },
         "runtimeState": {
-          "distance": 400
+          "_prevTrig": false,
+          "_echoEndMs": null,
+          "distance": 2
         },
         "selected": false,
         "rotation": 0
@@ -38,8 +40,8 @@
       {
         "id": "led1",
         "type": "led",
-        "x": 340,
-        "y": 260,
+        "x": 455,
+        "y": 115,
         "width": 30,
         "height": 60,
         "props": {
@@ -61,8 +63,8 @@
       {
         "id": "r1",
         "type": "resistor",
-        "x": 340,
-        "y": 340,
+        "x": 460,
+        "y": 230,
         "width": 20,
         "height": 60,
         "props": {
@@ -84,32 +86,6 @@
         "to": {
           "instId": "son1",
           "pinId": "vcc"
-        },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "w2",
-        "from": {
-          "instId": "b1",
-          "pinId": "D7"
-        },
-        "to": {
-          "instId": "son1",
-          "pinId": "trig"
-        },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "w3",
-        "from": {
-          "instId": "b1",
-          "pinId": "D8"
-        },
-        "to": {
-          "instId": "son1",
-          "pinId": "echo"
         },
         "color": null,
         "waypoints": []
@@ -154,14 +130,62 @@
         "waypoints": []
       },
       {
-        "id": "w7",
+        "id": "wire_1788283731340_f3cat",
         "from": {
-          "instId": "r1",
-          "pinId": "p2"
+          "instId": "son1",
+          "pinId": "trig"
         },
         "to": {
           "instId": "b1",
+          "pinId": "D7"
+        },
+        "color": null,
+        "waypoints": [
+          {
+            "x": 145,
+            "y": 300
+          },
+          {
+            "x": 145,
+            "y": 88
+          },
+          {
+            "x": 308,
+            "y": 88
+          }
+        ]
+      },
+      {
+        "id": "wire_1788283734746_sxfoz",
+        "from": {
+          "instId": "son1",
+          "pinId": "echo"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "D8"
+        },
+        "color": null,
+        "waypoints": [
+          {
+            "x": 166,
+            "y": 88
+          },
+          {
+            "x": 322,
+            "y": 88
+          }
+        ]
+      },
+      {
+        "id": "wire_1788285169865_2kwmi",
+        "from": {
+          "instId": "b1",
           "pinId": "GND1"
+        },
+        "to": {
+          "instId": "r1",
+          "pinId": "p2"
         },
         "color": null,
         "waypoints": []
