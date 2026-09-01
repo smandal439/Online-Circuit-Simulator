@@ -661,6 +661,14 @@ class ArduinoSimulator {
     // Fix: handle C++ string char arrays declared as: char str[20];
     // Already handled above
 
+    // Arduino String methods are in-place but JS String.prototype methods return new strings.
+    // Convert: command.trim();  →  command = command.trim();
+    // Convert: command.toLowerCase();  →  command = command.toLowerCase();
+    // Convert: command.toUpperCase();  →  command = command.toUpperCase();
+    js = js.replace(/\b(\w+)\.trim\(\)\s*;/g, function(_, v) { return v + ' = ' + v + '.trim();'; });
+    js = js.replace(/\b(\w+)\.toLowerCase\(\)\s*;/g, function(_, v) { return v + ' = ' + v + '.toLowerCase();'; });
+    js = js.replace(/\b(\w+)\.toUpperCase\(\)\s*;/g, function(_, v) { return v + ' = ' + v + '.toUpperCase();'; });
+
     return js;
   }
 
