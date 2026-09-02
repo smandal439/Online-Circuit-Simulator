@@ -25,6 +25,7 @@ defComp({
     ch3_en: false, ch3_vdiv: 5.0,  ch3_pos: -2.0, ch3_coupling: 'dc', ch3_probe: 1,
     ch4_en: false, ch4_vdiv: 0.5,  ch4_pos: -3.0, ch4_coupling: 'dc', ch4_probe: 1,
     math_op: 'off',
+    dsoMode: 'scope',
   },
 
   interactive: [
@@ -64,6 +65,9 @@ defComp({
     { field: 'ch4_pos',      label: 'CH4 Position',  min: -4, max: 4, step: 0.1, unit: 'div' },
     { field: 'ch4_coupling', label: 'CH4 Coupling',  type: 'select', options: [
       { value: 'dc', label: 'DC' }, { value: 'ac', label: 'AC' }, { value: 'gnd', label: 'GND' }
+    ]},
+    { field: 'dsoMode', label: 'Display Mode', type: 'select', options: [
+      { value: 'scope', label: 'Scope' }, { value: 'spectrum', label: 'Spectrum' }, { value: 'xy', label: 'XY' }
     ]},
   ],
 
@@ -441,6 +445,7 @@ defComp({
         if (mathOp === 'add') vm = v1 + v2;
         else if (mathOp === 'sub') vm = v1 - v2;
         else if (mathOp === 'abs') vm = Math.abs(v1 - v2);
+        else if (mathOp === 'mul') vm = v1 * v2;
         mathPts.push({ px: scrX + px, py: cy - (vm * (dH / vdiv)) - (pos * dH) });
       }
         // Math trace (magenta)
@@ -462,10 +467,105 @@ defComp({
         ctx.globalAlpha = 1;
     }
 
+    // ── Spectrum Analyzer Mode ──
+    if (P('dsoMode', 'scope') === 'spectrum' && typeof DSP !== 'undefined') {
+      const specChannels = channels.filter(c => c.en);
+      specChannels.forEach((ch) => {
+        const samples = buf && buf[ch.id] && buf[ch.id].length > 0 ? buf[ch.id] : null;
+        const tS = buf && buf.t && buf.t.length > 0 ? buf.t : null;
+        if (!samples || samples.length < 64 || !tS || tS.length < 2) return;
+
+        const totalTimeBuf = tS[tS.length - 1] - tS[0];
+        const sampleRate = totalTimeBuf > 0 ? samples.length / totalTimeBuf : 0;
+        if (sampleRate <= 0) return;
+
+        const fftResult = DSP.computeFFT(samples, sampleRate);
+        const mag = fftResult.magnitude;
+        const fAxis = fftResult.freqAxis;
+        const maxFreq = sampleRate / 2;
+        const dbMin = -80, dbMax = 10;
+
+        ctx.strokeStyle = ch.col;
+        ctx.globalAlpha = 0.3;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = ch.col;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        for (let px = 0; px < scrW; px++) {
+          const freq = (px / scrW) * maxFreq;
+          let binIdx = 0;
+          for (let k = 0; k < fAxis.length; k++) { if (fAxis[k] >= freq) { binIdx = k; break; } }
+          const db = Math.max(dbMin, Math.min(dbMax, mag[binIdx]));
+          const py = scrY + scrH - ((db - dbMin) / (dbMax - dbMin)) * scrH;
+          if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 0.85;
+        ctx.lineWidth = 1.2;
+        ctx.shadowBlur = 3;
+        ctx.beginPath();
+        for (let px = 0; px < scrW; px++) {
+          const freq = (px / scrW) * maxFreq;
+          let binIdx = 0;
+          for (let k = 0; k < fAxis.length; k++) { if (fAxis[k] >= freq) { binIdx = k; break; } }
+          const db = Math.max(dbMin, Math.min(dbMax, mag[binIdx]));
+          const py = scrY + scrH - ((db - dbMin) / (dbMax - dbMin)) * scrH;
+          if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      });
+    }
+
+    // ── XY Mode ──
+    if (P('dsoMode', 'scope') === 'xy' && buf && buf.ch1 && buf.ch2 && buf.ch1.length > 1) {
+      const ch1Samples = buf.ch1;
+      const ch2Samples = buf.ch2;
+      const len = Math.min(ch1Samples.length, ch2Samples.length);
+      const pf1 = P('ch1_probe', 1);
+      const pf2 = P('ch2_probe', 1);
+
+      let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+      for (let i = 0; i < len; i++) {
+        const vx = ch1Samples[i] * pf1;
+        const vy = ch2Samples[i] * pf2;
+        if (vx < xmin) xmin = vx; if (vx > xmax) xmax = vx;
+        if (vy < ymin) ymin = vy; if (vy > ymax) ymax = vy;
+      }
+      const xRange = Math.max(Math.abs(xmin), Math.abs(xmax), 0.1);
+      const yRange = Math.max(Math.abs(ymin), Math.abs(ymax), 0.1);
+
+      ctx.strokeStyle = '#ffe600';
+      ctx.globalAlpha = 0.3;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#ffe600';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      for (let i = 0; i < len; i++) {
+        const px = cx + (ch1Samples[i] * pf1 / xRange) * (scrW / 2) * 0.8;
+        const py = cy - (ch2Samples[i] * pf2 / yRange) * (scrH / 2) * 0.8;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 0.85;
+      ctx.lineWidth = 1.2;
+      ctx.shadowBlur = 3;
+      ctx.beginPath();
+      for (let i = 0; i < len; i++) {
+        const px = cx + (ch1Samples[i] * pf1 / xRange) * (scrW / 2) * 0.8;
+        const py = cy - (ch2Samples[i] * pf2 / yRange) * (scrH / 2) * 0.8;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+
     // ── Trigger Level Line ──
     const trigV = P('trig_level', 0);
     const trigCh = channels.find(c => c.id === (P('trig_source', 'ch1')));
-    if (trigCh) {
+    if (trigCh && P('dsoMode', 'scope') === 'scope') {
       const trigY = cy - (trigV * (dH / trigCh.vdiv)) - (trigCh.pos * dH);
       if (trigY >= scrY && trigY <= scrY + scrH) {
         ctx.strokeStyle = 'rgba(255, 170, 0, 0.5)';
@@ -516,14 +616,16 @@ defComp({
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 8px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(_fmtT(P('timebase', 0.001)) + '/div', scrX + scrW - 8, osdY + 10);
+    const modeLabel = P('dsoMode', 'scope') === 'spectrum' ? ' | FFT' : P('dsoMode', 'scope') === 'xy' ? ' | XY' : '';
+    ctx.fillText(_fmtT(P('timebase', 0.001)) + '/div' + modeLabel, scrX + scrW - 8, osdY + 10);
 
     // Math channel label
     if (P('math_op', 'off') !== 'off') {
       ctx.fillStyle = '#ff00ff';
       ctx.font = 'bold 7px monospace';
       ctx.textAlign = 'left';
-      const mathLabel = P('math_op', 'off') === 'add' ? 'M:CH1+CH2' : P('math_op', 'off') === 'sub' ? 'M:CH1-CH2' : 'M:|CH1-CH2|';
+      const mathOp = P('math_op', 'off');
+      const mathLabel = mathOp === 'add' ? 'M:CH1+CH2' : mathOp === 'sub' ? 'M:CH1-CH2' : mathOp === 'mul' ? 'M:CH1*CH2' : 'M:|CH1-CH2|';
       ctx.fillText(mathLabel, scrX + 8, osdY + 22);
     }
 
@@ -561,8 +663,9 @@ defComp({
     const measCh = channels.find(c => c.en) || channels[0];
     const m = meas[measCh.id];
     if (m && isPowered) {
+      const mode = P('dsoMode', 'scope');
       ctx.fillStyle = 'rgba(2, 4, 8, 0.6)';
-      _rr(ctx, scrX, measY, scrW, 16, 2); ctx.fill();
+      _rr(ctx, scrX, measY, scrW, mode === 'spectrum' ? 28 : 16, 2); ctx.fill();
       ctx.font = '6.5px monospace';
       ctx.textAlign = 'left';
       ctx.fillStyle = measCh.col;
@@ -571,6 +674,10 @@ defComp({
       const vrmsStr = ' Vrms=' + _fmtV(m.vrms);
       const dutyStr = m.dutyCycle > 0 ? ' D=' + m.dutyCycle.toFixed(1) + '%' : '';
       ctx.fillText(vppStr + vrmsStr + freqStr + dutyStr, scrX + 4, measY + 11);
+      if (mode === 'spectrum') {
+        ctx.fillStyle = '#ff00ff';
+        ctx.fillText('FFT: ' + measCh.id.toUpperCase() + '  |  Hann Window  |  Radix-2', scrX + 4, measY + 23);
+      }
     }
 
     // ── Right Panel Controls ──
@@ -799,7 +906,7 @@ defComp({
     ctx.fillStyle = isPowered ? '#3a4050' : '#22262f';
     ctx.font = '5px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('4-CHANNEL DIGITAL STORAGE OSCILLOSCOPE  |  100MHz  |  1 GSa/s', W / 2, H - 28);
+    ctx.fillText('4-CH DSO  |  100MHz  |  1 GSa/s  |  FFT  |  XY', W / 2, H - 28);
 
     // ── Selection ──
     if (inst.selected && typeof drawSelectionRect === 'function') {

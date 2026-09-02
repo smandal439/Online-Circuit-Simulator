@@ -45,6 +45,12 @@ class DSOFullscreen {
     this._fontSize = 1;
     this._isCompact = false;
 
+    // Display mode: 'scope' (normal), 'spectrum' (FFT), 'xy' (XY plot)
+    this._dsoMode = 'scope';
+    // Cached FFT results per channel
+    this._fftCache = {};
+    this._fftCacheTime = 0;
+
     // ResizeObserver for responsive layout
     this._ro = null;
 
@@ -339,6 +345,7 @@ class DSOFullscreen {
           if (mathOp === 'add') vm = v1 + v2;
           else if (mathOp === 'sub') vm = v1 - v2;
           else if (mathOp === 'abs') vm = Math.abs(v1 - v2);
+          else if (mathOp === 'mul') vm = v1 * v2;
           mathPts.push({ px: scrX + px, py: cy - (vm * (dH / vdiv)) });
         }
         ctx.strokeStyle = '#ff00ff';
@@ -359,10 +366,157 @@ class DSOFullscreen {
         ctx.globalAlpha = 1;
       }
 
+      // ── Spectrum Analyzer Mode ──
+      if (this._dsoMode === 'spectrum' && typeof DSP !== 'undefined') {
+        const specChannels = channels.filter(c => c.en);
+        specChannels.forEach((ch) => {
+          const samples = buf && buf[ch.id] && buf[ch.id].length > 0 ? buf[ch.id] : null;
+          const tS = buf && buf.t && buf.t.length > 0 ? buf.t : null;
+          if (!samples || samples.length < 64 || !tS || tS.length < 2) return;
+
+          const totalTimeBuf = tS[tS.length - 1] - tS[0];
+          const sampleRate = totalTimeBuf > 0 ? samples.length / totalTimeBuf : 0;
+          if (sampleRate <= 0) return;
+
+          const fftResult = DSP.computeFFT(samples, sampleRate);
+          const mag = fftResult.magnitude;
+          const fAxis = fftResult.freqAxis;
+
+          // Frequency range: 0 to Nyquist
+          const maxFreq = sampleRate / 2;
+          const minFreq = 0;
+
+          // Grid: X = frequency, Y = amplitude dB
+          const dbMin = -80;
+          const dbMax = 10;
+
+          ctx.strokeStyle = ch.col;
+          ctx.globalAlpha = 0.3;
+          ctx.lineWidth = 4;
+          ctx.shadowColor = ch.col;
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          for (let px = 0; px < scrW; px++) {
+            const freq = minFreq + (px / scrW) * (maxFreq - minFreq);
+            // Find closest FFT bin
+            let binIdx = 0;
+            for (let k = 0; k < fAxis.length; k++) {
+              if (fAxis[k] >= freq) { binIdx = k; break; }
+            }
+            const db = Math.max(dbMin, Math.min(dbMax, mag[binIdx]));
+            const py = scrY + scrH - ((db - dbMin) / (dbMax - dbMin)) * scrH;
+            if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
+          }
+          ctx.stroke();
+          ctx.globalAlpha = 0.9;
+          ctx.lineWidth = 1.5;
+          ctx.shadowBlur = 4;
+          ctx.beginPath();
+          for (let px = 0; px < scrW; px++) {
+            const freq = minFreq + (px / scrW) * (maxFreq - minFreq);
+            let binIdx = 0;
+            for (let k = 0; k < fAxis.length; k++) {
+              if (fAxis[k] >= freq) { binIdx = k; break; }
+            }
+            const db = Math.max(dbMin, Math.min(dbMax, mag[binIdx]));
+            const py = scrY + scrH - ((db - dbMin) / (dbMax - dbMin)) * scrH;
+            if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
+          }
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        });
+
+        // Spectrum grid labels
+        ctx.fillStyle = '#4a5264';
+        ctx.font = `${Math.round(7 * this._fontSize)}px monospace`;
+        ctx.textAlign = 'center';
+        const maxFreq = (buf.t.length > 1 ? (buf.t[buf.t.length - 1] - buf.t[0]) : 1) > 0
+          ? buf.t.length / (buf.t[buf.t.length - 1] - buf.t[0]) / 2 : 1e6;
+        for (let i = 0; i <= 4; i++) {
+          const fVal = maxFreq * i / 4;
+          const label = fVal >= 1e6 ? (fVal / 1e6).toFixed(1) + 'M' : fVal >= 1e3 ? (fVal / 1e3).toFixed(1) + 'k' : fVal.toFixed(0);
+          ctx.fillText(label, scrX + (scrW * i / 4), scrY + scrH + 12);
+        }
+        ctx.textAlign = 'left';
+        for (let i = 0; i <= 4; i++) {
+          const dbVal = dbMin + (dbMax - dbMin) * i / 4;
+          const py = scrY + scrH - (i / 4) * scrH;
+          ctx.fillText(dbVal.toFixed(0) + 'dB', scrX + 4, py - 2);
+        }
+      }
+
+      // ── XY Mode ──
+      if (this._dsoMode === 'xy' && buf && buf.ch1 && buf.ch2 && buf.ch1.length > 1) {
+        const ch1Samples = buf.ch1;
+        const ch2Samples = buf.ch2;
+        const len = Math.min(ch1Samples.length, ch2Samples.length);
+        const pf1 = P('ch1_probe', 1);
+        const pf2 = P('ch2_probe', 1);
+        const vdivX = P('ch1_vdiv', 1);
+        const vdivY = P('ch2_vdiv', 2);
+        const posX = P('ch1_pos', 0);
+        const posY = P('ch2_pos', 0);
+
+        // Find ranges for auto-scale
+        let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+        for (let i = 0; i < len; i++) {
+          const vx = ch1Samples[i] * pf1;
+          const vy = ch2Samples[i] * pf2;
+          if (vx < xmin) xmin = vx;
+          if (vx > xmax) xmax = vx;
+          if (vy < ymin) ymin = vy;
+          if (vy > ymax) ymax = vy;
+        }
+        const xRange = Math.max(Math.abs(xmin), Math.abs(xmax), 0.1);
+        const yRange = Math.max(Math.abs(ymin), Math.abs(ymax), 0.1);
+
+        // Draw XY trace with persistence
+        ctx.strokeStyle = '#ffe600';
+        ctx.globalAlpha = 0.3;
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#ffe600';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        for (let i = 0; i < len; i++) {
+          const vx = ch1Samples[i] * pf1;
+          const vy = ch2Samples[i] * pf2;
+          const px = cx + (vx / xRange) * (scrW / 2) * 0.8;
+          const py = cy - (vy / yRange) * (scrH / 2) * 0.8;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 0.9;
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+        for (let i = 0; i < len; i++) {
+          const vx = ch1Samples[i] * pf1;
+          const vy = ch2Samples[i] * pf2;
+          const px = cx + (vx / xRange) * (scrW / 2) * 0.8;
+          const py = cy - (vy / yRange) * (scrH / 2) * 0.8;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+
+        // XY axis labels
+        ctx.fillStyle = '#ffe600';
+        ctx.font = `${Math.round(8 * this._fontSize)}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText('CH1 (X)', cx, scrY + scrH + 12);
+        ctx.save();
+        ctx.translate(scrX - 10, cy);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText('CH2 (Y)', 0, 0);
+        ctx.restore();
+      }
+
       // ── Trigger Level Line ──
       const trigV = P('trig_level', 0);
       const trigCh = channels.find(c => c.id === (P('trig_source', 'ch1')));
-      if (trigCh) {
+      if (trigCh && this._dsoMode === 'scope') {
         const trigY = cy - (trigV * (dH / trigCh.vdiv)) - (trigCh.pos * dH);
         if (trigY >= scrY && trigY <= scrY + scrH) {
           ctx.strokeStyle = 'rgba(255, 170, 0, 0.5)';
@@ -708,8 +862,17 @@ class DSOFullscreen {
     yPos += 16;
     yPos = this._drawSelect(ctx, x + 8, yPos, w - 16, 'Operation', P('math_op', 'off'), [
       { value: 'off', label: 'OFF' }, { value: 'add', label: 'CH1 + CH2' },
-      { value: 'sub', label: 'CH1 \u2212 CH2' }, { value: 'abs', label: '|CH1 \u2212 CH2|' }
+      { value: 'sub', label: 'CH1 \u2212 CH2' }, { value: 'abs', label: '|CH1 \u2212 CH2|' },
+      { value: 'mul', label: 'CH1 \u00d7 CH2' }
     ], 'dso-fs-math-op');
+    yPos += sectionGap;
+
+    // ── Display Mode ──
+    this._drawSection(ctx, x + 8, yPos, w - 16, 'DISPLAY', '#00d4e6');
+    yPos += 16;
+    yPos = this._drawSelect(ctx, x + 8, yPos, w - 16, 'View', this._dsoMode, [
+      { value: 'scope', label: 'Scope' }, { value: 'spectrum', label: 'Spectrum' }, { value: 'xy', label: 'XY Mode' }
+    ], 'dso-fs-display-mode');
     yPos += sectionGap;
 
     // ── Transport ──
@@ -1009,6 +1172,14 @@ class DSOFullscreen {
       e.preventDefault(); return;
     }
 
+    // M — cycle display mode (scope → spectrum → xy)
+    if (e.key === 'm' || e.key === 'M') {
+      const modes = ['scope', 'spectrum', 'xy'];
+      const idx = modes.indexOf(this._dsoMode);
+      this._dsoMode = modes[(idx + 1) % modes.length];
+      e.preventDefault(); return;
+    }
+
     // 1-4 — toggle channel enable
     const chKeys = { '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4' };
     if (chKeys[e.key]) {
@@ -1170,6 +1341,9 @@ class DSOFullscreen {
             this.inst.props[el.field] = val;
           } else if (el.type === 'button') {
             this._autoSet();
+          }
+          if (el.field === 'dso-fs-display-mode') {
+            this._dsoMode = el.options[el.options.findIndex(o => o.value == el.value) % el.options.length].value;
           }
           this._syncControlsFromInst();
           e.stopPropagation();
