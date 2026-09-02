@@ -1813,7 +1813,7 @@ defComp({
 });
 
 // ==========================================
-// 2. NEOPIXEL 8x8 NeoPixel Matrix (64 LEDs)
+// 3. NEOPIXEL 8x8 NeoPixel Matrix (64 LEDs)
 // ==========================================
 
 defComp({
@@ -1892,8 +1892,16 @@ defComp({
 
         // Determine pixel color
         let color = '#000000';
-        if (Array.isArray(pixelData) && pixelData[index]) {
-          color = pixelData[index];
+        if (Array.isArray(pixelData) && pixelData[index] !== undefined && pixelData[index] !== null) {
+          const px = pixelData[index];
+          if (typeof px === 'string') {
+            color = px;
+          } else if (typeof px === 'number') {
+            const r = (px >> 16) & 0xFF, g = (px >> 8) & 0xFF, b = px & 0xFF;
+            color = `rgb(${r},${g},${b})`;
+          } else if (typeof px === 'object') {
+            color = `rgb(${px.r || 0},${px.g || 0},${px.b || 0})`;
+          }
         } else {
           // Default standby preview pattern (diagonal gradient) if no active signal buffer
           const hue = ((r + c) / 14) * 360;
