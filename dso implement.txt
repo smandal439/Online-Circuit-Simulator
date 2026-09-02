@@ -1,0 +1,6 @@
+make the dso dual channel 1gsps realistic design with fft, 
+Vpp, Frequency, and RMS voltage calculation algorithms to the 
+JS Oscilloscope engine,FFT MATH HELPERS (Hann Window & Radix-2 FFT),
+SPECTRUM ANALYZER RENDERER FOR GSPSOscilloscope,DUAL-CHANNEL DSO ENGINE 
+(CH1, CH2, MATH, XY MODE),control panel interface for switching channels,
+ math modes, and scale knobs.

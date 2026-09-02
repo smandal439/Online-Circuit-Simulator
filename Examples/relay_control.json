@@ -8,7 +8,7 @@
     "relay",
     "output"
   ],
-  "circuit": {
+ "circuit": {
     "components": [
       {
         "id": "b1",
@@ -35,29 +35,7 @@
           "label": "RELAY"
         },
         "runtimeState": {
-          "active": false
-        },
-        "selected": false,
-        "rotation": 0
-      },
-      {
-        "id": "comp_1787679993586_676bz",
-        "type": "bench_power_supply",
-        "x": -185,
-        "y": 80,
-        "width": 270,
-        "height": 200,
-        "props": {
-          "powered": 1,
-          "outputEnabled": 1,
-          "voltageSet": 12,
-          "currentLimit": 2.5,
-          "actualCurrent": 0,
-          "mode": "CV"
-        },
-        "runtimeState": {
-          "mode": "CV",
-          "actualCurrent": 1
+          "active": true
         },
         "selected": false,
         "rotation": 0
@@ -74,10 +52,10 @@
           "colorName": "Red"
         },
         "runtimeState": {
-          "current_mA": 14.598540145985401,
-          "val": 255,
-          "lit": true,
-          "brightness": 1,
+          "val": 0,
+          "lit": false,
+          "brightness": 0,
+          "current_mA": 0,
           "overload": false,
           "blown": false,
           "_warnedBlown": false
@@ -97,10 +75,10 @@
           "colorName": "Red"
         },
         "runtimeState": {
-          "val": 0,
-          "lit": false,
-          "brightness": 0,
-          "current_mA": 0,
+          "val": 255,
+          "lit": true,
+          "brightness": 1,
+          "current_mA": 14.598540145985401,
           "overload": false,
           "blown": false,
           "_warnedBlown": false
@@ -147,7 +125,7 @@
         "height": 80,
         "props": {},
         "runtimeState": {
-          "brightness": 1,
+          "brightness": 0,
           "blown": false,
           "_warnedBlown": false
         },
@@ -163,9 +141,35 @@
         "height": 80,
         "props": {},
         "runtimeState": {
-          "brightness": 0,
+          "brightness": 1,
           "blown": false,
           "_warnedBlown": false
+        },
+        "selected": false,
+        "rotation": 0
+      },
+      {
+        "id": "comp_1788345181417_so3rx",
+        "type": "bench_power_supply",
+        "x": -230,
+        "y": 105,
+        "width": 310,
+        "height": 210,
+        "props": {
+          "powered": 1,
+          "outputEnabled": 1,
+          "voltageSet": 12,
+          "currentLimit": 2.5,
+          "actualCurrentPos": 0,
+          "actualCurrentNeg": 0,
+          "mode": "CV",
+          "actualCurrent5V": 0
+        },
+        "runtimeState": {
+          "actualCurrentPos": 1,
+          "actualCurrentNeg": 0,
+          "actualCurrent5V": 5,
+          "mode": "CV"
         },
         "selected": false,
         "rotation": 0
@@ -247,23 +251,10 @@
         "waypoints": []
       },
       {
-        "id": "wire_1787680776797_4xuuv",
+        "id": "wire_1788345232620_dvb4d",
         "from": {
-          "instId": "rly",
-          "pinId": "no"
-        },
-        "to": {
-          "instId": "comp_1787680760809_m9ezp",
-          "pinId": "p2"
-        },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "wire_1787680796639_02mqf",
-        "from": {
-          "instId": "comp_1787679993586_676bz",
-          "pinId": "NEG"
+          "instId": "comp_1788345181417_so3rx",
+          "pinId": "POS"
         },
         "to": {
           "instId": "rly",
@@ -273,81 +264,98 @@
         "waypoints": []
       },
       {
-        "id": "wire_1787680799652_dn60h",
+        "id": "wire_1788345237613_w1yfi",
         "from": {
-          "instId": "comp_1787679993586_676bz",
-          "pinId": "POS"
-        },
-        "to": {
           "instId": "comp_1787680735754_su6qr",
           "pinId": "anode"
         },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "wire_1787680802753_prb7e",
-        "from": {
-          "instId": "comp_1787679993586_676bz",
-          "pinId": "POS"
-        },
         "to": {
-          "instId": "comp_1787680737146_jnqve",
+          "instId": "comp_1787680840288_f2lyt",
           "pinId": "anode"
         },
         "color": null,
         "waypoints": []
       },
       {
-        "id": "wire_1787680818757_r72vy",
+        "id": "wire_1788345240117_798t2",
         "from": {
           "instId": "rly",
           "pinId": "nc"
         },
         "to": {
-          "instId": "comp_1787680760095_m3aw5",
-          "pinId": "p2"
-        },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "wire_1787680845775_fk9dz",
-        "from": {
           "instId": "comp_1787680735754_su6qr",
           "pinId": "anode"
         },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788345249338_54ba3",
+        "from": {
+          "instId": "comp_1788345181417_so3rx",
+          "pinId": "GND"
+        },
         "to": {
+          "instId": "comp_1787680760095_m3aw5",
+          "pinId": "p2"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788345251313_x5trx",
+        "from": {
+          "instId": "comp_1787680760809_m9ezp",
+          "pinId": "p2"
+        },
+        "to": {
+          "instId": "comp_1787680760095_m3aw5",
+          "pinId": "p2"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788345253010_5jgc3",
+        "from": {
           "instId": "comp_1787680840288_f2lyt",
+          "pinId": "cathode"
+        },
+        "to": {
+          "instId": "comp_1787680760809_m9ezp",
+          "pinId": "p2"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788345255122_3phip",
+        "from": {
+          "instId": "comp_1787680841469_quda8",
+          "pinId": "cathode"
+        },
+        "to": {
+          "instId": "comp_1787680760809_m9ezp",
+          "pinId": "p2"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "wire_1788345276178_oca9c",
+        "from": {
+          "instId": "rly",
+          "pinId": "no"
+        },
+        "to": {
+          "instId": "comp_1787680737146_jnqve",
           "pinId": "anode"
         },
         "color": null,
         "waypoints": []
       },
       {
-        "id": "wire_1787680848188_bcflt",
-        "from": {
-          "instId": "comp_1787680760095_m3aw5",
-          "pinId": "p2"
-        },
-        "to": {
-          "instId": "comp_1787680840288_f2lyt",
-          "pinId": "cathode"
-        },
-        "color": null,
-        "waypoints": [
-          {
-            "x": 335,
-            "y": 464
-          },
-          {
-            "x": 460,
-            "y": 464
-          }
-        ]
-      },
-      {
-        "id": "wire_1787680852777_jcc7m",
+        "id": "wire_1788345277839_u84ke",
         "from": {
           "instId": "comp_1787680737146_jnqve",
           "pinId": "anode"
@@ -355,19 +363,6 @@
         "to": {
           "instId": "comp_1787680841469_quda8",
           "pinId": "anode"
-        },
-        "color": null,
-        "waypoints": []
-      },
-      {
-        "id": "wire_1787681336159_ii79b",
-        "from": {
-          "instId": "comp_1787680760809_m9ezp",
-          "pinId": "p2"
-        },
-        "to": {
-          "instId": "comp_1787680841469_quda8",
-          "pinId": "cathode"
         },
         "color": null,
         "waypoints": []
