@@ -1812,6 +1812,171 @@ defComp({
   }
 });
 
+// ==========================================
+// 2. NEOPIXEL 8x8 NeoPixel Matrix (64 LEDs)
+// ==========================================
+
+defComp({
+  id: 'neopixel_8x8_matrix',
+  name: '8x8 NeoPixel Matrix',
+  category: 'Output',
+  icon: '🔳',
+  // icon: '🎨',
+  desc: '8x8 addressable RGB LED matrix (WS2812B). Features single-wire serial digital control with cascaded DOUT line and 24-bit color depth per pixel.',
+  width: 180,
+  height: 205,
+  defaultProps: {
+    brightness: 1.0,
+    pixels: null, // Array of 64 hex color strings (e.g. ['#ff0000', ...]); falls back to default pattern if undriven
+  },
+  interactive: [
+    { field: 'brightness', label: 'Brightness', type: 'slider', min: 0.1, max: 1.0, step: 0.05, unit: '', inline: { x: 135, y: 178, w: 38, h: 18 } },
+  ],
+  pins: [
+    { id: '5V', label: '5V', type: PIN_TYPE.POWER, x: 35, y: 195, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 70, y: 195, side: 'bottom' },
+    { id: 'DIN', label: 'DIN', type: PIN_TYPE.INPUT, x: 105, y: 195, side: 'bottom' },
+    { id: 'DOUT', label: 'DOUT', type: PIN_TYPE.OUTPUT, x: 140, y: 195, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const brightness = Number(inst.runtimeState?.brightness ?? inst.props.brightness ?? 1.0);
+    const pixelData = inst.runtimeState?.pixels ?? inst.props.pixels;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // PCB Base Substrate
+    ctx.fillStyle = '#121417';
+    roundRect(ctx, 0, 0, 180, 205, 6);
+    ctx.fill();
+
+    // Silk Screen Outer Border
+    ctx.strokeStyle = '#2a2f35';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, 3, 3, 174, 199, 4);
+    ctx.stroke();
+
+    // Corner Mounting Holes
+    const holes = [[10, 10], [170, 10], [10, 168], [170, 168]];
+    holes.forEach(([hx, hy]) => {
+      ctx.fillStyle = '#0a0b0d';
+      ctx.strokeStyle = '#3a424a';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#1c2024';
+      ctx.beginPath(); ctx.arc(hx, hy, 2.2, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // Silkscreen Header & Labels
+    ctx.fillStyle = '#eceff1';
+    ctx.font = 'bold 8px "JetBrains Mono", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('8x8 NEOPIXEL MATRIX', 90, 13);
+
+    ctx.fillStyle = '#607d8b';
+    ctx.font = 'bold 6px "JetBrains Mono", monospace';
+    ctx.fillText('WS2812B · 64-RGB LEDS', 90, 21);
+
+    // Matrix Grid Geometry
+    const startX = 16;
+    const startY = 25;
+    const step = 18.5;
+
+    // Render 64 WS2812B 5050 LED Packages
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const index = r * 8 + c;
+        const cx = startX + c * step + step / 2;
+        const cy = startY + r * step + step / 2;
+
+        // Determine pixel color
+        let color = '#000000';
+        if (Array.isArray(pixelData) && pixelData[index]) {
+          color = pixelData[index];
+        } else {
+          // Default standby preview pattern (diagonal gradient) if no active signal buffer
+          const hue = ((r + c) / 14) * 360;
+          color = `hsl(${hue}, 80%, ${Math.round(20 * brightness)}%)`;
+        }
+
+        // White 5050 PLCC-4 Package Frame
+        ctx.fillStyle = '#e0e0e0';
+        roundRect(ctx, cx - 7.5, cy - 7.5, 15, 15, 2);
+        ctx.fill();
+
+        // Package Notch Corner
+        ctx.fillStyle = '#bdbdbd';
+        ctx.beginPath();
+        ctx.moveTo(cx - 7.5, cy - 4.5);
+        ctx.lineTo(cx - 4.5, cy - 7.5);
+        ctx.lineTo(cx - 7.5, cy - 7.5);
+        ctx.fill();
+
+        // Dark Circular Lens Well
+        ctx.fillStyle = '#15181c';
+        ctx.beginPath(); ctx.arc(cx, cy, 5.5, 0, Math.PI * 2); ctx.fill();
+
+        // Central LED Die Base
+        ctx.fillStyle = '#263238';
+        ctx.fillRect(cx - 2, cy - 2, 4, 4);
+
+        // LED Emission Glow / Lit State
+        const isLit = color !== '#000000' && color !== 'black' && brightness > 0;
+        if (isLit) {
+          const glowGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, 10);
+          glowGrad.addColorStop(0, '#ffffff');
+          glowGrad.addColorStop(0.3, color);
+          glowGrad.addColorStop(1, 'transparent');
+
+          ctx.save();
+          ctx.globalAlpha = brightness;
+          ctx.fillStyle = glowGrad;
+          ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.fill();
+
+          ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        } else {
+          ctx.fillStyle = '#101214';
+          ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+
+    // Bottom Pad Terminal Blocks & Pin Labels
+    const padLocations = [
+      { x: 35, label: '5V' },
+      { x: 70, label: 'GND' },
+      { x: 105, label: 'DIN' },
+      { x: 140, label: 'DOUT' }
+    ];
+
+    ctx.fillStyle = '#181b1e';
+    roundRect(ctx, 20, 175, 140, 22, 3);
+    ctx.fill();
+
+    padLocations.forEach(pad => {
+      // Solder Pad Rim
+      ctx.fillStyle = '#d4af37';
+      ctx.beginPath(); ctx.arc(pad.x, 184, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#08080a';
+      ctx.beginPath(); ctx.arc(pad.x, 184, 2.5, 0, Math.PI * 2); ctx.fill();
+
+      // Pin Label
+      ctx.fillStyle = '#b0bec5';
+      ctx.font = 'bold 6.5px "JetBrains Mono", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(pad.label, pad.x, 194);
+    });
+
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -2, -2, 184, 209);
+    }
+    ctx.restore();
+  }
+});
+
 /*---------------------MAX7219 8x8 LED matrix display driver (SPI)----------------------- */
 defComp({
   id: 'max7219',

@@ -81,18 +81,18 @@ defComp({
     bottomVoltage: '3.3V',
   },
   interactive: [
-    { field: 'powered',       label: 'Power Switch', min: 0, max: 1, step: 1, unit: '' },
-    { field: 'topVoltage',    label: 'Top Rail',     type: 'select', options: ['OFF', '3.3V', '5V'] },
-    { field: 'bottomVoltage', label: 'Bottom Rail',  type: 'select', options: ['OFF', '3.3V', '5V'] },
+    { field: 'powered', label: 'Power Switch', min: 0, max: 1, step: 1, unit: '' },
+    { field: 'topVoltage', label: 'Top Rail', type: 'select', options: ['OFF', '3.3V', '5V'] },
+    { field: 'bottomVoltage', label: 'Bottom Rail', type: 'select', options: ['OFF', '3.3V', '5V'] },
   ],
   pins: [
     { id: 'vcc_t', label: 'VCC_TOP', type: PIN_TYPE.POWER, x: 148, y: 12, side: 'top' },
-    { id: 'gnd_t', label: 'GND_TOP', type: PIN_TYPE.GND,   x: 148, y: 22, side: 'top' },
-    { id: 'aux_gnd', label: 'GND',  type: PIN_TYPE.GND,   x: 104, y: 44, side: 'right' },
+    { id: 'gnd_t', label: 'GND_TOP', type: PIN_TYPE.GND, x: 148, y: 22, side: 'top' },
+    { id: 'aux_gnd', label: 'GND', type: PIN_TYPE.GND, x: 104, y: 44, side: 'right' },
     { id: 'aux_3v3', label: '3.3V', type: PIN_TYPE.POWER, x: 104, y: 52, side: 'right' },
-    { id: 'aux_5v',  label: '5V',   type: PIN_TYPE.POWER, x: 104, y: 60, side: 'right' },
+    { id: 'aux_5v', label: '5V', type: PIN_TYPE.POWER, x: 104, y: 60, side: 'right' },
     { id: 'vcc_b', label: 'VCC_BOT', type: PIN_TYPE.POWER, x: 148, y: 74, side: 'bottom' },
-    { id: 'gnd_b', label: 'GND_BOT', type: PIN_TYPE.GND,   x: 148, y: 84, side: 'bottom' },
+    { id: 'gnd_b', label: 'GND_BOT', type: PIN_TYPE.GND, x: 148, y: 84, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -308,6 +308,7 @@ defComp({
 
 /* -------------- Dual-Rail Benchtop DC Power Supply (5V/5A Fixed + ±0–32V/0–5A Split-Rail) ------------------ */
 defComp({
+
   id: 'bench_power_supply',
   name: 'Benchtop Power Supply',
   category: 'Power',
@@ -326,17 +327,17 @@ defComp({
     actualCurrent5V: 0.0,
   },
   interactive: [
-    { field: 'powered',       label: 'Power',   type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 78, y: 148, w: 32, h: 42 } },
-    { field: 'outputEnabled', label: 'Output',  type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 26, y: 148, w: 32, h: 42 } },
-    { field: 'voltageSet',    label: 'Voltage (\u00b1)',  min: 0.0, max: 32.0, step: 0.1, unit: 'V' },
-    { field: 'currentLimit',  label: 'Current (per rail)',  min: 0.0, max: 5.0,  step: 0.05, unit: 'A' },
+    { field: 'powered', label: 'Power', type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 78, y: 148, w: 32, h: 42 } },
+    { field: 'outputEnabled', label: 'Output', type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 26, y: 148, w: 32, h: 42 } },
+    { field: 'voltageSet', label: 'Voltage (\u00b1)', min: 0.0, max: 32.0, step: 0.1, unit: 'V' },
+    { field: 'currentLimit', label: 'Current (per rail)', min: 0.0, max: 5.0, step: 0.05, unit: 'A' },
   ],
   pins: [
-    { id: 'VCC_5V',  label: '5V',        type: PIN_TYPE.POWER, x: 160, y: 182, side: 'bottom' },
-    { id: 'GND_5V',  label: '5V GND',    type: PIN_TYPE.GND,   x: 183, y: 182, side: 'bottom' },
-    { id: 'POS',     label: '+V',        type: PIN_TYPE.POWER, x: 205, y: 182, side: 'bottom' },
-    { id: 'GND',     label: 'GND',       type: PIN_TYPE.GND,   x: 232, y: 182, side: 'bottom' },
-    { id: 'NEG',     label: '\u2212V',   type: PIN_TYPE.POWER, x: 259, y: 182, side: 'bottom' },
+    { id: 'VCC_5V', label: '5V', type: PIN_TYPE.POWER, x: 160, y: 182, side: 'bottom' },
+    { id: 'GND_5V', label: '5V GND', type: PIN_TYPE.GND, x: 183, y: 182, side: 'bottom' },
+    { id: 'POS', label: '+V', type: PIN_TYPE.POWER, x: 205, y: 182, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 232, y: 182, side: 'bottom' },
+    { id: 'NEG', label: '\u2212V', type: PIN_TYPE.POWER, x: 259, y: 182, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -603,3 +604,318 @@ defComp({
     ctx.restore();
   }
 });
+
+// defComp({
+//   id: 'bench_power_supply',
+//   name: 'Benchtop Power Supply',
+//   category: 'Power',
+//   icon: '🎛️',
+//   desc: 'Dual-rail bench supply: fixed 5V/5A output plus adjustable split ±0–32V / 0–5A rails for op-amp circuits — POS=+V, NEG=−V, GND=0V center-tap',
+//   width: 310,
+//   height: 210,
+//   defaultProps: {
+//     powered: 1,
+//     outputEnabled: 1,
+//     voltageSet: 12.0,
+//     currentLimit: 2.5,
+//     actualCurrentPos: 0.0,
+//     actualCurrentNeg: 0.0,
+//     mode: 'CV',
+//     actualCurrent5V: 0.0,
+//   },
+//   interactive: [
+//     { field: 'powered',       label: 'Power',           type: 'toggle', min: 0.0, max: 1.0,  step: 1,    unit: '',  inline: { x: 78,  y: 148, w: 32, h: 42 } },
+//     { field: 'outputEnabled', label: 'Output',          type: 'toggle', min: 0.0, max: 1.0,  step: 1,    unit: '',  inline: { x: 26,  y: 148, w: 32, h: 42 } },
+//     { field: 'voltageSet',    label: 'Voltage (\u00b1)', type: 'knob',   min: 0.0, max: 32.0, step: 0.1,  unit: 'V', inline: { x: 220, y: 36,  w: 40, h: 40 } },
+//     { field: 'currentLimit',  label: 'Current (rail)',  type: 'knob',   min: 0.0, max: 5.0,  step: 0.05, unit: 'A', inline: { x: 220, y: 96,  w: 40, h: 40 } },
+//   ],
+//   pins: [
+//     { id: 'VCC_5V',  label: '5V',     type: PIN_TYPE.POWER, x: 155, y: 166, side: 'bottom' },
+//     { id: 'GND_5V',  label: '5V GND', type: PIN_TYPE.GND,   x: 182, y: 166, side: 'bottom' },
+//     { id: 'POS',     label: '+V',     type: PIN_TYPE.POWER, x: 209, y: 166, side: 'bottom' },
+//     { id: 'GND',     label: 'GND',    type: PIN_TYPE.GND,   x: 236, y: 166, side: 'bottom' },
+//     { id: 'NEG',     label: '\u2212V',type: PIN_TYPE.POWER, x: 263, y: 166, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const isPowered = Boolean(inst.runtimeState?.powered ?? inst.props.powered ?? 1);
+//     const isOutOn = isPowered && Boolean(inst.runtimeState?.outputEnabled ?? inst.props.outputEnabled ?? 1);
+//     const vSet = Number(inst.runtimeState?.voltageSet ?? inst.props.voltageSet ?? 12.0);
+//     const iLim = Number(inst.runtimeState?.currentLimit ?? inst.props.currentLimit ?? 2.5);
+//     const iPos = isOutOn ? Number(inst.runtimeState?.actualCurrentPos ?? inst.props.actualCurrentPos ?? 0.0) : 0.0;
+//     const iNeg = isOutOn ? Number(inst.runtimeState?.actualCurrentNeg ?? inst.props.actualCurrentNeg ?? 0.0) : 0.0;
+//     const iAct5V = isPowered ? Number(inst.runtimeState?.actualCurrent5V ?? inst.props.actualCurrent5V ?? 0.0) : 0.0;
+//     const mode = inst.runtimeState?.mode ?? inst.props.mode ?? 'CV';
+//     const pOut = isOutOn ? vSet * (iPos + iNeg) : 0.0;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // Main Chassis
+//     ctx.fillStyle = '#1c2024';
+//     roundRect(ctx, 0, 0, 310, 210, 8);
+//     ctx.fill();
+
+//     const panelGrad = ctx.createLinearGradient(0, 4, 0, 206);
+//     panelGrad.addColorStop(0, '#32383e');
+//     panelGrad.addColorStop(0.3, '#262b30');
+//     panelGrad.addColorStop(1, '#1e2226');
+//     ctx.fillStyle = panelGrad;
+//     roundRect(ctx, 4, 4, 302, 202, 6);
+//     ctx.fill();
+
+//     // Corner Accents / Screws
+//     ctx.fillStyle = '#0f1214';
+//     roundRect(ctx, 8, 2, 26, 4, 1); ctx.fill();
+//     roundRect(ctx, 276, 2, 26, 4, 1); ctx.fill();
+//     roundRect(ctx, 8, 204, 26, 4, 1); ctx.fill();
+//     roundRect(ctx, 276, 204, 26, 4, 1); ctx.fill();
+
+//     // Branding Header
+//     ctx.fillStyle = '#eceff1';
+//     ctx.font = 'bold 9px "JetBrains Mono", sans-serif';
+//     ctx.textAlign = 'left';
+//     ctx.fillText('DC POWER SUPPLY', 14, 18);
+
+//     ctx.fillStyle = '#78909c';
+//     ctx.font = 'bold 7px "JetBrains Mono", monospace';
+//     ctx.fillText('DPS-SPLIT PRO \u00b7 5V/5A + \u00b132V/5A', 14, 28);
+
+//     // Heat Vents Graphics
+//     ctx.fillStyle = '#121518';
+//     for (let i = 0; i < 4; i++) {
+//       ctx.fillRect(230 + i * 16, 14, 11, 2.5);
+//     }
+
+//     // LCD Display Frame
+//     ctx.fillStyle = '#0a0d0f';
+//     roundRect(ctx, 12, 34, 160, 112, 4);
+//     ctx.fill();
+//     ctx.strokeStyle = '#455a64';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     if (isPowered) {
+//       ctx.textAlign = 'right';
+
+//       // Unlit 7-Segment Background LCD Shadows
+//       ctx.fillStyle = 'rgba(0, 229, 255, 0.05)';
+//       ctx.font = 'bold 20px "JetBrains Mono", monospace';
+//       ctx.fillText('+88.8', 115, 56);
+//       ctx.fillStyle = 'rgba(255, 80, 80, 0.05)';
+//       ctx.fillText('\u221288.8', 115, 78);
+//       ctx.fillStyle = 'rgba(0, 230, 118, 0.05)';
+//       ctx.font = 'bold 12px "JetBrains Mono", monospace';
+//       ctx.fillText('8.88A / 8.88A', 115, 98);
+//       ctx.fillStyle = 'rgba(255, 171, 0, 0.05)';
+//       ctx.font = 'bold 14px "JetBrains Mono", monospace';
+//       ctx.fillText('888.8', 115, 118);
+
+//       // Active LCD Readouts
+//       ctx.fillStyle = isOutOn ? '#00e5ff' : '#007788';
+//       ctx.font = 'bold 20px "JetBrains Mono", monospace';
+//       ctx.fillText('+' + vSet.toFixed(1), 115, 56);
+
+//       ctx.fillStyle = isOutOn ? '#ff5252' : '#882222';
+//       ctx.fillText('\u2212' + vSet.toFixed(1), 115, 78);
+
+//       ctx.fillStyle = isOutOn ? '#00e676' : '#1b5e20';
+//       ctx.font = 'bold 12px "JetBrains Mono", monospace';
+//       ctx.fillText(iPos.toFixed(2) + 'A / ' + iNeg.toFixed(2) + 'A', 115, 98);
+
+//       ctx.fillStyle = isOutOn ? '#ffab00' : '#8c6d00';
+//       ctx.font = 'bold 14px "JetBrains Mono", monospace';
+//       ctx.fillText(pOut.toFixed(1).padStart(5, '0'), 115, 118);
+
+//       // 5V Fixed Rail Indicator
+//       ctx.fillStyle = '#78909c';
+//       ctx.font = 'bold 9px "JetBrains Mono", monospace';
+//       ctx.fillText('5V:', 36, 136);
+//       ctx.fillStyle = isPowered ? '#ff9100' : '#5d4037';
+//       ctx.font = 'bold 11px "JetBrains Mono", monospace';
+//       ctx.fillText(iAct5V.toFixed(2) + 'A', 80, 136);
+
+//       // LCD Unit Labels
+//       ctx.font = 'bold 11px "JetBrains Mono", sans-serif';
+//       ctx.textAlign = 'left';
+//       ctx.fillStyle = '#00e5ff'; ctx.fillText('V+', 122, 54);
+//       ctx.fillStyle = '#ff5252'; ctx.fillText('V\u2212', 122, 76);
+//       ctx.fillStyle = '#00e676'; ctx.fillText('A', 122, 96);
+//       ctx.font = 'bold 9px "JetBrains Mono", sans-serif';
+//       ctx.fillStyle = '#ffab00'; ctx.fillText('W', 122, 117);
+
+//       // Status Indicators (CV / CC / ON)
+//       const isCV = mode === 'CV' && isOutOn;
+//       ctx.fillStyle = isCV ? '#00e676' : '#1b3a24';
+//       ctx.beginPath(); ctx.arc(148, 44, 3, 0, Math.PI * 2); ctx.fill();
+//       if (isCV) { ctx.fillStyle = 'rgba(0, 230, 118, 0.4)'; ctx.beginPath(); ctx.arc(148, 44, 6, 0, Math.PI * 2); ctx.fill(); }
+//       ctx.font = 'bold 6.5px "JetBrains Mono", sans-serif';
+//       ctx.fillStyle = isCV ? '#ffffff' : '#546e7a';
+//       ctx.fillText('CV', 154, 46);
+
+//       const isCC = mode === 'CC' && isOutOn;
+//       ctx.fillStyle = isCC ? '#ff1744' : '#3a141a';
+//       ctx.beginPath(); ctx.arc(148, 58, 3, 0, Math.PI * 2); ctx.fill();
+//       if (isCC) { ctx.fillStyle = 'rgba(255, 23, 68, 0.4)'; ctx.beginPath(); ctx.arc(148, 58, 6, 0, Math.PI * 2); ctx.fill(); }
+//       ctx.fillStyle = isCC ? '#ffffff' : '#546e7a';
+//       ctx.fillText('CC', 154, 60);
+
+//       ctx.fillStyle = isOutOn ? '#29b6f6' : '#132836';
+//       ctx.beginPath(); ctx.arc(148, 72, 3, 0, Math.PI * 2); ctx.fill();
+//       ctx.fillStyle = isOutOn ? '#ffffff' : '#546e7a';
+//       ctx.fillText('ON', 154, 74);
+//     } else {
+//       ctx.fillStyle = '#1a2327';
+//       ctx.font = 'bold 11px "JetBrains Mono", monospace';
+//       ctx.textAlign = 'center';
+//       ctx.fillText('\u2014 STANDBY \u2014', 92, 90);
+//     }
+
+//     // Dynamic Rotary Knob Rendering
+//     function drawRotaryKnob(kx, ky, label, valueText, valRatio, accentColor) {
+//       ctx.fillStyle = '#181b1e';
+//       ctx.beginPath(); ctx.arc(kx, ky, 19, 0, Math.PI * 2); ctx.fill();
+
+//       ctx.strokeStyle = '#37474f';
+//       ctx.lineWidth = 1;
+//       for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+//         ctx.beginPath();
+//         ctx.moveTo(kx + Math.cos(a) * 16, ky + Math.sin(a) * 16);
+//         ctx.lineTo(kx + Math.cos(a) * 19, ky + Math.sin(a) * 19);
+//         ctx.stroke();
+//       }
+
+//       const knobGrad = ctx.createRadialGradient(kx - 4, ky - 4, 1, kx, ky, 15);
+//       knobGrad.addColorStop(0, '#cfd8dc');
+//       knobGrad.addColorStop(0.5, '#90a4ae');
+//       knobGrad.addColorStop(1, '#455a64');
+//       ctx.fillStyle = knobGrad;
+//       ctx.beginPath(); ctx.arc(kx, ky, 15, 0, Math.PI * 2); ctx.fill();
+
+//       // Dynamic Indicator Dot based on setting ratio (270 deg sweep)
+//       const angle = -Math.PI * 0.75 + (valRatio * Math.PI * 1.5);
+//       const dotX = kx + Math.cos(angle) * 10;
+//       const dotY = ky + Math.sin(angle) * 10;
+
+//       ctx.fillStyle = accentColor;
+//       ctx.beginPath(); ctx.arc(dotX, dotY, 2, 0, Math.PI * 2); ctx.fill();
+
+//       ctx.fillStyle = '#b0bec5';
+//       ctx.font = 'bold 7.5px "JetBrains Mono", sans-serif';
+//       ctx.textAlign = 'center';
+//       ctx.fillText(label, kx, ky + 28);
+
+//       ctx.fillStyle = accentColor;
+//       ctx.font = 'bold 7px "JetBrains Mono", monospace';
+//       ctx.fillText(valueText, kx, ky - 23);
+//     }
+
+//     drawRotaryKnob(240, 56, 'VOLTAGE', '\u00b1' + vSet.toFixed(1) + 'V', vSet / 32.0, '#00e5ff');
+//     drawRotaryKnob(240, 116, 'CURRENT', iLim.toFixed(2) + 'A', iLim / 5.0, '#00e676');
+
+//     // Toggle Switch Component
+//     function drawToggleSwitch(tx, ty, tw, th, isOn, label) {
+//       ctx.fillStyle = '#0e1114';
+//       roundRect(ctx, tx, ty, tw, th, 3);
+//       ctx.fill();
+//       ctx.strokeStyle = 'rgba(80,90,100,0.4)';
+//       ctx.lineWidth = 0.8;
+//       ctx.stroke();
+
+//       const trackW = tw * 0.7;
+//       const trackH = 8;
+//       const trackX = tx + (tw - trackW) / 2;
+//       const trackY = ty + th / 2 - 2;
+//       ctx.fillStyle = '#080a0c';
+//       roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+//       ctx.fill();
+
+//       if (isOn) {
+//         const grad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+//         grad.addColorStop(0, 'rgba(0,230,118,0.2)');
+//         grad.addColorStop(1, 'rgba(0,230,118,0.65)');
+//         ctx.fillStyle = grad;
+//         roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+//         ctx.fill();
+//       }
+
+//       const thumbR = 5;
+//       const thumbX = isOn ? trackX + trackW - thumbR - 1 : trackX + thumbR + 1;
+//       const thumbY = trackY + trackH / 2;
+//       if (Number.isFinite(thumbX) && Number.isFinite(thumbY)) {
+//         const thumbGrad = ctx.createRadialGradient(thumbX - 1, thumbY - 1, 0.5, thumbX, thumbY, thumbR);
+//         thumbGrad.addColorStop(0, isOn ? '#c8e6c9' : '#b0bec5');
+//         thumbGrad.addColorStop(1, isOn ? '#2e7d32' : '#546e7a');
+//         ctx.fillStyle = thumbGrad;
+//         ctx.beginPath();
+//         ctx.arc(thumbX, thumbY, thumbR, 0, Math.PI * 2);
+//         ctx.fill();
+//         ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+//         ctx.lineWidth = 0.6;
+//         ctx.stroke();
+//       }
+
+//       const ledX = tx + tw / 2;
+//       const ledY = ty + 5;
+//       ctx.fillStyle = isOn ? '#00e676' : '#1b3a24';
+//       ctx.beginPath(); ctx.arc(ledX, ledY, 2, 0, Math.PI * 2); ctx.fill();
+//       if (isOn) {
+//         ctx.fillStyle = 'rgba(0,230,118,0.3)';
+//         ctx.beginPath(); ctx.arc(ledX, ledY, 4.5, 0, Math.PI * 2); ctx.fill();
+//       }
+
+//       ctx.fillStyle = isOn ? '#eceff1' : '#78909c';
+//       ctx.font = 'bold 5.5px "JetBrains Mono", monospace';
+//       ctx.textAlign = 'center';
+//       ctx.fillText(label, tx + tw / 2, ty + th - 3);
+//     }
+
+//     drawToggleSwitch(78, 148, 32, 42, isPowered, 'POWER');
+//     drawToggleSwitch(26, 148, 32, 42, isOutOn, 'OUTPUT');
+
+//     // Binding Posts
+//     function drawBindingPost(bx, by, colorHex, rimColor, symbol, label) {
+//       ctx.fillStyle = '#14181b';
+//       ctx.beginPath(); ctx.arc(bx, by, 11, 0, Math.PI * 2); ctx.fill();
+
+//       const postGrad = ctx.createRadialGradient(bx - 3, by - 3, 2, bx, by, 9);
+//       postGrad.addColorStop(0, rimColor);
+//       postGrad.addColorStop(0.7, colorHex);
+//       postGrad.addColorStop(1, '#0d1012');
+//       ctx.fillStyle = postGrad;
+//       ctx.beginPath(); ctx.arc(bx, by, 9, 0, Math.PI * 2); ctx.fill();
+
+//       ctx.fillStyle = '#d4af37';
+//       ctx.beginPath(); ctx.arc(bx, by, 4.5, 0, Math.PI * 2); ctx.fill();
+
+//       ctx.fillStyle = '#08080a';
+//       ctx.beginPath(); ctx.arc(bx, by, 2.8, 0, Math.PI * 2); ctx.fill();
+
+//       ctx.fillStyle = '#eceff1';
+//       ctx.font = 'bold 9px "JetBrains Mono", monospace';
+//       ctx.textAlign = 'center';
+//       ctx.fillText(symbol, bx, by + 3);
+
+//       ctx.fillStyle = '#78909c';
+//       ctx.font = 'bold 6px "JetBrains Mono", sans-serif';
+//       ctx.fillText(label, bx, by - 15);
+//     }
+
+//     ctx.fillStyle = '#546e7a';
+//     ctx.font = 'bold 7px "JetBrains Mono", monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('FIXED 5V', 168, 145);
+//     ctx.fillText('SPLIT RAIL \u00b132V', 236, 145);
+
+//     drawBindingPost(155, 166, '#ff6d00', '#ffab40', '5V', '5V');
+//     drawBindingPost(182, 166, '#2e7d32', '#66bb6a', '\u2300', '5VGND');
+//     drawBindingPost(209, 166, '#d50000', '#ff5252', '+', '+V');
+//     drawBindingPost(236, 166, '#2e7d32', '#00e676', '\u2300', 'GND');
+//     drawBindingPost(263, 166, '#1565c0', '#42a5f5', '\u2212', '\u2212V');
+
+//     if (inst.selected && typeof drawSelectionRect === 'function') {
+//       drawSelectionRect(ctx, -2, -2, 314, 214);
+//     }
+//     ctx.restore();
+//   }
+// });
