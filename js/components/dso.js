@@ -692,6 +692,9 @@ defComp({
     ctx.textAlign = 'center';
     ctx.fillText('CONTROLS', panX + 52, 42);
 
+    // Store button rects for hit testing
+    if (!inst._btnRects) inst._btnRects = {};
+
     // ── Rotary Knobs ──
     const _knob = (kx, ky, r, label, col) => {
       const kg = ctx.createRadialGradient(kx - 1.5, ky - 1.5, 0.5, kx, ky, r);
@@ -728,29 +731,61 @@ defComp({
     _knob(panX + 40, 120, 13, 'TRIG LVL', isPowered ? '#ffaa00' : '#3a3a2a');
 
     // ── Channel Buttons ──
-    const _chBtn = (bx, by, lbl, col, active) => {
+    const _chBtn = (bx, by, bw, lbl, col, active) => {
       const cbg = ctx.createLinearGradient(bx, by, bx, by + 16);
       cbg.addColorStop(0, active ? col : '#222830');
       cbg.addColorStop(1, active ? _darken(col, 0.3) : '#181c22');
       ctx.fillStyle = cbg;
-      _rr(ctx, bx, by, 20, 16, 3); ctx.fill();
+      _rr(ctx, bx, by, bw, 16, 3); ctx.fill();
       ctx.strokeStyle = active ? '#0a0c10' : '#1a1e28'; ctx.lineWidth = 1; ctx.stroke();
 
       ctx.fillStyle = active ? col : '#2a3040';
-      ctx.beginPath(); ctx.arc(bx + 10, by - 3, 2.5, 0, Math.PI * 2); ctx.fill();
-      if (active) { ctx.shadowColor = col; ctx.shadowBlur = 4; ctx.beginPath(); ctx.arc(bx + 10, by - 3, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
+      ctx.beginPath(); ctx.arc(bx + bw / 2, by - 3, 2.5, 0, Math.PI * 2); ctx.fill();
+      if (active) { ctx.shadowColor = col; ctx.shadowBlur = 4; ctx.beginPath(); ctx.arc(bx + bw / 2, by - 3, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
 
       ctx.fillStyle = active ? '#000000' : '#6a7488';
       ctx.font = 'bold 8px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(lbl, bx + 10, by + 11);
+      ctx.fillText(lbl, bx + bw / 2, by + 11);
     };
 
     const btnY = 155;
-    _chBtn(panX + 4,  btnY, 'CH1', '#ffe600', isPowered && P('ch1_en', true) !== false);
-    _chBtn(panX + 28, btnY, 'CH2', '#00e5ff', isPowered && P('ch2_en', true) !== false);
-    _chBtn(panX + 52, btnY, 'CH3', '#ff3090', isPowered && P('ch3_en', false) !== false);
-    _chBtn(panX + 76, btnY, 'CH4', '#30ff60', isPowered && P('ch4_en', false) !== false);
+    _chBtn(panX + 4,  btnY, 20, 'CH1', '#ffe600', isPowered && P('ch1_en', true) !== false);
+    _chBtn(panX + 28, btnY, 20, 'CH2', '#00e5ff', isPowered && P('ch2_en', true) !== false);
+    _chBtn(panX + 52, btnY, 20, 'CH3', '#ff3090', isPowered && P('ch3_en', false) !== false);
+    _chBtn(panX + 76, btnY, 20, 'CH4', '#30ff60', isPowered && P('ch4_en', false) !== false);
+
+    // Store channel button rects
+    inst._btnRects.ch1 = { x: panX + 4, y: btnY, w: 20, h: 16, field: 'ch1_en' };
+    inst._btnRects.ch2 = { x: panX + 28, y: btnY, w: 20, h: 16, field: 'ch2_en' };
+    inst._btnRects.ch3 = { x: panX + 52, y: btnY, w: 20, h: 16, field: 'ch3_en' };
+    inst._btnRects.ch4 = { x: panX + 76, y: btnY, w: 20, h: 16, field: 'ch4_en' };
+
+    // ── Small Control Button Helper ──
+    const _ctrlBtn = (bx, by, bw, bh, lbl, col, active) => {
+      const bg = ctx.createLinearGradient(bx, by, bx, by + bh);
+      if (active) { bg.addColorStop(0, col); bg.addColorStop(1, _darken(col, 0.3)); }
+      else { bg.addColorStop(0, '#222830'); bg.addColorStop(1, '#181c22'); }
+      ctx.fillStyle = bg;
+      _rr(ctx, bx, by, bw, bh, 3); ctx.fill();
+      ctx.strokeStyle = active ? '#0a0c10' : '#1a1e28'; ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.fillStyle = active ? '#ffffff' : '#6a7488';
+      ctx.font = 'bold 6px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(lbl, bx + bw / 2, by + bh / 2 + 2);
+    };
+
+    // ── Trigger Source Button ──
+    const trigSrcY = btnY + 22;
+    const trigSrcBtn = P('trig_source', 'ch1').toUpperCase();
+    _ctrlBtn(panX + 4, trigSrcY, 44, 14, 'TRG:' + trigSrcBtn, '#ffaa00', isPowered);
+    inst._btnRects.trigSrc = { x: panX + 4, y: trigSrcY, w: 44, h: 14, field: 'trig_source' };
+
+    // ── Trigger Slope Button ──
+    const trigSlopeBtn = P('trig_slope', 'rising');
+    const slopeLabel = trigSlopeBtn === 'rising' ? '/ RISE' : '\\ FALL';
+    _ctrlBtn(panX + 52, trigSrcY, 44, 14, slopeLabel, '#ffaa00', isPowered);
+    inst._btnRects.trigSlope = { x: panX + 52, y: trigSrcY, w: 44, h: 14, field: 'trig_slope' };
 
     // ── Run/Stop Button ──
     const rsY = 185;
@@ -764,6 +799,7 @@ defComp({
     ctx.font = 'bold 8px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(isRunning ? 'RUN' : 'STOP', panX + 29, rsY + 12);
+    inst._btnRects.runStop = { x: panX + 10, y: rsY, w: 38, h: 18, field: 'runStop' };
 
     // Single button
     const sglBg = ctx.createLinearGradient(panX + 52, rsY, panX + 52, rsY + 18);
@@ -776,6 +812,7 @@ defComp({
     ctx.font = 'bold 8px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('SINGLE', panX + 71, rsY + 12);
+    inst._btnRects.single = { x: panX + 52, y: rsY, w: 38, h: 18, field: 'singleTrigger' };
 
     // ── Auto Set Button ──
     const autoY = rsY + 24;
@@ -789,6 +826,7 @@ defComp({
     ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('AUTO', panX + 29, autoY + 11);
+    inst._btnRects.autoSet = { x: panX + 10, y: autoY, w: 38, h: 16, field: 'autoSet' };
 
     // ── Fullscreen Button ──
     const fsX = panX + 52, fsY = rsY + 24;
@@ -799,6 +837,31 @@ defComp({
     ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('\u26F6 FULLSCREEN', fsX + 20, fsY + 11);
+    inst._btnRects.fullscreen = { x: fsX - 20, y: fsY, w: 80, h: 16, field: '_fullscreen' };
+
+    // ── Display Mode Button ──
+    const modeY = fsY + 20;
+    const dsoMode = P('dsoMode', 'scope');
+    const modeLabels = { scope: 'SCOPE', spectrum: 'SPECTRUM', xy: 'XY' };
+    const modeColors = { scope: '#00d4e6', spectrum: '#ff00ff', xy: '#ffe600' };
+    _ctrlBtn(panX + 4, modeY, 44, 14, modeLabels[dsoMode] || 'SCOPE', modeColors[dsoMode] || '#00d4e6', isPowered);
+    inst._btnRects.dsoMode = { x: panX + 4, y: modeY, w: 44, h: 14, field: 'dsoMode' };
+
+    // ── Math Operation Button ──
+    const mathOp = P('math_op', 'off');
+    const mathLabels = { off: 'MATH:OFF', add: 'CH1+CH2', sub: 'CH1-CH2', mul: 'CH1*CH2', abs: '|CH1-CH2|' };
+    _ctrlBtn(panX + 52, modeY, 44, 14, mathLabels[mathOp] || 'MATH', mathOp !== 'off' ? '#ff00ff' : '#4a5264', isPowered && mathOp !== 'off');
+    inst._btnRects.mathOp = { x: panX + 52, y: modeY, w: 44, h: 14, field: 'math_op' };
+
+    // ── Coupling Buttons (CH1 & CH2) ──
+    const coupY = modeY + 18;
+    const ch1Coup = P('ch1_coupling', 'dc').toUpperCase();
+    _ctrlBtn(panX + 4, coupY, 44, 14, 'CH1:' + ch1Coup, '#ffe600', isPowered && P('ch1_en', true) !== false);
+    inst._btnRects.ch1Coupling = { x: panX + 4, y: coupY, w: 44, h: 14, field: 'ch1_coupling' };
+
+    const ch2Coup = P('ch2_coupling', 'dc').toUpperCase();
+    _ctrlBtn(panX + 52, coupY, 44, 14, 'CH2:' + ch2Coup, '#00e5ff', isPowered && P('ch2_en', true) !== false);
+    inst._btnRects.ch2Coupling = { x: panX + 52, y: coupY, w: 44, h: 14, field: 'ch2_coupling' };
 
     // ── Power toggle switch ──
     function drawToggleSwitch(tx, ty, tw, th, isOn, label) {

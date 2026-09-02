@@ -392,74 +392,316 @@ defComp({
 });
 
 /* ------------------------------------PIR Motion Sensor --------------------------------- */
+// defComp({
+//   id: 'pir',
+//   name: 'PIR Motion Sensor',
+//   category: 'Sensors',
+//   icon: '🚶',
+//   desc: 'Passive infrared motion sensor — outputs HIGH when movement detected',
+//   width: 50,
+//   height: 40,
+//   defaultProps: { motion: 0 },
+//   interactive: [
+//     { field: 'motion', label: 'Motion', min: 0, max: 1, step: 1, unit: '' },
+//   ],
+//   pins: [
+//     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 40, side: 'bottom' },
+//     { id: 'out', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 25, y: 40, side: 'bottom' },
+//     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 38, y: 40, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const motion = inst.runtimeState && inst.runtimeState.motion !== undefined ? !!inst.runtimeState.motion : !!(inst.props.motion || 0);
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // Leads
+//     ctx.strokeStyle = '#c8a84b';
+//     ctx.lineWidth = 1.5;
+//     [[12, 40], [25, 40], [38, 40]].forEach(([px, py]) => {
+//       ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 36); ctx.stroke();
+//     });
+
+//     // Board
+//     ctx.fillStyle = '#1a5c1a';
+//     roundRect(ctx, 2, 12, 46, 24, 3);
+//     ctx.fill();
+//     ctx.strokeStyle = '#2d8c2d';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Sensor dome
+//     ctx.fillStyle = motion ? '#e8f4ff' : '#cfd8e0';
+//     ctx.beginPath();
+//     ctx.arc(25, 12, 13, Math.PI, 0);
+//     ctx.fill();
+//     ctx.strokeStyle = '#aab4c0';
+//     ctx.stroke();
+//     ctx.fillStyle = motion ? '#3399ff' : '#77828e';
+//     ctx.beginPath();
+//     ctx.arc(25, 12, 7, Math.PI, 0);
+//     ctx.fill();
+
+//     // Indicator LED
+//     ctx.fillStyle = motion ? '#ff5555' : '#442222';
+//     ctx.beginPath(); ctx.arc(12, 22, 2.5, 0, Math.PI * 2); ctx.fill();
+//     if (motion) { ctx.shadowColor = '#ff5555'; ctx.shadowBlur = 5; }
+//     ctx.beginPath(); ctx.arc(12, 22, 2.5, 0, Math.PI * 2); ctx.fill();
+//     ctx.shadowBlur = 0;
+
+//     ctx.fillStyle = '#c8c8c8';
+//     ctx.font = 'bold 6px sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(motion ? 'MOTION' : 'IDLE', 33, 28);
+
+//     if (inst.selected) drawSelectionRect(ctx, -3, -3, 56, 46);
+//     ctx.restore();
+//   }
+// });
+
+
 defComp({
   id: 'pir',
   name: 'PIR Motion Sensor',
   category: 'Sensors',
   icon: '🚶',
-  desc: 'Passive infrared motion sensor — outputs HIGH when movement detected',
-  width: 50,
-  height: 40,
+  desc: 'Passive infrared motion sensor (HC-SR501) — outputs HIGH when movement detected',
+  width: 56,
+  height: 62,
   defaultProps: { motion: 0 },
   interactive: [
     { field: 'motion', label: 'Motion', min: 0, max: 1, step: 1, unit: '' },
   ],
   pins: [
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 40, side: 'bottom' },
-    { id: 'out', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 25, y: 40, side: 'bottom' },
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 38, y: 40, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 16, y: 62, side: 'bottom' },
+    { id: 'out', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 28, y: 62, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 40, y: 62, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const motion = inst.runtimeState && inst.runtimeState.motion !== undefined ? !!inst.runtimeState.motion : !!(inst.props.motion || 0);
+    const motion = inst.runtimeState && inst.runtimeState.motion !== undefined 
+      ? !!inst.runtimeState.motion 
+      : !!(inst.props.motion || 0);
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Leads
-    ctx.strokeStyle = '#c8a84b';
-    ctx.lineWidth = 1.5;
-    [[12, 40], [25, 40], [38, 40]].forEach(([px, py]) => {
-      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 36); ctx.stroke();
+    // Canvas helper for rounded rectangles
+    const drawRoundRect = (cx, cy, w, h, r) => {
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(cx, cy, w, h, r);
+      } else {
+        ctx.moveTo(cx + r, cy);
+        ctx.lineTo(cx + w - r, cy);
+        ctx.quadraticCurveTo(cx + w, cy, cx + w, cy + r);
+        ctx.lineTo(cx + w, cy + h - r);
+        ctx.quadraticCurveTo(cx + w, cy + h, cx + w - r, cy + h);
+        ctx.lineTo(cx + r, cy + h);
+        ctx.quadraticCurveTo(cx, cy + h, cx, cy + h - r);
+        ctx.lineTo(cx, cy + r);
+        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+      }
+      ctx.closePath();
+    };
+
+    // ----------------------------------------------------
+    // 1. GREEN PCB BASE
+    // ----------------------------------------------------
+    const pcbGrad = ctx.createLinearGradient(0, 0, 56, 0);
+    pcbGrad.addColorStop(0, '#0c3814');
+    pcbGrad.addColorStop(0.5, '#165c24');
+    pcbGrad.addColorStop(1, '#0a2f10');
+    ctx.fillStyle = pcbGrad;
+    drawRoundRect(0, 0, 56, 48, 3);
+    ctx.fill();
+
+    // PCB Edge Chamfer Highlight
+    ctx.strokeStyle = '#278037';
+    ctx.lineWidth = 0.8;
+    drawRoundRect(0.5, 0.5, 55, 47, 2.5);
+    ctx.stroke();
+
+    // Corner Mounting Holes with Copper Rings
+    [[4, 4], [52, 4], [4, 44], [52, 44]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#061a0a';
+      ctx.beginPath(); ctx.arc(hx, hy, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#c5a059'; // Gold ring
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
     });
 
-    // Board
-    ctx.fillStyle = '#1a5c1a';
-    roundRect(ctx, 2, 12, 46, 24, 3);
+    // ----------------------------------------------------
+    // 2. PCB COMPONENTS (Trimpots, BISS0001 IC, Jumper)
+    // ----------------------------------------------------
+    // BISS0001 PIR Controller IC (SOP-16 Package)
+    ctx.fillStyle = '#1c1d21';
+    drawRoundRect(19, 3, 18, 8, 1);
     ctx.fill();
-    ctx.strokeStyle = '#2d8c2d';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Sensor dome
-    ctx.fillStyle = motion ? '#e8f4ff' : '#cfd8e0';
-    ctx.beginPath();
-    ctx.arc(25, 12, 13, Math.PI, 0);
-    ctx.fill();
-    ctx.strokeStyle = '#aab4c0';
-    ctx.stroke();
-    ctx.fillStyle = motion ? '#3399ff' : '#77828e';
-    ctx.beginPath();
-    ctx.arc(25, 12, 7, Math.PI, 0);
-    ctx.fill();
-
-    // Indicator LED
-    ctx.fillStyle = motion ? '#ff5555' : '#442222';
-    ctx.beginPath(); ctx.arc(12, 22, 2.5, 0, Math.PI * 2); ctx.fill();
-    if (motion) { ctx.shadowColor = '#ff5555'; ctx.shadowBlur = 5; }
-    ctx.beginPath(); ctx.arc(12, 22, 2.5, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle = '#c8c8c8';
-    ctx.font = 'bold 6px sans-serif';
+    ctx.fillStyle = '#61656c';
+    ctx.font = '2.2px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(motion ? 'MOTION' : 'IDLE', 33, 28);
+    ctx.fillText('BISS0001', 28, 8);
 
-    if (inst.selected) drawSelectionRect(ctx, -3, -3, 56, 46);
+    // Sensitivity & Delay Adjustment Trimpots (Orange Ceramic)
+    const drawTrimpot = (cx, cy, label) => {
+      // Base
+      ctx.fillStyle = '#d4920b';
+      drawRoundRect(cx - 3, cy - 3, 6, 6, 1);
+      ctx.fill();
+      // Metallic dial center
+      ctx.fillStyle = '#e8e8e8';
+      ctx.beginPath(); ctx.arc(cx, cy, 1.8, 0, Math.PI * 2); ctx.fill();
+      // Screw slot
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(cx - 1.2, cy - 0.8); ctx.lineTo(cx + 1.2, cy + 0.8);
+      ctx.moveTo(cx - 1.2, cy + 0.8); ctx.lineTo(cx + 1.2, cy - 0.8);
+      ctx.stroke();
+      // Silkscreen Label
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 2.3px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, cx, cy + 5.5);
+    };
+
+    drawTrimpot(8, 38, 'SENS');
+    drawTrimpot(48, 38, 'TIME');
+
+    // Trigger Mode Jumper Block (L / H)
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(44, 12, 8, 4); // Header housing
+    // Gold pins
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(45.5, 13, 1, 2);
+    ctx.fillRect(47.5, 13, 1, 2);
+    ctx.fillRect(49.5, 13, 1, 2);
+    // Yellow Jumper Cap (Set to H - Repeat Trigger)
+    ctx.fillStyle = '#f5c518';
+    drawRoundRect(47, 12, 3.5, 4, 0.8);
+    ctx.fill();
+
+    // ----------------------------------------------------
+    // 3. MOTION INDICATOR LED
+    // ----------------------------------------------------
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(8, 14, 2, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = motion ? '#ff3333' : '#441111';
+    ctx.beginPath(); ctx.arc(8, 14, 1.5, 0, Math.PI * 2); ctx.fill();
+
+    if (motion) {
+      ctx.save();
+      ctx.shadowColor = '#ff3333';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(8, 14, 1, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // ----------------------------------------------------
+    // 4. FRESNEL LENS DOME (Translucent White Multi-Faceted)
+    // ----------------------------------------------------
+    const domeX = 28;
+    const domeY = 24;
+    const domeR = 15;
+
+    // Translucent White Spherical Gradient
+    const domeGrad = ctx.createRadialGradient(
+      domeX - 4, domeY - 5, 2,
+      domeX, domeY, domeR
+    );
+    if (motion) {
+      // Subtle warm/reddish IR glow pass-through when motion detected
+      domeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      domeGrad.addColorStop(0.5, 'rgba(255, 220, 200, 0.9)');
+      domeGrad.addColorStop(1, 'rgba(210, 220, 230, 0.85)');
+    } else {
+      domeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      domeGrad.addColorStop(0.6, 'rgba(230, 238, 245, 0.9)');
+      domeGrad.addColorStop(1, 'rgba(180, 195, 210, 0.85)');
+    }
+
+    ctx.fillStyle = domeGrad;
+    ctx.beginPath(); ctx.arc(domeX, domeY, domeR, 0, Math.PI * 2); ctx.fill();
+
+    // Dome Edge Shadow & Outline
+    ctx.strokeStyle = 'rgba(120, 140, 160, 0.6)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Fresnel Lens Facet Grid Lines (Micro-lens Array Pattern)
+    ctx.strokeStyle = 'rgba(150, 170, 190, 0.35)';
+    ctx.lineWidth = 0.6;
+
+    // Concentric Ring Rings
+    [4, 8, 12].forEach((r) => {
+      ctx.beginPath(); ctx.arc(domeX, domeY, r, 0, Math.PI * 2); ctx.stroke();
+    });
+
+    // Radial Facet Lines
+    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+      ctx.beginPath();
+      ctx.moveTo(domeX + Math.cos(angle) * 4, domeY + Math.sin(angle) * 4);
+      ctx.lineTo(domeX + Math.cos(angle) * 14.5, domeY + Math.sin(angle) * 14.5);
+      ctx.stroke();
+    }
+
+    // Specular Highlight Arc
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(domeX, domeY, domeR - 2, -Math.PI * 0.75, -Math.PI * 0.25);
+    ctx.stroke();
+
+    // ----------------------------------------------------
+    // 5. SILKSCREEN LABELS
+    // ----------------------------------------------------
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 3.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('HC-SR501', 28, 45);
+
+    // Pin Labels
+    ctx.font = 'bold 2.8px monospace';
+    ctx.fillText('VCC', 16, 46);
+    ctx.fillText('OUT', 28, 46);
+    ctx.fillText('GND', 40, 46);
+
+    // ----------------------------------------------------
+    // 6. HEADER PINS & MALE LEADS
+    // ----------------------------------------------------
+    const pinX = [16, 28, 40];
+
+    // Black plastic pin header base
+    ctx.fillStyle = '#111111';
+    drawRoundRect(11, 47.5, 34, 4, 1);
+    ctx.fill();
+
+    pinX.forEach((px) => {
+      // Golden Square Pad
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(px - 1.8, 48.5, 3.6, 2);
+
+      // Metallic Extension Pins
+      const pinGrad = ctx.createLinearGradient(px - 0.8, 50, px + 0.8, 50);
+      pinGrad.addColorStop(0, '#888');
+      pinGrad.addColorStop(0.5, '#fff');
+      pinGrad.addColorStop(1, '#666');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(px - 0.8, 50, 1.6, 12);
+    });
+
+    // Selection Halo
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -2, -2, 60, 66);
+    }
+
     ctx.restore();
   }
 });
-
 
 /* -------------- LM35 Precision Centigrade Temperature Sensor (TO-92) ------------------ */
 defComp({
@@ -1199,7 +1441,7 @@ defComp({
   }
 });
 
-/* --------------------------RC522 â€” 13.56MHz RFID Reader (SPI)------------------*/
+/* --------------------------RC522  13.56MHz RFID Reader (SPI)------------------*/
 
 defComp({
   id: 'rc522',
@@ -1374,24 +1616,119 @@ defComp({
 });
 
 /*--------------------------  HC-05 Bluetooth Module (UART)  -----------------*/
+// defComp({
+//   id: 'hc05',
+//   name: 'HC-05 Bluetooth',
+//   category: 'Sensors',
+//   icon: 'ᚼᛒ',
+//   desc: 'HC-05 serial-to-Bluetooth transceiver module (UART). For mobile app communication',
+//   width: 50,
+//   height: 70,
+//   defaultProps: { connected: false, rxData: '' },
+//   interactive: [
+//     { field: 'connected', label: 'Conn', min: 0, max: 1, step: 1, unit: '' },
+//     { field: 'rxData', label: 'RX Data', type: 'text' },
+//   ],
+//   pins: [
+//     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 70, side: 'bottom' },
+//     { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 70, side: 'bottom' },
+//     { id: 'TXD', label: 'TXD', type: PIN_TYPE.DIGITAL, x: 32, y: 70, side: 'bottom' },
+//     { id: 'RXD', label: 'RXD', type: PIN_TYPE.DIGITAL, x: 44, y: 70, side: 'bottom' },
+//   ],
+//   step(inst, sim) {
+//     if (!sim || !sim.isRunning) return;
+//     const connected = inst.runtimeState?.connected ?? inst.props?.connected ?? false;
+//     if (!connected) return;
+//     const rxData = inst.runtimeState?.rxData ?? inst.props?.rxData ?? '';
+//     if (typeof rxData === 'string' && rxData.length > 0) {
+//       sim.sendSerialInput(rxData);
+//       if (inst.runtimeState) inst.runtimeState.rxData = '';
+//       else inst.props.rxData = '';
+//     }
+//   },
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const connected = inst.runtimeState?.connected ?? inst.props.connected ?? false;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // PCB body
+//     ctx.fillStyle = '#8B1A1A';
+//     roundRect(ctx, 0, 0, 50, 58, 4);
+//     ctx.fill();
+
+//     // Bluetooth antenna
+//     ctx.strokeStyle = '#c8a452';
+//     ctx.lineWidth = 2;
+//     ctx.beginPath();
+//     ctx.moveTo(40, 8);
+//     ctx.lineTo(40, 20);
+//     ctx.quadraticCurveTo(40, 28, 32, 28);
+//     ctx.stroke();
+
+//     // HC-05 chip
+//     ctx.fillStyle = '#111';
+//     roundRect(ctx, 8, 12, 24, 16, 2);
+//     ctx.fill();
+//     ctx.fillStyle = '#666';
+//     ctx.font = 'bold 4px monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('HC-05', 20, 22);
+
+//     // Status LED
+//     ctx.fillStyle = connected ? '#00ff00' : '#ff0000';
+//     ctx.beginPath();
+//     ctx.arc(40, 36, 3, 0, Math.PI * 2);
+//     ctx.fill();
+//     if (connected) {
+//       ctx.shadowColor = '#00ff00';
+//       ctx.shadowBlur = 6;
+//       ctx.fill();
+//       ctx.shadowBlur = 0;
+//     }
+
+//     // Connection status
+//     ctx.fillStyle = '#0a0a1a';
+//     roundRect(ctx, 4, 40, 42, 12, 2);
+//     ctx.fill();
+//     ctx.fillStyle = connected ? '#00ff88' : '#ff4444';
+//     ctx.font = 'bold 5px monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(connected ? 'CONNECTED' : 'PAIRING...', 25, 48);
+
+//     // Pin leads
+//     ctx.strokeStyle = '#a0a0a0';
+//     ctx.lineWidth = 1.5;
+//     [8, 20, 32, 44].forEach(px => {
+//       ctx.beginPath(); ctx.moveTo(px, 58); ctx.lineTo(px, 70); ctx.stroke();
+//     });
+
+//     if (inst.selected) drawSelectionRect(ctx, -2, -2, 54, 74);
+//     ctx.restore();
+//   }
+// });
+
 defComp({
   id: 'hc05',
   name: 'HC-05 Bluetooth',
   category: 'Sensors',
   icon: 'ᚼᛒ',
-  desc: 'HC-05 serial-to-Bluetooth transceiver module (UART). For mobile app communication',
-  width: 50,
-  height: 70,
+  desc: 'HC-05 serial-to-Bluetooth transceiver module (ZS-040 breakout). For mobile app communication',
+  width: 54,
+  height: 85,
   defaultProps: { connected: false, rxData: '' },
   interactive: [
     { field: 'connected', label: 'Conn', min: 0, max: 1, step: 1, unit: '' },
     { field: 'rxData', label: 'RX Data', type: 'text' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 70, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 70, side: 'bottom' },
-    { id: 'TXD', label: 'TXD', type: PIN_TYPE.DIGITAL, x: 32, y: 70, side: 'bottom' },
-    { id: 'RXD', label: 'RXD', type: PIN_TYPE.DIGITAL, x: 44, y: 70, side: 'bottom' },
+    { id: 'STATE', label: 'STATE', type: PIN_TYPE.DIGITAL, x: 7,  y: 85, side: 'bottom' },
+    { id: 'RXD',   label: 'RXD',   type: PIN_TYPE.DIGITAL, x: 15, y: 85, side: 'bottom' },
+    { id: 'TXD',   label: 'TXD',   type: PIN_TYPE.DIGITAL, x: 23, y: 85, side: 'bottom' },
+    { id: 'GND',   label: 'GND',   type: PIN_TYPE.GND,     x: 31, y: 85, side: 'bottom' },
+    { id: 'VCC',   label: 'VCC',   type: PIN_TYPE.POWER,   x: 39, y: 85, side: 'bottom' },
+    { id: 'EN',    label: 'EN',    type: PIN_TYPE.DIGITAL, x: 47, y: 85, side: 'bottom' },
   ],
   step(inst, sim) {
     if (!sim || !sim.isRunning) return;
@@ -1407,62 +1744,250 @@ defComp({
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const connected = inst.runtimeState?.connected ?? inst.props.connected ?? false;
+    const isRunning = sim && sim.isRunning;
+    const time = Date.now();
 
     ctx.save();
     ctx.translate(x, y);
 
-    // PCB body
-    ctx.fillStyle = '#8B1A1A';
-    roundRect(ctx, 0, 0, 50, 58, 4);
+    // Canvas helper for rounded rectangles
+    const drawRoundRect = (cx, cy, w, h, r) => {
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(cx, cy, w, h, r);
+      } else {
+        ctx.moveTo(cx + r, cy);
+        ctx.lineTo(cx + w - r, cy);
+        ctx.quadraticCurveTo(cx + w, cy, cx + w, cy + r);
+        ctx.lineTo(cx + w, cy + h - r);
+        ctx.quadraticCurveTo(cx + w, cy + h, cx + w - r, cy + h);
+        ctx.lineTo(cx + r, cy + h);
+        ctx.quadraticCurveTo(cx, cy + h, cx, cy + h - r);
+        ctx.lineTo(cx, cy + r);
+        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+      }
+      ctx.closePath();
+    };
+
+    // ----------------------------------------------------
+    // 1. BASE BREAKOUT PCB (ZS-040 Blue Board)
+    // ----------------------------------------------------
+    const pcbGrad = ctx.createLinearGradient(0, 0, 54, 0);
+    pcbGrad.addColorStop(0, '#0c2340');
+    pcbGrad.addColorStop(0.5, '#133863');
+    pcbGrad.addColorStop(1, '#0b1d36');
+    ctx.fillStyle = pcbGrad;
+    drawRoundRect(0, 0, 54, 72, 3);
     ctx.fill();
 
-    // Bluetooth antenna
-    ctx.strokeStyle = '#c8a452';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(40, 8);
-    ctx.lineTo(40, 20);
-    ctx.quadraticCurveTo(40, 28, 32, 28);
+    // PCB Edge Chamfer Highlight
+    ctx.strokeStyle = '#2d588c';
+    ctx.lineWidth = 0.8;
+    drawRoundRect(0.5, 0.5, 53, 71, 2.5);
     ctx.stroke();
 
-    // HC-05 chip
-    ctx.fillStyle = '#111';
-    roundRect(ctx, 8, 12, 24, 16, 2);
-    ctx.fill();
-    ctx.fillStyle = '#666';
-    ctx.font = 'bold 4px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('HC-05', 20, 22);
-
-    // Status LED
-    ctx.fillStyle = connected ? '#00ff00' : '#ff0000';
-    ctx.beginPath();
-    ctx.arc(40, 36, 3, 0, Math.PI * 2);
-    ctx.fill();
-    if (connected) {
-      ctx.shadowColor = '#00ff00';
-      ctx.shadowBlur = 6;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
-
-    // Connection status
-    ctx.fillStyle = '#0a0a1a';
-    roundRect(ctx, 4, 40, 42, 12, 2);
-    ctx.fill();
-    ctx.fillStyle = connected ? '#00ff88' : '#ff4444';
-    ctx.font = 'bold 5px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(connected ? 'CONNECTED' : 'PAIRING...', 25, 48);
-
-    // Pin leads
-    ctx.strokeStyle = '#a0a0a0';
-    ctx.lineWidth = 1.5;
-    [8, 20, 32, 44].forEach(px => {
-      ctx.beginPath(); ctx.moveTo(px, 58); ctx.lineTo(px, 70); ctx.stroke();
+    // Corner Mounting Holes
+    [ [4, 4], [50, 4] ].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#060f1c';
+      ctx.beginPath(); ctx.arc(hx, hy, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#c5a059'; // Gold copper ring
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
     });
 
-    if (inst.selected) drawSelectionRect(ctx, -2, -2, 54, 74);
+    // ----------------------------------------------------
+    // 2. GREEN CASTELLATED SUB-MODULE BOARD
+    // ----------------------------------------------------
+    const subGrad = ctx.createLinearGradient(5, 6, 49, 6);
+    subGrad.addColorStop(0, '#0d4218');
+    subGrad.addColorStop(0.5, '#165c24');
+    subGrad.addColorStop(1, '#0b3814');
+    ctx.fillStyle = subGrad;
+    drawRoundRect(5, 6, 44, 48, 2);
+    ctx.fill();
+
+    // Gold Castellated Soldering Pads (Edges of sub-module)
+    ctx.fillStyle = '#d4af37';
+    for (let py = 14; py <= 48; py += 4) {
+      ctx.fillRect(4.2, py, 2, 1.6);  // Left pads
+      ctx.fillRect(47.8, py, 2, 1.6); // Right pads
+    }
+    for (let px = 10; px <= 42; px += 4) {
+      ctx.fillRect(px, 52.8, 1.6, 2); // Bottom pads
+    }
+
+    // ----------------------------------------------------
+    // 3. MEANDER PCB ANTENNA (Gold Traces)
+    // ----------------------------------------------------
+    ctx.strokeStyle = '#e5c158';
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = 'square';
+    ctx.beginPath();
+    ctx.moveTo(9, 18);
+    ctx.lineTo(9, 9);
+    ctx.lineTo(13, 9);
+    ctx.lineTo(13, 16);
+    ctx.lineTo(17, 16);
+    ctx.lineTo(17, 9);
+    ctx.lineTo(21, 9);
+    ctx.lineTo(21, 16);
+    ctx.lineTo(25, 16);
+    ctx.lineTo(25, 9);
+    ctx.stroke();
+
+    // ----------------------------------------------------
+    // 4. IC CHIPS & COMPONENTS ON SUB-MODULE
+    // ----------------------------------------------------
+    // CSR BC417 Main Controller Chip (QFN Package)
+    ctx.fillStyle = '#1c1d21';
+    drawRoundRect(14, 22, 18, 18, 1);
+    ctx.fill();
+
+    // QFN Metallic Pins
+    ctx.fillStyle = '#a0a0a0';
+    for (let p = 16; p <= 28; p += 3) {
+      ctx.fillRect(12.8, p, 1.2, 1); // Left
+      ctx.fillRect(32, p, 1.2, 1);   // Right
+      ctx.fillRect(p, 20.8, 1, 1.2); // Top
+      ctx.fillRect(p, 40, 1, 1.2);   // Bottom
+    }
+
+    // CSR Chip Markings
+    ctx.fillStyle = '#7a7e85';
+    ctx.font = 'bold 3.2px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CSR', 23, 29);
+    ctx.font = '2.5px monospace';
+    ctx.fillText('BC417', 23, 33);
+    // Pin 1 Index Dot
+    ctx.beginPath(); ctx.arc(16, 24, 0.6, 0, Math.PI * 2); ctx.fill();
+
+    // 8Mbit External Flash Memory IC
+    ctx.fillStyle = '#151618';
+    drawRoundRect(35, 30, 10, 12, 1);
+    ctx.fill();
+    ctx.fillStyle = '#61656c';
+    ctx.font = '2.2px monospace';
+    ctx.fillText('4256', 40, 37);
+
+    // 26MHz Quartz Crystal Oscillator (Silver Metal Can)
+    const xtalGrad = ctx.createLinearGradient(35, 20, 45, 25);
+    xtalGrad.addColorStop(0, '#c0c0c0');
+    xtalGrad.addColorStop(0.5, '#f0f0f0');
+    xtalGrad.addColorStop(1, '#8a8a8a');
+    ctx.fillStyle = xtalGrad;
+    drawRoundRect(35, 20, 10, 6, 1.5);
+    ctx.fill();
+    ctx.fillStyle = '#444';
+    ctx.font = 'bold 2px sans-serif';
+    ctx.fillText('26.0', 40, 24);
+
+    // SMD Passives (0603 Resistors & Capacitors)
+    const drawSMD = (cx, cy, isCap = false) => {
+      ctx.fillStyle = isCap ? '#a87948' : '#222'; // Cap brown vs Resistor black
+      ctx.fillRect(cx, cy, 3, 1.6);
+      ctx.fillStyle = '#c0c0c0'; // Silver end caps
+      ctx.fillRect(cx, cy, 0.6, 1.6);
+      ctx.fillRect(cx + 2.4, cy, 0.6, 1.6);
+    };
+    drawSMD(10, 44, true);
+    drawSMD(15, 44, false);
+    drawSMD(20, 44, false);
+    drawSMD(36, 45, true);
+
+    // ----------------------------------------------------
+    // 5. BREAKOUT COMPONENTS (Button, Regulator, LED)
+    // ----------------------------------------------------
+    // KEY / EN Tactile Push Button (Top Right)
+    ctx.fillStyle = '#a0a0a0';
+    ctx.fillRect(44, 56, 5, 5); // Metal case
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.arc(46.5, 58.5, 1.5, 0, Math.PI * 2); ctx.fill(); // Button actuator
+
+    // 3.3V LDO Voltage Regulator (SOT-23 Package)
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(8, 56, 6, 4);
+    ctx.fillStyle = '#a0a0a0';
+    ctx.fillRect(7, 57, 1, 0.8);
+    ctx.fillRect(7, 59, 1, 0.8);
+    ctx.fillRect(14, 58, 1, 1);
+
+    // ----------------------------------------------------
+    // 6. REALISTIC STATE LED (Blinking / Solid Animation)
+    // ----------------------------------------------------
+    // LED State: Fast Blink when pairing (5Hz), Solid/Glow when connected
+    let ledOn = false;
+    if (isRunning) {
+      if (connected) {
+        ledOn = true;
+      } else {
+        ledOn = Math.floor(time / 200) % 2 === 0; // 5Hz Pairing Blink
+      }
+    }
+
+    // Status LED Body
+    ctx.fillStyle = '#222';
+    drawRoundRect(24, 56, 6, 4, 1);
+    ctx.fill();
+
+    // LED Diode Glow
+    ctx.fillStyle = ledOn ? '#00f0ff' : '#003344';
+    ctx.beginPath(); ctx.arc(27, 58, 1.5, 0, Math.PI * 2); ctx.fill();
+
+    if (ledOn) {
+      ctx.save();
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = connected ? 10 : 6;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(27, 58, 1.2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // ----------------------------------------------------
+    // 7. SILKSCREEN TEXT & LABELS
+    // ----------------------------------------------------
+    ctx.fillStyle = '#f0f4f8';
+    ctx.font = 'bold 5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('HC-05', 27, 66);
+
+    ctx.font = '3px sans-serif';
+    ctx.fillText('KEY', 46.5, 64);
+
+    // Pin Labels silkscreen at bottom of board
+    ctx.font = 'bold 3px monospace';
+    const pinLabels = ['STATE', 'RXD', 'TXD', 'GND', 'VCC', 'EN'];
+    const pinX = [7, 15, 23, 31, 39, 47];
+    pinX.forEach((px, idx) => {
+      ctx.fillText(pinLabels[idx], px, 70);
+    });
+
+    // ----------------------------------------------------
+    // 8. HEADER PINS & PADS
+    // ----------------------------------------------------
+    pinX.forEach((px) => {
+      // Golden Square Pad
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(px - 2.2, 70.5, 4.4, 2);
+
+      // Pin Hole
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(px, 71.5, 0.9, 0, Math.PI * 2); ctx.fill();
+
+      // Pin Extension Metallic Shafts
+      const pinGrad = ctx.createLinearGradient(px - 1, 72, px + 1, 72);
+      pinGrad.addColorStop(0, '#888');
+      pinGrad.addColorStop(0.5, '#fff');
+      pinGrad.addColorStop(1, '#666');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(px - 1, 72, 2, 13);
+    });
+
+    // Selection Halo
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -2, -2, 58, 89);
+    }
+
     ctx.restore();
   }
 });
