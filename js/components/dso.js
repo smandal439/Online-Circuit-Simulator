@@ -191,14 +191,17 @@ defComp({
     const fg4 = _findConnectedFG(inst, 'ch4_in');
     const hasFG = fg1 || fg2 || fg3 || fg4;
 
-    // 1 GSa/s sub-frame sampling when function generators are connected
+    // Sub-frame analytical sampling when function generators are connected
+    // Cap at 200k samples max (~5 screen-widths at 100k/div) and 50k per frame
     const TARGET_RATE = 1e9;
-    const maxSamples = Math.max(100000, Math.ceil(TARGET_RATE * totalTime));
+    const MAX_SAMPLES = 200000;
+    const MAX_PER_FRAME = 50000;
+    const maxSamples = Math.max(100000, Math.min(MAX_SAMPLES, Math.ceil(TARGET_RATE * totalTime)));
     const lastT = inst._lastSampleTime || 0;
     const dt = t - lastT;
 
     if (hasFG && dt > 0 && buf.t.length > 0) {
-      const numSamples = Math.min(Math.ceil(dt * TARGET_RATE), maxSamples - buf.t.length);
+      const numSamples = Math.min(Math.ceil(dt * TARGET_RATE), maxSamples - buf.t.length, MAX_PER_FRAME);
       if (numSamples > 1) {
         for (let i = 0; i < numSamples; i++) {
           const sampleT = lastT + (dt * (i + 1)) / numSamples;
@@ -223,10 +226,12 @@ defComp({
     buf.t.push(t);
     inst._lastSampleTime = t;
 
-    while (buf.t.length > maxSamples) {
-      buf.ch1.shift(); buf.ch2.shift();
-      buf.ch3.shift(); buf.ch4.shift();
-      buf.t.shift();
+    // Trim buffer — use splice instead of repeated .shift() (O(1) vs O(n))
+    if (buf.t.length > maxSamples) {
+      const excess = buf.t.length - maxSamples;
+      buf.ch1.splice(0, excess); buf.ch2.splice(0, excess);
+      buf.ch3.splice(0, excess); buf.ch4.splice(0, excess);
+      buf.t.splice(0, excess);
     }
 
     // Single trigger logic
