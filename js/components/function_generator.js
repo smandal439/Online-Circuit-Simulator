@@ -264,7 +264,7 @@ defComp({
     const waveOpts = ['sine', 'square', 'triangle', 'sawtooth', 'noise'];
     const ch1Wave = props.ch1_wave || 'sine';
     const freqBtnW = 28;
-    _ctrlBtn(scrX, cardY + cardH + 6, cardW / 2 - freqBtnW - 4, 'WAVE: ' + (waveLabels[ch1Wave] || 'SIN'), '#00e5ff', isPowered);
+    _ctrlBtn(scrX, cardY + cardH + 6, cardW / 2 - freqBtnW - 4, waveLabels[ch1Wave] || 'SIN', '#00e5ff', isPowered);
     inst._btnRects.ch1Wave = { x: scrX, y: cardY + cardH + 6, w: cardW / 2 - freqBtnW - 4, h: 14, field: 'ch1_wave', options: waveOpts };
 
     // CH1 Freq +/- buttons
@@ -275,7 +275,7 @@ defComp({
 
     // CH2 Wave Selector
     const ch2Wave = props.ch2_wave || 'square';
-    _ctrlBtn(scrX + cardW / 2 + 2, cardY + cardH + 6, cardW / 2 - freqBtnW - 4, 'WAVE: ' + (waveLabels[ch2Wave] || 'SQR'), '#ff3366', isPowered);
+    _ctrlBtn(scrX + cardW / 2 + 2, cardY + cardH + 6, cardW / 2 - freqBtnW - 4, waveLabels[ch2Wave] || 'SQR', '#ff3366', isPowered);
     inst._btnRects.ch2Wave = { x: scrX + cardW / 2 + 2, y: cardY + cardH + 6, w: cardW / 2 - freqBtnW - 4, h: 14, field: 'ch2_wave', options: waveOpts };
 
     // CH2 Freq +/- buttons

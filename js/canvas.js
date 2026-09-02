@@ -729,8 +729,10 @@ class CircuitCanvas {
       if (inst.type !== 'dso_4ch') continue;
       const btnRects = inst._btnRects;
       if (!btnRects) continue;
+      const lx = wx - inst.x;
+      const ly = wy - inst.y;
       for (const [key, rect] of Object.entries(btnRects)) {
-        if (wx >= rect.x && wx <= rect.x + rect.w && wy >= rect.y && wy <= rect.y + rect.h) {
+        if (lx >= rect.x && lx <= rect.x + rect.w && ly >= rect.y && ly <= rect.y + rect.h) {
           return { inst, key, rect };
         }
       }
@@ -821,8 +823,10 @@ class CircuitCanvas {
       if (inst.type !== 'func_gen') continue;
       const btnRects = inst._btnRects;
       if (!btnRects) continue;
+      const lx = wx - inst.x;
+      const ly = wy - inst.y;
       for (const [key, rect] of Object.entries(btnRects)) {
-        if (wx >= rect.x && wx <= rect.x + rect.w && wy >= rect.y && wy <= rect.y + rect.h) {
+        if (lx >= rect.x && lx <= rect.x + rect.w && ly >= rect.y && ly <= rect.y + rect.h) {
           return { inst, key, rect };
         }
       }
