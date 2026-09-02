@@ -136,6 +136,9 @@ defComp({
     const v2 = readChannel('ch2_in', 'dso_probe_ch2');
     const v3 = readChannel('ch3_in', 'dso_probe_ch3');
     const v4 = readChannel('ch4_in', 'dso_probe_ch4');
+
+    // Store previous voltages for sub-frame interpolation, then update
+    const prevV = inst._lastRawV || [v1, v2, v3, v4];
     inst._lastRawV = [v1, v2, v3, v4];
 
     // Pause: skip sampling but keep last buffer
@@ -192,41 +195,41 @@ defComp({
     const hasFG = fg1 || fg2 || fg3 || fg4;
 
     // Sub-frame analytical sampling when function generators are connected
-    // Cap at 200k samples max (~5 screen-widths at 100k/div) and 50k per frame
     const TARGET_RATE = 1e9;
     const MAX_SAMPLES = 200000;
     const MAX_PER_FRAME = 50000;
     const maxSamples = Math.max(100000, Math.min(MAX_SAMPLES, Math.ceil(TARGET_RATE * totalTime)));
     const lastT = inst._lastSampleTime || 0;
     const dt = t - lastT;
+    let subFramePushed = false;
 
     if (hasFG && dt > 0 && buf.t.length > 0) {
       const numSamples = Math.min(Math.ceil(dt * TARGET_RATE), maxSamples - buf.t.length, MAX_PER_FRAME);
       if (numSamples > 1) {
         for (let i = 0; i < numSamples; i++) {
-          const sampleT = lastT + (dt * (i + 1)) / numSamples;
-          const sv1 = fg1 ? _calcWaveAnalytical(fg1, 'ch1_out', sampleT) : v1;
-          const sv2 = fg2 ? _calcWaveAnalytical(fg2, 'ch2_out', sampleT) : v2;
-          const sv3 = fg3 ? _calcWaveAnalytical(fg3, 'ch3_out', sampleT) : v3;
-          const sv4 = fg4 ? _calcWaveAnalytical(fg4, 'ch4_out', sampleT) : v4;
+          const frac = (i + 1) / numSamples;
+          const sampleT = lastT + dt * frac;
           buf.t.push(sampleT);
-          buf.ch1.push(sv1 * probeFactor1);
-          buf.ch2.push(sv2 * probeFactor2);
-          buf.ch3.push(sv3 * probeFactor3);
-          buf.ch4.push(sv4 * probeFactor4);
+          buf.ch1.push(fg1 ? _calcWaveAnalytical(fg1, 'ch1_out', sampleT) * probeFactor1 : (prevV[0] + (v1 - prevV[0]) * frac) * probeFactor1);
+          buf.ch2.push(fg2 ? _calcWaveAnalytical(fg2, 'ch2_out', sampleT) * probeFactor2 : (prevV[1] + (v2 - prevV[1]) * frac) * probeFactor2);
+          buf.ch3.push(fg3 ? _calcWaveAnalytical(fg3, 'ch3_out', sampleT) * probeFactor3 : (prevV[2] + (v3 - prevV[2]) * frac) * probeFactor3);
+          buf.ch4.push(fg4 ? _calcWaveAnalytical(fg4, 'ch4_out', sampleT) * probeFactor4 : (prevV[3] + (v4 - prevV[3]) * frac) * probeFactor4);
         }
+        subFramePushed = true;
       }
     }
 
-    // Always push at least one sample per step
-    buf.ch1.push(v1 * probeFactor1);
-    buf.ch2.push(v2 * probeFactor2);
-    buf.ch3.push(v3 * probeFactor3);
-    buf.ch4.push(v4 * probeFactor4);
-    buf.t.push(t);
+    // Push live sample (skip if sub-frame already covered this step)
+    if (!subFramePushed) {
+      buf.ch1.push(v1 * probeFactor1);
+      buf.ch2.push(v2 * probeFactor2);
+      buf.ch3.push(v3 * probeFactor3);
+      buf.ch4.push(v4 * probeFactor4);
+      buf.t.push(t);
+    }
     inst._lastSampleTime = t;
 
-    // Trim buffer — use splice instead of repeated .shift() (O(1) vs O(n))
+    // Trim buffer
     if (buf.t.length > maxSamples) {
       const excess = buf.t.length - maxSamples;
       buf.ch1.splice(0, excess); buf.ch2.splice(0, excess);
