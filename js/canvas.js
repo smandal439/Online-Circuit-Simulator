@@ -2136,7 +2136,17 @@ class CircuitCanvas {
 
   /* ══════════════ SERIALIZE ══════════════ */
   serialize() {
-    return { components: this.components, wires: this.wires };
+    return {
+      components: this.components.map(c => ({
+        id: c.id,
+        type: c.type,
+        x: c.x,
+        y: c.y,
+        rotation: c.rotation,
+        props: c.props,
+      })),
+      wires: this.wires,
+    };
   }
 
   deserialize(data) {
