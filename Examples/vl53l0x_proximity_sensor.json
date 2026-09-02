@@ -1,0 +1,116 @@
+{
+  "id": "vl53l0x_proximity_sensor",
+  "name": "VL53L0X Laser Distance Measurement",
+  "icon": "📏",
+  "tags": ["sensor", "I2C", "distance", "VL53L0X"],
+  "desc": "Measure distance with VL53L0X laser ToF sensor via I2C. LEDs light up based on distance thresholds — green for close, red for far.",
+  "circuit": {
+    "components": [
+      {
+        "id": "board1",
+        "type": "arduino_uno",
+        "x": 150,
+        "y": 180,
+        "props": {}
+      },
+      {
+        "id": "tof1",
+        "type": "vl53l0x",
+        "x": 450,
+        "y": 120,
+        "props": { "distance": 150 }
+      },
+      {
+        "id": "led_close",
+        "type": "led_green",
+        "x": 450,
+        "y": 300,
+        "props": { "color": "#00ff00" }
+      },
+      {
+        "id": "led_far",
+        "type": "led_red",
+        "x": 510,
+        "y": 300,
+        "props": { "color": "#ff0000" }
+      },
+      {
+        "id": "res1",
+        "type": "resistor",
+        "x": 340,
+        "y": 300,
+        "props": { "value": 220, "unit": "Ω" }
+      },
+      {
+        "id": "res2",
+        "type": "resistor",
+        "x": 400,
+        "y": 300,
+        "props": { "value": 220, "unit": "Ω" }
+      }
+    ],
+    "wires": [
+      {
+        "id": "w_vcc",
+        "from": { "instId": "tof1", "pinId": "VCC" },
+        "to": { "instId": "board1", "pinId": "5V2" },
+        "color": "#ff0000"
+      },
+      {
+        "id": "w_gnd1",
+        "from": { "instId": "tof1", "pinId": "GND" },
+        "to": { "instId": "board1", "pinId": "GND3" },
+        "color": "#000000"
+      },
+      {
+        "id": "w_scl",
+        "from": { "instId": "tof1", "pinId": "SCL" },
+        "to": { "instId": "board1", "pinId": "A5" },
+        "color": "#00ccff"
+      },
+      {
+        "id": "w_sda",
+        "from": { "instId": "tof1", "pinId": "SDA" },
+        "to": { "instId": "board1", "pinId": "A4" },
+        "color": "#00ffcc"
+      },
+      {
+        "id": "w_d7_res1",
+        "from": { "instId": "board1", "pinId": "D7" },
+        "to": { "instId": "res1", "pinId": "p1" },
+        "color": "#00cc00"
+      },
+      {
+        "id": "w_res1_led_close",
+        "from": { "instId": "res1", "pinId": "p2" },
+        "to": { "instId": "led_close", "pinId": "anode" },
+        "color": "#00cc00"
+      },
+      {
+        "id": "w_led_close_gnd",
+        "from": { "instId": "led_close", "pinId": "cathode" },
+        "to": { "instId": "board1", "pinId": "GND3" },
+        "color": "#000000"
+      },
+      {
+        "id": "w_d8_res2",
+        "from": { "instId": "board1", "pinId": "D8" },
+        "to": { "instId": "res2", "pinId": "p1" },
+        "color": "#cc0000"
+      },
+      {
+        "id": "w_res2_led_far",
+        "from": { "instId": "res2", "pinId": "p2" },
+        "to": { "instId": "led_far", "pinId": "anode" },
+        "color": "#cc0000"
+      },
+      {
+        "id": "w_led_far_gnd",
+        "from": { "instId": "led_far", "pinId": "cathode" },
+        "to": { "instId": "board1", "pinId": "GND1" },
+        "color": "#000000"
+      }
+    ]
+  },
+  "code": "#include <Wire.h>\n#include <Adafruit_VL53L0X.h>\n\nAdafruit_VL53L0X lox = Adafruit_VL53L0X();\n\nconst int ledClose = 7;\nconst int ledFar   = 8;\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(ledClose, OUTPUT);\n  pinMode(ledFar, OUTPUT);\n\n  while (!Serial) { delay(10); }\n  Serial.println(\"VL53L0X Distance Sensor\");\n\n  if (!lox.begin()) {\n    Serial.println(F(\"Failed to boot VL53L0X!\"));\n    while (1);\n  }\n  Serial.println(F(\"Sensor ready.\"));\n}\n\nvoid loop() {\n  VL53L0X_RangingMeasurementData_t measure;\n  lox.rangingTest(&measure, false);\n\n  if (measure.RangeStatus != 4) {\n    int dist = measure.RangeMilliMeter;\n    Serial.print(\"Distance: \");\n    Serial.print(dist);\n    Serial.println(\" mm\");\n\n    if (dist < 100) {\n      digitalWrite(ledClose, HIGH);\n      digitalWrite(ledFar, LOW);\n    } else if (dist < 300) {\n      digitalWrite(ledClose, LOW);\n      digitalWrite(ledFar, HIGH);\n    } else {\n      digitalWrite(ledClose, LOW);\n      digitalWrite(ledFar, LOW);\n    }\n  } else {\n    Serial.println(\"Out of range\");\n    digitalWrite(ledClose, LOW);\n    digitalWrite(ledFar, LOW);\n  }\n\n  delay(100);\n}"
+}
