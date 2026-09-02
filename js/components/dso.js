@@ -87,6 +87,7 @@ defComp({
     const P = (runtime, pr, field, def) => (runtime[field] !== undefined) ? runtime[field] : (pr[field] ?? def);
     const isRunning = rs.runStop !== undefined ? Boolean(rs.runStop) : Boolean(inst.props.runStop ?? 1);
     const isSingleArmed = rs.singleTrigger !== undefined ? Boolean(rs.singleTrigger) : Boolean(inst.props.singleTrigger ?? 0);
+    const isPaused = Boolean(rs.paused);
 
     if (!inst._buffers) {
       inst._buffers = { ch1: [], ch2: [], ch3: [], ch4: [], t: [] };
@@ -137,18 +138,91 @@ defComp({
     const v4 = readChannel('ch4_in', 'dso_probe_ch4');
     inst._lastRawV = [v1, v2, v3, v4];
 
-    // Rate-limit: target ~2 samples per pixel minimum for smooth rendering
-    const maxSamples = scrW * 4;
-    const minInterval = totalTime / maxSamples;
-    const lastT = inst._lastSampleTime || 0;
-    if (t - lastT < minInterval && buf.t.length > 0) return;
-    inst._lastSampleTime = t;
+    // Pause: skip sampling but keep last buffer
+    if (isPaused) {
+      inst._computeMeas = inst._computeMeas || {};
+      ['ch1', 'ch2', 'ch3', 'ch4'].forEach((chId) => {
+        const probeFactor = P(rs, inst.props, chId + '_probe', 1);
+        const rawSamples = buf[chId] && buf[chId].length > 0 ? buf[chId] : null;
+        const samples = rawSamples ? rawSamples.map(v => v * probeFactor) : null;
+        inst._computeMeas[chId] = dsoComputeMeasurements(samples, timebase, divsX);
+      });
+      return;
+    }
 
+    // Detect connected function generators for sub-frame analytical sampling
+    const _findConnectedFG = (dsoInst, pinId) => {
+      const cc = window.CircuitCanvas;
+      if (cc && typeof cc._getWireTarget === 'function') {
+        const target = cc._getWireTarget(dsoInst.id, pinId);
+        if (target && target.inst && target.inst.type === 'func_gen') return target.inst;
+      }
+      return null;
+    };
+
+    const _calcWaveAnalytical = (fgInst, chPin, sampleT) => {
+      if (!fgInst) return null;
+      const fgProps = fgInst.props || {};
+      const isWave = chPin === 'ch1_out';
+      const wave = fgProps[isWave ? 'ch1_wave' : 'ch2_wave'] || 'sine';
+      const freq = fgProps[isWave ? 'ch1_freq' : 'ch2_freq'] || 440;
+      const amp = fgProps[isWave ? 'ch1_amp' : 'ch2_amp'] || 5;
+      const offset = fgProps[isWave ? 'ch1_offset' : 'ch2_offset'] || 0;
+      const phaseDeg = fgProps[isWave ? 'ch1_phase' : 'ch2_phase'] || 0;
+      const duty = fgProps[isWave ? 'ch1_duty' : 'ch2_duty'] || 50;
+      const phaseRad = phaseDeg * Math.PI / 180;
+      const tau = ((sampleT * freq + phaseRad / (2 * Math.PI)) % 1 + 1) % 1;
+      const dutyFrac = duty / 100;
+      let v = 0;
+      switch (wave) {
+        case 'sine':     v = Math.sin(2 * Math.PI * tau); break;
+        case 'square':   v = tau < dutyFrac ? 1 : -1; break;
+        case 'triangle': v = tau < dutyFrac ? -1 + 2 * (tau / dutyFrac) : 1 - 2 * ((tau - dutyFrac) / (1 - dutyFrac)); break;
+        case 'sawtooth': v = 2 * tau - 1; break;
+        case 'noise':    v = Math.sin(sampleT * freq * 137.5) * 0.7 + Math.sin(sampleT * freq * 239.1) * 0.3; break;
+        default:         v = Math.sin(2 * Math.PI * tau); break;
+      }
+      return offset + v * (amp / 2);
+    };
+
+    const fg1 = _findConnectedFG(inst, 'ch1_in');
+    const fg2 = _findConnectedFG(inst, 'ch2_in');
+    const fg3 = _findConnectedFG(inst, 'ch3_in');
+    const fg4 = _findConnectedFG(inst, 'ch4_in');
+    const hasFG = fg1 || fg2 || fg3 || fg4;
+
+    // 1 GSa/s sub-frame sampling when function generators are connected
+    const TARGET_RATE = 1e9;
+    const maxSamples = Math.max(100000, Math.ceil(TARGET_RATE * totalTime));
+    const lastT = inst._lastSampleTime || 0;
+    const dt = t - lastT;
+
+    if (hasFG && dt > 0 && buf.t.length > 0) {
+      const numSamples = Math.min(Math.ceil(dt * TARGET_RATE), maxSamples - buf.t.length);
+      if (numSamples > 1) {
+        for (let i = 0; i < numSamples; i++) {
+          const sampleT = lastT + (dt * (i + 1)) / numSamples;
+          const sv1 = fg1 ? _calcWaveAnalytical(fg1, 'ch1_out', sampleT) : v1;
+          const sv2 = fg2 ? _calcWaveAnalytical(fg2, 'ch2_out', sampleT) : v2;
+          const sv3 = fg3 ? _calcWaveAnalytical(fg3, 'ch3_out', sampleT) : v3;
+          const sv4 = fg4 ? _calcWaveAnalytical(fg4, 'ch4_out', sampleT) : v4;
+          buf.t.push(sampleT);
+          buf.ch1.push(sv1 * probeFactor1);
+          buf.ch2.push(sv2 * probeFactor2);
+          buf.ch3.push(sv3 * probeFactor3);
+          buf.ch4.push(sv4 * probeFactor4);
+        }
+      }
+    }
+
+    // Always push at least one sample per step
     buf.ch1.push(v1 * probeFactor1);
     buf.ch2.push(v2 * probeFactor2);
     buf.ch3.push(v3 * probeFactor3);
     buf.ch4.push(v4 * probeFactor4);
     buf.t.push(t);
+    inst._lastSampleTime = t;
+
     while (buf.t.length > maxSamples) {
       buf.ch1.shift(); buf.ch2.shift();
       buf.ch3.shift(); buf.ch4.shift();
@@ -629,6 +703,17 @@ defComp({
       ctx.fillText(mathLabel, scrX + 8, osdY + 22);
     }
 
+    // Paused overlay
+    const isPaused = Boolean(P('paused', false));
+    if (isPaused) {
+      ctx.fillStyle = 'rgba(255, 170, 0, 0.12)';
+      ctx.fillRect(scrX, scrY, scrW, scrH);
+      ctx.fillStyle = '#ffaa00';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('\u23F8 PAUSED', scrX + scrW / 2, scrY + scrH / 2 + 4);
+    }
+
     // ── Bottom OSD Bar ──
     const osdBotY = scrY + scrH - 16;
     ctx.fillStyle = 'rgba(2, 4, 8, 0.75)';
@@ -814,6 +899,19 @@ defComp({
     ctx.textAlign = 'center';
     ctx.fillText('SINGLE', panX + 52 + rsW / 2, rsY + 10);
     inst._btnRects.single = { x: panX + 52, y: rsY, w: rsW, h: 14, field: 'singleTrigger' };
+
+    // Pause button
+    const pauBg = ctx.createLinearGradient(panX + 100, rsY, panX + 100, rsY + 14);
+    if (isPaused) { pauBg.addColorStop(0, '#352515'); pauBg.addColorStop(1, '#221a0e'); }
+    else { pauBg.addColorStop(0, '#222830'); pauBg.addColorStop(1, '#181c22'); }
+    ctx.fillStyle = pauBg;
+    _rr(ctx, panX + 100, rsY, 30, 14, 3); ctx.fill();
+    ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = isPaused ? '#ffaa00' : '#6a7488';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('HOLD', panX + 115, rsY + 10);
+    inst._btnRects.pause = { x: panX + 100, y: rsY, w: 30, h: 14, field: 'paused' };
 
     // ── Auto Set + Fullscreen ──
     const autoY = rsY + 15;

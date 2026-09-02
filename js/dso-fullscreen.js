@@ -972,6 +972,21 @@ class DSOFullscreen {
     ctx.textAlign = 'center';
     ctx.fillText('AUTO SET', x + 8 + (w - 20) / 2, yPos + 15);
     this._elements['dso-fs-autoset-canvas'] = { x: x + 8, y: yPos, w: w - 20, h: 22, type: 'button', field: '_autoSet' };
+
+    // Pause / Hold button
+    yPos += 26;
+    const isPaused = Boolean(P('paused', false));
+    ctx.fillStyle = isPaused ? '#352515' : '#1a1d24';
+    this._rr(ctx, x + 8, yPos, w - 20, 22, 4);
+    ctx.fill();
+    ctx.strokeStyle = isPaused ? '#ffaa00' : '#3a4050';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = isPaused ? '#ffaa00' : '#7a889b';
+    ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(isPaused ? '\u23F8 PAUSED' : '\u25B6 HOLD', x + 8 + (w - 20) / 2, yPos + 15);
+    this._elements['dso-fs-pause'] = { x: x + 8, y: yPos, w: w - 20, h: 22, type: 'button', field: 'paused' };
   }
 
   _drawSection(ctx, x, y, w, label, col) {
@@ -1452,6 +1467,12 @@ class DSOFullscreen {
       e.preventDefault(); return;
     }
 
+    // Space — toggle Pause/Hold
+    if (e.key === ' ') {
+      rs.paused = !rs.paused;
+      e.preventDefault(); return;
+    }
+
     // A — auto-set
     if (e.key === 'a' || e.key === 'A') {
       this._autoSet();
@@ -1737,6 +1758,8 @@ class DSOFullscreen {
               props.singleTrigger = rs.singleTrigger;
             } else if (el.field === '_autoSet') {
               this._autoSet();
+            } else if (el.field === 'paused') {
+              rs.paused = !rs.paused;
             }
           }
           if (el.field === 'dso-fs-display-mode' && el.options) {

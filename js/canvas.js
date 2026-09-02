@@ -807,6 +807,10 @@ class CircuitCanvas {
         cycleOptions('ch2_coupling', ['dc', 'ac', 'gnd']);
         break;
       }
+      case 'pause': {
+        rs.paused = !rs.paused;
+        break;
+      }
     }
   }
 
@@ -840,6 +844,16 @@ class CircuitCanvas {
 
     const waveOpts = ['sine', 'square', 'triangle', 'sawtooth', 'noise'];
 
+    const freqSteps = [1, 10, 100, 1000, 10000, 100000, 1000000];
+    const shiftFreq = (field, dir) => {
+      const cur = rs[field] !== undefined ? rs[field] : (props[field] ?? 440);
+      let step = 1;
+      for (const s of freqSteps) { if (cur >= s) step = s; }
+      const newVal = Math.max(1, Math.min(10000000, cur + dir * step));
+      rs[field] = newVal;
+      props[field] = newVal;
+    };
+
     switch (key) {
       case 'ch1Wave': {
         cycleOptions('ch1_wave', waveOpts);
@@ -847,6 +861,22 @@ class CircuitCanvas {
       }
       case 'ch2Wave': {
         cycleOptions('ch2_wave', waveOpts);
+        break;
+      }
+      case 'ch1FreqUp': {
+        shiftFreq('ch1_freq', 1);
+        break;
+      }
+      case 'ch1FreqDown': {
+        shiftFreq('ch1_freq', -1);
+        break;
+      }
+      case 'ch2FreqUp': {
+        shiftFreq('ch2_freq', 1);
+        break;
+      }
+      case 'ch2FreqDown': {
+        shiftFreq('ch2_freq', -1);
         break;
       }
     }
@@ -3322,6 +3352,17 @@ class CircuitCanvas {
           if (inst.runtimeState.brightness === undefined) inst.runtimeState.brightness = npRingBri;
           if (!Array.isArray(inst.runtimeState.pixels)) {
             const numPx = inst.props.numPixels || 12;
+            inst.runtimeState.pixels = Array(numPx).fill({ r: inst.props.r ?? 0, g: inst.props.g ?? 0, b: inst.props.b ?? 0 });
+          }
+          break;
+        }
+
+        /* ── WS2812B NeoPixel 8x8 Matrix (64-pixel — reads pixel array from runtimeState) ── */
+        case 'neopixel_8x8_matrix': {
+          const npRingBri = inst.props.brightness ?? 255;
+          if (inst.runtimeState.brightness === undefined) inst.runtimeState.brightness = npRingBri;
+          if (!Array.isArray(inst.runtimeState.pixels)) {
+            const numPx = inst.props.numPixels || 64;
             inst.runtimeState.pixels = Array(numPx).fill({ r: inst.props.r ?? 0, g: inst.props.g ?? 0, b: inst.props.b ?? 0 });
           }
           break;
