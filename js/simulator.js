@@ -1831,9 +1831,8 @@ class ArduinoSimulator {
           const s = sat !== undefined ? Math.max(0, Math.min(255, Number(sat) || 0)) : 255;
           const v = val !== undefined ? Math.max(0, Math.min(255, Number(val) || 0)) : 255;
           if (s === 0) return (v << 16) | (v << 8) | v;
-          const hueShift = (h * 6) >> 16;
-          const region = hueShift / 256;
-          const remainder = (hueShift & 255);
+          const region = Math.floor(h / 10923); // 0–5
+          const remainder = Math.floor((h % 10923) * 255 / 10923); // 0–255
           const p = (v * (255 - s)) >> 8;
           const q = (v * (255 - ((s * remainder) >> 8))) >> 8;
           const t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
