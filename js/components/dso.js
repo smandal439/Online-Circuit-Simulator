@@ -732,34 +732,35 @@ defComp({
 
     // ── Channel Buttons ──
     const _chBtn = (bx, by, bw, lbl, col, active) => {
-      const cbg = ctx.createLinearGradient(bx, by, bx, by + 16);
+      const cbg = ctx.createLinearGradient(bx, by, bx, by + 14);
       cbg.addColorStop(0, active ? col : '#222830');
       cbg.addColorStop(1, active ? _darken(col, 0.3) : '#181c22');
       ctx.fillStyle = cbg;
-      _rr(ctx, bx, by, bw, 16, 3); ctx.fill();
+      _rr(ctx, bx, by, bw, 14, 3); ctx.fill();
       ctx.strokeStyle = active ? '#0a0c10' : '#1a1e28'; ctx.lineWidth = 1; ctx.stroke();
 
       ctx.fillStyle = active ? col : '#2a3040';
-      ctx.beginPath(); ctx.arc(bx + bw / 2, by - 3, 2.5, 0, Math.PI * 2); ctx.fill();
-      if (active) { ctx.shadowColor = col; ctx.shadowBlur = 4; ctx.beginPath(); ctx.arc(bx + bw / 2, by - 3, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
+      ctx.beginPath(); ctx.arc(bx + bw / 2, by - 3, 2, 0, Math.PI * 2); ctx.fill();
+      if (active) { ctx.shadowColor = col; ctx.shadowBlur = 3; ctx.beginPath(); ctx.arc(bx + bw / 2, by - 3, 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
 
       ctx.fillStyle = active ? '#000000' : '#6a7488';
-      ctx.font = 'bold 8px sans-serif';
+      ctx.font = 'bold 7px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(lbl, bx + bw / 2, by + 11);
+      ctx.fillText(lbl, bx + bw / 2, by + 10);
     };
 
-    const btnY = 155;
-    _chBtn(panX + 4,  btnY, 20, 'CH1', '#ffe600', isPowered && P('ch1_en', true) !== false);
-    _chBtn(panX + 28, btnY, 20, 'CH2', '#00e5ff', isPowered && P('ch2_en', true) !== false);
-    _chBtn(panX + 52, btnY, 20, 'CH3', '#ff3090', isPowered && P('ch3_en', false) !== false);
-    _chBtn(panX + 76, btnY, 20, 'CH4', '#30ff60', isPowered && P('ch4_en', false) !== false);
+    const btnY = 136;
+    const chBtnW = 21;
+    const chBtnGap = 1;
+    _chBtn(panX + 4,              btnY, chBtnW, 'CH1', '#ffe600', isPowered && P('ch1_en', true) !== false);
+    _chBtn(panX + 4 + chBtnW + chBtnGap, btnY, chBtnW, 'CH2', '#00e5ff', isPowered && P('ch2_en', true) !== false);
+    _chBtn(panX + 4 + (chBtnW + chBtnGap) * 2, btnY, chBtnW, 'CH3', '#ff3090', isPowered && P('ch3_en', false) !== false);
+    _chBtn(panX + 4 + (chBtnW + chBtnGap) * 3, btnY, chBtnW, 'CH4', '#30ff60', isPowered && P('ch4_en', false) !== false);
 
-    // Store channel button rects
-    inst._btnRects.ch1 = { x: panX + 4, y: btnY, w: 20, h: 16, field: 'ch1_en' };
-    inst._btnRects.ch2 = { x: panX + 28, y: btnY, w: 20, h: 16, field: 'ch2_en' };
-    inst._btnRects.ch3 = { x: panX + 52, y: btnY, w: 20, h: 16, field: 'ch3_en' };
-    inst._btnRects.ch4 = { x: panX + 76, y: btnY, w: 20, h: 16, field: 'ch4_en' };
+    inst._btnRects.ch1 = { x: panX + 4,              y: btnY, w: chBtnW, h: 14, field: 'ch1_en' };
+    inst._btnRects.ch2 = { x: panX + 4 + chBtnW + chBtnGap, y: btnY, w: chBtnW, h: 14, field: 'ch2_en' };
+    inst._btnRects.ch3 = { x: panX + 4 + (chBtnW + chBtnGap) * 2, y: btnY, w: chBtnW, h: 14, field: 'ch3_en' };
+    inst._btnRects.ch4 = { x: panX + 4 + (chBtnW + chBtnGap) * 3, y: btnY, w: chBtnW, h: 14, field: 'ch4_en' };
 
     // ── Small Control Button Helper ──
     const _ctrlBtn = (bx, by, bw, bh, lbl, col, active) => {
@@ -770,98 +771,96 @@ defComp({
       _rr(ctx, bx, by, bw, bh, 3); ctx.fill();
       ctx.strokeStyle = active ? '#0a0c10' : '#1a1e28'; ctx.lineWidth = 0.8; ctx.stroke();
       ctx.fillStyle = active ? '#ffffff' : '#6a7488';
-      ctx.font = 'bold 6px sans-serif';
+      ctx.font = 'bold 5.5px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(lbl, bx + bw / 2, by + bh / 2 + 2);
     };
 
-    // ── Trigger Source Button ──
-    const trigSrcY = btnY + 22;
+    // ── Trigger Source + Slope ──
+    const trigSrcY = btnY + 16;
+    const trigBtnW = 44;
     const trigSrcBtn = P('trig_source', 'ch1').toUpperCase();
-    _ctrlBtn(panX + 4, trigSrcY, 44, 14, 'TRG:' + trigSrcBtn, '#ffaa00', isPowered);
-    inst._btnRects.trigSrc = { x: panX + 4, y: trigSrcY, w: 44, h: 14, field: 'trig_source' };
+    _ctrlBtn(panX + 4, trigSrcY, trigBtnW, 12, 'TRG:' + trigSrcBtn, '#ffaa00', isPowered);
+    inst._btnRects.trigSrc = { x: panX + 4, y: trigSrcY, w: trigBtnW, h: 12, field: 'trig_source' };
 
-    // ── Trigger Slope Button ──
     const trigSlopeBtn = P('trig_slope', 'rising');
     const slopeLabel = trigSlopeBtn === 'rising' ? '/ RISE' : '\\ FALL';
-    _ctrlBtn(panX + 52, trigSrcY, 44, 14, slopeLabel, '#ffaa00', isPowered);
-    inst._btnRects.trigSlope = { x: panX + 52, y: trigSrcY, w: 44, h: 14, field: 'trig_slope' };
+    _ctrlBtn(panX + 52, trigSrcY, trigBtnW, 12, slopeLabel, '#ffaa00', isPowered);
+    inst._btnRects.trigSlope = { x: panX + 52, y: trigSrcY, w: trigBtnW, h: 12, field: 'trig_slope' };
 
-    // ── Run/Stop Button ──
-    const rsY = 185;
-    const rsBg = ctx.createLinearGradient(panX + 10, rsY, panX + 10, rsY + 30);
+    // ── Run/Stop + Single ──
+    const rsY = trigSrcY + 14;
+    const rsW = 42;
+    const rsBg = ctx.createLinearGradient(panX + 4, rsY, panX + 4, rsY + 14);
     if (isRunning) { rsBg.addColorStop(0, '#1a3520'); rsBg.addColorStop(1, '#0e2210'); }
     else { rsBg.addColorStop(0, '#351a1a'); rsBg.addColorStop(1, '#220e0e'); }
     ctx.fillStyle = rsBg;
-    _rr(ctx, panX + 10, rsY, 38, 18, 4); ctx.fill();
+    _rr(ctx, panX + 4, rsY, rsW, 14, 3); ctx.fill();
     ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1; ctx.stroke();
     ctx.fillStyle = isRunning ? '#00ff66' : '#ff3366';
-    ctx.font = 'bold 8px sans-serif';
+    ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(isRunning ? 'RUN' : 'STOP', panX + 29, rsY + 12);
-    inst._btnRects.runStop = { x: panX + 10, y: rsY, w: 38, h: 18, field: 'runStop' };
+    ctx.fillText(isRunning ? 'RUN' : 'STOP', panX + 4 + rsW / 2, rsY + 10);
+    inst._btnRects.runStop = { x: panX + 4, y: rsY, w: rsW, h: 14, field: 'runStop' };
 
-    // Single button
-    const sglBg = ctx.createLinearGradient(panX + 52, rsY, panX + 52, rsY + 18);
+    const sglBg = ctx.createLinearGradient(panX + 52, rsY, panX + 52, rsY + 14);
     if (isSingleArmed) { sglBg.addColorStop(0, '#35351a'); sglBg.addColorStop(1, '#22220e'); }
     else { sglBg.addColorStop(0, '#222830'); sglBg.addColorStop(1, '#181c22'); }
     ctx.fillStyle = sglBg;
-    _rr(ctx, panX + 52, rsY, 38, 18, 4); ctx.fill();
+    _rr(ctx, panX + 52, rsY, rsW, 14, 3); ctx.fill();
     ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1; ctx.stroke();
     ctx.fillStyle = isSingleArmed ? '#ffaa00' : '#6a7488';
-    ctx.font = 'bold 8px sans-serif';
+    ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('SINGLE', panX + 71, rsY + 12);
-    inst._btnRects.single = { x: panX + 52, y: rsY, w: 38, h: 18, field: 'singleTrigger' };
+    ctx.fillText('SINGLE', panX + 52 + rsW / 2, rsY + 10);
+    inst._btnRects.single = { x: panX + 52, y: rsY, w: rsW, h: 14, field: 'singleTrigger' };
 
-    // ── Auto Set Button ──
-    const autoY = rsY + 24;
-    const autoBg = ctx.createLinearGradient(panX + 10, autoY, panX + 10, autoY + 16);
+    // ── Auto Set + Fullscreen ──
+    const autoY = rsY + 15;
+    const autoBg = ctx.createLinearGradient(panX + 4, autoY, panX + 4, autoY + 14);
     autoBg.addColorStop(0, '#1a2550');
     autoBg.addColorStop(1, '#0e1a30');
     ctx.fillStyle = autoBg;
-    _rr(ctx, panX + 10, autoY, 38, 16, 3); ctx.fill();
+    _rr(ctx, panX + 4, autoY, rsW, 14, 3); ctx.fill();
     ctx.strokeStyle = isPowered ? '#3070a0' : '#2a2e38'; ctx.lineWidth = 0.8; ctx.stroke();
     ctx.fillStyle = isPowered ? '#40a0ff' : '#4a5264';
-    ctx.font = 'bold 7px sans-serif';
+    ctx.font = 'bold 6px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('AUTO', panX + 29, autoY + 11);
-    inst._btnRects.autoSet = { x: panX + 10, y: autoY, w: 38, h: 16, field: 'autoSet' };
+    ctx.fillText('AUTO', panX + 4 + rsW / 2, autoY + 10);
+    inst._btnRects.autoSet = { x: panX + 4, y: autoY, w: rsW, h: 14, field: 'autoSet' };
 
-    // ── Fullscreen Button ──
-    const fsX = panX + 52, fsY = rsY + 24;
     ctx.fillStyle = isPowered ? '#1a2550' : '#181c22';
-    _rr(ctx, fsX - 20, fsY, 80, 16, 3); ctx.fill();
+    _rr(ctx, panX + 52, autoY, rsW, 14, 3); ctx.fill();
     ctx.strokeStyle = isPowered ? '#00979c' : '#2a2e38'; ctx.lineWidth = 0.8; ctx.stroke();
     ctx.fillStyle = isPowered ? '#00d4e6' : '#4a5264';
-    ctx.font = 'bold 7px sans-serif';
+    ctx.font = 'bold 5.5px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('\u26F6 FULLSCREEN', fsX + 20, fsY + 11);
-    inst._btnRects.fullscreen = { x: fsX - 20, y: fsY, w: 80, h: 16, field: '_fullscreen' };
+    ctx.fillText('\u26F6 FULL', panX + 52 + rsW / 2, autoY + 10);
+    inst._btnRects.fullscreen = { x: panX + 52, y: autoY, w: rsW, h: 14, field: '_fullscreen' };
 
-    // ── Display Mode Button ──
-    const modeY = fsY + 20;
+    // ── Display Mode + Math ──
+    const modeY = autoY + 15;
+    const modeW = 44;
     const dsoMode = P('dsoMode', 'scope');
     const modeLabels = { scope: 'SCOPE', spectrum: 'SPECTRUM', xy: 'XY' };
     const modeColors = { scope: '#00d4e6', spectrum: '#ff00ff', xy: '#ffe600' };
-    _ctrlBtn(panX + 4, modeY, 44, 14, modeLabels[dsoMode] || 'SCOPE', modeColors[dsoMode] || '#00d4e6', isPowered);
-    inst._btnRects.dsoMode = { x: panX + 4, y: modeY, w: 44, h: 14, field: 'dsoMode' };
+    _ctrlBtn(panX + 4, modeY, modeW, 12, modeLabels[dsoMode] || 'SCOPE', modeColors[dsoMode] || '#00d4e6', isPowered);
+    inst._btnRects.dsoMode = { x: panX + 4, y: modeY, w: modeW, h: 12, field: 'dsoMode' };
 
-    // ── Math Operation Button ──
     const mathOp = P('math_op', 'off');
     const mathLabels = { off: 'MATH:OFF', add: 'CH1+CH2', sub: 'CH1-CH2', mul: 'CH1*CH2', abs: '|CH1-CH2|' };
-    _ctrlBtn(panX + 52, modeY, 44, 14, mathLabels[mathOp] || 'MATH', mathOp !== 'off' ? '#ff00ff' : '#4a5264', isPowered && mathOp !== 'off');
-    inst._btnRects.mathOp = { x: panX + 52, y: modeY, w: 44, h: 14, field: 'math_op' };
+    _ctrlBtn(panX + 52, modeY, modeW, 12, mathLabels[mathOp] || 'MATH', mathOp !== 'off' ? '#ff00ff' : '#4a5264', isPowered && mathOp !== 'off');
+    inst._btnRects.mathOp = { x: panX + 52, y: modeY, w: modeW, h: 12, field: 'math_op' };
 
     // ── Coupling Buttons (CH1 & CH2) ──
-    const coupY = modeY + 18;
+    const coupY = modeY + 14;
     const ch1Coup = P('ch1_coupling', 'dc').toUpperCase();
-    _ctrlBtn(panX + 4, coupY, 44, 14, 'CH1:' + ch1Coup, '#ffe600', isPowered && P('ch1_en', true) !== false);
-    inst._btnRects.ch1Coupling = { x: panX + 4, y: coupY, w: 44, h: 14, field: 'ch1_coupling' };
+    _ctrlBtn(panX + 4, coupY, modeW, 12, 'CH1:' + ch1Coup, '#ffe600', isPowered && P('ch1_en', true) !== false);
+    inst._btnRects.ch1Coupling = { x: panX + 4, y: coupY, w: modeW, h: 12, field: 'ch1_coupling' };
 
     const ch2Coup = P('ch2_coupling', 'dc').toUpperCase();
-    _ctrlBtn(panX + 52, coupY, 44, 14, 'CH2:' + ch2Coup, '#00e5ff', isPowered && P('ch2_en', true) !== false);
-    inst._btnRects.ch2Coupling = { x: panX + 52, y: coupY, w: 44, h: 14, field: 'ch2_coupling' };
+    _ctrlBtn(panX + 52, coupY, modeW, 12, 'CH2:' + ch2Coup, '#00e5ff', isPowered && P('ch2_en', true) !== false);
+    inst._btnRects.ch2Coupling = { x: panX + 52, y: coupY, w: modeW, h: 12, field: 'ch2_coupling' };
 
     // ── Power toggle switch ──
     function drawToggleSwitch(tx, ty, tw, th, isOn, label) {

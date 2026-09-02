@@ -931,9 +931,11 @@ class DSOFullscreen {
     // ── Transport ──
     this._drawSection(ctx, x + 8, yPos, w - 16, 'TRANSPORT');
     yPos += 16;
+    if (!this._elements) this._elements = {};
     // Run/Stop button
+    const rsW = (w - 20) / 2;
     ctx.fillStyle = isRunning ? '#1a3520' : '#351a1a';
-    this._rr(ctx, x + 8, yPos, (w - 20) / 2, 22, 4);
+    this._rr(ctx, x + 8, yPos, rsW, 22, 4);
     ctx.fill();
     ctx.strokeStyle = isRunning ? '#00ff66' : '#ff3366';
     ctx.lineWidth = 1;
@@ -941,11 +943,12 @@ class DSOFullscreen {
     ctx.fillStyle = isRunning ? '#00ff66' : '#ff3366';
     ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
     ctx.textAlign = 'center';
-    ctx.fillText(isRunning ? 'RUN' : 'STOP', x + 8 + (w - 20) / 4, yPos + 15);
+    ctx.fillText(isRunning ? 'RUN' : 'STOP', x + 8 + rsW / 2, yPos + 15);
+    this._elements['dso-fs-runstop'] = { x: x + 8, y: yPos, w: rsW, h: 22, type: 'button', field: 'runStop' };
 
     // Single button
     ctx.fillStyle = isSingleArmed ? '#35351a' : '#1a1d24';
-    this._rr(ctx, x + 8 + (w - 20) / 2 + 4, yPos, (w - 20) / 2, 22, 4);
+    this._rr(ctx, x + 8 + rsW + 4, yPos, rsW, 22, 4);
     ctx.fill();
     ctx.strokeStyle = isSingleArmed ? '#ffaa00' : '#3a4050';
     ctx.lineWidth = 1;
@@ -953,7 +956,8 @@ class DSOFullscreen {
     ctx.fillStyle = isSingleArmed ? '#ffaa00' : '#7a889b';
     ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
     ctx.textAlign = 'center';
-    ctx.fillText('SINGLE', x + 8 + (w - 20) * 3 / 4 + 4, yPos + 15);
+    ctx.fillText('SINGLE', x + 8 + rsW + 4 + rsW / 2, yPos + 15);
+    this._elements['dso-fs-single'] = { x: x + 8 + rsW + 4, y: yPos, w: rsW, h: 22, type: 'button', field: 'singleTrigger' };
 
     // Auto-set button
     yPos += 26;
@@ -967,8 +971,6 @@ class DSOFullscreen {
     ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
     ctx.textAlign = 'center';
     ctx.fillText('AUTO SET', x + 8 + (w - 20) / 2, yPos + 15);
-
-    if (!this._elements) this._elements = {};
     this._elements['dso-fs-autoset-canvas'] = { x: x + 8, y: yPos, w: w - 20, h: 22, type: 'button', field: '_autoSet' };
   }
 
@@ -1229,7 +1231,7 @@ class DSOFullscreen {
     const firstRefTime = times[0];
     const refDuration = lastRefTime - firstRefTime;
 
-    // Draw reference with dashed line and dimmer color
+    const ctx = this.ctx;
     ctx.save();
     ctx.beginPath();
     ctx.rect(scrX, scrY, scrW, scrH);
@@ -1708,30 +1710,39 @@ class DSOFullscreen {
       for (const [id, el] of Object.entries(this._elements)) {
         if (x >= el.x && x <= el.x + el.w && y >= el.y && y <= el.y + el.h) {
           const rs = this.inst.runtimeState || {};
+          const props = this.inst.props || {};
           if (el.type === 'select') {
-            // Cycle through options
             const idx = el.options.findIndex(o => o.value == el.value);
             const next = (idx + 1) % el.options.length;
             rs[el.field] = el.options[next].value;
-            this.inst.props[el.field] = el.options[next].value;
+            props[el.field] = el.options[next].value;
           } else if (el.type === 'checkbox') {
             rs[el.field] = !el.value;
-            this.inst.props[el.field] = !el.value;
+            props[el.field] = !el.value;
           } else if (el.type === 'range') {
-            // Click sets value proportionally
             const pct = Math.max(0, Math.min(1, (x - el.x) / el.w));
             let val = el.min + pct * (el.max - el.min);
             if (el.step) val = Math.round(val / el.step) * el.step;
             val = Math.max(el.min, Math.min(el.max, val));
             rs[el.field] = val;
-            this.inst.props[el.field] = val;
+            props[el.field] = val;
           } else if (el.type === 'button') {
-            this._autoSet();
+            if (el.field === 'runStop') {
+              const cur = rs.runStop !== undefined ? rs.runStop : (props.runStop ?? 1);
+              rs.runStop = cur ? 0 : 1;
+              props.runStop = rs.runStop;
+            } else if (el.field === 'singleTrigger') {
+              const cur = rs.singleTrigger !== undefined ? rs.singleTrigger : (props.singleTrigger ?? 0);
+              rs.singleTrigger = cur ? 0 : 1;
+              props.singleTrigger = rs.singleTrigger;
+            } else if (el.field === '_autoSet') {
+              this._autoSet();
+            }
           }
-          if (el.field === 'dso-fs-display-mode') {
-            this._dsoMode = el.options[el.options.findIndex(o => o.value == el.value) % el.options.length].value;
+          if (el.field === 'dso-fs-display-mode' && el.options) {
+            const idx = el.options.findIndex(o => o.value == el.value);
+            this._dsoMode = el.options[(idx + 1) % el.options.length].value;
           }
-          this._syncControlsFromInst();
           e.stopPropagation();
           return;
         }
@@ -1776,6 +1787,9 @@ class DSOFullscreen {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    const ctrlX = this._scrX + this._scrW + 16;
+    if (x >= ctrlX) return;
+
     // Only place cursors within the screen area
     if (x >= this._scrX && x <= this._scrX + this._scrW &&
         y >= this._scrY && y <= this._scrY + this._scrH) {
@@ -1817,8 +1831,6 @@ class DSOFullscreen {
 
   _syncControlsFromInst() {
     if (!this.inst) return;
-    // Controls are drawn from inst state on each render frame, so just redraw
-    this._elements = {};
   }
 
   _autoSet() {
