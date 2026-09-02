@@ -1126,6 +1126,25 @@ class ArduinoSimulator {
         servoWriteMs(varName, us) { /* advanced */ },
         servoRead(varName) { return 90; },
 
+        /* VL53L0X ToF Ranging Sensor — called via transpiler redirect */
+        vl53l0xRangingTest(varName, measure, debug) {
+          let dist = 100;
+          try {
+            const cc = window.CircuitCanvas;
+            if (cc && cc.components) {
+              const vl = cc.components.find(c => c.type === 'vl53l0x');
+              if (vl) dist = Number(vl.props?.distance ?? vl.runtimeState?.distance ?? 100);
+            }
+          } catch (e) { /* fallback to 100mm */ }
+          if (measure) {
+            measure.RangeStatus = dist > 0 ? 0 : 4;
+            measure.RangeMilliMeter = dist;
+          }
+          if (debug) {
+            self._serialLog(`[VL53L0X] Range: ${dist}mm (status=${measure ? measure.RangeStatus : 4})\n`, 'system');
+          }
+        },
+
         /* LCD (and OLED / WebServer share the generic `.begin` transpile) */
         lcdBegin(varName, cols, rows) {
           if (varName && varName._ssId) {
