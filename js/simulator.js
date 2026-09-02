@@ -1989,12 +1989,19 @@ class ArduinoSimulator {
           __vl53l0x: true,
           begin() { self._serialLog('[VL53L0X] I2C sensor initialized\n', 'system'); return true; },
           rangingTest(measure, debug) {
-            // Simulate a distance reading: 50–800 mm range with slight jitter
-            const dist = Math.floor(200 + Math.random() * 300);
-            measure.RangeStatus = 0;
+            // Read distance from the component's props (user-adjustable via slider)
+            let dist = 100;
+            try {
+              const cc = window.CircuitCanvas;
+              if (cc && cc.components) {
+                const vl = cc.components.find(c => c.type === 'vl53l0x');
+                if (vl) dist = Number(vl.props?.distance ?? vl.runtimeState?.distance ?? 100);
+              }
+            } catch (e) { /* fallback to 100mm */ }
+            measure.RangeStatus = dist > 0 ? 0 : 4;
             measure.RangeMilliMeter = dist;
             if (debug) {
-              self._serialLog(`[VL53L0X] Range: ${dist}mm (status=0)\n`, 'system');
+              self._serialLog(`[VL53L0X] Range: ${dist}mm (status=${measure.RangeStatus})\n`, 'system');
             }
           },
         };
