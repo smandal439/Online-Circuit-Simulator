@@ -3745,7 +3745,31 @@ class CircuitCanvas {
         continue;
       }
 
-      if (visited.has(nodeKey)) continue;
+      if (visited.has(nodeKey)) {
+        // Parallel path discovery: follow wires-only from visited node to find ground/source pins
+        const wq = [{ iid: current.instId, pid: current.pinId, d: 0 }];
+        const wv = new Set();
+        while (wq.length > 0) {
+          const wn = wq.shift();
+          const wk = wn.iid + ':' + wn.pid;
+          if (wv.has(wk) || wn.d > 10) continue;
+          wv.add(wk);
+          for (const w of this.wires) {
+            let ni, np;
+            if (w.from.instId === wn.iid && w.from.pinId === wn.pid) { ni = w.to.instId; np = w.to.pinId; }
+            else if (w.to.instId === wn.iid && w.to.pinId === wn.pid) { ni = w.from.instId; np = w.from.pinId; }
+            else continue;
+            const ninst = this.components.find(c => c.id === ni);
+            if (!ninst) continue;
+            if (this._isGroundPin(ninst, np)) {
+              grounds.push({ type: 'gnd', instId: ni, pinId: np, resistance: current.resistance });
+            } else {
+              wq.push({ iid: ni, pid: np, d: wn.d + 1 });
+            }
+          }
+        }
+        continue;
+      }
       visited.add(nodeKey);
 
       // 1. Arduino Uno Pins
