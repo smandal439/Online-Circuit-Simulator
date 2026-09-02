@@ -268,9 +268,9 @@ defComp({
     inst._btnRects.ch1Wave = { x: scrX, y: cardY + cardH + 6, w: cardW / 2 - freqBtnW - 4, h: 14, field: 'ch1_wave', options: waveOpts };
 
     // CH1 Freq +/- buttons
-    _ctrlBtn(scrX + cardW / 2 - freqBtnW - 2, cardY + cardH + 6, freqBtnW / 2, 14, '\u25B2', '#00e5ff', isPowered);
+    _ctrlBtn(scrX + cardW / 2 - freqBtnW - 2, cardY + cardH + 6, freqBtnW / 2, '\u25B2', '#00e5ff', isPowered);
     inst._btnRects.ch1FreqUp = { x: scrX + cardW / 2 - freqBtnW - 2, y: cardY + cardH + 6, w: freqBtnW / 2, h: 14, field: 'ch1_freq_up' };
-    _ctrlBtn(scrX + cardW / 2 - freqBtnW / 2 - 2, cardY + cardH + 6, freqBtnW / 2, 14, '\u25BC', '#00e5ff', isPowered);
+    _ctrlBtn(scrX + cardW / 2 - freqBtnW / 2 - 2, cardY + cardH + 6, freqBtnW / 2, '\u25BC', '#00e5ff', isPowered);
     inst._btnRects.ch1FreqDown = { x: scrX + cardW / 2 - freqBtnW / 2 - 2, y: cardY + cardH + 6, w: freqBtnW / 2, h: 14, field: 'ch1_freq_down' };
 
     // CH2 Wave Selector
@@ -279,9 +279,9 @@ defComp({
     inst._btnRects.ch2Wave = { x: scrX + cardW / 2 + 2, y: cardY + cardH + 6, w: cardW / 2 - freqBtnW - 4, h: 14, field: 'ch2_wave', options: waveOpts };
 
     // CH2 Freq +/- buttons
-    _ctrlBtn(scrX + cardW - freqBtnW - 2, cardY + cardH + 6, freqBtnW / 2, 14, '\u25B2', '#ff3366', isPowered);
+    _ctrlBtn(scrX + cardW - freqBtnW - 2, cardY + cardH + 6, freqBtnW / 2, '\u25B2', '#ff3366', isPowered);
     inst._btnRects.ch2FreqUp = { x: scrX + cardW - freqBtnW - 2, y: cardY + cardH + 6, w: freqBtnW / 2, h: 14, field: 'ch2_freq_up' };
-    _ctrlBtn(scrX + cardW - freqBtnW / 2 - 2, cardY + cardH + 6, freqBtnW / 2, 14, '\u25BC', '#ff3366', isPowered);
+    _ctrlBtn(scrX + cardW - freqBtnW / 2 - 2, cardY + cardH + 6, freqBtnW / 2, '\u25BC', '#ff3366', isPowered);
     inst._btnRects.ch2FreqDown = { x: scrX + cardW - freqBtnW / 2 - 2, y: cardY + cardH + 6, w: freqBtnW / 2, h: 14, field: 'ch2_freq_down' };
 
     // Power toggle switch
