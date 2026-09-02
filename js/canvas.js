@@ -4163,6 +4163,14 @@ class CircuitCanvas {
         else if (current.pinId === 'nc' && !relayOn) queue.push({ instId: inst.id, pinId: 'com', resistance: current.resistance });
       }
 
+      // 12V Bulb pass-through (anode → cathode, 12Ω nominal)
+      if (inst.type === 'bulb_12v' && current.pinId === 'anode') {
+        queue.push({ instId: inst.id, pinId: 'cathode', resistance: current.resistance + 12 });
+      }
+      if (inst.type === 'bulb_12v' && current.pinId === 'cathode') {
+        queue.push({ instId: inst.id, pinId: 'anode', resistance: current.resistance + 12 });
+      }
+
       // Traverse connected wires
       for (const wire of this.wires) {
         if (wire.from.instId === current.instId && wire.from.pinId === current.pinId) {
