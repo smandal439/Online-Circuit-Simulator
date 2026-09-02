@@ -1,0 +1,77 @@
+{
+  "id": "vl53l0x_proximity_sensor",
+  "name": "VL53L0X Distance Measurement & Proximity Alert",
+  "icon": "📏",
+  "tags": ["sensor", "I2C", "distance", "VL53L0X"],
+  "desc": "Measure distance using the VL53L0X laser Time-of-Flight sensor via I2C and trigger an LED indicator when an object is within 200mm.",
+  "circuit": {
+    "components": [
+      {
+        "id": "board1",
+        "type": "arduino_uno",
+        "x": 150,
+        "y": 180,
+        "props": {}
+      },
+      {
+        "id": "tof1",
+        "type": "vl53l0x",
+        "x": 420,
+        "y": 150,
+        "props": { "distance": 150 }
+      },
+      {
+        "id": "led1",
+        "type": "led",
+        "x": 420,
+        "y": 320,
+        "props": { "color": "#00ff00" }
+      },
+      {
+        "id": "res1",
+        "type": "resistor",
+        "x": 300,
+        "y": 320,
+        "props": { "resistance": 220 }
+      }
+    ],
+    "wires": [
+      {
+        "id": "w_vcc",
+        "from": { "instId": "tof1", "pinId": "VCC" },
+        "to": { "instId": "board1", "pinId": "5V" }
+      },
+      {
+        "id": "w_gnd1",
+        "from": { "instId": "tof1", "pinId": "GND" },
+        "to": { "instId": "board1", "pinId": "GND" }
+      },
+      {
+        "id": "w_scl",
+        "from": { "instId": "tof1", "pinId": "SCL" },
+        "to": { "instId": "board1", "pinId": "A5" }
+      },
+      {
+        "id": "w_sda",
+        "from": { "instId": "tof1", "pinId": "SDA" },
+        "to": { "instId": "board1", "pinId": "A4" }
+      },
+      {
+        "id": "w_led_sig",
+        "from": { "instId": "board1", "pinId": "D13" },
+        "to": { "instId": "res1", "pinId": "pin1" }
+      },
+      {
+        "id": "w_res_led",
+        "from": { "instId": "res1", "pinId": "pin2" },
+        "to": { "instId": "led1", "pinId": "anode" }
+      },
+      {
+        "id": "w_gnd_led",
+        "from": { "instId": "led1", "pinId": "cathode" },
+        "to": { "instId": "board1", "pinId": "GND" }
+      }
+    ]
+  },
+  "code": "#include <Wire.h>\n#include <Adafruit_VL53L0X.h>\n\nAdafruit_VL53L0X lox = Adafruit_VL53L0X();\nconst int ledPin = 13;\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(ledPin, OUTPUT);\n  \n  while (!Serial) {\n    delay(10);\n  }\n  \n  Serial.println(\"VL53L0X Starting...\");\n  if (!lox.begin()) {\n    Serial.println(F(\"Failed to boot VL53L0X sensor!\"));\n    while (1);\n  }\n  Serial.println(F(\"VL53L0X API Ready!\"));\n}\n\nvoid loop() {\n  VL53L0X_RangingMeasurementData_t measure;\n  \n  lox.rangingTest(&measure, false);\n\n  if (measure.RangeStatus != 4) {\n    Serial.print(\"Distance (mm): \");\n    Serial.println(measure.RangeMilliMeter);\n    \n    if (measure.RangeMilliMeter < 200) {\n      digitalWrite(ledPin, HIGH);\n    } else {\n      digitalWrite(ledPin, LOW);\n    }\n  } else {\n    Serial.println(\"Out of range \");\n    digitalWrite(ledPin, LOW);\n  }\n    \n  delay(100);\n}"
+}

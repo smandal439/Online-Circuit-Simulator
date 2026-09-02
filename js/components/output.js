@@ -211,108 +211,372 @@ defComp({
 });
 
 /* ---------------------------------- Multi-Color LED Array------------------------------ */
+// defComp({
+//   id: 'multi_led_array',
+//   name: 'Multi-Color LED Array',
+//   category: 'Output',
+//   icon: '🌈',
+//   desc: 'Module with 4 individually controlled LEDs (Red, Yellow, Green, Blue) sharing a common ground',
+//   width: 90,
+//   height: 60,
+//   defaultProps: {},
+//   pins: [
+//     { id: 'led_r', label: 'R', type: PIN_TYPE.DIGITAL, x: 15, y: 60, side: 'bottom' },
+//     { id: 'led_y', label: 'Y', type: PIN_TYPE.DIGITAL, x: 30, y: 60, side: 'bottom' },
+//     { id: 'led_g', label: 'G', type: PIN_TYPE.DIGITAL, x: 45, y: 60, side: 'bottom' },
+//     { id: 'led_b', label: 'B', type: PIN_TYPE.DIGITAL, x: 60, y: 60, side: 'bottom' },
+//     { id: 'gnd', label: 'âˆ’', type: PIN_TYPE.GND, x: 75, y: 60, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+
+//     // Configuration for each LED in the module
+//     const leds = [
+//       { id: 'led_r', color: '#ff3333', label: 'R', x: 15 },
+//       { id: 'led_y', color: '#ffcc00', label: 'Y', x: 30 },
+//       { id: 'led_g', color: '#33cc33', label: 'G', x: 45 },
+//       { id: 'led_b', color: '#3388ff', label: 'B', x: 60 },
+//     ];
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // Module Housing Base
+//     ctx.fillStyle = '#1e1e24';
+//     roundRect(ctx, 4, 10, 82, 30, 4);
+//     ctx.fill();
+//     ctx.strokeStyle = '#3a3a42';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Bottom Lead Pins
+//     const pinXs = [15, 30, 45, 60, 75];
+//     ctx.strokeStyle = '#888888';
+//     ctx.lineWidth = 1.5;
+//     pinXs.forEach(px => {
+//       ctx.beginPath();
+//       ctx.moveTo(px, 40);
+//       ctx.lineTo(px, 60);
+//       ctx.stroke();
+//     });
+
+//     // Common Cathode (GND) Mark
+//     ctx.fillStyle = '#aaaaaa';
+//     ctx.font = 'bold 8px sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('âˆ’', 75, 53);
+
+//     // Render Individual LEDs
+//     leds.forEach(led => {
+//       const val = getInstPinState(inst, led.id, sim) || 0;
+//       const brightness = val > 1 ? Math.min(val / 255, 1) : Math.max(val, 0);
+//       const isOn = brightness > 0.02;
+//       const col = led.color;
+//       const lx = led.x;
+//       const ly = 25;
+
+//       // Pin Text Labels
+//       ctx.fillStyle = '#aaaaaa';
+//       ctx.font = 'bold 7px sans-serif';
+//       ctx.fillText(led.label, lx, 53);
+
+//       // 1. Ambient Volumetric Glow Halo (When Lit)
+//       if (isOn) {
+//         const glowRadius = 18 * brightness;
+//         const halo = ctx.createRadialGradient(lx, ly, 0, lx, ly, glowRadius);
+//         halo.addColorStop(0, hexToRgba(col, 0.65 * brightness));
+//         halo.addColorStop(0.5, hexToRgba(col, 0.25 * brightness));
+//         halo.addColorStop(1, hexToRgba(col, 0));
+//         ctx.fillStyle = halo;
+//         ctx.beginPath();
+//         ctx.arc(lx, ly, glowRadius, 0, Math.PI * 2);
+//         ctx.fill();
+//       }
+
+//       // 2. LED Bulb Lens Body
+//       ctx.fillStyle = isOn ? hexToRgba(col, 0.9) : hexToRgba(col, 0.3);
+//       ctx.beginPath();
+//       ctx.arc(lx, ly, 6, 0, Math.PI * 2);
+//       ctx.fill();
+
+//       ctx.strokeStyle = isOn ? '#ffffff' : hexToRgba(col, 0.6);
+//       ctx.lineWidth = 1;
+//       ctx.stroke();
+
+//       // 3. Bright Specular Highlight Core
+//       if (isOn) {
+//         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+//         ctx.beginPath();
+//         ctx.arc(lx - 2, ly - 2, 1.8, 0, Math.PI * 2);
+//         ctx.fill();
+//       }
+//     });
+
+//     if (inst.selected) drawSelectionRect(ctx, -2, 5, 94, 60);
+//     ctx.restore();
+//   }
+// });
+
 defComp({
   id: 'multi_led_array',
-  name: 'Multi-Color LED Array',
+  name: '8-LED Spectrum Array (Inbuilt Resistors)',
   category: 'Output',
   icon: '🌈',
-  desc: 'Module with 4 individually controlled LEDs (Red, Yellow, Green, Blue) sharing a common ground',
-  width: 90,
-  height: 60,
-  defaultProps: {},
+  desc: '8-channel multi-color LED bar module with integrated 220Ω current-limiting SMD resistors and common cathode ground.',
+  width: 150,
+  height: 70,
+  defaultProps: { label: '8-LED ARRAY' },
   pins: [
-    { id: 'led_r', label: 'R', type: PIN_TYPE.DIGITAL, x: 15, y: 60, side: 'bottom' },
-    { id: 'led_y', label: 'Y', type: PIN_TYPE.DIGITAL, x: 30, y: 60, side: 'bottom' },
-    { id: 'led_g', label: 'G', type: PIN_TYPE.DIGITAL, x: 45, y: 60, side: 'bottom' },
-    { id: 'led_b', label: 'B', type: PIN_TYPE.DIGITAL, x: 60, y: 60, side: 'bottom' },
-    { id: 'gnd', label: 'âˆ’', type: PIN_TYPE.GND, x: 75, y: 60, side: 'bottom' },
+    { id: 'l1', label: 'L1', type: PIN_TYPE.DIGITAL, x: 15, y: 70, side: 'bottom' },
+    { id: 'l2', label: 'L2', type: PIN_TYPE.DIGITAL, x: 30, y: 70, side: 'bottom' },
+    { id: 'l3', label: 'L3', type: PIN_TYPE.DIGITAL, x: 45, y: 70, side: 'bottom' },
+    { id: 'l4', label: 'L4', type: PIN_TYPE.DIGITAL, x: 60, y: 70, side: 'bottom' },
+    { id: 'l5', label: 'L5', type: PIN_TYPE.DIGITAL, x: 75, y: 70, side: 'bottom' },
+    { id: 'l6', label: 'L6', type: PIN_TYPE.DIGITAL, x: 90, y: 70, side: 'bottom' },
+    { id: 'l7', label: 'L7', type: PIN_TYPE.DIGITAL, x: 105, y: 70, side: 'bottom' },
+    { id: 'l8', label: 'L8', type: PIN_TYPE.DIGITAL, x: 120, y: 70, side: 'bottom' },
+    { id: 'gnd', label: '−', type: PIN_TYPE.GND, x: 135, y: 70, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
 
-    // Configuration for each LED in the module
+    // 8 Rainbow LED configuration palette
     const leds = [
-      { id: 'led_r', color: '#ff3333', label: 'R', x: 15 },
-      { id: 'led_y', color: '#ffcc00', label: 'Y', x: 30 },
-      { id: 'led_g', color: '#33cc33', label: 'G', x: 45 },
-      { id: 'led_b', color: '#3388ff', label: 'B', x: 60 },
+      { id: 'l1', color: '#ff2233', label: '1', x: 15 },  // Red
+      { id: 'l2', color: '#ff7700', label: '2', x: 30 },  // Orange
+      { id: 'l3', color: '#ffcc00', label: '3', x: 45 },  // Yellow
+      { id: 'l4', color: '#22cc44', label: '4', x: 60 },  // Green
+      { id: 'l5', color: '#00d8ff', label: '5', x: 75 },  // Cyan
+      { id: 'l6', color: '#2266ff', label: '6', x: 90 },  // Blue
+      { id: 'l7', color: '#b022ff', label: '7', x: 105 }, // Purple
+      { id: 'l8', color: '#ffffff', label: '8', x: 120 }, // White
     ];
+
+    const pinXs = [15, 30, 45, 60, 75, 90, 105, 120, 135];
 
     ctx.save();
     ctx.translate(x, y);
 
-    // Module Housing Base
-    ctx.fillStyle = '#1e1e24';
-    roundRect(ctx, 4, 10, 82, 30, 4);
+    // Canvas Helper for Rounded Rectangles
+    const drawRoundRect = (cx, cy, w, h, r) => {
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(cx, cy, w, h, r);
+      } else {
+        ctx.moveTo(cx + r, cy);
+        ctx.lineTo(cx + w - r, cy);
+        ctx.quadraticCurveTo(cx + w, cy, cx + w, cy + r);
+        ctx.lineTo(cx + w, cy + h - r);
+        ctx.quadraticCurveTo(cx + w, cy + h, cx + w - r, cy + h);
+        ctx.lineTo(cx + r, cy + h);
+        ctx.quadraticCurveTo(cx, cy + h, cx, cy + h - r);
+        ctx.lineTo(cx, cy + r);
+        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+      }
+      ctx.closePath();
+    };
+
+    // Helper to convert hex colors to RGBA for volumetric lighting
+    const hexToRgba = (hex, alpha) => {
+      let c = hex.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const num = parseInt(c, 16);
+      return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
+    };
+
+    // ----------------------------------------------------
+    // 1. PIN HEADERS & LEADS (Bottom Connection)
+    // ----------------------------------------------------
+    // Gold/Silver Extension Pins
+    pinXs.forEach(px => {
+      const pinGrad = ctx.createLinearGradient(px - 1, 52, px + 1, 70);
+      pinGrad.addColorStop(0, '#888888');
+      pinGrad.addColorStop(0.5, '#e0e0e0');
+      pinGrad.addColorStop(1, '#666666');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(px - 1, 52, 2, 18);
+    });
+
+    // Black Plastic Header Strip Housing
+    ctx.fillStyle = '#111116';
+    drawRoundRect(5, 50, 140, 5, 1);
     ctx.fill();
-    ctx.strokeStyle = '#3a3a42';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#2d2d35';
+    ctx.lineWidth = 0.5;
     ctx.stroke();
 
-    // Bottom Lead Pins
-    const pinXs = [15, 30, 45, 60, 75];
-    ctx.strokeStyle = '#888888';
-    ctx.lineWidth = 1.5;
-    pinXs.forEach(px => {
-      ctx.beginPath();
-      ctx.moveTo(px, 40);
-      ctx.lineTo(px, 60);
+    // ----------------------------------------------------
+    // 2. MAIN PCB BASE (Matte Black / Slate Finish)
+    // ----------------------------------------------------
+    const pcbGrad = ctx.createLinearGradient(0, 0, 150, 52);
+    pcbGrad.addColorStop(0, '#12161f');
+    pcbGrad.addColorStop(0.5, '#1a202c');
+    pcbGrad.addColorStop(1, '#0f131a');
+    ctx.fillStyle = pcbGrad;
+    drawRoundRect(0, 0, 150, 52, 4);
+    ctx.fill();
+
+    // Outer Edge Chamfer Border
+    ctx.strokeStyle = '#2b3548';
+    ctx.lineWidth = 1;
+    drawRoundRect(0.8, 0.8, 148.4, 50.4, 3.5);
+    ctx.stroke();
+
+    // Corner Mounting Holes with Copper Pads
+    [[4, 4], [146, 4], [4, 48], [146, 48]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#0a0d12';
+      ctx.beginPath(); ctx.arc(hx, hy, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#b8973e'; // Gold ring
+      ctx.lineWidth = 0.8;
       ctx.stroke();
     });
 
-    // Common Cathode (GND) Mark
-    ctx.fillStyle = '#aaaaaa';
-    ctx.font = 'bold 8px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('âˆ’', 75, 53);
+    // ----------------------------------------------------
+    // 3. SILKSCREEN TEXT & COPPER BUS TRACES
+    // ----------------------------------------------------
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = 'bold 5.5px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('8-LED ARRAY', 8, 9);
 
-    // Render Individual LEDs
+    ctx.font = 'bold 4px monospace';
+    ctx.fillStyle = '#81a1c1';
+    ctx.fillText('220Ω INBUILT', 8, 14);
+
+    // Common Cathode Ground Bus Line
+    ctx.strokeStyle = '#3b4252';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(15, 24);
+    ctx.lineTo(135, 24);
+    ctx.lineTo(135, 46);
+    ctx.stroke();
+
+    // Solder Pads around Pin holes
+    pinXs.forEach(px => {
+      ctx.fillStyle = '#b8973e';
+      ctx.beginPath(); ctx.arc(px, 46, 1.8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0f131a';
+      ctx.beginPath(); ctx.arc(px, 46, 0.8, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // ----------------------------------------------------
+    // 4. INBUILT SMD RESISTORS ROW (220Ω - 0805 Package)
+    // ----------------------------------------------------
     leds.forEach(led => {
-      const val = getInstPinState(inst, led.id, sim) || 0;
-      const brightness = val > 1 ? Math.min(val / 255, 1) : Math.max(val, 0);
+      const rx = led.x;
+      const ry = 35;
+
+      // Vertical copper trace connecting LED -> Resistor -> Pin
+      ctx.strokeStyle = '#4c566a';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(rx, 24); ctx.lineTo(rx, 46);
+      ctx.stroke();
+
+      // SMD Resistor Silver End Caps
+      ctx.fillStyle = '#cccccc';
+      ctx.fillRect(rx - 3.2, ry - 1.8, 6.4, 3.6);
+
+      // SMD Resistor Black Body
+      ctx.fillStyle = '#181818';
+      ctx.fillRect(rx - 2.2, ry - 1.8, 4.4, 3.6);
+
+      // "221" SMD Marking (220 Ohms)
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 2.5px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('221', rx, ry + 0.8);
+    });
+
+    // ----------------------------------------------------
+    // 5. INDIVIDUAL LEDS & DYNAMIC GLOW EFFECTS
+    // ----------------------------------------------------
+    leds.forEach(led => {
+      // Pin reading logic with multi-simulator fallback
+      let rawVal = 0;
+      if (typeof getInstPinState === 'function') {
+        rawVal = getInstPinState(inst, led.id, sim) || 0;
+      } else if (sim && sim.pinStates) {
+        rawVal = sim.pinStates[inst.id + '_' + led.id] || 0;
+      }
+
+      const brightness = rawVal > 1 ? Math.min(rawVal / 255, 1) : Math.max(rawVal, 0);
       const isOn = brightness > 0.02;
       const col = led.color;
       const lx = led.x;
-      const ly = 25;
+      const ly = 19;
 
-      // Pin Text Labels
-      ctx.fillStyle = '#aaaaaa';
+      // Pin Silkscreen Label
+      ctx.fillStyle = '#d8dee9';
+      ctx.font = 'bold 4.5px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(led.label, lx, 43);
+
+      // Common Cathode Label at Right
+      ctx.fillStyle = '#e5e9f0';
       ctx.font = 'bold 7px sans-serif';
-      ctx.fillText(led.label, lx, 53);
+      ctx.fillText('−', 135, 43);
 
-      // 1. Ambient Volumetric Glow Halo (When Lit)
+      // --- A. Ambient Volumetric Glow Halo ---
       if (isOn) {
-        const glowRadius = 18 * brightness;
+        ctx.save();
+        const glowRadius = 16 * brightness;
         const halo = ctx.createRadialGradient(lx, ly, 0, lx, ly, glowRadius);
-        halo.addColorStop(0, hexToRgba(col, 0.65 * brightness));
-        halo.addColorStop(0.5, hexToRgba(col, 0.25 * brightness));
+        halo.addColorStop(0, hexToRgba(col, 0.8 * brightness));
+        halo.addColorStop(0.4, hexToRgba(col, 0.35 * brightness));
         halo.addColorStop(1, hexToRgba(col, 0));
         ctx.fillStyle = halo;
         ctx.beginPath();
         ctx.arc(lx, ly, glowRadius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
       }
 
-      // 2. LED Bulb Lens Body
-      ctx.fillStyle = isOn ? hexToRgba(col, 0.9) : hexToRgba(col, 0.3);
-      ctx.beginPath();
-      ctx.arc(lx, ly, 6, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = isOn ? '#ffffff' : hexToRgba(col, 0.6);
-      ctx.lineWidth = 1;
+      // --- B. Metallic LED Base Flange Ring ---
+      ctx.fillStyle = '#222733';
+      ctx.beginPath(); ctx.arc(lx, ly, 5.2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#434c5e';
+      ctx.lineWidth = 0.6;
       ctx.stroke();
 
-      // 3. Bright Specular Highlight Core
+      // --- C. Internal Anode/Cathode Leadframe Anvil ---
+      ctx.fillStyle = isOn ? hexToRgba(col, 0.9) : '#3b4252';
+      ctx.fillRect(lx - 1.5, ly - 0.5, 3, 2);
+
+      // --- D. Epoxy Resin Bulb Lens ---
+      const bulbGrad = ctx.createRadialGradient(lx - 1.5, ly - 1.5, 0.5, lx, ly, 4.5);
       if (isOn) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.beginPath();
-        ctx.arc(lx - 2, ly - 2, 1.8, 0, Math.PI * 2);
-        ctx.fill();
+        bulbGrad.addColorStop(0, '#ffffff');
+        bulbGrad.addColorStop(0.3, col);
+        bulbGrad.addColorStop(1, hexToRgba(col, 0.85));
+      } else {
+        bulbGrad.addColorStop(0, hexToRgba(col, 0.45));
+        bulbGrad.addColorStop(0.7, hexToRgba(col, 0.2));
+        bulbGrad.addColorStop(1, 'rgba(20, 25, 35, 0.8)');
       }
+
+      ctx.fillStyle = bulbGrad;
+      ctx.beginPath();
+      ctx.arc(lx, ly, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = isOn ? '#ffffff' : hexToRgba(col, 0.4);
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+
+      // --- E. Specular Curved Highlight ---
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.beginPath();
+      ctx.arc(lx - 1.5, ly - 1.5, 1.2, 0, Math.PI * 2);
+      ctx.fill();
     });
 
-    if (inst.selected) drawSelectionRect(ctx, -2, 5, 94, 60);
+    // Selection Box Overlay
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -2, -2, 154, 74);
+    }
+
     ctx.restore();
   }
 });
@@ -1623,7 +1887,7 @@ defComp({
 });
 
 /*-------------------ILI9341 2.4" 240x320 TFT LCD display (SPI)------------------- */
-   defComp({
+defComp({
   id: 'ili9341',
   name: 'ILI9341 TFT Display',
   category: 'Output',

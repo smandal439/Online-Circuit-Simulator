@@ -1195,7 +1195,7 @@ defComp({
   }
 });
 
-/* ---------------BME280 / BMP280 â€” Precision Environment Sensor (I2C @ 0x76)-------------------*/
+/* ---------------BME280 / BMP280  Precision Environment Sensor (I2C @ 0x76)-------------------*/
 
 defComp({
   id: 'bme280',
@@ -1355,6 +1355,7 @@ defComp({
 });
 
 /*----------------------VL53L0X  Time-of-Flight Laser Distance Sensor (I2C)--------------*/
+
 defComp({
   id: 'vl53l0x',
   name: 'VL53L0X ToF Sensor',
@@ -1368,8 +1369,8 @@ defComp({
     { field: 'distance', label: 'Dist', min: 0, max: 2000, step: 1, unit: 'mm' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 60, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 60, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER,   x: 8,  y: 60, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND,     x: 20, y: 60, side: 'bottom' },
     { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 32, y: 60, side: 'bottom' },
     { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 44, y: 60, side: 'bottom' },
   ],
@@ -1380,66 +1381,219 @@ defComp({
     ctx.save();
     ctx.translate(x, y);
 
-    // PCB body
-    ctx.fillStyle = '#1a1a2e';
-    roundRect(ctx, 0, 0, 50, 48, 4);
+    // Canvas helper for rounded rectangles
+    const drawRoundRect = (cx, cy, w, h, r) => {
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(cx, cy, w, h, r);
+      } else {
+        ctx.moveTo(cx + r, cy);
+        ctx.lineTo(cx + w - r, cy);
+        ctx.quadraticCurveTo(cx + w, cy, cx + w, cy + r);
+        ctx.lineTo(cx + w, cy + h - r);
+        ctx.quadraticCurveTo(cx + w, cy + h, cx + w - r, cy + h);
+        ctx.lineTo(cx + r, cy + h);
+        ctx.quadraticCurveTo(cx, cy + h, cx, cy + h - r);
+        ctx.lineTo(cx, cy + r);
+        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+      }
+      ctx.closePath();
+    };
+
+    // ----------------------------------------------------
+    // 1. PURPLE PCB BASE (GY-530 Style)
+    // ----------------------------------------------------
+    const pcbGrad = ctx.createLinearGradient(0, 0, 50, 0);
+    pcbGrad.addColorStop(0, '#2d114d');
+    pcbGrad.addColorStop(0.5, '#431973');
+    pcbGrad.addColorStop(1, '#230b3e');
+    ctx.fillStyle = pcbGrad;
+    drawRoundRect(0, 0, 50, 48, 3.5);
     ctx.fill();
 
-    // Laser emitter (left)
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(14, 14, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = dist > 0 ? '#ff3333' : '#331111';
-    ctx.beginPath();
-    ctx.arc(14, 14, 3, 0, Math.PI * 2);
-    ctx.fill();
-    if (dist > 0 && dist < 200) {
-      ctx.shadowColor = '#ff0000';
-      ctx.shadowBlur = 8;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
+    // PCB Gold Chamfer Border & Traces
+    ctx.strokeStyle = '#c5a059';
+    ctx.lineWidth = 0.6;
+    drawRoundRect(0.6, 0.6, 48.8, 46.8, 3);
+    ctx.stroke();
 
-    // Laser receiver (right)
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(36, 14, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#111';
-    ctx.beginPath();
-    ctx.arc(36, 14, 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // VL53L0X chip
-    ctx.fillStyle = '#111';
-    roundRect(ctx, 10, 24, 30, 12, 2);
-    ctx.fill();
-    ctx.fillStyle = '#666';
-    ctx.font = 'bold 4px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('VL53L0X', 25, 32);
-
-    // Distance display
-    ctx.fillStyle = '#0a0a1a';
-    roundRect(ctx, 4, 38, 42, 8, 2);
-    ctx.fill();
-    ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 6px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${dist}mm`, 25, 44);
-
-    // Pin leads
-    ctx.strokeStyle = '#a0a0a0';
-    ctx.lineWidth = 1.5;
-    [8, 20, 32, 44].forEach(px => {
-      ctx.beginPath(); ctx.moveTo(px, 48); ctx.lineTo(px, 60); ctx.stroke();
+    // Corner Mounting Holes with Gold Rings
+    [[4, 4], [46, 4]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#120521';
+      ctx.beginPath(); ctx.arc(hx, hy, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#d4af37';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
     });
 
-    if (inst.selected) drawSelectionRect(ctx, -2, -2, 54, 64);
+    // ----------------------------------------------------
+    // 2. SMD COMPONENTS (Regulator, Resistors, Caps)
+    // ----------------------------------------------------
+    // SOT-23 Voltage Regulator (3.3V LDO)
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(5, 23, 5, 6);
+    // Regulator Leads
+    ctx.fillStyle = '#ccc';
+    ctx.fillRect(4, 24, 1, 1.2);
+    ctx.fillRect(4, 26.8, 1, 1.2);
+    ctx.fillRect(10, 25.4, 1, 1.2);
+
+    // SMD 0603 Resistors & Capacitors Helper
+    const drawSMD = (cx, cy, color, code) => {
+      ctx.fillStyle = '#bbb'; // End caps
+      ctx.fillRect(cx - 2.2, cy - 1, 4.4, 2);
+      ctx.fillStyle = color; // Body
+      ctx.fillRect(cx - 1.5, cy - 1, 3, 2);
+      if (code) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '1.8px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(code, cx, cy + 0.6);
+      }
+    };
+
+    drawSMD(38, 23, '#222', '103');
+    drawSMD(43, 23, '#222', '472');
+    drawSMD(38, 27, '#a88254'); // Brown ceramic capacitor
+    drawSMD(43, 27, '#a88254');
+
+    // Onboard Power LED
+    ctx.fillStyle = '#222';
+    ctx.fillRect(5, 14, 3, 2);
+    ctx.fillStyle = '#33ff77';
+    ctx.fillRect(5.5, 14.3, 2, 1.4);
+
+    // ----------------------------------------------------
+    // 3. VL53L0X OPTICAL SENSOR PACKAGE
+    // ----------------------------------------------------
+    const sensorX = 13;
+    const sensorY = 7;
+    const sensorW = 24;
+    const sensorH = 13;
+
+    // Metallic Sensor Casing Gradient
+    const metalGrad = ctx.createLinearGradient(sensorX, sensorY, sensorX, sensorY + sensorH);
+    metalGrad.addColorStop(0, '#d6d6d6');
+    metalGrad.addColorStop(0.3, '#999999');
+    metalGrad.addColorStop(0.7, '#cccccc');
+    metalGrad.addColorStop(1, '#777777');
+    ctx.fillStyle = metalGrad;
+    drawRoundRect(sensorX, sensorY, sensorW, sensorH, 1.5);
+    ctx.fill();
+
+    // Dark Glass Optical Aperture Window
+    ctx.fillStyle = '#0a0a10';
+    drawRoundRect(sensorX + 2, sensorY + 2, sensorW - 4, sensorH - 4, 1);
+    ctx.fill();
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // --- Left Aperture: VCSEL 940nm Infrared Laser Emitter ---
+    ctx.fillStyle = '#181824';
+    ctx.beginPath(); ctx.arc(19, 13.5, 3.2, 0, Math.PI * 2); ctx.fill();
+
+    const isRanging = dist > 0;
+    // VCSEL Iris & IR Glow Effect
+    ctx.fillStyle = isRanging ? '#ff2255' : '#33111b';
+    ctx.beginPath(); ctx.arc(19, 13.5, 1.8, 0, Math.PI * 2); ctx.fill();
+
+    if (isRanging) {
+      ctx.save();
+      ctx.shadowColor = '#ff0055';
+      ctx.shadowBlur = dist < 300 ? 10 : 5;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(19, 13.5, 0.9, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // --- Right Aperture: SPAD Receiver Array ---
+    ctx.fillStyle = '#181824';
+    ctx.beginPath(); ctx.arc(31, 13.5, 3.2, 0, Math.PI * 2); ctx.fill();
+    // Silicon Photodiode Grid Pattern
+    ctx.fillStyle = '#112233';
+    ctx.fillRect(29.8, 12.3, 2.4, 2.4);
+    ctx.strokeStyle = '#225588';
+    ctx.lineWidth = 0.4;
+    ctx.strokeRect(29.8, 12.3, 2.4, 2.4);
+
+    // Optical Glass Reflection Highlight
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(sensorX + 3, sensorY + 3);
+    ctx.lineTo(sensorX + 8, sensorY + 3);
+    ctx.stroke();
+
+    // ----------------------------------------------------
+    // 4. DIGITAL DISTANCE READOUT DISPLAY
+    // ----------------------------------------------------
+    ctx.fillStyle = '#050a12';
+    drawRoundRect(6, 32, 38, 10, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+
+    // Glowing Matrix Text
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 4;
+    ctx.font = 'bold 6.5px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${dist}mm`, 25, 39.5);
+    ctx.shadowBlur = 0; // Reset glow
+
+    // ----------------------------------------------------
+    // 5. SILKSCREEN & PIN LABELS
+    // ----------------------------------------------------
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 3px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('VL53L0X', 25, 25);
+    ctx.font = '2px sans-serif';
+    ctx.fillText('GY-530', 25, 28);
+
+    // Pin Silkscreen Above Header
+    ctx.font = 'bold 2.5px monospace';
+    ctx.fillText('VCC', 8, 45.5);
+    ctx.fillText('GND', 20, 45.5);
+    ctx.fillText('SCL', 32, 45.5);
+    ctx.fillText('SDA', 44, 45.5);
+
+    // ----------------------------------------------------
+    // 6. HEADER PINS & MALE TERMINALS
+    // ----------------------------------------------------
+    const pinX = [8, 20, 32, 44];
+
+    // Black plastic pin header block
+    ctx.fillStyle = '#111111';
+    drawRoundRect(4, 47, 42, 4, 1);
+    ctx.fill();
+
+    pinX.forEach((px) => {
+      // Gold Solder Contacts
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(px - 1.8, 47.8, 3.6, 2.2);
+
+      // Metallic Header Pins
+      const pinGrad = ctx.createLinearGradient(px - 0.8, 50, px + 0.8, 50);
+      pinGrad.addColorStop(0, '#777');
+      pinGrad.addColorStop(0.5, '#fff');
+      pinGrad.addColorStop(1, '#555');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(px - 0.8, 50, 1.6, 10);
+    });
+
+    // Selection Halo
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -2, -2, 54, 64);
+    }
+
     ctx.restore();
   }
 });
+
 
 /* --------------------------RC522  13.56MHz RFID Reader (SPI)------------------*/
 
@@ -1616,98 +1770,6 @@ defComp({
 });
 
 /*--------------------------  HC-05 Bluetooth Module (UART)  -----------------*/
-// defComp({
-//   id: 'hc05',
-//   name: 'HC-05 Bluetooth',
-//   category: 'Sensors',
-//   icon: 'ᚼᛒ',
-//   desc: 'HC-05 serial-to-Bluetooth transceiver module (UART). For mobile app communication',
-//   width: 50,
-//   height: 70,
-//   defaultProps: { connected: false, rxData: '' },
-//   interactive: [
-//     { field: 'connected', label: 'Conn', min: 0, max: 1, step: 1, unit: '' },
-//     { field: 'rxData', label: 'RX Data', type: 'text' },
-//   ],
-//   pins: [
-//     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 70, side: 'bottom' },
-//     { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 20, y: 70, side: 'bottom' },
-//     { id: 'TXD', label: 'TXD', type: PIN_TYPE.DIGITAL, x: 32, y: 70, side: 'bottom' },
-//     { id: 'RXD', label: 'RXD', type: PIN_TYPE.DIGITAL, x: 44, y: 70, side: 'bottom' },
-//   ],
-//   step(inst, sim) {
-//     if (!sim || !sim.isRunning) return;
-//     const connected = inst.runtimeState?.connected ?? inst.props?.connected ?? false;
-//     if (!connected) return;
-//     const rxData = inst.runtimeState?.rxData ?? inst.props?.rxData ?? '';
-//     if (typeof rxData === 'string' && rxData.length > 0) {
-//       sim.sendSerialInput(rxData);
-//       if (inst.runtimeState) inst.runtimeState.rxData = '';
-//       else inst.props.rxData = '';
-//     }
-//   },
-//   draw(ctx, inst, sim) {
-//     const { x, y } = inst;
-//     const connected = inst.runtimeState?.connected ?? inst.props.connected ?? false;
-
-//     ctx.save();
-//     ctx.translate(x, y);
-
-//     // PCB body
-//     ctx.fillStyle = '#8B1A1A';
-//     roundRect(ctx, 0, 0, 50, 58, 4);
-//     ctx.fill();
-
-//     // Bluetooth antenna
-//     ctx.strokeStyle = '#c8a452';
-//     ctx.lineWidth = 2;
-//     ctx.beginPath();
-//     ctx.moveTo(40, 8);
-//     ctx.lineTo(40, 20);
-//     ctx.quadraticCurveTo(40, 28, 32, 28);
-//     ctx.stroke();
-
-//     // HC-05 chip
-//     ctx.fillStyle = '#111';
-//     roundRect(ctx, 8, 12, 24, 16, 2);
-//     ctx.fill();
-//     ctx.fillStyle = '#666';
-//     ctx.font = 'bold 4px monospace';
-//     ctx.textAlign = 'center';
-//     ctx.fillText('HC-05', 20, 22);
-
-//     // Status LED
-//     ctx.fillStyle = connected ? '#00ff00' : '#ff0000';
-//     ctx.beginPath();
-//     ctx.arc(40, 36, 3, 0, Math.PI * 2);
-//     ctx.fill();
-//     if (connected) {
-//       ctx.shadowColor = '#00ff00';
-//       ctx.shadowBlur = 6;
-//       ctx.fill();
-//       ctx.shadowBlur = 0;
-//     }
-
-//     // Connection status
-//     ctx.fillStyle = '#0a0a1a';
-//     roundRect(ctx, 4, 40, 42, 12, 2);
-//     ctx.fill();
-//     ctx.fillStyle = connected ? '#00ff88' : '#ff4444';
-//     ctx.font = 'bold 5px monospace';
-//     ctx.textAlign = 'center';
-//     ctx.fillText(connected ? 'CONNECTED' : 'PAIRING...', 25, 48);
-
-//     // Pin leads
-//     ctx.strokeStyle = '#a0a0a0';
-//     ctx.lineWidth = 1.5;
-//     [8, 20, 32, 44].forEach(px => {
-//       ctx.beginPath(); ctx.moveTo(px, 58); ctx.lineTo(px, 70); ctx.stroke();
-//     });
-
-//     if (inst.selected) drawSelectionRect(ctx, -2, -2, 54, 74);
-//     ctx.restore();
-//   }
-// });
 
 defComp({
   id: 'hc05',

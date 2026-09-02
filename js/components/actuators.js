@@ -89,90 +89,90 @@ defComp({
 
 
 /* ─── Electromagnetic Relay ─── */
-defComp({
-  id: 'relay',
-  name: 'Relay Module',
-  category: 'Actuators',
-  icon: '⚡',
-  desc: 'Electromagnetic relay — a digital signal switches COM between NO and NC contacts',
-  width: 90,
-  height: 50,
-  defaultProps: { label: 'RELAY' },
-  pins: [
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 50, side: 'bottom' },
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 24, y: 50, side: 'bottom' },
-    { id: 'sig', label: 'IN', type: PIN_TYPE.DIGITAL, x: 36, y: 50, side: 'bottom' },
-    { id: 'com', label: 'COM', type: PIN_TYPE.SIGNAL, x: 54, y: 50, side: 'bottom' },
-    { id: 'no', label: 'NO', type: PIN_TYPE.SIGNAL, x: 66, y: 50, side: 'bottom' },
-    { id: 'nc', label: 'NC', type: PIN_TYPE.SIGNAL, x: 78, y: 50, side: 'bottom' },
-  ],
-  draw(ctx, inst, sim) {
-    const { x, y } = inst;
-    const active = inst.runtimeState && inst.runtimeState.active;
+// defComp({
+//   id: 'relay',
+//   name: 'Relay Module',
+//   category: 'Actuators',
+//   icon: '⚡',
+//   desc: 'Electromagnetic relay — a digital signal switches COM between NO and NC contacts',
+//   width: 90,
+//   height: 50,
+//   defaultProps: { label: 'RELAY' },
+//   pins: [
+//     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 50, side: 'bottom' },
+//     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 24, y: 50, side: 'bottom' },
+//     { id: 'sig', label: 'IN', type: PIN_TYPE.DIGITAL, x: 36, y: 50, side: 'bottom' },
+//     { id: 'com', label: 'COM', type: PIN_TYPE.SIGNAL, x: 54, y: 50, side: 'bottom' },
+//     { id: 'no', label: 'NO', type: PIN_TYPE.SIGNAL, x: 66, y: 50, side: 'bottom' },
+//     { id: 'nc', label: 'NC', type: PIN_TYPE.SIGNAL, x: 78, y: 50, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const active = inst.runtimeState && inst.runtimeState.active;
 
-    ctx.save();
-    ctx.translate(x, y);
+//     ctx.save();
+//     ctx.translate(x, y);
 
-    // Pin leads
-    ctx.strokeStyle = '#c8a84b';
-    ctx.lineWidth = 1.5;
-    [12, 24, 36, 54, 66, 78].forEach(px => {
-      ctx.beginPath(); ctx.moveTo(px, 44); ctx.lineTo(px, 50); ctx.stroke();
-    });
+//     // Pin leads
+//     ctx.strokeStyle = '#c8a84b';
+//     ctx.lineWidth = 1.5;
+//     [12, 24, 36, 54, 66, 78].forEach(px => {
+//       ctx.beginPath(); ctx.moveTo(px, 44); ctx.lineTo(px, 50); ctx.stroke();
+//     });
 
-    // Body
-    const bodyGrad = ctx.createLinearGradient(0, 4, 90, 46);
-    bodyGrad.addColorStop(0, '#3d4a5a');
-    bodyGrad.addColorStop(1, '#1c2530');
-    ctx.fillStyle = bodyGrad;
-    roundRect(ctx, 2, 4, 86, 40, 5);
-    ctx.fill();
-    ctx.strokeStyle = '#55677a';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+//     // Body
+//     const bodyGrad = ctx.createLinearGradient(0, 4, 90, 46);
+//     bodyGrad.addColorStop(0, '#3d4a5a');
+//     bodyGrad.addColorStop(1, '#1c2530');
+//     ctx.fillStyle = bodyGrad;
+//     roundRect(ctx, 2, 4, 86, 40, 5);
+//     ctx.fill();
+//     ctx.strokeStyle = '#55677a';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
 
-    // Coil (left) — inductor loops
-    ctx.strokeStyle = '#ffd24a';
-    ctx.lineWidth = 2;
-    const coilY = 22;
-    ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-      const cx = 14 + i * 5;
-      ctx.moveTo(cx, coilY + 3);
-      ctx.arc(cx, coilY, 3, 0, Math.PI);
-    }
-    ctx.stroke();
+//     // Coil (left) — inductor loops
+//     ctx.strokeStyle = '#ffd24a';
+//     ctx.lineWidth = 2;
+//     const coilY = 22;
+//     ctx.beginPath();
+//     for (let i = 0; i < 4; i++) {
+//       const cx = 14 + i * 5;
+//       ctx.moveTo(cx, coilY + 3);
+//       ctx.arc(cx, coilY, 3, 0, Math.PI);
+//     }
+//     ctx.stroke();
 
-    // Signal LED indicator
-    ctx.fillStyle = active ? '#33ff66' : '#335533';
-    ctx.beginPath(); ctx.arc(26, 22, 3.5, 0, Math.PI * 2); ctx.fill();
-    if (active) { ctx.shadowColor = '#33ff66'; ctx.shadowBlur = 6; }
-    ctx.beginPath(); ctx.arc(26, 22, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
+//     // Signal LED indicator
+//     ctx.fillStyle = active ? '#33ff66' : '#335533';
+//     ctx.beginPath(); ctx.arc(26, 22, 3.5, 0, Math.PI * 2); ctx.fill();
+//     if (active) { ctx.shadowColor = '#33ff66'; ctx.shadowBlur = 6; }
+//     ctx.beginPath(); ctx.arc(26, 22, 3.5, 0, Math.PI * 2); ctx.fill();
+//     ctx.shadowBlur = 0;
 
-    // Contacts: COM terminal at right, lever swings between NO / NC
-    ctx.fillStyle = '#999';
-    ctx.fillRect(48, 20, 4, 4);   // COM fixed contact
-    ctx.fillRect(active ? 60 : 72, 12, 4, 4);  // NO (top) or NC (bottom) contact
-    // Moving lever
-    ctx.strokeStyle = active ? '#33ff66' : '#cc3333';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(50, 22);
-    ctx.lineTo(active ? 62 : 74, active ? 14 : 30);
-    ctx.stroke();
+//     // Contacts: COM terminal at right, lever swings between NO / NC
+//     ctx.fillStyle = '#999';
+//     ctx.fillRect(48, 20, 4, 4);   // COM fixed contact
+//     ctx.fillRect(active ? 60 : 72, 12, 4, 4);  // NO (top) or NC (bottom) contact
+//     // Moving lever
+//     ctx.strokeStyle = active ? '#33ff66' : '#cc3333';
+//     ctx.lineWidth = 2;
+//     ctx.beginPath();
+//     ctx.moveTo(50, 22);
+//     ctx.lineTo(active ? 62 : 74, active ? 14 : 30);
+//     ctx.stroke();
 
-    // Labels
-    ctx.fillStyle = '#aab4c0';
-    ctx.font = 'bold 7px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(active ? 'ON' : 'OFF', 72, 42);
-    ctx.fillText('RELAY', 40, 10);
+//     // Labels
+//     ctx.fillStyle = '#aab4c0';
+//     ctx.font = 'bold 7px sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText(active ? 'ON' : 'OFF', 72, 42);
+//     ctx.fillText('RELAY', 40, 10);
 
-    if (inst.selected) drawSelectionRect(ctx, -3, 2, 96, 55);
-    ctx.restore();
-  }
-});
+//     if (inst.selected) drawSelectionRect(ctx, -3, 2, 96, 55);
+//     ctx.restore();
+//   }
+// });
 
 
 // defComp({
@@ -642,6 +642,274 @@ defComp({
 //   }
 // });
 
+
+defComp({
+  id: 'relay',
+  name: 'Relay Module',
+  category: 'Actuators',
+  icon: '⚡',
+  desc: 'Electromagnetic relay module (Songle 5V) — digital signal switches COM between NO and NC contacts',
+  width: 90,
+  height: 60,
+  defaultProps: { label: 'RELAY' },
+  pins: [
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 12, y: 60, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 24, y: 60, side: 'bottom' },
+    { id: 'sig', label: 'IN',  type: PIN_TYPE.DIGITAL, x: 36, y: 60, side: 'bottom' },
+    { id: 'com', label: 'COM', type: PIN_TYPE.SIGNAL,  x: 54, y: 60, side: 'bottom' },
+    { id: 'no',  label: 'NO',  type: PIN_TYPE.SIGNAL,  x: 66, y: 60, side: 'bottom' },
+    { id: 'nc',  label: 'NC',  type: PIN_TYPE.SIGNAL,  x: 78, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const active = !!(inst.runtimeState && inst.runtimeState.active);
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Canvas helper for rounded rectangles
+    const drawRoundRect = (cx, cy, w, h, r) => {
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(cx, cy, w, h, r);
+      } else {
+        ctx.moveTo(cx + r, cy);
+        ctx.lineTo(cx + w - r, cy);
+        ctx.quadraticCurveTo(cx + w, cy, cx + w, cy + r);
+        ctx.lineTo(cx + w, cy + h - r);
+        ctx.quadraticCurveTo(cx + w, cy + h, cx + w - r, cy + h);
+        ctx.lineTo(cx + r, cy + h);
+        ctx.quadraticCurveTo(cx, cy + h, cx, cy + h - r);
+        ctx.lineTo(cx, cy + r);
+        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+      }
+      ctx.closePath();
+    };
+
+    // ----------------------------------------------------
+    // 1. BASE MODULE PCB (Blue Mask)
+    // ----------------------------------------------------
+    const pcbGrad = ctx.createLinearGradient(0, 0, 90, 0);
+    pcbGrad.addColorStop(0, '#0f3860');
+    pcbGrad.addColorStop(0.5, '#1b5288');
+    pcbGrad.addColorStop(1, '#0c2e50');
+    ctx.fillStyle = pcbGrad;
+    drawRoundRect(0, 0, 90, 48, 3.5);
+    ctx.fill();
+
+    // PCB Edge Chamfer Line
+    ctx.strokeStyle = '#2d72b8';
+    ctx.lineWidth = 0.8;
+    drawRoundRect(0.6, 0.6, 88.8, 46.8, 3);
+    ctx.stroke();
+
+    // Corner Mounting Holes with Copper Rings
+    [[4, 4], [86, 4], [4, 44], [86, 44]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#061320';
+      ctx.beginPath(); ctx.arc(hx, hy, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#d4af37'; // Gold copper ring
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    });
+
+    // ----------------------------------------------------
+    // 2. SONGLE BLUE RELAY CUBE
+    // ----------------------------------------------------
+    const rX = 38, rY = 5, rW = 48, rH = 28;
+
+    // Relay Casing Gradient
+    const relayGrad = ctx.createLinearGradient(rX, rY, rX, rY + rH);
+    relayGrad.addColorStop(0, '#2b82d9');
+    relayGrad.addColorStop(0.3, '#1a6ec7');
+    relayGrad.addColorStop(1, '#0e4e93');
+    ctx.fillStyle = relayGrad;
+    drawRoundRect(rX, rY, rW, rH, 2);
+    ctx.fill();
+
+    // Top Bevel Highlight on Relay Box
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(rX + 2, rY + 1);
+    ctx.lineTo(rX + rW - 2, rY + 1);
+    ctx.stroke();
+
+    // Songle Relay Silk Markings
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 4.5px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('SONGLE', rX + 4, rY + 8);
+
+    ctx.font = '3px monospace';
+    ctx.fillText('SRD-05VDC-SL-C', rX + 4, rY + 14);
+    ctx.font = '2.5px sans-serif';
+    ctx.fillStyle = '#d0e4ff';
+    ctx.fillText('10A 250VAC  10A 30VDC', rX + 4, rY + 20);
+    ctx.fillText('10A 125VAC  10A 28VDC', rX + 4, rY + 24);
+
+    // ----------------------------------------------------
+    // 3. OPTOCOUPLER & CONTROL CIRCUITRY (Left Side)
+    // ----------------------------------------------------
+    // Optocoupler IC (EL817 4-Pin DIP Package)
+    ctx.fillStyle = '#1c1d21';
+    drawRoundRect(14, 6, 12, 10, 1);
+    ctx.fill();
+    ctx.fillStyle = '#7a7e85';
+    ctx.font = 'bold 2.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('817C', 20, 12);
+    // Pin 1 Dot
+    ctx.beginPath(); ctx.arc(16, 8, 0.6, 0, Math.PI * 2); ctx.fill();
+
+    // Flyback Diode & Driver Transistor (SOT-23)
+    ctx.fillStyle = '#111';
+    ctx.fillRect(8, 22, 5, 3); // SMD Diode
+    ctx.fillStyle = '#ccc';
+    ctx.fillRect(8, 22, 1, 3); // Diode cathode bar
+
+    ctx.fillStyle = '#181818';
+    ctx.fillRect(18, 22, 6, 4); // SOT-23 Transistor
+
+    // High/Low Trigger Selection Jumper Block
+    ctx.fillStyle = '#111';
+    ctx.fillRect(28, 6, 6, 10);
+    // Gold pins
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(30, 8, 2, 1.5);
+    ctx.fillRect(30, 11, 2, 1.5);
+    ctx.fillRect(30, 14, 2, 1.5);
+    // Yellow Jumper Cap (Default to Low Level Trigger)
+    ctx.fillStyle = '#f5c518';
+    drawRoundRect(29, 7.5, 4, 4.5, 0.8);
+    ctx.fill();
+
+    // ----------------------------------------------------
+    // 4. POWER & RELAY STATUS LEDs
+    // ----------------------------------------------------
+    // Power LED (Green - Always ON when board receives power)
+    ctx.fillStyle = '#222';
+    drawRoundRect(6, 32, 4, 3, 0.8);
+    ctx.fill();
+    ctx.fillStyle = '#00ff66';
+    ctx.beginPath(); ctx.arc(8, 33.5, 1, 0, Math.PI * 2); ctx.fill();
+
+    // Relay Active LED (Red / Green Glow when active)
+    ctx.fillStyle = '#222';
+    drawRoundRect(28, 32, 4, 3, 0.8);
+    ctx.fill();
+
+    ctx.fillStyle = active ? '#ff3333' : '#441111';
+    ctx.beginPath(); ctx.arc(30, 33.5, 1, 0, Math.PI * 2); ctx.fill();
+
+    if (active) {
+      ctx.save();
+      ctx.shadowColor = '#ff3333';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(30, 33.5, 0.8, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // ----------------------------------------------------
+    // 5. BLUE HIGH-VOLTAGE SCREW TERMINAL BLOCK
+    // ----------------------------------------------------
+    const termX = 48, termY = 35, termW = 38, termH = 12;
+
+    const termGrad = ctx.createLinearGradient(termX, termY, termX, termY + termH);
+    termGrad.addColorStop(0, '#1d8142');
+    termGrad.addColorStop(0.5, '#156131');
+    termGrad.addColorStop(1, '#0e4221');
+    ctx.fillStyle = termGrad;
+    drawRoundRect(termX, termY, termW, termH, 1.5);
+    ctx.fill();
+
+    // Metallic Terminal Screws
+    [54, 66, 78].forEach((sx) => {
+      // Metal Housing Entry
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(sx, termY + 5, 2.5, 0, Math.PI * 2); ctx.fill();
+
+      // Silver Screw Head
+      const screwGrad = ctx.createLinearGradient(sx - 2, termY + 3, sx + 2, termY + 7);
+      screwGrad.addColorStop(0, '#e0e0e0');
+      screwGrad.addColorStop(1, '#888888');
+      ctx.fillStyle = screwGrad;
+      ctx.beginPath(); ctx.arc(sx, termY + 5, 2, 0, Math.PI * 2); ctx.fill();
+
+      // Screw Slot (+)
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(sx - 1.2, termY + 5); ctx.lineTo(sx + 1.2, termY + 5);
+      ctx.moveTo(sx, termY + 3.8);     ctx.lineTo(sx, termY + 6.2);
+      ctx.stroke();
+    });
+
+    // ----------------------------------------------------
+    // 6. SILKSCREEN LABELS
+    // ----------------------------------------------------
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 3px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('PWR', 8, 38);
+    ctx.fillText('IN_LED', 30, 38);
+
+    // Terminal Block Labels
+    ctx.font = 'bold 3px monospace';
+    ctx.fillText('COM', 54, 33);
+    ctx.fillText('NO', 66, 33);
+    ctx.fillText('NC', 78, 33);
+
+    // Input Pin Labels
+    ctx.fillText('VCC', 12, 45);
+    ctx.fillText('GND', 24, 45);
+    ctx.fillText('IN', 36, 45);
+
+    // ----------------------------------------------------
+    // 7. HEADER PINS & TERMINAL CONNECTIONS
+    // ----------------------------------------------------
+    // Control Male Header Pins (VCC, GND, IN)
+    ctx.fillStyle = '#111111';
+    drawRoundRect(8, 47, 32, 4, 1);
+    ctx.fill();
+
+    [12, 24, 36].forEach((px) => {
+      // Golden Solder Contact Pad
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(px - 1.8, 47.8, 3.6, 2);
+
+      // Gold Header Pin Extension
+      const pinGrad = ctx.createLinearGradient(px - 0.8, 50, px + 0.8, 50);
+      pinGrad.addColorStop(0, '#888');
+      pinGrad.addColorStop(0.5, '#fff');
+      pinGrad.addColorStop(1, '#666');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(px - 0.8, 50, 1.6, 10);
+    });
+
+    // Terminal Output Leads (COM, NO, NC)
+    [54, 66, 78].forEach((px) => {
+      // Golden Solder Contact Pad
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(px - 1.8, 47.8, 3.6, 2);
+
+      // Screw Wire Entry Leads
+      const leadGrad = ctx.createLinearGradient(px - 1, 50, px + 1, 50);
+      leadGrad.addColorStop(0, '#555');
+      leadGrad.addColorStop(0.5, '#aaa');
+      leadGrad.addColorStop(1, '#444');
+      ctx.fillStyle = leadGrad;
+      ctx.fillRect(px - 1, 50, 2, 10);
+    });
+
+    // Selection Halo
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -2, -2, 94, 64);
+    }
+
+    ctx.restore();
+  }
+});
 
 defComp({
   id: 'dc_motor',
