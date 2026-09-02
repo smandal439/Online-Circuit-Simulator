@@ -446,7 +446,8 @@ class ArduinoSimulator {
     js = js.replace(/\bCHSV\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.chsvNew($2)');
     js = js.replace(/\bTWhite\b/g, '255');
 
-    // Adafruit NeoPixel library
+    // Adafruit NeoPixel library — handle both constructor and assignment syntax
+    js = js.replace(/\bAdafruit_NeoPixel\s+(\w+)\s*=\s*Adafruit_NeoPixel\s*\(([^)]+)\)/g, 'var $1 = _a.neopixelNew($2)');
     js = js.replace(/\bAdafruit_NeoPixel\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.neopixelNew($2)');
     js = js.replace(/\b(\w+)\.show\s*\(/g, function (match, varName) {
       if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
