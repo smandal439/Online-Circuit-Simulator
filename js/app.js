@@ -174,7 +174,7 @@ class App {
     shortcutsBtn?.addEventListener('click', () => this._showModal('modal-shortcuts'));
     const homeBtn = get('btn-home');
     homeBtn?.addEventListener('click', () => {
-      window.open('ArduSim_Guide.html', '_blank');
+      window.open('docs/ArduSim_Guide.html', '_blank');
       window.GuideManager?.open('home');
     });
     const remoteBtn = get('btn-remote');
@@ -197,7 +197,7 @@ class App {
     const helpProjectGuide = get('btn-help-project-guide');
     helpProjectGuide?.addEventListener('click', () => {
       this._closeHeaderDropdowns();
-      window.open('ArduSim_Guide.html', '_blank');
+      window.open('docs/ArduSim_Guide.html', '_blank');
     });
     const guideLaunch = get('guide-launch');
     guideLaunch?.addEventListener('click', () => window.GuideManager?.close());
@@ -2587,7 +2587,7 @@ _newProject() {
         window.GuideManager?.open('home');
         break;
       case 'project-guide':
-        window.open('ArduSim_Guide.html', '_blank');
+        window.open('docs/ArduSim_Guide.html', '_blank');
         break;
     }
   }

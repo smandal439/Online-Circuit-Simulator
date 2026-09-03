@@ -10,6 +10,7 @@ const BASE = self.registration.scope.replace(/\/[^/]*$/, '/');
 const STATIC_ASSETS = [
   '',
   'index.html',
+  'docs/ArduSim_Guide.html',
   'css/style.css',
   'js/app.js',
   'js/components/audio.js',

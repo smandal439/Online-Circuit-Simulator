@@ -1828,7 +1828,7 @@ class GuideManager {
     bind('#gh-go-sim2', () => this.close());
     bind('#gh-go-comp', closeAnd('components'));
     bind('#gh-go-tut', closeAnd('tutorials'));
-    bind('#gh-go-guide', () => window.open('ArduSim_Guide.html', '_blank'));
+    bind('#gh-go-guide', () => window.open('docs/ArduSim_Guide.html', '_blank'));
   }
 
   /* ── Component reference ── */

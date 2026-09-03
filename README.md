@@ -194,7 +194,15 @@ No build step or Node.js environment is required. You can host this static web a
 │   ├── components/     # Component definitions (boards, LEDs, sensors, etc.)
 │   └── utils.js        # Shared helpers
 ├── Examples/           # Example project JSON files
+├── circuits/            # Circuit JSON data used by examples
+├── projects/
+│   └── saved/           # User-exported/saved project JSON snapshots
+├── docs/
+│   ├── ArduSim_Guide.html       # Detailed architecture and usage guide
+│   ├── PLAN_dso_fullscreen.md   # DSO implementation plan
+│   └── dso-implementation-notes.txt
 ├── server.js           # Node.js backend (optional, for saved projects)
+├── data/                # Runtime SQLite database (created by server.js)
 ├── sw.js               # Service worker for PWA
 └── manifest.json       # PWA manifest
 ```
