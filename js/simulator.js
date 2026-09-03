@@ -144,6 +144,8 @@ class ArduinoSimulator {
     js = js.replace(/\bsizeof\s*\((\w+)\)/g, '$1.length');
     // Arduino String .c_str() → already a JS string, just strip
     js = js.replace(/\.\s*c_str\s*\(\s*\)/g, '');
+    // Preserve C++ integer division for common clock field calculations.
+    js = js.replace(/\blet\s+(hours|minutes)\s*=\s*([^;\n]+?)\s*\/\s*(\d+)\s*;/g, 'let $1 = Number.parseInt(($2) / $3, 10);');
     js = js.replace(/\bfalse\b/g, 'false');
 
     // Strip leftover C storage/qualifier keywords that are invalid JS
@@ -1290,13 +1292,17 @@ class ArduinoSimulator {
           }
           self._lcdCursor = { col: Number(col) || 0, row: Number(row) || 0 };
         },
-        lcdPrint(varName, val) {
+        lcdPrint(varName, val, decimals) {
           if (varName && varName._ssId) {
             const ch = self._softSerial && self._softSerial[varName._ssId];
             if (ch) { self._serialLog(String(val) + '\n', 'data'); }
             return;
           }
-          const text = String(val);
+          const numericValue = typeof val === 'number' ? val : Number(val);
+          const hasNumericValue = typeof val === 'number' || (typeof val === 'string' && val.trim() !== '' && Number.isFinite(numericValue));
+          const text = hasNumericValue && Number.isFinite(numericValue) && !Number.isInteger(numericValue)
+            ? numericValue.toFixed(Number.isFinite(Number(decimals)) ? Math.max(0, Math.min(6, Number(decimals))) : 2)
+            : String(val);
           // TFT (Adafruit_ILI9341): cursor in pixels, sized by setTextSize()
           if (varName && varName.__tft) {
             const cursor = self._tftCursor || { col: 0, row: 0 };
@@ -2894,7 +2900,16 @@ class ArduinoSimulator {
 
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
-      source.connect(ctx.destination);
+      if (!this._i2sOutputGain) {
+        this._i2sOutputGain = ctx.createGain();
+        this._i2sOutputGain.gain.value = 0.55;
+        this._i2sOutputFilter = ctx.createBiquadFilter();
+        this._i2sOutputFilter.type = 'lowpass';
+        this._i2sOutputFilter.frequency.value = 12000;
+        this._i2sOutputGain.connect(this._i2sOutputFilter);
+        this._i2sOutputFilter.connect(ctx.destination);
+      }
+      source.connect(this._i2sOutputGain);
       source.start(this._i2sNextAudioTime);
       this._i2sNextAudioTime += audioBuffer.duration;
     } catch (e) { }
