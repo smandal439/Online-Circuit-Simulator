@@ -2017,14 +2017,34 @@ class ArduinoSimulator {
         httpSetTimeout(obj, ms) { obj._timeout = ms; },
         httpGet(obj) {
           self._serialLog('[HTTP] GET ' + obj._url + '\n', 'system');
-          const sr = 44100, dur = 3, channels = 2, bps = 2;
+          // Attempt a real fetch to check reachability (CORS may block it)
+          const url = obj._url;
+          if (url && url.startsWith('http')) {
+            fetch(url, { mode: 'no-cors', method: 'HEAD' }).then(() => {
+              self._serialLog('[HTTP] Server reachable: ' + url + '\n', 'system');
+            }).catch(() => {
+              self._serialLog('[HTTP] Using simulated audio (CORS/network)\n', 'system');
+            });
+          }
+          // Generate synthetic radio-like audio: 10 seconds, layered tones
+          const sr = 44100, dur = 10, channels = 2, bps = 2;
           const totalSamples = sr * dur * channels;
           const buf = new ArrayBuffer(totalSamples * bps);
           const view = new Int16Array(buf);
-          const freq = 440;
           for (let i = 0; i < totalSamples; i += 2) {
             const t = (i / 2) / sr;
-            const s = Math.round(16000 * Math.sin(2 * Math.PI * freq * t));
+            // Layered tones to sound like a music broadcast
+            let s = 0;
+            s += 6000 * Math.sin(2 * Math.PI * 262 * t);  // C4
+            s += 4000 * Math.sin(2 * Math.PI * 330 * t);  // E4
+            s += 3000 * Math.sin(2 * Math.PI * 392 * t);  // G4
+            s += 2000 * Math.sin(2 * Math.PI * 523 * t);  // C5
+            s += 1500 * Math.sin(2 * Math.PI * 659 * t);  // E5
+            // Subtle vibrato
+            s *= 1 + 0.03 * Math.sin(2 * Math.PI * 5 * t);
+            // Fade in/out
+            const env = Math.min(t * 4, 1) * Math.min((dur - t) * 4, 1);
+            s = Math.round(Math.max(-32000, Math.min(32000, s * env)));
             view[i] = s;
             view[i + 1] = s;
           }
