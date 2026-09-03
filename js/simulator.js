@@ -95,6 +95,10 @@ class ArduinoSimulator {
     js = js.replace(/\bconst\s+let\b/g, 'let');
     js = js.replace(/\bconst\s+var\b/g, 'var');
     js = js.replace(/\bconst\s+async\b/g, 'async');
+    // Strip const before type keywords: const int x = 5; → int x = 5;
+    js = js.replace(/\bconst\s+((?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|char|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|size_t))\b/g, '$1');
+    // char* name[] = { ... } → var name = [ ... ]  (C-style string array)
+    js = js.replace(/\bchar\s*\*\s+(\w+)\s*\[\s*\]\s*=\s*\{([^}]*)\}/g, 'var $1 = [$2]');
 
     // C++ pointer dereference: stream->method() → stream.method()
     js = js.replace(/->/g, '.');
@@ -124,6 +128,8 @@ class ArduinoSimulator {
     js = js.replace(/let\s+(\w+)\s*\[\s*\]\s*=\s*\{([^}]*)\}/g, 'let $1 = [$2]');
     js = js.replace(/let\s+(\w+)\s*\[(\d+)\](?!\s*=)/g, 'let $1 = new Array($2).fill(0)');
     js = js.replace(/let\s+(\w+)\s*\[\s*\](?!\s*=)/g, 'let $1 = []');
+    // Also handle var arrays (from pointer/const stripping): var arr[] = {...} → var arr = [...]
+    js = js.replace(/var\s+(\w+)\s*\[\s*\]\s*=\s*\{([^}]*)\}/g, 'var $1 = [$2]');
     // C-style char arrays with string literals: char str[20] = "hi"; / char msg[] = "hi";
     js = js.replace(/let\s+(\w+)\s*\[\s*\d*\s*\]\s*=\s*("[^"]*"|'[^']*')/g, 'let $1 = $2');
     // Pointer declarations: WiFiClient* stream = ... → var stream = ...
