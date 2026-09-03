@@ -635,7 +635,7 @@ class ArduinoSimulator {
     js = js.replace(/\bi2s_zero_dma_buffer\s*\(/g, '_a.i2sZeroDma(');
     // Convert &ref args in I2S calls to reference objects: &bytesWritten → __i2sRef1
     // then read back after: bytesWritten = __i2sRef1.val
-    js = js.replace(/(_a\.i2s\w+)\s*\(([^)]*)\)/g, (_, fn, args) => {
+    js = js.replace(/(await\s+)?(_a\.i2s\w+)\s*\(([^)]*)\)/g, (_, awaitPrefix, fn, args) => {
       let refCount = 0;
       const refNames = [];
       const newArgs = args.replace(/&\s*(\w+)/g, (m, refName) => {
@@ -648,7 +648,7 @@ class ArduinoSimulator {
       for (const r of refNames) {
         prefix += 'var ' + r.ref + '={val:0};';
       }
-      let result = fn + '(' + newArgs + ')';
+      let result = (awaitPrefix || '') + fn + '(' + newArgs + ')';
       for (const r of refNames) {
         result += ';' + r.var + '=' + r.ref + '.val';
       }
@@ -2102,8 +2102,9 @@ class ArduinoSimulator {
             ' LRCK=' + (pins.ws_io_num ?? pins.ws ?? '?') +
             ' DOUT=' + (pins.data_out_num ?? pins.dout ?? '?') + '\n', 'system');
         },
-        i2sWrite(port, buf, len, written, timeout) {
+        async i2sWrite(port, buf, len, written, timeout) {
           if (written) written.val = len;
+          self._playI2SAudio(buf, len);
           // Feed audio amplitude to the DIN pin of any connected MAX98357A
           try {
             const cc = window.CircuitCanvas;
@@ -2133,6 +2134,8 @@ class ArduinoSimulator {
               }
             }
           } catch (e) { /* ignore — no circuit canvas available */ }
+          const playbackMs = Math.max(1, (Number(len) / 4) / 44100 * 1000 / Math.max(0.01, self.speed));
+          await new Promise(resolve => setTimeout(resolve, playbackMs));
           return len;
         },
         i2sZeroDma(port) { },
@@ -2590,6 +2593,7 @@ class ArduinoSimulator {
 
     this.isRunning = true;
     this.isPaused = false;
+    this._resumeAudio();
     const runId = ++this._runSeq;
 
     const { keys, vals, fn } = this._compiledCtx;
@@ -2657,6 +2661,7 @@ class ArduinoSimulator {
   stop() {
     this.isRunning = false;
     this.isPaused = false;
+    this._i2sNextAudioTime = 0;
     this._runSeq++;
     // Close any live MQTT connections
     for (const c of this._mqttOpen) {
@@ -2846,6 +2851,53 @@ class ArduinoSimulator {
         this._toneCtx = new (window.AudioContext || window.webkitAudioContext)();
       } catch (e) { }
     }
+  }
+
+  _resumeAudio() {
+    this._initAudio();
+    if (this._toneCtx && this._toneCtx.state === 'suspended') {
+      this._toneCtx.resume().catch(() => { });
+    }
+  }
+
+  _playI2SAudio(buf, len) {
+    this._resumeAudio();
+    const ctx = this._toneCtx;
+    if (!ctx || !buf || len < 4 || ctx.state !== 'running') return;
+
+    try {
+      let byteView;
+      if (buf instanceof ArrayBuffer) {
+        byteView = new Uint8Array(buf, 0, Math.min(len, buf.byteLength));
+      } else if (ArrayBuffer.isView(buf)) {
+        byteView = new Uint8Array(buf.buffer, buf.byteOffset, Math.min(len, buf.byteLength));
+      } else if (Array.isArray(buf)) {
+        byteView = Uint8Array.from(buf.slice(0, len));
+      } else {
+        return;
+      }
+      const sampleCount = Math.floor(byteView.byteLength / 4);
+      const audioBuffer = ctx.createBuffer(2, sampleCount, 44100);
+      const left = audioBuffer.getChannelData(0);
+      const right = audioBuffer.getChannelData(1);
+      const view = new DataView(byteView.buffer, byteView.byteOffset, byteView.byteLength);
+      for (let i = 0; i < sampleCount; i++) {
+        left[i] = view.getInt16(i * 4, true) / 32768;
+        right[i] = view.getInt16(i * 4 + 2, true) / 32768;
+      }
+
+      const now = ctx.currentTime;
+      if (!this._i2sNextAudioTime || this._i2sNextAudioTime < now) {
+        this._i2sNextAudioTime = now + 0.02;
+      }
+      if (this._i2sNextAudioTime - now > 0.5) return;
+
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      source.start(this._i2sNextAudioTime);
+      this._i2sNextAudioTime += audioBuffer.duration;
+    } catch (e) { }
   }
 
   _startTone(key, freq) {
