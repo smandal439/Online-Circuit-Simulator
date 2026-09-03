@@ -633,8 +633,27 @@ class ArduinoSimulator {
     js = js.replace(/\bi2s_set_pin\s*\(/g, '_a.i2sSetPin(');
     js = js.replace(/\bi2s_write\s*\(/g, 'await _a.i2sWrite(');
     js = js.replace(/\bi2s_zero_dma_buffer\s*\(/g, '_a.i2sZeroDma(');
-    // Strip & from I2S function arguments: &i2s_config → i2s_config
-    js = js.replace(/(_a\.i2s\w+)\s*\(([^)]*)\)/g, (_, fn, args) => fn + '(' + args.replace(/&\s*/g, '') + ')');
+    // Convert &ref args in I2S calls to reference objects: &bytesWritten → __i2sRef1
+    // then read back after: bytesWritten = __i2sRef1.val
+    js = js.replace(/(_a\.i2s\w+)\s*\(([^)]*)\)/g, (_, fn, args) => {
+      let refCount = 0;
+      const refNames = [];
+      const newArgs = args.replace(/&\s*(\w+)/g, (m, refName) => {
+        refCount++;
+        const rn = '__i2sRef' + refCount;
+        refNames.push({ ref: rn, var: refName });
+        return rn;
+      });
+      let prefix = '';
+      for (const r of refNames) {
+        prefix += 'var ' + r.ref + '={val:0};';
+      }
+      let result = fn + '(' + newArgs + ')';
+      for (const r of refNames) {
+        result += ';' + r.var + '=' + r.ref + '.val';
+      }
+      return prefix + result;
+    });
     // I2S designated-initializer structs → plain JS objects
     js = js.replace(/\b(i2s_config_t|i2s_pin_config_t)\s+(\w+)\s*=\s*\{/g, 'var $2 = {');
     // Designated initializers: only lines starting with whitespace + .field =
@@ -2054,9 +2073,16 @@ class ArduinoSimulator {
           return 200;
         },
         httpGetStream(obj) {
+          const hasStream = !!(obj && obj._stream);
+          const pos = obj ? obj._streamPos : -1;
+          const len = obj && obj._stream ? obj._stream.length : 0;
+          self._serialLog('[HTTP] getStreamPtr: stream=' + hasStream + ' pos=' + pos + ' len=' + len + '\n', 'system');
           return {
             connected() { return obj._stream && obj._streamPos < obj._stream.length; },
-            available() { return obj._stream ? obj._stream.length - obj._streamPos : 0; },
+            available() {
+              const avail = obj._stream ? obj._stream.length - obj._streamPos : 0;
+              return avail;
+            },
             readBytes(dst, len) {
               if (!obj._stream) return 0;
               const remain = obj._stream.length - obj._streamPos;
