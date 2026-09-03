@@ -41,6 +41,41 @@ defComp({
     { id: 'ch2_gnd', label: 'GND2', type: PIN_TYPE.GND,   x: 200, y: 190, side: 'bottom' },
   ],
 
+  step(inst, sim) {
+    const props = inst.props || {};
+    const t = sim && typeof sim.simTime === 'number' ? sim.simTime / 1000 : performance.now() / 1000;
+    const powered = Boolean(props.powered ?? 1);
+    const evaluate = (channel) => {
+      if (!powered) return 0;
+      const wave = props[`${channel}_wave`] || 'sine';
+      const freq = Number(props[`${channel}_freq`]) || 0;
+      const amp = Number(props[`${channel}_amp`]) || 0;
+      const offset = Number(props[`${channel}_offset`]) || 0;
+      const phase = (Number(props[`${channel}_phase`]) || 0) / 360;
+      const duty = Math.max(0.01, Math.min(0.99, (Number(props[`${channel}_duty`]) || 50) / 100));
+      const tau = ((t * freq + phase) % 1 + 1) % 1;
+      let normalized;
+      switch (wave) {
+        case 'square': normalized = tau < duty ? 1 : -1; break;
+        case 'triangle': normalized = tau < duty ? -1 + 2 * tau / duty : 1 - 2 * (tau - duty) / (1 - duty); break;
+        case 'sawtooth': normalized = 2 * tau - 1; break;
+        case 'noise': normalized = Math.sin(t * freq * 137.5) * 0.7 + Math.sin(t * freq * 239.1) * 0.3; break;
+        default: normalized = Math.sin(2 * Math.PI * tau); break;
+      }
+      return offset + normalized * amp / 2;
+    };
+
+    inst.runtimeState = inst.runtimeState || {};
+    inst.runtimeState.ch1_voltage = evaluate('ch1');
+    inst.runtimeState.ch2_voltage = evaluate('ch2');
+    if (sim && typeof sim.setPinVoltage === 'function') {
+      sim.setPinVoltage(inst, 'ch1_out', inst.runtimeState.ch1_voltage);
+      sim.setPinVoltage(inst, 'ch1_gnd', 0);
+      sim.setPinVoltage(inst, 'ch2_out', inst.runtimeState.ch2_voltage);
+      sim.setPinVoltage(inst, 'ch2_gnd', 0);
+    }
+  },
+
   _btnRects: {},
 
   draw(ctx, inst, sim) {

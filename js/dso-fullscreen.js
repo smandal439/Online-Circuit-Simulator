@@ -47,6 +47,7 @@ class DSOFullscreen {
 
     // Display mode: 'scope' (normal), 'spectrum' (FFT), 'xy' (XY plot)
     this._dsoMode = 'scope';
+    this._frozen = false;
     // Cached FFT results per channel
     this._fftCache = {};
     this._fftCacheTime = 0;
@@ -101,6 +102,8 @@ class DSOFullscreen {
     this.overlay.classList.remove('hidden');
     this._resize();
     this._syncControlsFromInst();
+    this._frozen = Boolean(this.inst.runtimeState?.paused);
+    this._updateHoldButton();
     this._startRender();
 
     // Initialize persistence canvas
@@ -123,6 +126,40 @@ class DSOFullscreen {
     if (this._ro) { this._ro.disconnect(); this._ro = null; }
   }
 
+  _updateHoldButton() {
+    const button = document.getElementById('dso-fs-hold');
+    if (!button) return;
+    button.textContent = this._frozen ? 'Live' : 'Hold';
+    button.classList.toggle('active', this._frozen);
+    button.title = this._frozen ? 'Resume live waveform (Space)' : 'Freeze waveform for measurement (Space)';
+  }
+
+  _toggleHold() {
+    if (!this.inst) return;
+    this._frozen = !this._frozen;
+    const rs = this.inst.runtimeState || (this.inst.runtimeState = {});
+    rs.paused = this._frozen;
+    this._updateHoldButton();
+    this._updateStatusBar();
+  }
+
+  _clearCapture() {
+    if (!this.inst) return;
+    const buf = this.inst._buffers;
+    if (buf) {
+      buf.ch1.length = 0; buf.ch2.length = 0;
+      buf.ch3.length = 0; buf.ch4.length = 0; buf.t.length = 0;
+    }
+    this.inst._computeMeas = {};
+    this.inst._lastRawV = null;
+    this.inst._lastSampleTime = 0;
+    this.inst._triggered = false;
+    this._fftCache = {};
+    this._fftCacheTime = 0;
+    this._initPersistenceCanvas();
+    this._updateStatusBar();
+  }
+
   _resize() {
     if (!this.canvas) return;
     const wrap = this.canvas.parentElement;
@@ -134,6 +171,7 @@ class DSOFullscreen {
     this.canvas.height = h * dpr;
     this.canvas.style.width = w + 'px';
     this.canvas.style.height = h + 'px';
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.scale(dpr, dpr);
     this._canvasW = w;
     this._canvasH = h;
@@ -184,6 +222,11 @@ class DSOFullscreen {
     const isPowered = Boolean(rs.powered ?? props.powered ?? 1);
     const isRunning = rs.runStop !== undefined ? Boolean(rs.runStop) : Boolean(props.runStop ?? 1);
     const isSingleArmed = rs.singleTrigger !== undefined ? Boolean(rs.singleTrigger) : Boolean(props.singleTrigger ?? 0);
+    const isPaused = Boolean(rs.paused ?? false);
+    if (this._frozen !== isPaused) {
+      this._frozen = isPaused;
+      this._updateHoldButton();
+    }
 
     // Screen area (fills most of the canvas, leaving room for controls on right)
     const ctrlW = this._ctrlW;
@@ -281,8 +324,6 @@ class DSOFullscreen {
       const channels = [
         { id: 'ch1', en: P('ch1_en', true) !== false, col: '#ffe600', glow: '#ffe600', vdiv: P('ch1_vdiv', 1), pos: P('ch1_pos', 2), coup: P('ch1_coupling', 'dc') },
         { id: 'ch2', en: P('ch2_en', true) !== false, col: '#00e5ff', glow: '#00e5ff', vdiv: P('ch2_vdiv', 2), pos: P('ch2_pos', 0), coup: P('ch2_coupling', 'dc') },
-        { id: 'ch3', en: P('ch3_en', false) !== false, col: '#ff3090', glow: '#ff3090', vdiv: P('ch3_vdiv', 5), pos: P('ch3_pos', -2), coup: P('ch3_coupling', 'dc') },
-        { id: 'ch4', en: P('ch4_en', false) !== false, col: '#30ff60', glow: '#30ff60', vdiv: P('ch4_vdiv', 0.5), pos: P('ch4_pos', -3), coup: P('ch4_coupling', 'dc') },
       ];
 
       channels.forEach((ch) => {
@@ -311,11 +352,6 @@ class DSOFullscreen {
               v = samples[idx];
             }
             if (ch.coup === 'ac') v -= meanV;
-          } else {
-            const omega = 2 * Math.PI / (totalTime * 0.4);
-            const wavePhase = (t + (px / scrW) * totalTime) * omega;
-            v = ch.id === 'ch1' ? Math.sin(wavePhase) * ch.vdiv * 1.5 :
-                ch.id === 'ch2' ? (Math.sin(wavePhase * 2) > 0 ? ch.vdiv : -ch.vdiv) : 0;
           }
           pts.push({ px: scrX + px, py: cy - (v * (dH / ch.vdiv)) - (ch.pos * dH) });
         }
@@ -669,8 +705,6 @@ class DSOFullscreen {
     const osdGap = this._isCompact ? 60 : 80;
     _osd(scrX + 10, '1:' + this._fmtV(P('ch1_vdiv', 1)) + (P('ch1_coupling', 'dc') === 'ac' ? '~' : '='), '#ffe600', P('ch1_en', true) !== false);
     _osd(scrX + osdGap, '2:' + this._fmtV(P('ch2_vdiv', 2)) + (P('ch2_coupling', 'dc') === 'ac' ? '~' : '='), '#00e5ff', P('ch2_en', true) !== false);
-    _osd(scrX + osdGap * 2, '3:' + this._fmtV(P('ch3_vdiv', 5)) + (P('ch3_coupling', 'dc') === 'ac' ? '~' : '='), '#ff3090', P('ch3_en', false) !== false);
-    _osd(scrX + osdGap * 3, '4:' + this._fmtV(P('ch4_vdiv', 0.5)) + (P('ch4_coupling', 'dc') === 'ac' ? '~' : '='), '#30ff60', P('ch4_en', false) !== false);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
@@ -738,6 +772,8 @@ class DSOFullscreen {
     if (!this._isCompact) {
       const measY = scrY + scrH + 12;
       this._drawMeasurements(ctx, scrX, measY, scrW, P, inst);
+    } else {
+      this._drawCompactMeasurement(ctx, scrX, scrY + scrH + 4, scrW, P, inst);
     }
 
     // ── Right Control Panel ──
@@ -815,8 +851,6 @@ class DSOFullscreen {
     const channels = [
       { id: 'ch1', en: P('ch1_en', true) !== false, col: '#ffe600', label: 'CH1' },
       { id: 'ch2', en: P('ch2_en', true) !== false, col: '#00e5ff', label: 'CH2' },
-      { id: 'ch3', en: P('ch3_en', false) !== false, col: '#ff3090', label: 'CH3' },
-      { id: 'ch4', en: P('ch4_en', false) !== false, col: '#30ff60', label: 'CH4' },
     ];
 
     const colW = w / 4;
@@ -848,6 +882,17 @@ class DSOFullscreen {
     });
   }
 
+  _drawCompactMeasurement(ctx, x, y, w, P, inst) {
+    const m = inst._computeMeas?.ch1;
+    if (!m) return;
+    ctx.fillStyle = '#ffe600';
+    ctx.font = `${Math.round(8 * this._fontSize)}px monospace`;
+    ctx.textAlign = 'left';
+    const freq = m.frequency > 0 ? this._fmtFreq(m.frequency) : '---';
+    ctx.fillText(`CH1  Vpp:${this._fmtV(m.vpp)}  Vrms:${this._fmtV(m.vrms)}  Freq:${freq}`, x, y + 10);
+    ctx.fillText(`Vmax:${this._fmtV(m.vmax)}  Vmin:${this._fmtV(m.vmin)}  Duty:${m.dutyCycle > 0 ? m.dutyCycle.toFixed(1) + '%' : '---'}`, x, y + 21);
+  }
+
   _drawControlPanel(ctx, x, y, w, h, P, isPowered, isRunning, isSingleArmed) {
     const fs = this._fontSize;
     // Panel background
@@ -873,8 +918,7 @@ class DSOFullscreen {
       { value: 'auto', label: 'Auto' }, { value: 'norm', label: 'Normal' }, { value: 'single', label: 'Single' }
     ], 'dso-fs-trig-mode');
     yPos = this._drawSelect(ctx, x + 8, yPos, w - 16, 'Source', P('trig_source', 'ch1'), [
-      { value: 'ch1', label: 'CH1' }, { value: 'ch2', label: 'CH2' },
-      { value: 'ch3', label: 'CH3' }, { value: 'ch4', label: 'CH4' }
+      { value: 'ch1', label: 'CH1' }, { value: 'ch2', label: 'CH2' }
     ], 'dso-fs-trig-source');
     yPos = this._drawSelect(ctx, x + 8, yPos, w - 16, 'Slope', P('trig_slope', 'rising'), [
       { value: 'rising', label: 'Rising' }, { value: 'falling', label: 'Falling' }
@@ -886,8 +930,6 @@ class DSOFullscreen {
     const chDefs = [
       { id: 'ch1', col: '#ffe600', defEn: true, defVdiv: 1, defPos: 2 },
       { id: 'ch2', col: '#00e5ff', defEn: true, defVdiv: 2, defPos: 0 },
-      { id: 'ch3', col: '#ff3090', defEn: false, defVdiv: 5, defPos: -2 },
-      { id: 'ch4', col: '#30ff60', defEn: false, defVdiv: 0.5, defPos: -3 },
     ];
     chDefs.forEach((chDef) => {
       this._drawSection(ctx, x + 8, yPos, w - 16, chDef.id.toUpperCase(), chDef.col);
@@ -1326,11 +1368,15 @@ class DSOFullscreen {
       if (samples && samples.length > 20) {
         const timebase = P('timebase', 0.001);
         const totalTime = timebase * 12;
-        let crossings = 0;
+        const risingCrossings = [];
         for (let i = 1; i < samples.length; i++) {
-          if ((samples[i - 1] < 0 && samples[i] >= 0) || (samples[i - 1] >= 0 && samples[i] < 0)) crossings++;
+          if (samples[i - 1] < 0 && samples[i] >= 0) risingCrossings.push(i);
         }
-        const freq = crossings > 1 ? (crossings / 2) / totalTime : 0;
+        const sampleRate = totalTime > 0 ? (samples.length - 1) / totalTime : 0;
+        const periodSamples = risingCrossings.length > 1
+          ? (risingCrossings[risingCrossings.length - 1] - risingCrossings[0]) / (risingCrossings.length - 1)
+          : 0;
+        const freq = periodSamples > 0 ? sampleRate / periodSamples : 0;
         this._statusFreq.textContent = freq > 0 ? `FREQ: ${this._fmtFreq(freq)}` : 'FREQ: ---';
       } else {
         this._statusFreq.textContent = 'FREQ: ---';
@@ -1348,6 +1394,7 @@ class DSOFullscreen {
     if (this._statusMode) {
       const modeLabels = { scope: 'SCOPE', spectrum: 'FFT', xy: 'XY' };
       this._statusMode.textContent = `MODE: ${modeLabels[this._dsoMode] || 'SCOPE'}`;
+      if (this._frozen) this._statusMode.textContent += ' · HOLD';
     }
   }
 
@@ -1360,6 +1407,9 @@ class DSOFullscreen {
 
     // Auto-set button
     document.getElementById('dso-fs-autoset')?.addEventListener('click', () => this._autoSet());
+
+    document.getElementById('dso-fs-hold')?.addEventListener('click', () => this._toggleHold());
+    document.getElementById('dso-fs-clear')?.addEventListener('click', () => this._clearCapture());
 
     // Save CSV button
     document.getElementById('dso-fs-save')?.addEventListener('click', () => this._saveCSV());
@@ -1469,7 +1519,7 @@ class DSOFullscreen {
 
     // Space — toggle Pause/Hold
     if (e.key === ' ') {
-      rs.paused = !rs.paused;
+      this._toggleHold();
       e.preventDefault(); return;
     }
 
@@ -1510,7 +1560,7 @@ class DSOFullscreen {
 
     // O — cycle trigger source
     if (e.key === 'o' || e.key === 'O') {
-      const sources = ['ch1', 'ch2', 'ch3', 'ch4'];
+      const sources = ['ch1', 'ch2'];
       const cur = rs.trig_source || props.trig_source || 'ch1';
       const idx = sources.indexOf(cur);
       rs.trig_source = sources[(idx + 1) % sources.length];
@@ -1546,26 +1596,6 @@ class DSOFullscreen {
       e.preventDefault(); return;
     }
 
-    // E — cycle CH3 coupling
-    if (e.key === 'e' || e.key === 'E') {
-      const couplings = ['dc', 'ac', 'gnd'];
-      const cur = rs.ch3_coupling || props.ch3_coupling || 'dc';
-      const idx = couplings.indexOf(cur);
-      rs.ch3_coupling = couplings[(idx + 1) % couplings.length];
-      props.ch3_coupling = rs.ch3_coupling;
-      e.preventDefault(); return;
-    }
-
-    // X — cycle CH4 coupling
-    if (e.key === 'x' || e.key === 'X') {
-      const couplings = ['dc', 'ac', 'gnd'];
-      const cur = rs.ch4_coupling || props.ch4_coupling || 'dc';
-      const idx = couplings.indexOf(cur);
-      rs.ch4_coupling = couplings[(idx + 1) % couplings.length];
-      props.ch4_coupling = rs.ch4_coupling;
-      e.preventDefault(); return;
-    }
-
     // Ctrl+S — store reference waveform
     if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
       e.preventDefault();
@@ -1589,8 +1619,8 @@ class DSOFullscreen {
       return;
     }
 
-    // 1-4 — toggle channel enable
-    const chKeys = { '1': 'ch1', '2': 'ch2', '3': 'ch3', '4': 'ch4' };
+    // 1-2 — toggle channel enable
+    const chKeys = { '1': 'ch1', '2': 'ch2' };
     if (chKeys[e.key]) {
       const chId = chKeys[e.key];
       const cur = rs[chId + '_en'] !== undefined ? rs[chId + '_en'] : (props[chId + '_en'] ?? (chId === 'ch1' || chId === 'ch2'));
@@ -1910,12 +1940,16 @@ class DSOFullscreen {
     const samples = buf && buf[trigCh] ? buf[trigCh] : null;
     if (samples && samples.length > 20) {
       // Estimate frequency from zero crossings
-      let crossings = 0;
+      const risingCrossings = [];
       for (let i = 1; i < samples.length; i++) {
-        if ((samples[i - 1] < 0 && samples[i] >= 0) || (samples[i - 1] >= 0 && samples[i] < 0)) crossings++;
+        if (samples[i - 1] < 0 && samples[i] >= 0) risingCrossings.push(i);
       }
       const totalT = buf.t && buf.t.length > 1 ? buf.t[buf.t.length - 1] - buf.t[0] : 1;
-      const freq = crossings > 1 ? (crossings / 2) / totalT : 0;
+      const sampleRate = totalT > 0 ? (samples.length - 1) / totalT : 0;
+      const periodSamples = risingCrossings.length > 1
+        ? (risingCrossings[risingCrossings.length - 1] - risingCrossings[0]) / (risingCrossings.length - 1)
+        : 0;
+      const freq = periodSamples > 0 ? sampleRate / periodSamples : 0;
       if (freq > 0) {
         const period = 1 / freq;
         const targetTimebase = (period * 3) / 12; // 3 cycles across 12 divisions
@@ -1935,13 +1969,11 @@ class DSOFullscreen {
     const buf = this.inst._buffers;
     if (!buf || !buf.t || buf.t.length === 0) return;
 
-    let csv = 'Time(s),CH1(V),CH2(V),CH3(V),CH4(V)\n';
+    let csv = 'Time(s),CH1(V),CH2(V)\n';
     for (let i = 0; i < buf.t.length; i++) {
       csv += buf.t[i].toFixed(6) + ',' +
              (buf.ch1[i] || 0).toFixed(4) + ',' +
-             (buf.ch2[i] || 0).toFixed(4) + ',' +
-             (buf.ch3[i] || 0).toFixed(4) + ',' +
-             (buf.ch4[i] || 0).toFixed(4) + '\n';
+             (buf.ch2[i] || 0).toFixed(4) + '\n';
     }
 
     const blob = new Blob([csv], { type: 'text/csv' });

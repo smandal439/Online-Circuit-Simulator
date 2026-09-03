@@ -912,8 +912,10 @@
     <div id="dso-fullscreen-overlay" class="dso-fullscreen-overlay hidden">
         <div class="dso-fullscreen-container">
             <div class="dso-fs-header">
-                <span class="dso-fs-title">DSO-4100 — 4CH Digital Storage Oscilloscope</span>
+                <span class="dso-fs-title">DSO-2100 — 2CH Digital Storage Oscilloscope</span>
                 <div class="dso-fs-header-controls">
+                    <button id="dso-fs-hold" class="dso-fs-btn dso-fs-btn-toggle" title="Freeze waveform for measurement (Space)">Hold</button>
+                    <button id="dso-fs-clear" class="dso-fs-btn" title="Clear captured waveform">Clear</button>
                     <button id="dso-fs-autoset" class="dso-fs-btn" title="Auto-set scale & trigger (A)">Auto Set</button>
                     <button id="dso-fs-ref-store" class="dso-fs-btn" title="Store current waveform as reference (Ctrl+S)">Ref Store</button>
                     <button id="dso-fs-ref-toggle" class="dso-fs-btn dso-fs-btn-toggle" title="Toggle reference waveform visibility (Ctrl+R)">Ref View</button>
@@ -961,11 +963,9 @@
                     </div>
                     <div class="dso-help-section">
                         <h3>Channels</h3>
-                        <div class="dso-help-row"><kbd>1</kbd>-<kbd>4</kbd><span>Toggle CH1-CH4</span></div>
+                        <div class="dso-help-row"><kbd>1</kbd>-<kbd>2</kbd><span>Toggle CH1-CH2</span></div>
                         <div class="dso-help-row"><kbd>Q</kbd><span>Cycle CH1 coupling</span></div>
                         <div class="dso-help-row"><kbd>W</kbd><span>Cycle CH2 coupling</span></div>
-                        <div class="dso-help-row"><kbd>E</kbd><span>Cycle CH3 coupling</span></div>
-                        <div class="dso-help-row"><kbd>X</kbd><span>Cycle CH4 coupling</span></div>
                     </div>
                 </div>
                 <div class="dso-help-column">
@@ -1021,11 +1021,11 @@
     <script src="js/components/ics.js?v=20260825-2"></script>
     <script src="js/components/audio.js?v=20260903-1"></script>
     <script src="js/dsp.js?v=20260901-1"></script>
-    <script src="js/components/dso.js?v=20260831-1"></script>
-    <script src="js/dso-fullscreen.js?v=20260831-1"></script>
+    <script src="js/components/dso.js?v=20260904-8"></script>
+    <script src="js/dso-fullscreen.js?v=20260904-6"></script>
     <script src="js/components/multimeter.js?v=20260825-2"></script>
     <script src="js/components/probe.js?v=20260831-1"></script>
-    <script src="js/components/function_generator.js?v=20260825-2"></script>
+    <script src="js/components/function_generator.js?v=20260904-1"></script>
     <script src="js/simulator.js?v=20260904-5"></script>
     <script src="js/canvas.js?v=20260826-3"></script>
     <script src="js/serial.js?v=20260825-1"></script>

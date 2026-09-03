@@ -2,10 +2,10 @@
 
 defComp({
   id: 'dso_4ch',
-  name: '4-Channel Digital Storage Oscilloscope',
+  name: '2-Channel Digital Storage Oscilloscope',
   category: 'Instruments',
   icon: '∿',
-  desc: '4-Channel DSO with phosphor display, AC/DC coupling, trigger, measurements, cursors, math channel, and fullscreen mode.',
+  desc: '2-Channel DSO with phosphor display, AC/DC coupling, trigger, measurements, cursors, math channel, and fullscreen mode.',
 
   width: 440,
   height: 300,
@@ -22,8 +22,6 @@ defComp({
     trig_slope: 'rising',
     ch1_en: true,  ch1_vdiv: 1.0,  ch1_pos: 2.0,  ch1_coupling: 'dc', ch1_probe: 1,
     ch2_en: true,  ch2_vdiv: 2.0,  ch2_pos: 0.0,  ch2_coupling: 'dc', ch2_probe: 1,
-    ch3_en: false, ch3_vdiv: 5.0,  ch3_pos: -2.0, ch3_coupling: 'dc', ch3_probe: 1,
-    ch4_en: false, ch4_vdiv: 0.5,  ch4_pos: -3.0, ch4_coupling: 'dc', ch4_probe: 1,
     math_op: 'off',
     dsoMode: 'scope',
   },
@@ -35,8 +33,7 @@ defComp({
     { field: 'autoSet',     label: 'Auto Set',    type: 'toggle', min: 0, max: 1, step: 1, unit: '', inline: { x: 316, y: 209, w: 38, h: 16 } },
     { field: 'timebase',    label: 'Time/Div',     min: 0.00001, max: 0.1, step: 0.0001, unit: 's' },
     { field: 'trig_source', label: 'Trig Source',  type: 'select', options: [
-      { value: 'ch1', label: 'CH1' }, { value: 'ch2', label: 'CH2' },
-      { value: 'ch3', label: 'CH3' }, { value: 'ch4', label: 'CH4' }
+      { value: 'ch1', label: 'CH1' }, { value: 'ch2', label: 'CH2' }
     ]},
     { field: 'trig_level',  label: 'Trig Level',   min: -10, max: 10, step: 0.1, unit: 'V' },
     { field: 'trig_slope',  label: 'Trig Slope',   type: 'select', options: [
@@ -54,18 +51,6 @@ defComp({
     { field: 'ch2_coupling', label: 'CH2 Coupling',  type: 'select', options: [
       { value: 'dc', label: 'DC' }, { value: 'ac', label: 'AC' }, { value: 'gnd', label: 'GND' }
     ]},
-    { field: 'ch3_en',       label: 'CH3 Enable',   type: 'checkbox' },
-    { field: 'ch3_vdiv',     label: 'CH3 V/Div',    min: 0.05, max: 20, step: 0.05, unit: 'V' },
-    { field: 'ch3_pos',      label: 'CH3 Position',  min: -4, max: 4, step: 0.1, unit: 'div' },
-    { field: 'ch3_coupling', label: 'CH3 Coupling',  type: 'select', options: [
-      { value: 'dc', label: 'DC' }, { value: 'ac', label: 'AC' }, { value: 'gnd', label: 'GND' }
-    ]},
-    { field: 'ch4_en',       label: 'CH4 Enable',   type: 'checkbox' },
-    { field: 'ch4_vdiv',     label: 'CH4 V/Div',    min: 0.05, max: 20, step: 0.05, unit: 'V' },
-    { field: 'ch4_pos',      label: 'CH4 Position',  min: -4, max: 4, step: 0.1, unit: 'div' },
-    { field: 'ch4_coupling', label: 'CH4 Coupling',  type: 'select', options: [
-      { value: 'dc', label: 'DC' }, { value: 'ac', label: 'AC' }, { value: 'gnd', label: 'GND' }
-    ]},
     { field: 'dsoMode', label: 'Display Mode', type: 'select', options: [
       { value: 'scope', label: 'Scope' }, { value: 'spectrum', label: 'Spectrum' }, { value: 'xy', label: 'XY' }
     ]},
@@ -74,8 +59,6 @@ defComp({
   pins: [
     { id: 'ch1_in', label: 'CH1', type: PIN_TYPE.SIGNAL, x: 50,  y: 300, side: 'bottom' },
     { id: 'ch2_in', label: 'CH2', type: PIN_TYPE.SIGNAL, x: 120, y: 300, side: 'bottom' },
-    { id: 'ch3_in', label: 'CH3', type: PIN_TYPE.SIGNAL, x: 190, y: 300, side: 'bottom' },
-    { id: 'ch4_in', label: 'CH4', type: PIN_TYPE.SIGNAL, x: 260, y: 300, side: 'bottom' },
     { id: 'gnd',    label: 'GND', type: PIN_TYPE.GND,    x: 350, y: 300, side: 'bottom' },
   ],
 
@@ -94,7 +77,7 @@ defComp({
       inst._triggered = false;
     }
 
-    const t = sim && typeof sim.time === 'number' ? sim.time : performance.now() / 1000;
+    const t = sim && typeof sim.simTime === 'number' ? sim.simTime / 1000 : performance.now() / 1000;
     inst._lastSimTime = t;
     const avSim = window.ArduinoSim;
     const readV = (pin) => {
@@ -114,6 +97,7 @@ defComp({
     const scrW = 280;
     const timebase = P(rs, inst.props, 'timebase', 0.001);
     const totalTime = timebase * divsX;
+    const measurementTime = buf.t.length > 1 ? Math.max(buf.t[buf.t.length - 1] - buf.t[0], 1e-9) : totalTime;
 
     if (!isRunning && !isSingleArmed) {
       inst._computeMeas = inst._computeMeas || {};
@@ -121,7 +105,7 @@ defComp({
         const probeFactor = P(rs, inst.props, chId + '_probe', 1);
         const rawSamples = buf[chId] && buf[chId].length > 0 ? buf[chId] : null;
         const samples = rawSamples ? rawSamples.map(v => v * probeFactor) : null;
-        inst._computeMeas[chId] = dsoComputeMeasurements(samples, timebase, divsX);
+        inst._computeMeas[chId] = dsoComputeMeasurements(samples, measurementTime);
       });
       return;
     }
@@ -148,7 +132,7 @@ defComp({
         const probeFactor = P(rs, inst.props, chId + '_probe', 1);
         const rawSamples = buf[chId] && buf[chId].length > 0 ? buf[chId] : null;
         const samples = rawSamples ? rawSamples.map(v => v * probeFactor) : null;
-        inst._computeMeas[chId] = dsoComputeMeasurements(samples, timebase, divsX);
+        inst._computeMeas[chId] = dsoComputeMeasurements(samples, measurementTime);
       });
       return;
     }
@@ -159,6 +143,16 @@ defComp({
       if (cc && typeof cc._getWireTarget === 'function') {
         const target = cc._getWireTarget(dsoInst.id, pinId);
         if (target && target.inst && target.inst.type === 'func_gen') return target.inst;
+      }
+      if (cc && Array.isArray(cc.wires) && Array.isArray(cc.components)) {
+        for (const wire of cc.wires) {
+          const matchesFrom = wire.from?.instId === dsoInst.id && wire.from?.pinId === pinId;
+          const matchesTo = wire.to?.instId === dsoInst.id && wire.to?.pinId === pinId;
+          if (!matchesFrom && !matchesTo) continue;
+          const otherId = matchesFrom ? wire.to?.instId : wire.from?.instId;
+          const other = cc.components.find(component => component.id === otherId);
+          if (other?.type === 'func_gen') return other;
+        }
       }
       return null;
     };
@@ -195,10 +189,12 @@ defComp({
     const hasFG = fg1 || fg2 || fg3 || fg4;
 
     // Sub-frame analytical sampling when function generators are connected
-    const TARGET_RATE = 1e9;
+    // Keep enough analytical samples for the complete screen window without
+    // trying to simulate an impossible 1 GHz capture rate.
+    const TARGET_RATE = 1000000;
     const MAX_SAMPLES = 200000;
     const MAX_PER_FRAME = 50000;
-    const maxSamples = Math.max(100000, Math.min(MAX_SAMPLES, Math.ceil(TARGET_RATE * totalTime)));
+    const maxSamples = Math.max(1024, Math.min(MAX_SAMPLES, Math.ceil(TARGET_RATE * totalTime)));
     const lastT = inst._lastSampleTime || 0;
     const dt = t - lastT;
     let subFramePushed = false;
@@ -237,6 +233,8 @@ defComp({
       buf.t.splice(0, excess);
     }
 
+    const capturedTime = buf.t.length > 1 ? Math.max(buf.t[buf.t.length - 1] - buf.t[0], 1e-9) : totalTime;
+
     // Single trigger logic
     if (isSingleArmed && !inst._triggered) {
       const trigSource = P(rs, inst.props, 'trig_source', 'ch1');
@@ -263,7 +261,7 @@ defComp({
       const probeFactor = P(rs, inst.props, chId + '_probe', 1);
       const rawSamples = buf[chId] && buf[chId].length > 0 ? buf[chId] : null;
       const samples = rawSamples ? rawSamples.map(v => v * probeFactor) : null;
-      inst._computeMeas[chId] = dsoComputeMeasurements(samples, P(rs, inst.props, 'timebase', 0.001), divsX);
+      inst._computeMeas[chId] = dsoComputeMeasurements(samples, capturedTime);
     });
 
     // Auto-set: triggered when autoSet prop toggles to 1
@@ -328,7 +326,7 @@ defComp({
 
     ctx.fillStyle = isPowered ? '#606878' : '#2a2e38';
     ctx.font = '7px sans-serif';
-    ctx.fillText('4-CH DIGITAL STORAGE OSCILLOSCOPE', 82, 20);
+    ctx.fillText('2-CH DIGITAL STORAGE OSCILLOSCOPE', 82, 20);
 
     // Run/Stop status
     if (isPowered) {
@@ -412,8 +410,6 @@ defComp({
     const channels = [
       { id: 'ch1', en: P('ch1_en', true) !== false, col: '#ffe600', glow: '#ffe600', vdiv: P('ch1_vdiv', 1), pos: P('ch1_pos', 2), coup: P('ch1_coupling', 'dc') },
       { id: 'ch2', en: P('ch2_en', true) !== false, col: '#00e5ff', glow: '#00e5ff', vdiv: P('ch2_vdiv', 2), pos: P('ch2_pos', 0), coup: P('ch2_coupling', 'dc') },
-      { id: 'ch3', en: P('ch3_en', false) !== false, col: '#ff3090', glow: '#ff3090', vdiv: P('ch3_vdiv', 5), pos: P('ch3_pos', -2), coup: P('ch3_coupling', 'dc') },
-      { id: 'ch4', en: P('ch4_en', false) !== false, col: '#30ff60', glow: '#30ff60', vdiv: P('ch4_vdiv', 0.5), pos: P('ch4_pos', -3), coup: P('ch4_coupling', 'dc') },
     ];
 
     const buf = inst._buffers;
@@ -457,12 +453,7 @@ defComp({
               v = samples[idx];
             }
             if (ch.coup === 'ac') v -= meanV;
-          } else {
-          const omega = 2 * Math.PI / (totalTime * 0.4);
-          const wavePhase = (t + (px / scrW) * totalTime) * omega;
-          v = ch.id === 'ch1' ? Math.sin(wavePhase) * ch.vdiv * 1.5 :
-              ch.id === 'ch2' ? (Math.sin(wavePhase * 2) > 0 ? ch.vdiv : -ch.vdiv) : 0;
-        }
+            }
         pts.push({ px: scrX + px, py: cy - (v * (dH / ch.vdiv)) - (ch.pos * dH) });
       }
 
@@ -691,8 +682,6 @@ defComp({
     };
     _osd(scrX + 8, '1:' + _fmtV(P('ch1_vdiv', 1)) + (P('ch1_coupling', 'dc') === 'ac' ? '~' : '='), '#ffe600', P('ch1_en', true) !== false);
     _osd(scrX + 72, '2:' + _fmtV(P('ch2_vdiv', 2)) + (P('ch2_coupling', 'dc') === 'ac' ? '~' : '='), '#00e5ff', P('ch2_en', true) !== false);
-    _osd(scrX + 136, '3:' + _fmtV(P('ch3_vdiv', 5)) + (P('ch3_coupling', 'dc') === 'ac' ? '~' : '='), '#ff3090', P('ch3_en', false) !== false);
-    _osd(scrX + 200, '4:' + _fmtV(P('ch4_vdiv', 0.5)) + (P('ch4_coupling', 'dc') === 'ac' ? '~' : '='), '#30ff60', P('ch4_en', false) !== false);
 
     // Timebase on right
     ctx.fillStyle = '#ffffff';
@@ -847,13 +836,9 @@ defComp({
     const chBtnGap = 1;
     _chBtn(panX + 4,              btnY, chBtnW, 'CH1', '#ffe600', isPowered && P('ch1_en', true) !== false);
     _chBtn(panX + 4 + chBtnW + chBtnGap, btnY, chBtnW, 'CH2', '#00e5ff', isPowered && P('ch2_en', true) !== false);
-    _chBtn(panX + 4 + (chBtnW + chBtnGap) * 2, btnY, chBtnW, 'CH3', '#ff3090', isPowered && P('ch3_en', false) !== false);
-    _chBtn(panX + 4 + (chBtnW + chBtnGap) * 3, btnY, chBtnW, 'CH4', '#30ff60', isPowered && P('ch4_en', false) !== false);
 
     inst._btnRects.ch1 = { x: panX + 4,              y: btnY, w: chBtnW, h: 14, field: 'ch1_en' };
     inst._btnRects.ch2 = { x: panX + 4 + chBtnW + chBtnGap, y: btnY, w: chBtnW, h: 14, field: 'ch2_en' };
-    inst._btnRects.ch3 = { x: panX + 4 + (chBtnW + chBtnGap) * 2, y: btnY, w: chBtnW, h: 14, field: 'ch3_en' };
-    inst._btnRects.ch4 = { x: panX + 4 + (chBtnW + chBtnGap) * 3, y: btnY, w: chBtnW, h: 14, field: 'ch4_en' };
 
     // ── Small Control Button Helper ──
     const _ctrlBtn = (bx, by, bw, bh, lbl, col, active) => {
@@ -1057,14 +1042,10 @@ defComp({
     if (isPowered) {
       _bnc(50,  bncY, 'CH1', '#ffe600');
       _bnc(120, bncY, 'CH2', '#00e5ff');
-      _bnc(190, bncY, 'CH3', '#ff3090');
-      _bnc(260, bncY, 'CH4', '#30ff60');
       _bnc(350, bncY, 'GND', '#7a889b');
     } else {
       _bnc(50,  bncY, 'CH1', '#3a4050');
       _bnc(120, bncY, 'CH2', '#3a4050');
-      _bnc(190, bncY, 'CH3', '#3a4050');
-      _bnc(260, bncY, 'CH4', '#3a4050');
       _bnc(350, bncY, 'GND', '#3a4050');
     }
 
@@ -1074,7 +1055,7 @@ defComp({
     ctx.fillStyle = isPowered ? '#3a4050' : '#22262f';
     ctx.font = '5px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('4-CH DSO  |  100MHz  |  1 GSa/s  |  FFT  |  XY', W / 2, H - 28);
+    ctx.fillText('2-CH DSO  |  100MHz  |  1 MSa/s  |  FFT  |  XY', W / 2, H - 28);
 
     // ── Selection ──
     if (inst.selected && typeof drawSelectionRect === 'function') {
@@ -1086,7 +1067,7 @@ defComp({
 });
 
 /* ── Measurement Engine ── */
-function dsoComputeMeasurements(samples, timebase, divsX) {
+function dsoComputeMeasurements(samples, measurementTime) {
   if (!samples || samples.length < 2) return { vmax: 0, vmin: 0, vpp: 0, vrms: 0, mean: 0, frequency: 0, period: 0, dutyCycle: 0 };
   let vmax = -Infinity, vmin = Infinity, sum = 0, sumSq = 0;
   for (let i = 0; i < samples.length; i++) {
@@ -1103,14 +1084,16 @@ function dsoComputeMeasurements(samples, timebase, divsX) {
   const vrms = samples.length > 0 ? Math.sqrt(sumSq / samples.length) : 0;
 
   // Frequency from zero crossings
-  let crossings = 0;
+  const risingCrossings = [];
   for (let i = 1; i < samples.length; i++) {
-    if ((samples[i - 1] < 0 && samples[i] >= 0) || (samples[i - 1] >= 0 && samples[i] < 0)) {
-      crossings++;
-    }
+    if (samples[i - 1] < 0 && samples[i] >= 0) risingCrossings.push(i);
   }
-  const totalTime = timebase * divsX;
-  const frequency = crossings > 1 ? (crossings / 2) / totalTime : 0;
+  let frequency = 0;
+  if (risingCrossings.length > 1 && measurementTime > 0) {
+    const sampleRate = (samples.length - 1) / measurementTime;
+    const averagePeriodSamples = (risingCrossings[risingCrossings.length - 1] - risingCrossings[0]) / (risingCrossings.length - 1);
+    frequency = averagePeriodSamples > 0 ? sampleRate / averagePeriodSamples : 0;
+  }
   const period = frequency > 0 ? 1 / frequency : 0;
 
   // Duty cycle
@@ -1158,12 +1141,16 @@ function _dsoAutoSet(inst, rs, buf, P) {
     inst.props.trig_source = chId;
 
     const trigCh = chId;
-    let crossings = 0;
+    const risingCrossings = [];
     for (let i = 1; i < samples.length; i++) {
-      if ((samples[i - 1] < 0 && samples[i] >= 0) || (samples[i - 1] >= 0 && samples[i] < 0)) crossings++;
+      if (samples[i - 1] < 0 && samples[i] >= 0) risingCrossings.push(i);
     }
     const totalT = buf.t && buf.t.length > 1 ? buf.t[buf.t.length - 1] - buf.t[0] : 1;
-    const freq = crossings > 1 ? (crossings / 2) / totalT : 0;
+    const sampleRate = totalT > 0 ? (samples.length - 1) / totalT : 0;
+    const periodSamples = risingCrossings.length > 1
+      ? (risingCrossings[risingCrossings.length - 1] - risingCrossings[0]) / (risingCrossings.length - 1)
+      : 0;
+    const freq = periodSamples > 0 ? sampleRate / periodSamples : 0;
     if (freq > 0) {
       const period = 1 / freq;
       const targetTimebase = (period * 3) / 12;
