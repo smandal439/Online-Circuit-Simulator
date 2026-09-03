@@ -1136,7 +1136,7 @@ class ArduinoSimulator {
             const cc = window.CircuitCanvas;
             if (cc && cc.components) {
               const vl = cc.components.find(c => c.type === 'vl53l0x');
-              if (vl) dist = Number(vl.props?.distance ?? vl.runtimeState?.distance ?? 100);
+              if (vl) dist = Number(vl.runtimeState?.distance ?? vl.props?.distance ?? 100);
             }
           } catch (e) { /* fallback to 100mm */ }
           if (measure) {
@@ -2019,7 +2019,7 @@ class ArduinoSimulator {
               const cc = window.CircuitCanvas;
               if (cc && cc.components) {
                 const vl = cc.components.find(c => c.type === 'vl53l0x');
-                if (vl) dist = Number(vl.props?.distance ?? vl.runtimeState?.distance ?? 100);
+              if (vl) dist = Number(vl.runtimeState?.distance ?? vl.props?.distance ?? 100);
               }
             } catch (e) { /* fallback to 100mm */ }
             measure.RangeStatus = dist > 0 ? 0 : 4;
