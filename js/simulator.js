@@ -88,12 +88,15 @@ class ArduinoSimulator {
 
     // 5. Handle variable declarations (not already transformed)
     // int x = 5; → let x = 5;
-    js = js.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
+    js = js.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|size_t)\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
     // char x = 'a'; → let x = 'a';
     js = js.replace(/\bchar\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
     // Handle const
     js = js.replace(/\bconst\s+let\b/g, 'let');
     js = js.replace(/\bconst\s+async\b/g, 'async');
+
+    // C++ pointer dereference: stream->method() → stream.method()
+    js = js.replace(/->/g, '.');
 
     // Object-style library declarations:
     // Servo myServo;  →  let myServo = new Servo();
@@ -119,9 +122,13 @@ class ArduinoSimulator {
     js = js.replace(/let\s+(\w+)\s*\[\s*\](?!\s*=)/g, 'let $1 = []');
     // C-style char arrays with string literals: char str[20] = "hi"; / char msg[] = "hi";
     js = js.replace(/let\s+(\w+)\s*\[\s*\d*\s*\]\s*=\s*("[^"]*"|'[^']*')/g, 'let $1 = $2');
+    // Pointer declarations: WiFiClient* stream = ... → var stream = ...
+    js = js.replace(/\b(\w+)\s*\*\s+(\w+)\s*=/g, 'var $2 =');
 
     // 7. Boolean literals
     js = js.replace(/\btrue\b/g, 'true');
+    // sizeof(expr) → expr.length (simplified — works for arrays/buffers)
+    js = js.replace(/\bsizeof\s*\((\w+)\)/g, '$1.length');
     js = js.replace(/\bfalse\b/g, 'false');
 
     // Strip leftover C storage/qualifier keywords that are invalid JS
@@ -257,6 +264,7 @@ class ArduinoSimulator {
     js = js.replace(/\bSerial\.begin\s*\(/g, '_a.serialBegin(');
     js = js.replace(/\bSerial\.print\s*\(/g, '_a.serialPrint(');
     js = js.replace(/\bSerial\.println\s*\(/g, '_a.serialPrintln(');
+    js = js.replace(/\bSerial\.printf\s*\(/g, '_a.serialPrintf(');
     js = js.replace(/\bSerial\.read\s*\(/g, '_a.serialRead(');
     js = js.replace(/\bSerial\.available\s*\(/g, '_a.serialAvailable(');
     js = js.replace(/\bSerial\.write\s*\(/g, '_a.serialWrite(');
@@ -278,6 +286,7 @@ class ArduinoSimulator {
     js = js.replace(/\bWiFi\.disconnect\s*\(/g, '_a.wifiDisconnect(');
     js = js.replace(/\bWiFi\.mode\s*\(/g, '_a.wifiMode(');
     js = js.replace(/\bWiFi\.softAP\s*\(/g, '_a.wifiSoftAP(');
+    js = js.replace(/\bWiFi\.reconnect\s*\(\s*\)/g, '_a.wifiReconnect()');
 
     // Wire (I2C) — stub
     js = js.replace(/\bWire\.begin\s*\(/g, '_a.wireBegin(');
@@ -604,6 +613,20 @@ class ArduinoSimulator {
       return '_a.vl53l0xRangingTest(' + varName + ', ' + args.replace(/&\s*/g, '') + ')';
     });
 
+    // ESP32 I2S driver — free-function calls
+    js = js.replace(/\bi2s_driver_install\s*\(/g, '_a.i2sDriverInstall(');
+    js = js.replace(/\bi2s_set_pin\s*\(/g, '_a.i2sSetPin(');
+    js = js.replace(/\bi2s_write\s*\(/g, 'await _a.i2sWrite(');
+    js = js.replace(/\bi2s_zero_dma_buffer\s*\(/g, '_a.i2sZeroDma(');
+    // Strip & from I2S function arguments: &i2s_config → i2s_config
+    js = js.replace(/(_a\.i2s\w+)\s*\(([^)]*)\)/g, (_, fn, args) => fn + '(' + args.replace(/&\s*/g, '') + ')');
+    // I2S designated-initializer structs → plain JS objects
+    js = js.replace(/\b(i2s_config_t|i2s_pin_config_t)\s+(\w+)\s*=\s*\{/g, 'var $2 = {');
+    // Designated initializers: only lines starting with whitespace + .field =
+    js = js.replace(/^\s+\.(\w+)\s*=\s*/gm, '  $1: ');
+    // Strip I2S type casts: (i2s_mode_t)(...) → (...)
+    js = js.replace(/\(i2s_mode_t\)\s*/g, '');
+
     // Servo library
     js = js.replace(/\b(\w+)\.attach\s*\(/g, '_a.servoAttach($1, ');
     js = js.replace(/\b(\w+)\.write\s*\(/g, '_a.servoWrite($1, ');
@@ -654,6 +677,30 @@ class ArduinoSimulator {
     js = js.replace(/\b(\w+)\.drawTriangle\s*\(/g, '_a.tftDrawTriangle($1, ');
     js = js.replace(/\b(\w+)\.fillTriangle\s*\(/g, '_a.tftFillTriangle($1, ');
     js = js.replace(/\b(\w+)\.drawChar\s*\(/g, '_a.tftDrawChar($1, ');
+
+    // HTTPClient (ESP32) — map before generic `.begin` rule
+    js = js.replace(/\bHTTPClient\s+(\w+)\s*;/g, 'var $1 = _a.httpNew();');
+    js = js.replace(/\bHTTPClient\s+(\w+)\s*\(\s*\)\s*;/g, 'var $1 = _a.httpNew();');
+    js = js.replace(/\b(\w+)\.begin\s*\(([^)]+)\)/g, function(m, v, a) {
+      if (/^(http|client)/i.test(v)) return '_a.httpBegin(' + v + ', ' + a + ')';
+      return m;
+    });
+    js = js.replace(/\b(\w+)\.setTimeout\s*\(([^)]+)\)/g, function(m, v, a) {
+      if (/^(http|client)/i.test(v)) return '_a.httpSetTimeout(' + v + ', ' + a + ')';
+      return m;
+    });
+    js = js.replace(/\b(\w+)\.GET\s*\(\s*\)/g, function(m, v) {
+      if (/^(http|client)/i.test(v)) return '_a.httpGet(' + v + ')';
+      return m;
+    });
+    js = js.replace(/\b(\w+)\.getStreamPtr\s*\(\s*\)/g, function(m, v) {
+      if (/^(http|client)/i.test(v)) return '_a.httpGetStream(' + v + ')';
+      return m;
+    });
+    js = js.replace(/\b(\w+)\.end\s*\(\s*\)/g, function(m, v) {
+      if (/^(http|client)/i.test(v)) return '_a.httpEnd(' + v + ')';
+      return m;
+    });
 
     // LiquidCrystal
     js = js.replace(/\b(\w+)\.begin\s*\(\s*\)/g, function(m, v) {
@@ -869,6 +916,28 @@ class ArduinoSimulator {
             str = val.toFixed(dec);
           } else str = String(val);
           self._serialLog(str + '\n', 'data');
+        },
+        serialPrintf(fmt, ...args) {
+          let i = 0;
+          const str = String(fmt).replace(/%([dusfxXeEgGoc])/g, function(_, spec) {
+            const v = args[i++];
+            if (v === undefined) return '';
+            switch (spec) {
+              case 'd': case 'u': return String(Math.round(Number(v)));
+              case 's': return String(v);
+              case 'f': return Number(v).toFixed(6);
+              case 'x': return Math.round(Number(v)).toString(16);
+              case 'X': return Math.round(Number(v)).toString(16).toUpperCase();
+              case 'e': return Number(v).toExponential();
+              case 'E': return Number(v).toExponential().toUpperCase();
+              case 'g': return String(Number(v));
+              case 'G': return String(Number(v)).toUpperCase();
+              case 'o': return Math.round(Number(v)).toString(8);
+              case 'c': return String.fromCharCode(v);
+              default: return String(v);
+            }
+          });
+          self._serialLog(str, 'data');
         },
         serialRead() {
           return self.serialInputBuffer.length > 0
@@ -1494,6 +1563,7 @@ class ArduinoSimulator {
         wifiSoftAPIP() { return '192.168.4.1'; },
         wifiStatus() { return 3; }, // WL_CONNECTED
         wifiDisconnect() { self._serialLog('[ESP32 Wi-Fi] Disconnected\n', 'system'); },
+        wifiReconnect() { self._serialLog('[ESP32 Wi-Fi] Reconnected\n', 'system'); },
         wifiMode() { },
         wifiSoftAP(ssid, pass) {
           self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system');
@@ -1944,6 +2014,18 @@ class ArduinoSimulator {
       // ESP32 Wi-Fi constants
       WIFI_STA: 1, WIFI_AP: 2, WIFI_AP_STA: 3,
       WL_CONNECTED: 3, WL_DISCONNECTED: 6,
+      HTTP_CODE_OK: 200, HTTP_CODE_NOT_FOUND: 404,
+      portMAX_DELAY: 0xFFFFFFFF,
+      NULL: null,
+      // ESP32 I2S driver constants
+      I2S_NUM_0: 0, I2S_NUM_1: 1,
+      I2S_MODE_MASTER: 1, I2S_MODE_SLAVE: 2,
+      I2S_MODE_TX: 4, I2S_MODE_RX: 8,
+      I2S_BITS_PER_SAMPLE_8BIT: 1, I2S_BITS_PER_SAMPLE_16BIT: 2, I2S_BITS_PER_SAMPLE_24BIT: 3, I2S_BITS_PER_SAMPLE_32BIT: 4,
+      I2S_CHANNEL_FMT_RIGHT_LEFT: 0, I2S_CHANNEL_FMT_ONLY_LEFT: 1, I2S_CHANNEL_FMT_ONLY_RIGHT: 2,
+      I2S_COMM_FORMAT_I2S: 0, I2S_COMM_FORMAT_STAND_I2S: 1,
+      ESP_INTR_FLAG_LEVEL1: 0,
+      I2S_PIN_NO_CHANGE: -1,
       // ESP32 WebServer HTTP method constants
       HTTP_GET: 'GET', HTTP_POST: 'POST', HTTP_PUT: 'PUT', HTTP_DELETE: 'DELETE',
       HTTP_HEAD: 'HEAD', HTTP_OPTIONS: 'OPTIONS', HTTP_PATCH: 'PATCH', HTTP_ANY: 'ANY',
@@ -2130,6 +2212,7 @@ class ArduinoSimulator {
         mode() { },
         softAP(ssid) { self._serialLog(`[ESP32 Wi-Fi] SoftAP "${ssid}" started\n`, 'system'); },
         setAutoConnect() { },
+        reconnect() { self._serialLog('[ESP32 Wi-Fi] Reconnected\n', 'system'); },
       },
       /* ESP32 Wi-Fi client + MQTT (PubSubClient).
          When the MQTT.js library is loaded (index.html), this also publishes
@@ -2137,7 +2220,60 @@ class ArduinoSimulator {
          default), so you can watch the messages in MQTTX / any MQTT client.
          If no real broker can be reached, a local in-page broker is used as a
          fallback so the pub/sub demo still works offline. */
-      WiFiClient: function () { return {}; },
+      WiFiClient: function () { return { connected() { return true; }, available() { return 0; }, readBytes() { return 0; } }; },
+      /* ESP32 HTTPClient stub — simulates HTTP GET with a synthetic PCM audio stream */
+      httpNew() {
+        return { _url: '', _timeout: 5000, _stream: null, __http: true };
+      },
+      httpBegin(obj, url) { obj._url = url; },
+      httpSetTimeout(obj, ms) { obj._timeout = ms; },
+      httpGet(obj) {
+        self._serialLog('[HTTP] GET ' + obj._url + '\n', 'system');
+        // Generate synthetic PCM sine-wave audio: 16-bit, 44100 Hz, stereo
+        const sr = 44100, dur = 3, channels = 2, bps = 2;
+        const totalSamples = sr * dur * channels;
+        const buf = new ArrayBuffer(totalSamples * bps);
+        const view = new Int16Array(buf);
+        const freq = 440; // A4
+        for (let i = 0; i < totalSamples; i += 2) {
+          const t = (i / 2) / sr;
+          const s = Math.round(16000 * Math.sin(2 * Math.PI * freq * t));
+          view[i] = s;     // left
+          view[i + 1] = s; // right
+        }
+        obj._stream = new Uint8Array(buf);
+        obj._streamPos = 0;
+        return 200; // HTTP_CODE_OK
+      },
+      httpGetStream(obj) {
+        return {
+          connected() { return obj._stream && obj._streamPos < obj._stream.length; },
+          available() { return obj._stream ? obj._stream.length - obj._streamPos : 0; },
+          readBytes(dst, len) {
+            if (!obj._stream) return 0;
+            const remain = obj._stream.length - obj._streamPos;
+            const n = Math.min(len, remain);
+            for (let i = 0; i < n; i++) dst[i] = obj._stream[obj._streamPos++];
+            return n;
+          },
+        };
+      },
+      httpEnd(obj) { obj._stream = null; obj._streamPos = 0; },
+      /* ESP32 I2S driver stubs */
+      i2sDriverInstall(port, config, flags, arg) {
+        self._serialLog('[I2S] Driver installed\n', 'system');
+      },
+      i2sSetPin(port, pins) {
+        self._serialLog('[I2S] Pins set BCLK=' + (pins.bck_io_num ?? pins.bck ?? '?') +
+          ' LRCK=' + (pins.ws_io_num ?? pins.ws ?? '?') +
+          ' DOUT=' + (pins.data_out_num ?? pins.dout ?? '?') + '\n', 'system');
+      },
+      i2sWrite(port, buf, len, written, timeout) {
+        // Consume the audio buffer — in a real sim we'd visualise this
+        if (written) written.val = len;
+        return len;
+      },
+      i2sZeroDma(port) { },
       /* ESP32 WebServer stub — routes are registered via _a.serverOn() and
          served by _a.serverHandleClient(), which generates a simulated HTTP
          request to each route every ~1.5s so you can watch requests/responses
@@ -2623,20 +2759,6 @@ class ArduinoSimulator {
     }
   }
 
-  _setBuzzerActive(key, active) {
-    const cc = window.CircuitCanvas;
-    if (!cc || !cc.components) return;
-    const pinNum = parseInt(String(key).replace('pin_', ''), 10);
-    for (const inst of cc.components) {
-      if (inst.type !== 'buzzer') continue;
-      const vp = cc._getConnectedPinNum(inst.id, 'vcc');
-      if (vp === pinNum) {
-        inst.runtimeState.active = active;
-        break;
-      }
-    }
-  }
-
   _startTone(key, freq) {
     this._initAudio();
     if (!this._toneCtx) return;
@@ -2651,7 +2773,6 @@ class ArduinoSimulator {
       gain.connect(this._toneCtx.destination);
       osc.start();
       this._toneOscillators[key] = { osc, gain };
-      this._setBuzzerActive(key, true);
       this._emitEvent('buzzer_on', { key, freq });
     } catch (e) {
       console.error('[ArduSim] Audio error:', e);
@@ -2663,7 +2784,6 @@ class ArduinoSimulator {
       try { this._toneOscillators[key].osc.stop(); } catch (e) { }
       delete this._toneOscillators[key];
     }
-    this._setBuzzerActive(key, false);
     this._emitEvent('buzzer_off', { key });
   }
 
