@@ -934,13 +934,14 @@ class ArduinoSimulator {
         },
         serialPrintf(fmt, ...args) {
           let i = 0;
-          const str = String(fmt).replace(/%([dusfxXeEgGoc])/g, function(_, spec) {
+          const str = String(fmt).replace(/%([-+# 0]*)(\d*)(?:\.(\d+))?([dusfxXeEgGoc])/g, function(_, flags, width, prec, spec) {
             const v = args[i++];
             if (v === undefined) return '';
+            const decimals = prec !== undefined ? Number(prec) : (spec === 'f' ? 6 : undefined);
             switch (spec) {
               case 'd': case 'u': return String(Math.round(Number(v)));
               case 's': return String(v);
-              case 'f': return Number(v).toFixed(6);
+              case 'f': return Number(v).toFixed(decimals);
               case 'x': return Math.round(Number(v)).toString(16);
               case 'X': return Math.round(Number(v)).toString(16).toUpperCase();
               case 'e': return Number(v).toExponential();
