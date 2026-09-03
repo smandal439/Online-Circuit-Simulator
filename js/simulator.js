@@ -1171,8 +1171,7 @@ class ArduinoSimulator {
             return;
           }
           if (varName && varName.__vl53l0x) {
-            varName.begin();
-            return;
+            return varName.begin();
           }
           if (varName && varName.__tft) {
             self._emitEvent('tft_power', { on: true });
