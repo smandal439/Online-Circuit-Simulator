@@ -40,6 +40,7 @@ const STATIC_ASSETS = [
   'js/guide.js',
   'js/sharing.js',
   'js/safetyChecker.js',
+  'js/communication.js',
   'favicon.ico',
 ].map(p => BASE + p);
 
