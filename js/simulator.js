@@ -2078,6 +2078,35 @@ class ArduinoSimulator {
         },
         i2sWrite(port, buf, len, written, timeout) {
           if (written) written.val = len;
+          // Feed audio amplitude to the DIN pin of any connected MAX98357A
+          try {
+            const cc = window.CircuitCanvas;
+            if (cc && cc.components && buf) {
+              const amp = cc.components.find(c => c.type === 'max98357a');
+              if (amp) {
+                // Compute RMS amplitude from PCM buffer (16-bit LE stereo)
+                let sum = 0, count = 0;
+                const samples = Math.min(len / 2, 512);
+                const view = new Int16Array(buf.buffer || buf, buf.byteOffset || 0, samples);
+                for (let i = 0; i < samples; i++) { sum += view[i] * view[i]; count++; }
+                const rms = count > 0 ? Math.sqrt(sum / count) : 0;
+                // Map 0..32767 → 0..3.3V on DIN pin via pinStates
+                const dinV = (rms / 32767) * 3.3;
+                if (typeof cc._getConnectedPinNum === 'function') {
+                  const pinNum = cc._getConnectedPinNum(amp.id, 'din');
+                  if (pinNum !== null) self.pinStates[`pin_${pinNum}`] = dinV;
+                }
+                // Also set the ESP32 D22 pin state (I2S DOUT)
+                if (typeof cc._getConnectedPinNum === 'function') {
+                  const esp = cc.components.find(c => c.type === 'esp32_devkit_v1');
+                  if (esp) {
+                    const d22num = cc._getConnectedPinNum(esp.id, 'D22');
+                    if (d22num !== null) self.pinStates[`pin_${d22num}`] = dinV;
+                  }
+                }
+              }
+            }
+          } catch (e) { /* ignore — no circuit canvas available */ }
           return len;
         },
         i2sZeroDma(port) { },
