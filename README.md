@@ -209,6 +209,18 @@ No build step or Node.js environment is required. You can host this static web a
 
 ---
 
+## Add A Custom Example
+
+1. Build or load your circuit and code in the simulator.
+2. Open **File** and choose **Save as Example**.
+3. Enter the example name, description, and comma-separated tags.
+4. Put the downloaded JSON file in `Examples/`.
+5. Run the Node server and refresh the simulator; the new file will appear automatically in **Examples**.
+
+For static hosting without `/api/examples`, also add the file's base name to the fallback list in `window.loadExamplesFromFiles` in `js/simulator.js`.
+
+The downloaded file includes the required `id`, `name`, `icon`, `desc`, `tags`, `circuit`, and `code` fields. Use a unique example name so its generated `id` does not collide with another example.
+
 ## 📄 License
 
 MIT License. Open source and free for educational and commercial use.

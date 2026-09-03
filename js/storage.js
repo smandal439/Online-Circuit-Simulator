@@ -170,6 +170,31 @@ const StorageManager = {
     this.showToast('Project downloaded!', 'success');
   },
 
+  downloadExample(code, circuitData, name, description, tags) {
+    const id = name.toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'custom_example';
+    const example = {
+      id,
+      name,
+      icon: '🔧',
+      desc: description || `A custom ${name} circuit example.`,
+      tags: String(tags || '').split(',').map(tag => tag.trim()).filter(Boolean),
+      circuit: circuitData,
+      code,
+    };
+    const json = JSON.stringify(example, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.showToast(`Example JSON downloaded: ${id}.json`, 'success');
+  },
+
   /* ── Load project from file ── */
   loadFromFile(callback) {
     const input = document.getElementById('file-input');

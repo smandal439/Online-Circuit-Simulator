@@ -116,6 +116,7 @@ class App {
     const pauseBtn  = get('btn-pause');
     const saveBtn   = get('btn-save');
     const downloadBtn = get('btn-download');
+    const saveExampleBtn = get('btn-save-example');
     const loadBtn   = get('btn-load');
     const savedProjectsBtn = get('btn-saved-projects');
     const shareBtn  = get('btn-share');
@@ -155,6 +156,7 @@ class App {
     pauseBtn?.addEventListener('click', () => this.pauseResume());
     saveBtn?.addEventListener('click', () => this.saveProject());
     downloadBtn?.addEventListener('click', () => this.downloadProject());
+    saveExampleBtn?.addEventListener('click', () => this.saveAsExample());
     loadBtn?.addEventListener('click', () => this.loadProject());
     savedProjectsBtn?.addEventListener('click', () => this._openSavedProjects());
     shareBtn?.addEventListener('click', () => this.shareProject());
@@ -1041,6 +1043,18 @@ class App {
     const code = this.editor?.getCode() || '';
     const circuitData = this.canvas?.serialize() || { components: [], wires: [] };
     window.StorageManager?.downloadProject(code, circuitData, this._projectName);
+  }
+
+  saveAsExample() {
+    const name = window.prompt('Example name:', this.getProjectName());
+    if (!name || !name.trim()) return;
+    const description = window.prompt('Short description:', `A custom ${name.trim()} circuit example.`);
+    if (description === null) return;
+    const tags = window.prompt('Tags, separated by commas:', 'custom, circuit');
+    if (tags === null) return;
+    const code = this.editor?.getCode() || '';
+    const circuitData = this.canvas?.serialize() || { components: [], wires: [] };
+    window.StorageManager?.downloadExample(code, circuitData, name.trim(), description.trim(), tags);
   }
 
   loadProject() {

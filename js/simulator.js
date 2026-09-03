@@ -3093,6 +3093,19 @@ class ArduinoSimulator {
 window.ArduinoSim = new ArduinoSimulator();
 window.EXAMPLE_SKETCHES = [];
 window.loadExamplesFromFiles = async function () {
+  // The Node server discovers every JSON file, including user-added examples.
+  try {
+    const apiRes = await fetch('/api/examples?ts=' + Date.now());
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      if (Array.isArray(data.examples)) {
+        window.EXAMPLE_SKETCHES = data.examples;
+        console.log('[ArduSim] Loaded ' + data.examples.length + ' examples from server');
+        return;
+      }
+    }
+  } catch (e) { /* static hosting uses the bundled fallback list */ }
+
   const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep',
     'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic',
     'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter',
