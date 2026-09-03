@@ -12,6 +12,7 @@ const STATIC_ASSETS = [
   'index.html',
   'css/style.css',
   'js/app.js',
+  'js/components/audio.js',
   'js/canvas.js',
   'js/editor.js',
   'js/simulator.js',

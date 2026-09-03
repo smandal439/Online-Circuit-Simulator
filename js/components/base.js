@@ -9,34 +9,34 @@ const GRID = 1;
 
 /* ── Pin types ── */
 const PIN_TYPE = {
-  DIGITAL:  'digital',
-  ANALOG:   'analog',
-  POWER:    'power',
-  GND:      'gnd',
-  PWM:      'pwm',
-  SIGNAL:   'signal',
+  DIGITAL: 'digital',
+  ANALOG: 'analog',
+  POWER: 'power',
+  GND: 'gnd',
+  PWM: 'pwm',
+  SIGNAL: 'signal',
 };
 
 /* ── Color map for components ── */
 const C = {
-  BOARD:   '#1a5c1a',
+  BOARD: '#1a5c1a',
   BOARD_D: '#12401a',
-  PCB:     '#1d6b2e',
+  PCB: '#1d6b2e',
   PIN_HDR: '#c8a84b',
-  CHIP:    '#2a2a2a',
-  CHIP_TXT:'#cccccc',
-  WHITE:   '#f0f0f0',
-  GRAY:    '#888',
-  LGRAY:   '#aaa',
-  DGRAY:   '#444',
+  CHIP: '#2a2a2a',
+  CHIP_TXT: '#cccccc',
+  WHITE: '#f0f0f0',
+  GRAY: '#888',
+  LGRAY: '#aaa',
+  DGRAY: '#444',
   RED_LED: '#ff3333',
   GRN_LED: '#33ff66',
   BLU_LED: '#3399ff',
   YLW_LED: '#ffee33',
   ORG_LED: '#ff8833',
   WHT_LED: '#ffffff',
-  WIRE_H:  '#ff5555',
-  WIRE_L:  '#4488cc',
+  WIRE_H: '#ff5555',
+  WIRE_L: '#4488cc',
 };
 
 /* ══════════════════════════════════════════════════════
@@ -133,10 +133,10 @@ function drawLED_on_board(ctx, cx, cy, color, r) {
 function hexToRgba(hex, alpha) {
   if (!hex || !hex.startsWith('#')) return `rgba(255,50,50,${alpha})`;
   let h = hex.slice(1);
-  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-  const r = parseInt(h.slice(0,2),16) || 0;
-  const g = parseInt(h.slice(2,4),16) || 0;
-  const b = parseInt(h.slice(4,6),16) || 0;
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  const r = parseInt(h.slice(0, 2), 16) || 0;
+  const g = parseInt(h.slice(2, 4), 16) || 0;
+  const b = parseInt(h.slice(4, 6), 16) || 0;
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
@@ -169,7 +169,7 @@ function getInstPinPWM(inst, pinId, sim) {
 
 /* Resistor color bands */
 function resistorBands(val) {
-  const COLORS = ['#000','#884400','#ff0000','#ff8800','#ffff00','#00aa00','#0000ff','#aa00aa','#888888','#ffffff'];
+  const COLORS = ['#000', '#884400', '#ff0000', '#ff8800', '#ffff00', '#00aa00', '#0000ff', '#aa00aa', '#888888', '#ffffff'];
   const digits = String(Math.round(val)).replace(/0+$/, '');
   const significant = digits.padStart(2, '0');
   const multiplier = Math.floor(Math.log10(val)) - 1;
@@ -182,8 +182,8 @@ function resistorBands(val) {
 
 function formatResistance(val, unit) {
   if (unit) return val + unit;
-  if (val >= 1000000) return (val/1000000).toFixed(1) + 'MΩ';
-  if (val >= 1000) return (val/1000).toFixed(1) + 'kΩ';
+  if (val >= 1000000) return (val / 1000000).toFixed(1) + 'MΩ';
+  if (val >= 1000) return (val / 1000).toFixed(1) + 'kΩ';
   return val + 'Ω';
 }
 
@@ -201,41 +201,46 @@ function getComponentPins(inst) {
 
 /* ═══════════════ COMPONENT CATALOG (for UI display) ═══════════════ */
 const COMPONENT_CATALOG = [
-  { category: 'Boards',    ids: ['arduino_uno', 'esp32_devkit_v1'] },
-  { category: 'Output',    ids: ['multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel', 'neopixel_strip', 'neopixel_ring', 'neopixel_8x8_matrix', 'bulb_12v', 'max7219', 'ili9341'],
-    dropdown: { id: 'led', label: 'LED', icon: '💡', desc: 'Light Emitting Diode',
+  { category: 'Boards', ids: ['arduino_uno', 'esp32_devkit_v1'] },
+  {
+    category: 'Output', ids: ['multi_led_array', 'rgb_led', 'buzzer', 'seg7', 'lcd1602', 'lcd1602_i2c', 'oled_ssd1306', 'neopixel', 'neopixel_strip', 'neopixel_ring', 'neopixel_8x8_matrix', 'bulb_12v', 'max7219', 'ili9341'],
+    dropdown: {
+      id: 'led', label: 'LED', icon: '💡', desc: 'Light Emitting Diode',
       variants: [
-        { id: 'led',         name: 'Red LED',    color: '#ff3333', icon: '🔴' },
-        { id: 'led_green',   name: 'Green LED',  color: '#33ff33', icon: '🟢' },
-        { id: 'led_blue',    name: 'Blue LED',   color: '#3366ff', icon: '🔵' },
-        { id: 'led_yellow',  name: 'Yellow LED', color: '#ffff33', icon: '🟡' },
-        { id: 'led_orange',  name: 'Orange LED', color: '#ff9933', icon: '🟠' },
-        { id: 'led_white',   name: 'White LED',  color: '#ffffff', icon: '⚪' },
+        { id: 'led', name: 'Red LED', color: '#ff3333', icon: '🔴' },
+        { id: 'led_green', name: 'Green LED', color: '#33ff33', icon: '🟢' },
+        { id: 'led_blue', name: 'Blue LED', color: '#3366ff', icon: '🔵' },
+        { id: 'led_yellow', name: 'Yellow LED', color: '#ffff33', icon: '🟡' },
+        { id: 'led_orange', name: 'Orange LED', color: '#ff9933', icon: '🟠' },
+        { id: 'led_white', name: 'White LED', color: '#ffffff', icon: '⚪' },
       ]
     }
   },
-  { category: 'Input',     ids: ['push_button', 'potentiometer', 'joystick', 'keypad_4x4', 'rotary_encoder', 'dip_switch'] },
+  { category: 'Input', ids: ['push_button', 'potentiometer', 'joystick', 'keypad_4x4', 'rotary_encoder', 'dip_switch'] },
   { category: 'Actuators', ids: ['servo', 'dc_motor', 'relay', 'stepper_28byj', 'l298n', 'servo_continuous'] },
-  { category: 'Sensors',   ids: ['dht11', 'hcsr04', 'ldr', 'pir', 'mpu6050', 'ir_obstacle', 'flex_sensor', 'thermistor', 'lm35_sensor', 'bme280', 'vl53l0x', 'rc522', 'ir_receiver', 'hc05'] },
-  { category: 'Passive',   ids: ['resistor', 'capacitor', 'breadboard', 'diode_1n4007'] },
-  { category: 'Power',     ids: ['power_5v', 'power_gnd', 'mb102_power', 'bench_power_supply'] },
-  { category: 'Digital ICs', ids: [],
-    dropdown: { id: 'digital_ic', label: 'Digital ICs', icon: '⮗', desc: 'Logic Gates & Timers',
+  { category: 'Audio', ids: ['max98357a', 'speaker_4ohm'] },
+  { category: 'Sensors', ids: ['dht11', 'hcsr04', 'ldr', 'pir', 'mpu6050', 'ir_obstacle', 'flex_sensor', 'thermistor', 'lm35_sensor', 'bme280', 'vl53l0x', 'rc522', 'ir_receiver', 'hc05'] },
+  { category: 'Passive', ids: ['resistor', 'capacitor', 'breadboard', 'diode_1n4007'] },
+  { category: 'Power', ids: ['power_5v', 'power_gnd', 'mb102_power', 'bench_power_supply'] },
+  {
+    category: 'Digital ICs', ids: [],
+    dropdown: {
+      id: 'digital_ic', label: 'Digital ICs', icon: '⮗', desc: 'Logic Gates & Timers',
       variants: [
-        { id: 'ic_555',   name: '555 Timer',      icon: '⏱️' },
-        { id: 'ic_74hc00', name: '74HC00 NAND',    icon: '⮗' },
-        { id: 'ic_74hc04', name: '74HC04 NOT',     icon: '⮗' },
-        { id: 'ic_74hc08', name: '74HC08 AND',     icon: '⮗' },
-        { id: 'ic_74hc32', name: '74HC32 OR',      icon: '⮗' },
+        { id: 'ic_555', name: '555 Timer', icon: '⏱️' },
+        { id: 'ic_74hc00', name: '74HC00 NAND', icon: '⮗' },
+        { id: 'ic_74hc04', name: '74HC04 NOT', icon: '⮗' },
+        { id: 'ic_74hc08', name: '74HC08 AND', icon: '⮗' },
+        { id: 'ic_74hc32', name: '74HC32 OR', icon: '⮗' },
         { id: 'ic_74hc74', name: '74HC74 Dual DFF', icon: '⮗' },
         { id: 'ic_74hc47', name: '74HC47 BCD→7Seg', icon: '⮗' },
         { id: 'ic_74hc148', name: '74HC148 Encoder', icon: '⮗' },
         { id: 'ic_74hc595', name: '74HC595 Shift Reg', icon: '⮗' },
-        { id: 'ic_74hc138', name: '74HC138 Decoder',   icon: '⮗' },
-        { id: 'ic_74hc165', name: '74HC165 PISO',      icon: '⮗' },
-        { id: 'ic_74hc193', name: '74HC193 Counter',   icon: '⮗' },
-        { id: 'ic_74hc245', name: '74HC245 Buffer',    icon: '⮗' },
-        { id: 'lm741',    name: 'LM741 Op-Amp',    icon: '📐' },
+        { id: 'ic_74hc138', name: '74HC138 Decoder', icon: '⮗' },
+        { id: 'ic_74hc165', name: '74HC165 PISO', icon: '⮗' },
+        { id: 'ic_74hc193', name: '74HC193 Counter', icon: '⮗' },
+        { id: 'ic_74hc245', name: '74HC245 Buffer', icon: '⮗' },
+        { id: 'lm741', name: 'LM741 Op-Amp', icon: '📐' },
       ]
     }
   },

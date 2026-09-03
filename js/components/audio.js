@@ -3,7 +3,7 @@
 defComp({
   id: 'max98357a',
   name: 'MAX98357A I2S Class-D Amp',
-  category: 'Audio',
+  category: 'audio',
   icon: '🔊',
   desc: '3.2W Monaural Class-D I2S Audio Amplifier with digital input, flexible gain control, dynamic BTL differential output, and shutdown mode.',
 
@@ -275,7 +275,7 @@ defComp({
 defComp({
   id: 'speaker_4ohm',
   name: 'Dynamic Loudspeaker',
-  category: 'Audio',
+  category: 'audio',
   icon: '🔊',
   desc: 'Dynamic electrodynamic speaker with differential BTL inputs, real-time physical cone excursion, RMS power calculation, and animated acoustic wave emission.',
 
