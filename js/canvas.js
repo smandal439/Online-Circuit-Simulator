@@ -2517,7 +2517,10 @@ class CircuitCanvas {
           const gndNet = this._tracePinNet(inst.id, 'gnd');
           const hasVcc = vccNet.sources.length > 0 && vccNet.sources[0].voltage > 1.5;
           const hasGnd = gndNet.grounds.length > 0;
-          inst.runtimeState.active = hasVcc && hasGnd;
+          const vp = this._getConnectedPinNum(inst.id, 'vcc');
+          const toneKey = `pin_${vp}`;
+          const tonePlaying = !!(window.ArduinoSim && window.ArduinoSim._toneOscillators && window.ArduinoSim._toneOscillators[toneKey]);
+          inst.runtimeState.active = tonePlaying || (hasVcc && hasGnd);
           break;
         }
         case 'seg7': {

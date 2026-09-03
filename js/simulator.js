@@ -2623,6 +2623,20 @@ class ArduinoSimulator {
     }
   }
 
+  _setBuzzerActive(key, active) {
+    const cc = window.CircuitCanvas;
+    if (!cc || !cc.components) return;
+    const pinNum = parseInt(String(key).replace('pin_', ''), 10);
+    for (const inst of cc.components) {
+      if (inst.type !== 'buzzer') continue;
+      const vp = cc._getConnectedPinNum(inst.id, 'vcc');
+      if (vp === pinNum) {
+        inst.runtimeState.active = active;
+        break;
+      }
+    }
+  }
+
   _startTone(key, freq) {
     this._initAudio();
     if (!this._toneCtx) return;
@@ -2637,6 +2651,7 @@ class ArduinoSimulator {
       gain.connect(this._toneCtx.destination);
       osc.start();
       this._toneOscillators[key] = { osc, gain };
+      this._setBuzzerActive(key, true);
       this._emitEvent('buzzer_on', { key, freq });
     } catch (e) {
       console.error('[ArduSim] Audio error:', e);
@@ -2648,6 +2663,7 @@ class ArduinoSimulator {
       try { this._toneOscillators[key].osc.stop(); } catch (e) { }
       delete this._toneOscillators[key];
     }
+    this._setBuzzerActive(key, false);
     this._emitEvent('buzzer_off', { key });
   }
 
