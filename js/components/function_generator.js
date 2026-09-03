@@ -41,6 +41,8 @@ defComp({
     { id: 'ch2_gnd', label: 'GND2', type: PIN_TYPE.GND,   x: 200, y: 190, side: 'bottom' },
   ],
 
+  _btnRects: {},
+
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const props = inst.props || {};
@@ -50,40 +52,34 @@ defComp({
     ctx.save();
     ctx.translate(x, y);
 
-    // ── Lead wires ──
-    const drawLead = (px, py, color) => {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(px, H - 30); ctx.lineTo(px, H); ctx.stroke();
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(px, H, 3, 0, Math.PI * 2); ctx.fill();
-    };
-    drawLead(80,  H, isPowered ? '#00e5ff' : '#1a2a30');
-    drawLead(110, H, '#333');
-    drawLead(170, H, isPowered ? '#ff3366' : '#2a1a20');
-    drawLead(200, H, '#333');
+    // Store button rects for hit testing
+    if (!inst._btnRects) inst._btnRects = {};
 
     // ── Main body ──
-    ctx.fillStyle = '#22262f';
-    roundRect(ctx, 0, 0, W, H - 30, 10);
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#2a2e38'); bg.addColorStop(0.5, '#22262f'); bg.addColorStop(1, '#181b22');
+    ctx.fillStyle = bg;
+    roundRect(ctx, 0, 0, W, H - 25, 10);
     ctx.fill();
-    ctx.strokeStyle = '#14171c';
+    ctx.strokeStyle = '#0c0e12';
     ctx.lineWidth = 3;
     ctx.stroke();
 
     // ── Top bar ──
-    ctx.fillStyle = '#333945';
-    ctx.fillRect(8, 6, W - 16, 2);
-    ctx.fillStyle = isPowered ? '#556677' : '#333945';
-    ctx.font = 'bold 9px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('DUAL-CHANNEL DDS FUNCTION GENERATOR', 12, 18);
-    ctx.textAlign = 'right';
-    ctx.fillText('CH1 / CH2', W - 12, 18);
-    ctx.fillStyle = '#333945';
-    ctx.fillRect(8, 22, W - 16, 2);
+    ctx.fillStyle = '#1a1d24';
+    ctx.fillRect(8, 6, W - 16, 18);
 
-    // ── Power LED in top bar ──
+    // Brand Logo
+    ctx.fillStyle = isPowered ? '#00d4e6' : '#1a2a30';
+    ctx.font = 'bold 9px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('DDS-8000', 14, 18);
+
+    ctx.fillStyle = isPowered ? '#606878' : '#2a2e38';
+    ctx.font = '7px sans-serif';
+    ctx.fillText('DUAL-CHANNEL FUNCTION GENERATOR', 65, 18);
+
+    // Power LED
     ctx.fillStyle = isPowered ? '#00e676' : '#1b3a24';
     ctx.beginPath(); ctx.arc(W - 55, 15, 2.5, 0, Math.PI * 2); ctx.fill();
     if (isPowered) {
@@ -93,16 +89,19 @@ defComp({
 
     // ── Scope screen ──
     const scrX = 10, scrY = 28, scrW = W - 20, scrH = 56;
-    ctx.fillStyle = '#090b0e';
-    roundRect(ctx, scrX, scrY, scrW, scrH, 4);
+    ctx.fillStyle = '#020406';
+    roundRect(ctx, scrX - 2, scrY - 2, scrW + 4, scrH + 4, 4);
     ctx.fill();
-    ctx.strokeStyle = isPowered ? '#2d333f' : '#1a1e24';
+    ctx.fillStyle = '#010204';
+    roundRect(ctx, scrX, scrY, scrW, scrH, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#2a3040';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     if (isPowered) {
       // Graticule
-      ctx.strokeStyle = '#1e232d';
+      ctx.strokeStyle = '#0c1420';
       ctx.lineWidth = 0.5;
       for (let gx = 1; gx < 10; gx++) {
         const gxPos = scrX + (scrW / 10) * gx;
@@ -113,7 +112,7 @@ defComp({
         ctx.beginPath(); ctx.moveTo(scrX, gyPos); ctx.lineTo(scrX + scrW, gyPos); ctx.stroke();
       }
       // Zero line
-      ctx.strokeStyle = '#343a46';
+      ctx.strokeStyle = '#182838';
       ctx.lineWidth = 0.8;
       const zeroY = scrY + scrH / 2;
       ctx.beginPath(); ctx.moveTo(scrX, zeroY); ctx.lineTo(scrX + scrW, zeroY); ctx.stroke();
@@ -142,7 +141,9 @@ defComp({
         return offset + v * (amp / 2);
       };
 
-      // CH1 trace (cyan)
+      // CH1 trace (cyan) with glow
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 4;
       ctx.strokeStyle = '#00e5ff';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -153,8 +154,11 @@ defComp({
         if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
       }
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      // CH2 trace (pink)
+      // CH2 trace (pink) with glow
+      ctx.shadowColor = '#ff3366';
+      ctx.shadowBlur = 4;
       ctx.strokeStyle = '#ff3366';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -165,6 +169,22 @@ defComp({
         if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
       }
       ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // OSD labels
+      ctx.fillStyle = 'rgba(2, 4, 8, 0.75)';
+      roundRect(ctx, scrX + 2, scrY + 2, 60, 12, 2);
+      ctx.fill();
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = 'bold 7px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('CH1: ' + _fmtFreq(ch1Freq), scrX + 5, scrY + 10);
+
+      ctx.fillStyle = 'rgba(2, 4, 8, 0.75)';
+      roundRect(ctx, scrX + 66, scrY + 2, 60, 12, 2);
+      ctx.fill();
+      ctx.fillStyle = '#ff3366';
+      ctx.fillText('CH2: ' + _fmtFreq(ch2Freq), scrX + 69, scrY + 10);
     } else {
       ctx.fillStyle = '#111418';
       ctx.font = 'bold 11px monospace';
@@ -222,7 +242,49 @@ defComp({
     _drawCard(scrX + cardW + cardGap, cardY, cardW, cardH, 'CHANNEL 2', '#ff3366',
       props.ch2_wave || 'square', ch2Freq, props.ch2_amp || 3, props.ch2_offset || 0, props.ch2_phase || 90, props.ch2_duty || 50);
 
-    // ── Power toggle switch ──
+    // ── Interactive Control Buttons ──
+    const _ctrlBtn = (bx, by, bw, lbl, col, active) => {
+      const bg = ctx.createLinearGradient(bx, by, bx, by + 14);
+      if (active) { bg.addColorStop(0, col); bg.addColorStop(1, _darken(col, 0.3)); }
+      else { bg.addColorStop(0, '#222830'); bg.addColorStop(1, '#181c22'); }
+      ctx.fillStyle = bg;
+      roundRect(ctx, bx, by, bw, 14, 3);
+      ctx.fill();
+      ctx.strokeStyle = active ? '#0a0c10' : '#1a1e28';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+      ctx.fillStyle = active ? '#ffffff' : '#6a7488';
+      ctx.font = 'bold 7px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(lbl, bx + bw / 2, by + 10);
+    };
+
+    // CH1 Wave Selector
+    const waveLabels = { sine: 'SIN', square: 'SQR', triangle: 'TRI', sawtooth: 'SAW', noise: 'NOI' };
+    const waveOpts = ['sine', 'square', 'triangle', 'sawtooth', 'noise'];
+    const ch1Wave = props.ch1_wave || 'sine';
+    const freqBtnW = 28;
+    _ctrlBtn(scrX, cardY + cardH + 6, cardW / 2 - freqBtnW - 4, waveLabels[ch1Wave] || 'SIN', '#00e5ff', isPowered);
+    inst._btnRects.ch1Wave = { x: scrX, y: cardY + cardH + 6, w: cardW / 2 - freqBtnW - 4, h: 14, field: 'ch1_wave', options: waveOpts };
+
+    // CH1 Freq +/- buttons
+    _ctrlBtn(scrX + cardW / 2 - freqBtnW - 2, cardY + cardH + 6, freqBtnW / 2, '\u25B2', '#00e5ff', isPowered);
+    inst._btnRects.ch1FreqUp = { x: scrX + cardW / 2 - freqBtnW - 2, y: cardY + cardH + 6, w: freqBtnW / 2, h: 14, field: 'ch1_freq_up' };
+    _ctrlBtn(scrX + cardW / 2 - freqBtnW / 2 - 2, cardY + cardH + 6, freqBtnW / 2, '\u25BC', '#00e5ff', isPowered);
+    inst._btnRects.ch1FreqDown = { x: scrX + cardW / 2 - freqBtnW / 2 - 2, y: cardY + cardH + 6, w: freqBtnW / 2, h: 14, field: 'ch1_freq_down' };
+
+    // CH2 Wave Selector
+    const ch2Wave = props.ch2_wave || 'square';
+    _ctrlBtn(scrX + cardW / 2 + 2, cardY + cardH + 6, cardW / 2 - freqBtnW - 4, waveLabels[ch2Wave] || 'SQR', '#ff3366', isPowered);
+    inst._btnRects.ch2Wave = { x: scrX + cardW / 2 + 2, y: cardY + cardH + 6, w: cardW / 2 - freqBtnW - 4, h: 14, field: 'ch2_wave', options: waveOpts };
+
+    // CH2 Freq +/- buttons
+    _ctrlBtn(scrX + cardW - freqBtnW - 2, cardY + cardH + 6, freqBtnW / 2, '\u25B2', '#ff3366', isPowered);
+    inst._btnRects.ch2FreqUp = { x: scrX + cardW - freqBtnW - 2, y: cardY + cardH + 6, w: freqBtnW / 2, h: 14, field: 'ch2_freq_up' };
+    _ctrlBtn(scrX + cardW - freqBtnW / 2 - 2, cardY + cardH + 6, freqBtnW / 2, '\u25BC', '#ff3366', isPowered);
+    inst._btnRects.ch2FreqDown = { x: scrX + cardW - freqBtnW / 2 - 2, y: cardY + cardH + 6, w: freqBtnW / 2, h: 14, field: 'ch2_freq_down' };
+
+    // Power toggle switch
     function drawToggleSwitch(tx, ty, tw, th, isOn, label) {
       ctx.fillStyle = '#0e1114';
       roundRect(ctx, tx, ty, tw, th, 3);
@@ -281,13 +343,44 @@ defComp({
 
     drawToggleSwitch(265, 28, 26, 42, isPowered, 'POWER');
 
-    // ── Pin labels ──
-    ctx.font = 'bold 8px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = isPowered ? '#00e5ff' : '#1a2a30';
-    ctx.fillText('CH1', 80, H - 8);
-    ctx.fillStyle = isPowered ? '#ff3366' : '#2a1a20';
-    ctx.fillText('CH2', 170, H - 8);
+    // ── BNC Connectors ──
+    const _bnc = (bx, by, lbl, col) => {
+      ctx.fillStyle = '#2a2e38';
+      ctx.beginPath(); ctx.arc(bx, by, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#3a4050';
+      ctx.beginPath(); ctx.arc(bx, by, 8, 0, Math.PI * 2); ctx.fill();
+      const mg = ctx.createLinearGradient(bx - 5, by - 5, bx + 5, by + 5);
+      mg.addColorStop(0, '#c8d0da'); mg.addColorStop(0.4, '#8090a0');
+      mg.addColorStop(0.6, '#606878'); mg.addColorStop(1, '#3a4050');
+      ctx.fillStyle = mg;
+      ctx.beginPath(); ctx.arc(bx, by, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0c0e12';
+      ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(bx, by, 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath(); ctx.arc(bx, by, 8.5, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = col;
+      ctx.font = 'bold 7px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(lbl, bx, by + 16);
+    };
+
+    const bncY = H - 35;
+    if (isPowered) {
+      _bnc(50,  bncY, 'CH1', '#00e5ff');
+      _bnc(110, bncY, 'GND1', '#7a889b');
+      _bnc(190, bncY, 'CH2', '#ff3366');
+      _bnc(250, bncY, 'GND2', '#7a889b');
+    } else {
+      _bnc(50,  bncY, 'CH1', '#3a4050');
+      _bnc(110, bncY, 'GND1', '#3a4050');
+      _bnc(190, bncY, 'CH2', '#3a4050');
+      _bnc(250, bncY, 'GND2', '#3a4050');
+    }
 
     // ── Selection highlight ──
     if (inst.selected) drawSelectionRect(ctx, -4, -4, W + 8, H + 4);
@@ -300,6 +393,13 @@ function _fmtFreq(hz) {
   if (hz >= 1e6) return (hz / 1e6).toFixed(2) + ' MHz';
   if (hz >= 1e3) return (hz / 1e3).toFixed(2) + ' kHz';
   return hz.toFixed(0) + ' Hz';
+}
+
+function _darken(hex, amt) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgb(${Math.round(r * (1 - amt))},${Math.round(g * (1 - amt))},${Math.round(b * (1 - amt))})`;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

@@ -51,6 +51,33 @@ class DSOFullscreen {
     this._fftCache = {};
     this._fftCacheTime = 0;
 
+    // Reference waveform storage
+    this._refWaveform = null;
+    this._refVisible = false;
+    this._refLabel = '';
+
+    // Waveform persistence (0 = off, 1 = low, 2 = medium, 3 = high)
+    this._persistenceLevel = 0;
+    this._persistenceCanvas = null;
+    this._persistenceCtx = null;
+
+    // Grid and display settings
+    this._gridVisible = true;
+    this._gridIntensity = 0.5;
+
+    // Help overlay
+    this._helpOverlay = document.getElementById('dso-help-overlay');
+    this._helpVisible = false;
+
+    // Status bar elements
+    this._statusTrigger = document.getElementById('dso-fs-status-trigger');
+    this._statusFreq = document.getElementById('dso-fs-status-freq');
+    this._statusSample = document.getElementById('dso-fs-status-sample');
+    this._statusMode = document.getElementById('dso-fs-status-mode');
+
+    // Throttled status update
+    this._lastStatusUpdate = 0;
+
     // ResizeObserver for responsive layout
     this._ro = null;
 
@@ -76,11 +103,17 @@ class DSOFullscreen {
     this._syncControlsFromInst();
     this._startRender();
 
+    // Initialize persistence canvas
+    this._initPersistenceCanvas();
+
     // Re-create ResizeObserver if needed
     if (window.ResizeObserver && this.canvas?.parentElement && !this._ro) {
       this._ro = new ResizeObserver(() => { if (this.visible) this._resize(); });
       this._ro.observe(this.canvas.parentElement);
     }
+
+    // Update status bar
+    this._updateStatusBar();
   }
 
   close() {
@@ -200,32 +233,33 @@ class DSOFullscreen {
     this._cy = cy;
     this._cx = cx;
 
-    ctx.strokeStyle = '#0c1420';
-    ctx.lineWidth = 0.5;
-    for (let i = 1; i < divsX; i++) {
-      const px = scrX + dW * i;
-      ctx.beginPath(); ctx.moveTo(px, scrY); ctx.lineTo(px, scrY + scrH); ctx.stroke();
-    }
-    for (let i = 1; i < divsY; i++) {
-      const py = scrY + dH * i;
-      ctx.beginPath(); ctx.moveTo(scrX, py); ctx.lineTo(scrX + scrW, py); ctx.stroke();
-    }
-
-    // Center crosshair
-    ctx.strokeStyle = '#182838';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(scrX, cy); ctx.lineTo(scrX + scrW, cy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx, scrY); ctx.lineTo(cx, scrY + scrH); ctx.stroke();
-
-    // Sub-ticks
-    ctx.fillStyle = '#203040';
-    for (let i = 0; i <= divsX * 4; i++) {
-      const tx = scrX + (scrW / (divsX * 4)) * i;
-      ctx.fillRect(tx, cy - 1.5, 0.7, 3);
-    }
-    for (let i = 0; i <= divsY * 4; i++) {
-      const ty = scrY + (scrH / (divsY * 4)) * i;
-      ctx.fillRect(cx - 1.5, ty, 3, 0.7);
+    if (this._gridVisible) {
+      const gridAlpha = this._gridIntensity;
+      ctx.strokeStyle = `rgba(12, 20, 32, ${gridAlpha})`;
+      ctx.lineWidth = 0.5;
+      for (let i = 1; i < divsX; i++) {
+        const px = scrX + dW * i;
+        ctx.beginPath(); ctx.moveTo(px, scrY); ctx.lineTo(px, scrY + scrH); ctx.stroke();
+      }
+      for (let i = 1; i < divsY; i++) {
+        const py = scrY + dH * i;
+        ctx.beginPath(); ctx.moveTo(scrX, py); ctx.lineTo(scrX + scrW, py); ctx.stroke();
+      }
+      // Center crosshair
+      ctx.strokeStyle = `rgba(24, 40, 56, ${gridAlpha})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(scrX, cy); ctx.lineTo(scrX + scrW, cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, scrY); ctx.lineTo(cx, scrY + scrH); ctx.stroke();
+      // Sub-tick marks
+      ctx.fillStyle = `rgba(32, 48, 64, ${gridAlpha})`;
+      for (let i = 0; i <= divsX * 4; i++) {
+        const tx = scrX + (scrW / (divsX * 4)) * i;
+        ctx.fillRect(tx, cy - 1, 0.5, 2);
+      }
+      for (let i = 0; i <= divsY * 4; i++) {
+        const ty = scrY + (scrH / (divsY * 4)) * i;
+        ctx.fillRect(cx - 1, ty, 2, 0.5);
+      }
     }
 
     // ── Waveforms ──
@@ -557,6 +591,14 @@ class DSOFullscreen {
     if (this.voltCursorB !== null) this._smoothVCB = lerp(this._smoothVCB ?? this.voltCursorB, this.voltCursorB, smoothing);
     else this._smoothVCB = null;
 
+    // ── Reference Waveform ──
+    this._drawReferenceWaveform(scrX, scrY, scrW, scrH, dW, dH, cy, totalTime, t);
+
+    // ── Persistence overlay ──
+    if (this._persistenceLevel > 0) {
+      this._applyPersistence();
+    }
+
     // ── Time Cursors ──
     if (this._smoothTCA !== null) {
       const xA = this._smoothTCA;
@@ -700,6 +742,17 @@ class DSOFullscreen {
 
     // ── Right Control Panel ──
     this._drawControlPanel(ctx, scrX + scrW + 16, scrY, ctrlW - 16, scrH, P, isPowered, isRunning, isSingleArmed);
+
+    // ── Persistence capture for next frame ──
+    if (this._persistenceLevel > 0) {
+      this._capturePersistence();
+    }
+
+    // ── Update status bar (throttled) ──
+    if (!this._lastStatusUpdate || Date.now() - this._lastStatusUpdate > 500) {
+      this._updateStatusBar();
+      this._lastStatusUpdate = Date.now();
+    }
   }
 
   _drawCursorReadout(ctx, scrX, scrY, scrW, scrH, dW, dH, cy, cx, divsX, divsY, P, buf, totalTime) {
@@ -878,9 +931,11 @@ class DSOFullscreen {
     // ── Transport ──
     this._drawSection(ctx, x + 8, yPos, w - 16, 'TRANSPORT');
     yPos += 16;
+    if (!this._elements) this._elements = {};
     // Run/Stop button
+    const rsW = (w - 20) / 2;
     ctx.fillStyle = isRunning ? '#1a3520' : '#351a1a';
-    this._rr(ctx, x + 8, yPos, (w - 20) / 2, 22, 4);
+    this._rr(ctx, x + 8, yPos, rsW, 22, 4);
     ctx.fill();
     ctx.strokeStyle = isRunning ? '#00ff66' : '#ff3366';
     ctx.lineWidth = 1;
@@ -888,11 +943,12 @@ class DSOFullscreen {
     ctx.fillStyle = isRunning ? '#00ff66' : '#ff3366';
     ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
     ctx.textAlign = 'center';
-    ctx.fillText(isRunning ? 'RUN' : 'STOP', x + 8 + (w - 20) / 4, yPos + 15);
+    ctx.fillText(isRunning ? 'RUN' : 'STOP', x + 8 + rsW / 2, yPos + 15);
+    this._elements['dso-fs-runstop'] = { x: x + 8, y: yPos, w: rsW, h: 22, type: 'button', field: 'runStop' };
 
     // Single button
     ctx.fillStyle = isSingleArmed ? '#35351a' : '#1a1d24';
-    this._rr(ctx, x + 8 + (w - 20) / 2 + 4, yPos, (w - 20) / 2, 22, 4);
+    this._rr(ctx, x + 8 + rsW + 4, yPos, rsW, 22, 4);
     ctx.fill();
     ctx.strokeStyle = isSingleArmed ? '#ffaa00' : '#3a4050';
     ctx.lineWidth = 1;
@@ -900,7 +956,8 @@ class DSOFullscreen {
     ctx.fillStyle = isSingleArmed ? '#ffaa00' : '#7a889b';
     ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
     ctx.textAlign = 'center';
-    ctx.fillText('SINGLE', x + 8 + (w - 20) * 3 / 4 + 4, yPos + 15);
+    ctx.fillText('SINGLE', x + 8 + rsW + 4 + rsW / 2, yPos + 15);
+    this._elements['dso-fs-single'] = { x: x + 8 + rsW + 4, y: yPos, w: rsW, h: 22, type: 'button', field: 'singleTrigger' };
 
     // Auto-set button
     yPos += 26;
@@ -914,9 +971,22 @@ class DSOFullscreen {
     ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
     ctx.textAlign = 'center';
     ctx.fillText('AUTO SET', x + 8 + (w - 20) / 2, yPos + 15);
-
-    if (!this._elements) this._elements = {};
     this._elements['dso-fs-autoset-canvas'] = { x: x + 8, y: yPos, w: w - 20, h: 22, type: 'button', field: '_autoSet' };
+
+    // Pause / Hold button
+    yPos += 26;
+    const isPaused = Boolean(P('paused', false));
+    ctx.fillStyle = isPaused ? '#352515' : '#1a1d24';
+    this._rr(ctx, x + 8, yPos, w - 20, 22, 4);
+    ctx.fill();
+    ctx.strokeStyle = isPaused ? '#ffaa00' : '#3a4050';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = isPaused ? '#ffaa00' : '#7a889b';
+    ctx.font = `bold ${Math.round(10 * fs)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(isPaused ? '\u23F8 PAUSED' : '\u25B6 HOLD', x + 8 + (w - 20) / 2, yPos + 15);
+    this._elements['dso-fs-pause'] = { x: x + 8, y: yPos, w: w - 20, h: 22, type: 'button', field: 'paused' };
   }
 
   _drawSection(ctx, x, y, w, label, col) {
@@ -1090,6 +1160,197 @@ class DSOFullscreen {
     return r.toFixed(0) + 'Sa/s';
   }
 
+  /* ══════════════ PERSISTENCE ══════════════ */
+  _initPersistenceCanvas() {
+    if (!this.canvas) return;
+    if (!this._persistenceCanvas) {
+      this._persistenceCanvas = document.createElement('canvas');
+      this._persistenceCtx = this._persistenceCanvas.getContext('2d');
+    }
+    this._persistenceCanvas.width = this.canvas.width;
+    this._persistenceCanvas.height = this.canvas.height;
+    if (this._persistenceCtx) {
+      this._persistenceCtx.clearRect(0, 0, this._persistenceCanvas.width, this._persistenceCanvas.height);
+    }
+  }
+
+  _applyPersistence() {
+    if (this._persistenceLevel === 0 || !this._persistenceCanvas || !this.ctx) return;
+    const decay = [0, 0.85, 0.7, 0.55][this._persistenceLevel] || 0.85;
+    // Fade the persistence canvas
+    this._persistenceCtx.globalAlpha = decay;
+    this._persistenceCtx.drawImage(this.canvas, 0, 0);
+    this._persistenceCtx.globalAlpha = 1;
+    // Draw the persistence layer onto main canvas
+    this.ctx.drawImage(this._persistenceCanvas, 0, 0, this._canvasW, this._canvasH);
+  }
+
+  _capturePersistence() {
+    if (this._persistenceLevel === 0 || !this._persistenceCanvas || !this.ctx) return;
+    // After rendering, capture the current screen for next frame persistence
+    this._persistenceCtx.clearRect(0, 0, this._persistenceCanvas.width, this._persistenceCanvas.height);
+    this._persistenceCtx.drawImage(this.canvas, 0, 0);
+  }
+
+  /* ══════════════ REFERENCE WAVEFORM ══════════════ */
+  _storeReference() {
+    if (!this.inst || !this.inst._buffers) return;
+    const buf = this.inst._buffers;
+    const rs = this.inst.runtimeState || {};
+    const props = this.inst.props || {};
+    const P = (field, def) => (rs[field] !== undefined) ? rs[field] : (props[field] ?? def);
+
+    // Store the first enabled channel's waveform
+    const chIds = ['ch1', 'ch2', 'ch3', 'ch4'];
+    for (const chId of chIds) {
+      if (!P(chId + '_en', chId === 'ch1' || chId === 'ch2')) continue;
+      const samples = buf[chId];
+      const times = buf.t;
+      if (!samples || samples.length < 2 || !times) continue;
+
+      this._refWaveform = {
+        samples: new Float64Array(samples),
+        times: new Float64Array(times),
+        vdiv: P(chId + '_vdiv', 1),
+        pos: P(chId + '_pos', 0),
+        color: this._getChannelColor(chId),
+        label: chId.toUpperCase(),
+        timebase: P('timebase', 0.001),
+      };
+      this._refVisible = true;
+      this._refLabel = chId.toUpperCase();
+
+      // Update button state
+      const refToggle = document.getElementById('dso-fs-ref-toggle');
+      if (refToggle) refToggle.classList.add('active');
+      break;
+    }
+  }
+
+  _getChannelColor(chId) {
+    const colors = { ch1: '#ffe600', ch2: '#00e5ff', ch3: '#ff3090', ch4: '#30ff60' };
+    return colors[chId] || '#ffffff';
+  }
+
+  _drawReferenceWaveform(scrX, scrY, scrW, scrH, dW, dH, cy, totalTime, t) {
+    if (!this._refWaveform || !this._refVisible) return;
+
+    const ref = this._refWaveform;
+    const samples = ref.samples;
+    const times = ref.times;
+    if (!samples || samples.length < 2) return;
+
+    const refTimebase = ref.timebase || 0.001;
+    const refTotalTime = refTimebase * 12;
+    const lastRefTime = times[times.length - 1];
+    const firstRefTime = times[0];
+    const refDuration = lastRefTime - firstRefTime;
+
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(scrX, scrY, scrW, scrH);
+    ctx.clip();
+
+    ctx.strokeStyle = ref.color;
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+
+    for (let px = 0; px < scrW; px++) {
+      const targetRefTime = firstRefTime + (px / scrW) * refDuration;
+      // Find the closest sample
+      let idx = 0;
+      for (let i = 0; i < times.length - 1; i++) {
+        if (times[i] <= targetRefTime && times[i + 1] > targetRefTime) {
+          idx = i;
+          break;
+        }
+        if (i === times.length - 2) idx = i;
+      }
+      const v = samples[idx] || 0;
+      const py = cy - (v * (dH / ref.vdiv)) - (ref.pos * dH);
+      if (px === 0) ctx.moveTo(scrX + px, py); else ctx.lineTo(scrX + px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /* ══════════════ SCREENSHOT ══════════════ */
+  _savePNG() {
+    if (!this.canvas) return;
+    const link = document.createElement('a');
+    link.download = 'dso_screenshot_' + Date.now() + '.png';
+    link.href = this.canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  /* ══════════════ HELP OVERLAY ══════════════ */
+  _toggleHelp() {
+    this._helpVisible = !this._helpVisible;
+    if (this._helpOverlay) {
+      this._helpOverlay.classList.toggle('hidden', !this._helpVisible);
+    }
+  }
+
+  _closeHelp() {
+    this._helpVisible = false;
+    if (this._helpOverlay) {
+      this._helpOverlay.classList.add('hidden');
+    }
+  }
+
+  /* ══════════════ STATUS BAR ══════════════ */
+  _updateStatusBar() {
+    if (!this.inst) return;
+    const rs = this.inst.runtimeState || {};
+    const props = this.inst.props || {};
+    const P = (field, def) => (rs[field] !== undefined) ? rs[field] : (props[field] ?? def);
+    const buf = this.inst._buffers;
+
+    // Trigger status
+    const trigSrc = (P('trig_source', 'ch1')).toUpperCase();
+    const trigSlope = P('trig_slope', 'rising') === 'falling' ? 'FALL' : 'RISE';
+    const trigLevel = this._fmtV(P('trig_level', 0));
+    if (this._statusTrigger) {
+      this._statusTrigger.textContent = `TRIG: ${trigSrc} ${trigSlope} ${trigLevel}`;
+    }
+
+    // Frequency counter
+    if (this._statusFreq && buf) {
+      const trigCh = P('trig_source', 'ch1');
+      const samples = buf[trigCh];
+      if (samples && samples.length > 20) {
+        const timebase = P('timebase', 0.001);
+        const totalTime = timebase * 12;
+        let crossings = 0;
+        for (let i = 1; i < samples.length; i++) {
+          if ((samples[i - 1] < 0 && samples[i] >= 0) || (samples[i - 1] >= 0 && samples[i] < 0)) crossings++;
+        }
+        const freq = crossings > 1 ? (crossings / 2) / totalTime : 0;
+        this._statusFreq.textContent = freq > 0 ? `FREQ: ${this._fmtFreq(freq)}` : 'FREQ: ---';
+      } else {
+        this._statusFreq.textContent = 'FREQ: ---';
+      }
+    }
+
+    // Sample rate
+    if (this._statusSample && buf && buf.t && buf.t.length > 1) {
+      const totalTimeBuf = buf.t[buf.t.length - 1] - buf.t[0];
+      const sampleRate = totalTimeBuf > 0 ? buf.t.length / totalTimeBuf : 0;
+      this._statusSample.textContent = sampleRate > 0 ? `SAMPLE: ${this._fmtRate(sampleRate)}` : 'SAMPLE: ---';
+    }
+
+    // Mode
+    if (this._statusMode) {
+      const modeLabels = { scope: 'SCOPE', spectrum: 'FFT', xy: 'XY' };
+      this._statusMode.textContent = `MODE: ${modeLabels[this._dsoMode] || 'SCOPE'}`;
+    }
+  }
+
   /* ══════════════ EVENT HANDLING ══════════════ */
   _bindEvents() {
     if (!this.overlay) return;
@@ -1100,8 +1361,34 @@ class DSOFullscreen {
     // Auto-set button
     document.getElementById('dso-fs-autoset')?.addEventListener('click', () => this._autoSet());
 
-    // Save button
+    // Save CSV button
     document.getElementById('dso-fs-save')?.addEventListener('click', () => this._saveCSV());
+
+    // Save PNG button
+    document.getElementById('dso-fs-save-png')?.addEventListener('click', () => this._savePNG());
+
+    // Reference store button
+    document.getElementById('dso-fs-ref-store')?.addEventListener('click', () => this._storeReference());
+
+    // Reference toggle button
+    document.getElementById('dso-fs-ref-toggle')?.addEventListener('click', () => {
+      this._refVisible = !this._refVisible;
+      const refToggle = document.getElementById('dso-fs-ref-toggle');
+      if (refToggle) refToggle.classList.toggle('active', this._refVisible);
+    });
+
+    // Help button
+    document.getElementById('dso-fs-help')?.addEventListener('click', () => this._toggleHelp());
+
+    // Help close button
+    document.getElementById('dso-help-close')?.addEventListener('click', () => this._closeHelp());
+
+    // Help overlay click to close
+    if (this._helpOverlay) {
+      this._helpOverlay.addEventListener('click', (e) => {
+        if (e.target === this._helpOverlay) this._closeHelp();
+      });
+    }
 
     // Canvas cursor interaction
     if (this.canvas) {
@@ -1144,11 +1431,25 @@ class DSOFullscreen {
   /* ══════════════ KEYBOARD SHORTCUTS ══════════════ */
   _onKeyDown(e) {
     if (!this.visible || !this.inst) return;
+
+    // Close help if open
+    if (this._helpVisible && (e.key === 'Escape' || e.key === 'h' || e.key === 'H')) {
+      this._closeHelp();
+      e.preventDefault();
+      return;
+    }
+
     const rs = this.inst.runtimeState || {};
     const props = this.inst.props || {};
 
     // Escape — close
     if (e.key === 'Escape') { this.close(); return; }
+
+    // H — toggle help overlay
+    if (e.key === 'h' || e.key === 'H') {
+      this._toggleHelp();
+      e.preventDefault(); return;
+    }
 
     // R — toggle Run/Stop
     if (e.key === 'r' || e.key === 'R') {
@@ -1166,6 +1467,12 @@ class DSOFullscreen {
       e.preventDefault(); return;
     }
 
+    // Space — toggle Pause/Hold
+    if (e.key === ' ') {
+      rs.paused = !rs.paused;
+      e.preventDefault(); return;
+    }
+
     // A — auto-set
     if (e.key === 'a' || e.key === 'A') {
       this._autoSet();
@@ -1178,6 +1485,108 @@ class DSOFullscreen {
       const idx = modes.indexOf(this._dsoMode);
       this._dsoMode = modes[(idx + 1) % modes.length];
       e.preventDefault(); return;
+    }
+
+    // G — toggle grid visibility
+    if (e.key === 'g' || e.key === 'G') {
+      this._gridVisible = !this._gridVisible;
+      e.preventDefault(); return;
+    }
+
+    // P — cycle persistence level (off → low → medium → high)
+    if (e.key === 'p' && !e.ctrlKey) {
+      this._persistenceLevel = (this._persistenceLevel + 1) % 4;
+      if (this._persistenceLevel === 0) {
+        this._initPersistenceCanvas();
+      }
+      e.preventDefault(); return;
+    }
+
+    // B — cycle grid brightness
+    if (e.key === 'b' || e.key === 'B') {
+      this._gridIntensity = this._gridIntensity >= 0.8 ? 0.2 : this._gridIntensity + 0.2;
+      e.preventDefault(); return;
+    }
+
+    // O — cycle trigger source
+    if (e.key === 'o' || e.key === 'O') {
+      const sources = ['ch1', 'ch2', 'ch3', 'ch4'];
+      const cur = rs.trig_source || props.trig_source || 'ch1';
+      const idx = sources.indexOf(cur);
+      rs.trig_source = sources[(idx + 1) % sources.length];
+      props.trig_source = rs.trig_source;
+      e.preventDefault(); return;
+    }
+
+    // I — cycle trigger slope
+    if (e.key === 'i' || e.key === 'I') {
+      const cur = rs.trig_slope || props.trig_slope || 'rising';
+      rs.trig_slope = cur === 'rising' ? 'falling' : 'rising';
+      props.trig_slope = rs.trig_slope;
+      e.preventDefault(); return;
+    }
+
+    // Q — cycle CH1 coupling (dc → ac → gnd)
+    if (e.key === 'q' || e.key === 'Q') {
+      const couplings = ['dc', 'ac', 'gnd'];
+      const cur = rs.ch1_coupling || props.ch1_coupling || 'dc';
+      const idx = couplings.indexOf(cur);
+      rs.ch1_coupling = couplings[(idx + 1) % couplings.length];
+      props.ch1_coupling = rs.ch1_coupling;
+      e.preventDefault(); return;
+    }
+
+    // W — cycle CH2 coupling
+    if (e.key === 'w' || e.key === 'W') {
+      const couplings = ['dc', 'ac', 'gnd'];
+      const cur = rs.ch2_coupling || props.ch2_coupling || 'dc';
+      const idx = couplings.indexOf(cur);
+      rs.ch2_coupling = couplings[(idx + 1) % couplings.length];
+      props.ch2_coupling = rs.ch2_coupling;
+      e.preventDefault(); return;
+    }
+
+    // E — cycle CH3 coupling
+    if (e.key === 'e' || e.key === 'E') {
+      const couplings = ['dc', 'ac', 'gnd'];
+      const cur = rs.ch3_coupling || props.ch3_coupling || 'dc';
+      const idx = couplings.indexOf(cur);
+      rs.ch3_coupling = couplings[(idx + 1) % couplings.length];
+      props.ch3_coupling = rs.ch3_coupling;
+      e.preventDefault(); return;
+    }
+
+    // X — cycle CH4 coupling
+    if (e.key === 'x' || e.key === 'X') {
+      const couplings = ['dc', 'ac', 'gnd'];
+      const cur = rs.ch4_coupling || props.ch4_coupling || 'dc';
+      const idx = couplings.indexOf(cur);
+      rs.ch4_coupling = couplings[(idx + 1) % couplings.length];
+      props.ch4_coupling = rs.ch4_coupling;
+      e.preventDefault(); return;
+    }
+
+    // Ctrl+S — store reference waveform
+    if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      this._storeReference();
+      return;
+    }
+
+    // Ctrl+R — toggle reference visibility
+    if (e.ctrlKey && (e.key === 'r' || e.key === 'R')) {
+      e.preventDefault();
+      this._refVisible = !this._refVisible;
+      const refToggle = document.getElementById('dso-fs-ref-toggle');
+      if (refToggle) refToggle.classList.toggle('active', this._refVisible);
+      return;
+    }
+
+    // Ctrl+P — save screenshot
+    if (e.ctrlKey && (e.key === 'p' || e.key === 'P')) {
+      e.preventDefault();
+      this._savePNG();
+      return;
     }
 
     // 1-4 — toggle channel enable
@@ -1322,30 +1731,41 @@ class DSOFullscreen {
       for (const [id, el] of Object.entries(this._elements)) {
         if (x >= el.x && x <= el.x + el.w && y >= el.y && y <= el.y + el.h) {
           const rs = this.inst.runtimeState || {};
+          const props = this.inst.props || {};
           if (el.type === 'select') {
-            // Cycle through options
             const idx = el.options.findIndex(o => o.value == el.value);
             const next = (idx + 1) % el.options.length;
             rs[el.field] = el.options[next].value;
-            this.inst.props[el.field] = el.options[next].value;
+            props[el.field] = el.options[next].value;
           } else if (el.type === 'checkbox') {
             rs[el.field] = !el.value;
-            this.inst.props[el.field] = !el.value;
+            props[el.field] = !el.value;
           } else if (el.type === 'range') {
-            // Click sets value proportionally
             const pct = Math.max(0, Math.min(1, (x - el.x) / el.w));
             let val = el.min + pct * (el.max - el.min);
             if (el.step) val = Math.round(val / el.step) * el.step;
             val = Math.max(el.min, Math.min(el.max, val));
             rs[el.field] = val;
-            this.inst.props[el.field] = val;
+            props[el.field] = val;
           } else if (el.type === 'button') {
-            this._autoSet();
+            if (el.field === 'runStop') {
+              const cur = rs.runStop !== undefined ? rs.runStop : (props.runStop ?? 1);
+              rs.runStop = cur ? 0 : 1;
+              props.runStop = rs.runStop;
+            } else if (el.field === 'singleTrigger') {
+              const cur = rs.singleTrigger !== undefined ? rs.singleTrigger : (props.singleTrigger ?? 0);
+              rs.singleTrigger = cur ? 0 : 1;
+              props.singleTrigger = rs.singleTrigger;
+            } else if (el.field === '_autoSet') {
+              this._autoSet();
+            } else if (el.field === 'paused') {
+              rs.paused = !rs.paused;
+            }
           }
-          if (el.field === 'dso-fs-display-mode') {
-            this._dsoMode = el.options[el.options.findIndex(o => o.value == el.value) % el.options.length].value;
+          if (el.field === 'dso-fs-display-mode' && el.options) {
+            const idx = el.options.findIndex(o => o.value == el.value);
+            this._dsoMode = el.options[(idx + 1) % el.options.length].value;
           }
-          this._syncControlsFromInst();
           e.stopPropagation();
           return;
         }
@@ -1390,6 +1810,9 @@ class DSOFullscreen {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    const ctrlX = this._scrX + this._scrW + 16;
+    if (x >= ctrlX) return;
+
     // Only place cursors within the screen area
     if (x >= this._scrX && x <= this._scrX + this._scrW &&
         y >= this._scrY && y <= this._scrY + this._scrH) {
@@ -1431,8 +1854,6 @@ class DSOFullscreen {
 
   _syncControlsFromInst() {
     if (!this.inst) return;
-    // Controls are drawn from inst state on each render frame, so just redraw
-    this._elements = {};
   }
 
   _autoSet() {

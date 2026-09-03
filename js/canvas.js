@@ -722,6 +722,170 @@ class CircuitCanvas {
     return null;
   }
 
+  _hitTestDsoButton(wx, wy) {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    if (!defs) return null;
+    for (const inst of this.components) {
+      if (inst.type !== 'dso_4ch') continue;
+      const btnRects = inst._btnRects;
+      if (!btnRects) continue;
+      const lx = wx - inst.x;
+      const ly = wy - inst.y;
+      for (const [key, rect] of Object.entries(btnRects)) {
+        if (lx >= rect.x && lx <= rect.x + rect.w && ly >= rect.y && ly <= rect.y + rect.h) {
+          return { inst, key, rect };
+        }
+      }
+    }
+    return null;
+  }
+
+  _handleDsoButtonClick(inst, key) {
+    const rs = inst.runtimeState || {};
+    const props = inst.props || {};
+
+    const cycleOptions = (field, options) => {
+      const cur = rs[field] !== undefined ? rs[field] : (props[field] ?? options[0]);
+      const idx = options.indexOf(cur);
+      const next = options[(idx + 1) % options.length];
+      rs[field] = next;
+      props[field] = next;
+    };
+
+    switch (key) {
+      case 'ch1':
+      case 'ch2':
+      case 'ch3':
+      case 'ch4': {
+        const field = key + '_en';
+        const defVal = (key === 'ch1' || key === 'ch2');
+        const cur = rs[field] !== undefined ? rs[field] : (props[field] ?? defVal);
+        rs[field] = !cur;
+        props[field] = !cur;
+        break;
+      }
+      case 'runStop': {
+        const cur = rs.runStop !== undefined ? rs.runStop : (props.runStop ?? 1);
+        rs.runStop = cur ? 0 : 1;
+        props.runStop = rs.runStop;
+        break;
+      }
+      case 'single': {
+        const cur = rs.singleTrigger !== undefined ? rs.singleTrigger : (props.singleTrigger ?? 0);
+        rs.singleTrigger = cur ? 0 : 1;
+        props.singleTrigger = rs.singleTrigger;
+        break;
+      }
+      case 'autoSet': {
+        rs.autoSet = 1;
+        props.autoSet = 1;
+        break;
+      }
+      case 'fullscreen': {
+        if (window.App) window.App.openDSOFullscreen(inst);
+        break;
+      }
+      case 'trigSrc': {
+        cycleOptions('trig_source', ['ch1', 'ch2', 'ch3', 'ch4']);
+        break;
+      }
+      case 'trigSlope': {
+        cycleOptions('trig_slope', ['rising', 'falling']);
+        break;
+      }
+      case 'dsoMode': {
+        cycleOptions('dsoMode', ['scope', 'spectrum', 'xy']);
+        break;
+      }
+      case 'mathOp': {
+        cycleOptions('math_op', ['off', 'add', 'sub', 'abs', 'mul']);
+        break;
+      }
+      case 'ch1Coupling': {
+        cycleOptions('ch1_coupling', ['dc', 'ac', 'gnd']);
+        break;
+      }
+      case 'ch2Coupling': {
+        cycleOptions('ch2_coupling', ['dc', 'ac', 'gnd']);
+        break;
+      }
+      case 'pause': {
+        rs.paused = !rs.paused;
+        break;
+      }
+    }
+  }
+
+  _hitTestFuncGenButton(wx, wy) {
+    const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
+    if (!defs) return null;
+    for (const inst of this.components) {
+      if (inst.type !== 'func_gen') continue;
+      const btnRects = inst._btnRects;
+      if (!btnRects) continue;
+      const lx = wx - inst.x;
+      const ly = wy - inst.y;
+      for (const [key, rect] of Object.entries(btnRects)) {
+        if (lx >= rect.x && lx <= rect.x + rect.w && ly >= rect.y && ly <= rect.y + rect.h) {
+          return { inst, key, rect };
+        }
+      }
+    }
+    return null;
+  }
+
+  _handleFuncGenButtonClick(inst, key) {
+    const rs = inst.runtimeState || {};
+    const props = inst.props || {};
+
+    const cycleOptions = (field, options) => {
+      const cur = rs[field] !== undefined ? rs[field] : (props[field] ?? options[0]);
+      const idx = options.indexOf(cur);
+      const next = options[(idx + 1) % options.length];
+      rs[field] = next;
+      props[field] = next;
+    };
+
+    const waveOpts = ['sine', 'square', 'triangle', 'sawtooth', 'noise'];
+
+    const freqSteps = [1, 10, 100, 1000, 10000, 100000, 1000000];
+    const shiftFreq = (field, dir) => {
+      const cur = rs[field] !== undefined ? rs[field] : (props[field] ?? 440);
+      let step = 1;
+      for (const s of freqSteps) { if (cur >= s) step = s; }
+      const newVal = Math.max(1, Math.min(10000000, cur + dir * step));
+      rs[field] = newVal;
+      props[field] = newVal;
+    };
+
+    switch (key) {
+      case 'ch1Wave': {
+        cycleOptions('ch1_wave', waveOpts);
+        break;
+      }
+      case 'ch2Wave': {
+        cycleOptions('ch2_wave', waveOpts);
+        break;
+      }
+      case 'ch1FreqUp': {
+        shiftFreq('ch1_freq', 1);
+        break;
+      }
+      case 'ch1FreqDown': {
+        shiftFreq('ch1_freq', -1);
+        break;
+      }
+      case 'ch2FreqUp': {
+        shiftFreq('ch2_freq', 1);
+        break;
+      }
+      case 'ch2FreqDown': {
+        shiftFreq('ch2_freq', -1);
+        break;
+      }
+    }
+  }
+
   _hitTestDipSwitch(wx, wy) {
     const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
     if (!defs) return null;
@@ -1192,6 +1356,30 @@ class CircuitCanvas {
         inst.runtimeState = inst.runtimeState || {};
         const cur = Number(inst.runtimeState[ctrl.field] ?? inst.props?.[ctrl.field] ?? ctrl.min);
         inst.runtimeState[ctrl.field] = cur > 0 ? ctrl.min : ctrl.max;
+        this._selectAll(false);
+        inst.selected = true;
+        this.selected = inst;
+        return;
+      }
+
+      // DSO button clicks (channel toggles, trigger, mode, etc.)
+      const dsoHit = this._hitTestDsoButton(world.x, world.y);
+      if (dsoHit) {
+        const { inst, key } = dsoHit;
+        inst.runtimeState = inst.runtimeState || {};
+        this._handleDsoButtonClick(inst, key);
+        this._selectAll(false);
+        inst.selected = true;
+        this.selected = inst;
+        return;
+      }
+
+      // Function Generator button clicks (wave selectors)
+      const funcGenHit = this._hitTestFuncGenButton(world.x, world.y);
+      if (funcGenHit) {
+        const { inst, key } = funcGenHit;
+        inst.runtimeState = inst.runtimeState || {};
+        this._handleFuncGenButtonClick(inst, key);
         this._selectAll(false);
         inst.selected = true;
         this.selected = inst;
@@ -1948,7 +2136,17 @@ class CircuitCanvas {
 
   /* ══════════════ SERIALIZE ══════════════ */
   serialize() {
-    return { components: this.components, wires: this.wires };
+    return {
+      components: this.components.map(c => ({
+        id: c.id,
+        type: c.type,
+        x: c.x,
+        y: c.y,
+        rotation: c.rotation,
+        props: c.props,
+      })),
+      wires: this.wires,
+    };
   }
 
   deserialize(data) {
@@ -3173,6 +3371,17 @@ class CircuitCanvas {
           break;
         }
 
+        /* ── WS2812B NeoPixel 8x8 Matrix (64-pixel — reads pixel array from runtimeState) ── */
+        case 'neopixel_8x8_matrix': {
+          const npRingBri = inst.props.brightness ?? 255;
+          if (inst.runtimeState.brightness === undefined) inst.runtimeState.brightness = npRingBri;
+          if (!Array.isArray(inst.runtimeState.pixels)) {
+            const numPx = inst.props.numPixels || 64;
+            inst.runtimeState.pixels = Array(numPx).fill({ r: inst.props.r ?? 0, g: inst.props.g ?? 0, b: inst.props.b ?? 0 });
+          }
+          break;
+        }
+
         /* ── IR Obstacle Sensor (writes digital to connected pin) ── */
         case 'ir_obstacle': {
           const sim = window.ArduinoSim;
@@ -3536,7 +3745,31 @@ class CircuitCanvas {
         continue;
       }
 
-      if (visited.has(nodeKey)) continue;
+      if (visited.has(nodeKey)) {
+        // Parallel path discovery: follow wires-only from visited node to find ground/source pins
+        const wq = [{ iid: current.instId, pid: current.pinId, d: 0 }];
+        const wv = new Set();
+        while (wq.length > 0) {
+          const wn = wq.shift();
+          const wk = wn.iid + ':' + wn.pid;
+          if (wv.has(wk) || wn.d > 10) continue;
+          wv.add(wk);
+          for (const w of this.wires) {
+            let ni, np;
+            if (w.from.instId === wn.iid && w.from.pinId === wn.pid) { ni = w.to.instId; np = w.to.pinId; }
+            else if (w.to.instId === wn.iid && w.to.pinId === wn.pid) { ni = w.from.instId; np = w.from.pinId; }
+            else continue;
+            const ninst = this.components.find(c => c.id === ni);
+            if (!ninst) continue;
+            if (this._isGroundPin(ninst, np)) {
+              grounds.push({ type: 'gnd', instId: ni, pinId: np, resistance: current.resistance });
+            } else {
+              wq.push({ iid: ni, pid: np, d: wn.d + 1 });
+            }
+          }
+        }
+        continue;
+      }
       visited.add(nodeKey);
 
       // 1. Arduino Uno Pins
@@ -3928,6 +4161,14 @@ class CircuitCanvas {
         if (current.pinId === 'com') queue.push({ instId: inst.id, pinId: relayOn ? 'no' : 'nc', resistance: current.resistance });
         else if (current.pinId === 'no' && relayOn) queue.push({ instId: inst.id, pinId: 'com', resistance: current.resistance });
         else if (current.pinId === 'nc' && !relayOn) queue.push({ instId: inst.id, pinId: 'com', resistance: current.resistance });
+      }
+
+      // 12V Bulb pass-through (anode → cathode, 12Ω nominal)
+      if (inst.type === 'bulb_12v' && current.pinId === 'anode') {
+        queue.push({ instId: inst.id, pinId: 'cathode', resistance: current.resistance + 12 });
+      }
+      if (inst.type === 'bulb_12v' && current.pinId === 'cathode') {
+        queue.push({ instId: inst.id, pinId: 'anode', resistance: current.resistance + 12 });
       }
 
       // Traverse connected wires

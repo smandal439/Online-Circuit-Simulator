@@ -87,6 +87,7 @@ defComp({
     const P = (runtime, pr, field, def) => (runtime[field] !== undefined) ? runtime[field] : (pr[field] ?? def);
     const isRunning = rs.runStop !== undefined ? Boolean(rs.runStop) : Boolean(inst.props.runStop ?? 1);
     const isSingleArmed = rs.singleTrigger !== undefined ? Boolean(rs.singleTrigger) : Boolean(inst.props.singleTrigger ?? 0);
+    const isPaused = Boolean(rs.paused);
 
     if (!inst._buffers) {
       inst._buffers = { ch1: [], ch2: [], ch3: [], ch4: [], t: [] };
@@ -135,24 +136,105 @@ defComp({
     const v2 = readChannel('ch2_in', 'dso_probe_ch2');
     const v3 = readChannel('ch3_in', 'dso_probe_ch3');
     const v4 = readChannel('ch4_in', 'dso_probe_ch4');
+
+    // Store previous voltages for sub-frame interpolation, then update
+    const prevV = inst._lastRawV || [v1, v2, v3, v4];
     inst._lastRawV = [v1, v2, v3, v4];
 
-    // Rate-limit: target ~2 samples per pixel minimum for smooth rendering
-    const maxSamples = scrW * 4;
-    const minInterval = totalTime / maxSamples;
+    // Pause: skip sampling but keep last buffer
+    if (isPaused) {
+      inst._computeMeas = inst._computeMeas || {};
+      ['ch1', 'ch2', 'ch3', 'ch4'].forEach((chId) => {
+        const probeFactor = P(rs, inst.props, chId + '_probe', 1);
+        const rawSamples = buf[chId] && buf[chId].length > 0 ? buf[chId] : null;
+        const samples = rawSamples ? rawSamples.map(v => v * probeFactor) : null;
+        inst._computeMeas[chId] = dsoComputeMeasurements(samples, timebase, divsX);
+      });
+      return;
+    }
+
+    // Detect connected function generators for sub-frame analytical sampling
+    const _findConnectedFG = (dsoInst, pinId) => {
+      const cc = window.CircuitCanvas;
+      if (cc && typeof cc._getWireTarget === 'function') {
+        const target = cc._getWireTarget(dsoInst.id, pinId);
+        if (target && target.inst && target.inst.type === 'func_gen') return target.inst;
+      }
+      return null;
+    };
+
+    const _calcWaveAnalytical = (fgInst, chPin, sampleT) => {
+      if (!fgInst) return null;
+      const fgProps = fgInst.props || {};
+      const isWave = chPin === 'ch1_out';
+      const wave = fgProps[isWave ? 'ch1_wave' : 'ch2_wave'] || 'sine';
+      const freq = fgProps[isWave ? 'ch1_freq' : 'ch2_freq'] || 440;
+      const amp = fgProps[isWave ? 'ch1_amp' : 'ch2_amp'] || 5;
+      const offset = fgProps[isWave ? 'ch1_offset' : 'ch2_offset'] || 0;
+      const phaseDeg = fgProps[isWave ? 'ch1_phase' : 'ch2_phase'] || 0;
+      const duty = fgProps[isWave ? 'ch1_duty' : 'ch2_duty'] || 50;
+      const phaseRad = phaseDeg * Math.PI / 180;
+      const tau = ((sampleT * freq + phaseRad / (2 * Math.PI)) % 1 + 1) % 1;
+      const dutyFrac = duty / 100;
+      let v = 0;
+      switch (wave) {
+        case 'sine':     v = Math.sin(2 * Math.PI * tau); break;
+        case 'square':   v = tau < dutyFrac ? 1 : -1; break;
+        case 'triangle': v = tau < dutyFrac ? -1 + 2 * (tau / dutyFrac) : 1 - 2 * ((tau - dutyFrac) / (1 - dutyFrac)); break;
+        case 'sawtooth': v = 2 * tau - 1; break;
+        case 'noise':    v = Math.sin(sampleT * freq * 137.5) * 0.7 + Math.sin(sampleT * freq * 239.1) * 0.3; break;
+        default:         v = Math.sin(2 * Math.PI * tau); break;
+      }
+      return offset + v * (amp / 2);
+    };
+
+    const fg1 = _findConnectedFG(inst, 'ch1_in');
+    const fg2 = _findConnectedFG(inst, 'ch2_in');
+    const fg3 = _findConnectedFG(inst, 'ch3_in');
+    const fg4 = _findConnectedFG(inst, 'ch4_in');
+    const hasFG = fg1 || fg2 || fg3 || fg4;
+
+    // Sub-frame analytical sampling when function generators are connected
+    const TARGET_RATE = 1e9;
+    const MAX_SAMPLES = 200000;
+    const MAX_PER_FRAME = 50000;
+    const maxSamples = Math.max(100000, Math.min(MAX_SAMPLES, Math.ceil(TARGET_RATE * totalTime)));
     const lastT = inst._lastSampleTime || 0;
-    if (t - lastT < minInterval && buf.t.length > 0) return;
+    const dt = t - lastT;
+    let subFramePushed = false;
+
+    if (hasFG && dt > 0 && buf.t.length > 0) {
+      const numSamples = Math.min(Math.ceil(dt * TARGET_RATE), maxSamples - buf.t.length, MAX_PER_FRAME);
+      if (numSamples > 1) {
+        for (let i = 0; i < numSamples; i++) {
+          const frac = (i + 1) / numSamples;
+          const sampleT = lastT + dt * frac;
+          buf.t.push(sampleT);
+          buf.ch1.push(fg1 ? _calcWaveAnalytical(fg1, 'ch1_out', sampleT) * probeFactor1 : (prevV[0] + (v1 - prevV[0]) * frac) * probeFactor1);
+          buf.ch2.push(fg2 ? _calcWaveAnalytical(fg2, 'ch2_out', sampleT) * probeFactor2 : (prevV[1] + (v2 - prevV[1]) * frac) * probeFactor2);
+          buf.ch3.push(fg3 ? _calcWaveAnalytical(fg3, 'ch3_out', sampleT) * probeFactor3 : (prevV[2] + (v3 - prevV[2]) * frac) * probeFactor3);
+          buf.ch4.push(fg4 ? _calcWaveAnalytical(fg4, 'ch4_out', sampleT) * probeFactor4 : (prevV[3] + (v4 - prevV[3]) * frac) * probeFactor4);
+        }
+        subFramePushed = true;
+      }
+    }
+
+    // Push live sample (skip if sub-frame already covered this step)
+    if (!subFramePushed) {
+      buf.ch1.push(v1 * probeFactor1);
+      buf.ch2.push(v2 * probeFactor2);
+      buf.ch3.push(v3 * probeFactor3);
+      buf.ch4.push(v4 * probeFactor4);
+      buf.t.push(t);
+    }
     inst._lastSampleTime = t;
 
-    buf.ch1.push(v1 * probeFactor1);
-    buf.ch2.push(v2 * probeFactor2);
-    buf.ch3.push(v3 * probeFactor3);
-    buf.ch4.push(v4 * probeFactor4);
-    buf.t.push(t);
-    while (buf.t.length > maxSamples) {
-      buf.ch1.shift(); buf.ch2.shift();
-      buf.ch3.shift(); buf.ch4.shift();
-      buf.t.shift();
+    // Trim buffer
+    if (buf.t.length > maxSamples) {
+      const excess = buf.t.length - maxSamples;
+      buf.ch1.splice(0, excess); buf.ch2.splice(0, excess);
+      buf.ch3.splice(0, excess); buf.ch4.splice(0, excess);
+      buf.t.splice(0, excess);
     }
 
     // Single trigger logic
@@ -629,6 +711,17 @@ defComp({
       ctx.fillText(mathLabel, scrX + 8, osdY + 22);
     }
 
+    // Paused overlay
+    const isPaused = Boolean(P('paused', false));
+    if (isPaused) {
+      ctx.fillStyle = 'rgba(255, 170, 0, 0.12)';
+      ctx.fillRect(scrX, scrY, scrW, scrH);
+      ctx.fillStyle = '#ffaa00';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('\u23F8 PAUSED', scrX + scrW / 2, scrY + scrH / 2 + 4);
+    }
+
     // ── Bottom OSD Bar ──
     const osdBotY = scrY + scrH - 16;
     ctx.fillStyle = 'rgba(2, 4, 8, 0.75)';
@@ -692,6 +785,9 @@ defComp({
     ctx.textAlign = 'center';
     ctx.fillText('CONTROLS', panX + 52, 42);
 
+    // Store button rects for hit testing
+    if (!inst._btnRects) inst._btnRects = {};
+
     // ── Rotary Knobs ──
     const _knob = (kx, ky, r, label, col) => {
       const kg = ctx.createRadialGradient(kx - 1.5, ky - 1.5, 0.5, kx, ky, r);
@@ -728,77 +824,149 @@ defComp({
     _knob(panX + 40, 120, 13, 'TRIG LVL', isPowered ? '#ffaa00' : '#3a3a2a');
 
     // ── Channel Buttons ──
-    const _chBtn = (bx, by, lbl, col, active) => {
-      const cbg = ctx.createLinearGradient(bx, by, bx, by + 16);
+    const _chBtn = (bx, by, bw, lbl, col, active) => {
+      const cbg = ctx.createLinearGradient(bx, by, bx, by + 14);
       cbg.addColorStop(0, active ? col : '#222830');
       cbg.addColorStop(1, active ? _darken(col, 0.3) : '#181c22');
       ctx.fillStyle = cbg;
-      _rr(ctx, bx, by, 20, 16, 3); ctx.fill();
+      _rr(ctx, bx, by, bw, 14, 3); ctx.fill();
       ctx.strokeStyle = active ? '#0a0c10' : '#1a1e28'; ctx.lineWidth = 1; ctx.stroke();
 
       ctx.fillStyle = active ? col : '#2a3040';
-      ctx.beginPath(); ctx.arc(bx + 10, by - 3, 2.5, 0, Math.PI * 2); ctx.fill();
-      if (active) { ctx.shadowColor = col; ctx.shadowBlur = 4; ctx.beginPath(); ctx.arc(bx + 10, by - 3, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
+      ctx.beginPath(); ctx.arc(bx + bw / 2, by - 3, 2, 0, Math.PI * 2); ctx.fill();
+      if (active) { ctx.shadowColor = col; ctx.shadowBlur = 3; ctx.beginPath(); ctx.arc(bx + bw / 2, by - 3, 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
 
       ctx.fillStyle = active ? '#000000' : '#6a7488';
-      ctx.font = 'bold 8px sans-serif';
+      ctx.font = 'bold 7px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(lbl, bx + 10, by + 11);
+      ctx.fillText(lbl, bx + bw / 2, by + 10);
     };
 
-    const btnY = 155;
-    _chBtn(panX + 4,  btnY, 'CH1', '#ffe600', isPowered && P('ch1_en', true) !== false);
-    _chBtn(panX + 28, btnY, 'CH2', '#00e5ff', isPowered && P('ch2_en', true) !== false);
-    _chBtn(panX + 52, btnY, 'CH3', '#ff3090', isPowered && P('ch3_en', false) !== false);
-    _chBtn(panX + 76, btnY, 'CH4', '#30ff60', isPowered && P('ch4_en', false) !== false);
+    const btnY = 136;
+    const chBtnW = 21;
+    const chBtnGap = 1;
+    _chBtn(panX + 4,              btnY, chBtnW, 'CH1', '#ffe600', isPowered && P('ch1_en', true) !== false);
+    _chBtn(panX + 4 + chBtnW + chBtnGap, btnY, chBtnW, 'CH2', '#00e5ff', isPowered && P('ch2_en', true) !== false);
+    _chBtn(panX + 4 + (chBtnW + chBtnGap) * 2, btnY, chBtnW, 'CH3', '#ff3090', isPowered && P('ch3_en', false) !== false);
+    _chBtn(panX + 4 + (chBtnW + chBtnGap) * 3, btnY, chBtnW, 'CH4', '#30ff60', isPowered && P('ch4_en', false) !== false);
 
-    // ── Run/Stop Button ──
-    const rsY = 185;
-    const rsBg = ctx.createLinearGradient(panX + 10, rsY, panX + 10, rsY + 30);
+    inst._btnRects.ch1 = { x: panX + 4,              y: btnY, w: chBtnW, h: 14, field: 'ch1_en' };
+    inst._btnRects.ch2 = { x: panX + 4 + chBtnW + chBtnGap, y: btnY, w: chBtnW, h: 14, field: 'ch2_en' };
+    inst._btnRects.ch3 = { x: panX + 4 + (chBtnW + chBtnGap) * 2, y: btnY, w: chBtnW, h: 14, field: 'ch3_en' };
+    inst._btnRects.ch4 = { x: panX + 4 + (chBtnW + chBtnGap) * 3, y: btnY, w: chBtnW, h: 14, field: 'ch4_en' };
+
+    // ── Small Control Button Helper ──
+    const _ctrlBtn = (bx, by, bw, bh, lbl, col, active) => {
+      const bg = ctx.createLinearGradient(bx, by, bx, by + bh);
+      if (active) { bg.addColorStop(0, col); bg.addColorStop(1, _darken(col, 0.3)); }
+      else { bg.addColorStop(0, '#222830'); bg.addColorStop(1, '#181c22'); }
+      ctx.fillStyle = bg;
+      _rr(ctx, bx, by, bw, bh, 3); ctx.fill();
+      ctx.strokeStyle = active ? '#0a0c10' : '#1a1e28'; ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.fillStyle = active ? '#ffffff' : '#6a7488';
+      ctx.font = 'bold 5.5px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(lbl, bx + bw / 2, by + bh / 2 + 2);
+    };
+
+    // ── Trigger Source + Slope ──
+    const trigSrcY = btnY + 16;
+    const trigBtnW = 44;
+    const trigSrcBtn = P('trig_source', 'ch1').toUpperCase();
+    _ctrlBtn(panX + 4, trigSrcY, trigBtnW, 12, 'TRG:' + trigSrcBtn, '#ffaa00', isPowered);
+    inst._btnRects.trigSrc = { x: panX + 4, y: trigSrcY, w: trigBtnW, h: 12, field: 'trig_source' };
+
+    const trigSlopeBtn = P('trig_slope', 'rising');
+    const slopeLabel = trigSlopeBtn === 'rising' ? '/ RISE' : '\\ FALL';
+    _ctrlBtn(panX + 52, trigSrcY, trigBtnW, 12, slopeLabel, '#ffaa00', isPowered);
+    inst._btnRects.trigSlope = { x: panX + 52, y: trigSrcY, w: trigBtnW, h: 12, field: 'trig_slope' };
+
+    // ── Run/Stop + Single ──
+    const rsY = trigSrcY + 14;
+    const rsW = 42;
+    const rsBg = ctx.createLinearGradient(panX + 4, rsY, panX + 4, rsY + 14);
     if (isRunning) { rsBg.addColorStop(0, '#1a3520'); rsBg.addColorStop(1, '#0e2210'); }
     else { rsBg.addColorStop(0, '#351a1a'); rsBg.addColorStop(1, '#220e0e'); }
     ctx.fillStyle = rsBg;
-    _rr(ctx, panX + 10, rsY, 38, 18, 4); ctx.fill();
+    _rr(ctx, panX + 4, rsY, rsW, 14, 3); ctx.fill();
     ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1; ctx.stroke();
     ctx.fillStyle = isRunning ? '#00ff66' : '#ff3366';
-    ctx.font = 'bold 8px sans-serif';
+    ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(isRunning ? 'RUN' : 'STOP', panX + 29, rsY + 12);
+    ctx.fillText(isRunning ? 'RUN' : 'STOP', panX + 4 + rsW / 2, rsY + 10);
+    inst._btnRects.runStop = { x: panX + 4, y: rsY, w: rsW, h: 14, field: 'runStop' };
 
-    // Single button
-    const sglBg = ctx.createLinearGradient(panX + 52, rsY, panX + 52, rsY + 18);
+    const sglBg = ctx.createLinearGradient(panX + 52, rsY, panX + 52, rsY + 14);
     if (isSingleArmed) { sglBg.addColorStop(0, '#35351a'); sglBg.addColorStop(1, '#22220e'); }
     else { sglBg.addColorStop(0, '#222830'); sglBg.addColorStop(1, '#181c22'); }
     ctx.fillStyle = sglBg;
-    _rr(ctx, panX + 52, rsY, 38, 18, 4); ctx.fill();
+    _rr(ctx, panX + 52, rsY, rsW, 14, 3); ctx.fill();
     ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1; ctx.stroke();
     ctx.fillStyle = isSingleArmed ? '#ffaa00' : '#6a7488';
-    ctx.font = 'bold 8px sans-serif';
+    ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('SINGLE', panX + 71, rsY + 12);
+    ctx.fillText('SINGLE', panX + 52 + rsW / 2, rsY + 10);
+    inst._btnRects.single = { x: panX + 52, y: rsY, w: rsW, h: 14, field: 'singleTrigger' };
 
-    // ── Auto Set Button ──
-    const autoY = rsY + 24;
-    const autoBg = ctx.createLinearGradient(panX + 10, autoY, panX + 10, autoY + 16);
+    // Pause button
+    const pauBg = ctx.createLinearGradient(panX + 100, rsY, panX + 100, rsY + 14);
+    if (isPaused) { pauBg.addColorStop(0, '#352515'); pauBg.addColorStop(1, '#221a0e'); }
+    else { pauBg.addColorStop(0, '#222830'); pauBg.addColorStop(1, '#181c22'); }
+    ctx.fillStyle = pauBg;
+    _rr(ctx, panX + 100, rsY, 30, 14, 3); ctx.fill();
+    ctx.strokeStyle = '#0a0c10'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = isPaused ? '#ffaa00' : '#6a7488';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('HOLD', panX + 115, rsY + 10);
+    inst._btnRects.pause = { x: panX + 100, y: rsY, w: 30, h: 14, field: 'paused' };
+
+    // ── Auto Set + Fullscreen ──
+    const autoY = rsY + 15;
+    const autoBg = ctx.createLinearGradient(panX + 4, autoY, panX + 4, autoY + 14);
     autoBg.addColorStop(0, '#1a2550');
     autoBg.addColorStop(1, '#0e1a30');
     ctx.fillStyle = autoBg;
-    _rr(ctx, panX + 10, autoY, 38, 16, 3); ctx.fill();
+    _rr(ctx, panX + 4, autoY, rsW, 14, 3); ctx.fill();
     ctx.strokeStyle = isPowered ? '#3070a0' : '#2a2e38'; ctx.lineWidth = 0.8; ctx.stroke();
     ctx.fillStyle = isPowered ? '#40a0ff' : '#4a5264';
-    ctx.font = 'bold 7px sans-serif';
+    ctx.font = 'bold 6px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('AUTO', panX + 29, autoY + 11);
+    ctx.fillText('AUTO', panX + 4 + rsW / 2, autoY + 10);
+    inst._btnRects.autoSet = { x: panX + 4, y: autoY, w: rsW, h: 14, field: 'autoSet' };
 
-    // ── Fullscreen Button ──
-    const fsX = panX + 52, fsY = rsY + 24;
     ctx.fillStyle = isPowered ? '#1a2550' : '#181c22';
-    _rr(ctx, fsX - 20, fsY, 80, 16, 3); ctx.fill();
+    _rr(ctx, panX + 52, autoY, rsW, 14, 3); ctx.fill();
     ctx.strokeStyle = isPowered ? '#00979c' : '#2a2e38'; ctx.lineWidth = 0.8; ctx.stroke();
     ctx.fillStyle = isPowered ? '#00d4e6' : '#4a5264';
-    ctx.font = 'bold 7px sans-serif';
+    ctx.font = 'bold 5.5px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('\u26F6 FULLSCREEN', fsX + 20, fsY + 11);
+    ctx.fillText('\u26F6 FULL', panX + 52 + rsW / 2, autoY + 10);
+    inst._btnRects.fullscreen = { x: panX + 52, y: autoY, w: rsW, h: 14, field: '_fullscreen' };
+
+    // ── Display Mode + Math ──
+    const modeY = autoY + 15;
+    const modeW = 44;
+    const dsoMode = P('dsoMode', 'scope');
+    const modeLabels = { scope: 'SCOPE', spectrum: 'SPECTRUM', xy: 'XY' };
+    const modeColors = { scope: '#00d4e6', spectrum: '#ff00ff', xy: '#ffe600' };
+    _ctrlBtn(panX + 4, modeY, modeW, 12, modeLabels[dsoMode] || 'SCOPE', modeColors[dsoMode] || '#00d4e6', isPowered);
+    inst._btnRects.dsoMode = { x: panX + 4, y: modeY, w: modeW, h: 12, field: 'dsoMode' };
+
+    const mathOp = P('math_op', 'off');
+    const mathLabels = { off: 'MATH:OFF', add: 'CH1+CH2', sub: 'CH1-CH2', mul: 'CH1*CH2', abs: '|CH1-CH2|' };
+    _ctrlBtn(panX + 52, modeY, modeW, 12, mathLabels[mathOp] || 'MATH', mathOp !== 'off' ? '#ff00ff' : '#4a5264', isPowered && mathOp !== 'off');
+    inst._btnRects.mathOp = { x: panX + 52, y: modeY, w: modeW, h: 12, field: 'math_op' };
+
+    // ── Coupling Buttons (CH1 & CH2) ──
+    const coupY = modeY + 14;
+    const ch1Coup = P('ch1_coupling', 'dc').toUpperCase();
+    _ctrlBtn(panX + 4, coupY, modeW, 12, 'CH1:' + ch1Coup, '#ffe600', isPowered && P('ch1_en', true) !== false);
+    inst._btnRects.ch1Coupling = { x: panX + 4, y: coupY, w: modeW, h: 12, field: 'ch1_coupling' };
+
+    const ch2Coup = P('ch2_coupling', 'dc').toUpperCase();
+    _ctrlBtn(panX + 52, coupY, modeW, 12, 'CH2:' + ch2Coup, '#00e5ff', isPowered && P('ch2_en', true) !== false);
+    inst._btnRects.ch2Coupling = { x: panX + 52, y: coupY, w: modeW, h: 12, field: 'ch2_coupling' };
 
     // ── Power toggle switch ──
     function drawToggleSwitch(tx, ty, tw, th, isOn, label) {

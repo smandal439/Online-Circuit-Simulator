@@ -2858,12 +2858,19 @@ body.view-serial #resizer-bottom { display: none; }
   font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 .dso-fs-btn:hover {
   background: #222830;
   color: #e0e0e0;
   border-color: #00979c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,151,156,0.2);
+}
+.dso-fs-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 .dso-fs-close-btn {
   font-size: 18px;
@@ -2874,6 +2881,7 @@ body.view-serial #resizer-bottom { display: none; }
 .dso-fs-close-btn:hover {
   background: #ff3366;
   color: #ffffff;
+  box-shadow: 0 2px 12px rgba(255,51,102,0.3);
 }
 
 .dso-fs-body {
@@ -2895,7 +2903,12 @@ body.view-serial #resizer-bottom { display: none; }
   cursor: crosshair;
 }
 
-/* ── Responsive breakpoints ── */
+/* Canvas component button hint */
+canvas {
+  cursor: default;
+}
+
+/* Responsive breakpoints */
 @media (max-width: 900px) {
   .dso-fullscreen-container {
     width: 100vw;
@@ -2921,6 +2934,182 @@ body.view-serial #resizer-bottom { display: none; }
   #dso-fullscreen-canvas {
     cursor: default;
     touch-action: none;
+  }
+}
+
+/* ═══════════════ DSO STATUS BAR ═══════════════ */
+.dso-fs-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 16px;
+  background: #0a0d12;
+  border-top: 1px solid #1a1e28;
+  flex-shrink: 0;
+  min-height: 24px;
+}
+
+.dso-fs-status-item {
+  color: #6a7488;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.dso-fs-status-hint {
+  margin-left: auto;
+  color: #3a4250;
+  font-style: italic;
+}
+
+/* ═══════════════ DSO TOGGLE BUTTON ═══════════════ */
+.dso-fs-btn-toggle {
+  position: relative;
+}
+.dso-fs-btn-toggle.active {
+  background: #0e2a35;
+  color: #00d4e6;
+  border-color: #00979c;
+}
+
+/* ═══════════════ DSO HELP OVERLAY ═══════════════ */
+.dso-help-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 9500;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+.dso-help-overlay.hidden { display: none; }
+
+.dso-help-panel {
+  background: #14171e;
+  border: 1px solid #2a3040;
+  border-radius: 10px;
+  width: 700px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+}
+
+.dso-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #0d1117;
+  border-bottom: 1px solid #2a2e38;
+}
+
+.dso-help-title {
+  color: #00d4e6;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.dso-help-body {
+  display: flex;
+  gap: 24px;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dso-help-column {
+  flex: 1;
+}
+
+.dso-help-section {
+  margin-bottom: 16px;
+}
+
+.dso-help-section h3 {
+  color: #ffaa00;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin: 0 0 8px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #1a1e28;
+}
+
+.dso-help-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  color: #b0bec5;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+}
+
+.dso-help-row kbd {
+  display: inline-block;
+  min-width: 28px;
+  padding: 2px 6px;
+  background: #1a1d24;
+  border: 1px solid #2a3040;
+  border-radius: 3px;
+  color: #e0e0e0;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.dso-help-row span {
+  color: #8c9ba5;
+}
+
+/* Responsive help panel */
+@media (max-width: 600px) {
+  .dso-help-body {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+  .dso-help-panel {
+    width: 95vw;
+  }
+  .dso-help-row {
+    font-size: 10px;
+  }
+  .dso-help-row kbd {
+    min-width: 24px;
+    font-size: 9px;
+  }
+}
+
+/* ═══════════════ DSO STATUSBAR RESPONSIVE ═══════════════ */
+@media (max-width: 900px) {
+  .dso-fs-statusbar {
+    gap: 8px;
+    padding: 3px 10px;
+    flex-wrap: wrap;
+  }
+  .dso-fs-status-item {
+    font-size: 9px;
+  }
+  .dso-fs-status-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .dso-fs-statusbar {
+    gap: 6px;
+    padding: 2px 8px;
+  }
+  .dso-fs-status-item {
+    font-size: 8px;
   }
 }
 

@@ -894,12 +894,13 @@ class App {
       // NeoPixel / FastLED strip events — map strip LEDs onto placed WS2812B
       // components in placement order (led[0] → first neopixel, etc.)
       if (type === 'fastled_show' && data && Array.isArray(data.leds)) {
-        const npInsts = insts.filter(i => i.type === 'neopixel' || i.type === 'neopixel_strip' || i.type === 'neopixel_ring');
+        const npInsts = insts.filter(i => i.type === 'neopixel' || i.type === 'neopixel_strip' || i.type === 'neopixel_ring' || i.type === 'neopixel_8x8_matrix');
         const brightness = Math.max(0, Math.min(255, Number(data.brightness != null ? data.brightness : 255) || 0));
         let ledOffset = 0;
         npInsts.forEach((inst) => {
           const numPx = inst.type === 'neopixel' ? 1
             : inst.type === 'neopixel_strip' ? (inst.props.numPixels || 8)
+            : inst.type === 'neopixel_8x8_matrix' ? 64
             : (inst.props.numPixels || 12);
           if (inst.type === 'neopixel') {
             const led = data.leds[ledOffset];

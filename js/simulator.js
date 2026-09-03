@@ -446,7 +446,8 @@ class ArduinoSimulator {
     js = js.replace(/\bCHSV\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.chsvNew($2)');
     js = js.replace(/\bTWhite\b/g, '255');
 
-    // Adafruit NeoPixel library
+    // Adafruit NeoPixel library — handle both constructor and assignment syntax
+    js = js.replace(/\bAdafruit_NeoPixel\s+(\w+)\s*=\s*Adafruit_NeoPixel\s*\(([^)]+)\)/g, 'var $1 = _a.neopixelNew($2)');
     js = js.replace(/\bAdafruit_NeoPixel\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.neopixelNew($2)');
     js = js.replace(/\b(\w+)\.show\s*\(/g, function (match, varName) {
       if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
@@ -1125,6 +1126,25 @@ class ArduinoSimulator {
         },
         servoWriteMs(varName, us) { /* advanced */ },
         servoRead(varName) { return 90; },
+
+        /* VL53L0X ToF Ranging Sensor — called via transpiler redirect */
+        vl53l0xRangingTest(varName, measure, debug) {
+          let dist = 100;
+          try {
+            const cc = window.CircuitCanvas;
+            if (cc && cc.components) {
+              const vl = cc.components.find(c => c.type === 'vl53l0x');
+              if (vl) dist = Number(vl.props?.distance ?? vl.runtimeState?.distance ?? 100);
+            }
+          } catch (e) { /* fallback to 100mm */ }
+          if (measure) {
+            measure.RangeStatus = dist > 0 ? 0 : 4;
+            measure.RangeMilliMeter = dist;
+          }
+          if (debug) {
+            self._serialLog(`[VL53L0X] Range: ${dist}mm (status=${measure ? measure.RangeStatus : 4})\n`, 'system');
+          }
+        },
 
         /* LCD (and OLED / WebServer share the generic `.begin` transpile) */
         lcdBegin(varName, cols, rows) {
@@ -1811,9 +1831,8 @@ class ArduinoSimulator {
           const s = sat !== undefined ? Math.max(0, Math.min(255, Number(sat) || 0)) : 255;
           const v = val !== undefined ? Math.max(0, Math.min(255, Number(val) || 0)) : 255;
           if (s === 0) return (v << 16) | (v << 8) | v;
-          const hueShift = (h * 6) >> 16;
-          const region = hueShift / 256;
-          const remainder = (hueShift & 255);
+          const region = Math.floor(h / 10923); // 0–5
+          const remainder = Math.floor((h % 10923) * 255 / 10923); // 0–255
           const p = (v * (255 - s)) >> 8;
           const q = (v * (255 - ((s * remainder) >> 8))) >> 8;
           const t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
@@ -1989,12 +2008,19 @@ class ArduinoSimulator {
           __vl53l0x: true,
           begin() { self._serialLog('[VL53L0X] I2C sensor initialized\n', 'system'); return true; },
           rangingTest(measure, debug) {
-            // Simulate a distance reading: 50–800 mm range with slight jitter
-            const dist = Math.floor(200 + Math.random() * 300);
-            measure.RangeStatus = 0;
+            // Read distance from the component's props (user-adjustable via slider)
+            let dist = 100;
+            try {
+              const cc = window.CircuitCanvas;
+              if (cc && cc.components) {
+                const vl = cc.components.find(c => c.type === 'vl53l0x');
+                if (vl) dist = Number(vl.props?.distance ?? vl.runtimeState?.distance ?? 100);
+              }
+            } catch (e) { /* fallback to 100mm */ }
+            measure.RangeStatus = dist > 0 ? 0 : 4;
             measure.RangeMilliMeter = dist;
             if (debug) {
-              self._serialLog(`[VL53L0X] Range: ${dist}mm (status=0)\n`, 'system');
+              self._serialLog(`[VL53L0X] Range: ${dist}mm (status=${measure.RangeStatus})\n`, 'system');
             }
           },
         };
@@ -2782,7 +2808,7 @@ window.loadExamplesFromFiles = async function () {
     'max7219', 'ili9341', 'astable_555', 'neopixel_strip_chase', 'ir_obstacle_led',
     'l298n_dc_motor', 'servo_continuous_spin', 'rotary_encoder_counter',
     'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo',
-    'opamp_741_non_inverting'];
+    'opamp_741_non_inverting','vl53l0x_proximity_sensor'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {

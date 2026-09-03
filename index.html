@@ -913,14 +913,93 @@
             <div class="dso-fs-header">
                 <span class="dso-fs-title">DSO-4100 — 4CH Digital Storage Oscilloscope</span>
                 <div class="dso-fs-header-controls">
-                    <button id="dso-fs-autoset" class="dso-fs-btn">Auto Set</button>
-                    <button id="dso-fs-save" class="dso-fs-btn">Save CSV</button>
+                    <button id="dso-fs-autoset" class="dso-fs-btn" title="Auto-set scale & trigger (A)">Auto Set</button>
+                    <button id="dso-fs-ref-store" class="dso-fs-btn" title="Store current waveform as reference (Ctrl+S)">Ref Store</button>
+                    <button id="dso-fs-ref-toggle" class="dso-fs-btn dso-fs-btn-toggle" title="Toggle reference waveform visibility (Ctrl+R)">Ref View</button>
+                    <button id="dso-fs-save-png" class="dso-fs-btn" title="Save screenshot as PNG (Ctrl+P)">Save PNG</button>
+                    <button id="dso-fs-save" class="dso-fs-btn" title="Export waveform data as CSV">Save CSV</button>
+                    <button id="dso-fs-help" class="dso-fs-btn" title="Show keyboard shortcuts (H)">?</button>
                     <button id="dso-fs-close" class="dso-fs-btn dso-fs-close-btn">&times;</button>
                 </div>
             </div>
             <div class="dso-fs-body">
                 <div class="dso-fs-screen-wrap">
                     <canvas id="dso-fullscreen-canvas"></canvas>
+                </div>
+            </div>
+            <div class="dso-fs-statusbar">
+                <span id="dso-fs-status-trigger" class="dso-fs-status-item">TRIG: ---</span>
+                <span id="dso-fs-status-freq" class="dso-fs-status-item">FREQ: ---</span>
+                <span id="dso-fs-status-sample" class="dso-fs-status-item">SAMPLE: ---</span>
+                <span id="dso-fs-status-mode" class="dso-fs-status-item">MODE: SCOPE</span>
+                <span id="dso-fs-status-hint" class="dso-fs-status-item dso-fs-status-hint">Press H for help</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════ DSO HELP OVERLAY ════════════════════ -->
+    <div id="dso-help-overlay" class="dso-help-overlay hidden">
+        <div class="dso-help-panel">
+            <div class="dso-help-header">
+                <span class="dso-help-title">DSO Keyboard Shortcuts</span>
+                <button id="dso-help-close" class="dso-fs-btn dso-fs-close-btn">&times;</button>
+            </div>
+            <div class="dso-help-body">
+                <div class="dso-help-column">
+                    <div class="dso-help-section">
+                        <h3>Transport</h3>
+                        <div class="dso-help-row"><kbd>R</kbd><span>Run / Stop</span></div>
+                        <div class="dso-help-row"><kbd>S</kbd><span>Single Trigger</span></div>
+                        <div class="dso-help-row"><kbd>A</kbd><span>Auto Set</span></div>
+                        <div class="dso-help-row"><kbd>Space</kbd><span>Pause / Hold Waveform</span></div>
+                    </div>
+                    <div class="dso-help-section">
+                        <h3>Timebase</h3>
+                        <div class="dso-help-row"><kbd>+</kbd> / <kbd>=</kbd><span>Zoom In (faster)</span></div>
+                        <div class="dso-help-row"><kbd>-</kbd><span>Zoom Out (slower)</span></div>
+                    </div>
+                    <div class="dso-help-section">
+                        <h3>Channels</h3>
+                        <div class="dso-help-row"><kbd>1</kbd>-<kbd>4</kbd><span>Toggle CH1-CH4</span></div>
+                        <div class="dso-help-row"><kbd>Q</kbd><span>Cycle CH1 coupling</span></div>
+                        <div class="dso-help-row"><kbd>W</kbd><span>Cycle CH2 coupling</span></div>
+                        <div class="dso-help-row"><kbd>E</kbd><span>Cycle CH3 coupling</span></div>
+                        <div class="dso-help-row"><kbd>X</kbd><span>Cycle CH4 coupling</span></div>
+                    </div>
+                </div>
+                <div class="dso-help-column">
+                    <div class="dso-help-section">
+                        <h3>Display</h3>
+                        <div class="dso-help-row"><kbd>M</kbd><span>Cycle Mode (Scope/FFT/XY)</span></div>
+                        <div class="dso-help-row"><kbd>G</kbd><span>Toggle Grid</span></div>
+                        <div class="dso-help-row"><kbd>P</kbd><span>Cycle Persistence</span></div>
+                        <div class="dso-help-row"><kbd>B</kbd><span>Cycle Brightness</span></div>
+                    </div>
+                    <div class="dso-help-section">
+                        <h3>Trigger</h3>
+                        <div class="dso-help-row"><kbd>T</kbd><span>Set Trigger to Center</span></div>
+                        <div class="dso-help-row"><kbd>O</kbd><span>Cycle Trigger Source</span></div>
+                        <div class="dso-help-row"><kbd>I</kbd><span>Cycle Trigger Slope</span></div>
+                    </div>
+                    <div class="dso-help-section">
+                        <h3>Cursors &amp; Measure</h3>
+                        <div class="dso-help-row"><kbd>Click</kbd><span>Place Time Cursor</span></div>
+                        <div class="dso-help-row"><kbd>Right-Click</kbd><span>Place Volt Cursor</span></div>
+                        <div class="dso-help-row"><kbd>Double-Click</kbd><span>Clear All Cursors</span></div>
+                        <div class="dso-help-row"><kbd>Arrows</kbd><span>Nudge Cursor</span></div>
+                        <div class="dso-help-row"><kbd>Shift+Arrow</kbd><span>Fine Nudge Cursor</span></div>
+                    </div>
+                    <div class="dso-help-section">
+                        <h3>Reference</h3>
+                        <div class="dso-help-row"><kbd>Ctrl+S</kbd><span>Store Reference</span></div>
+                        <div class="dso-help-row"><kbd>Ctrl+R</kbd><span>Toggle Reference View</span></div>
+                        <div class="dso-help-row"><kbd>Ctrl+P</kbd><span>Save Screenshot</span></div>
+                    </div>
+                    <div class="dso-help-section">
+                        <h3>Other</h3>
+                        <div class="dso-help-row"><kbd>H</kbd><span>Toggle This Help</span></div>
+                        <div class="dso-help-row"><kbd>Esc</kbd><span>Close Fullscreen</span></div>
+                    </div>
                 </div>
             </div>
         </div>
