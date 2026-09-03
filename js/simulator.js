@@ -93,10 +93,14 @@ class ArduinoSimulator {
     js = js.replace(/\bchar\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
     // Handle const
     js = js.replace(/\bconst\s+let\b/g, 'let');
+    js = js.replace(/\bconst\s+var\b/g, 'var');
     js = js.replace(/\bconst\s+async\b/g, 'async');
 
     // C++ pointer dereference: stream->method() → stream.method()
     js = js.replace(/->/g, '.');
+    // Re-clean const after pointer rule may have introduced 'const var'
+    js = js.replace(/\bconst\s+let\b/g, 'let');
+    js = js.replace(/\bconst\s+var\b/g, 'var');
 
     // Object-style library declarations:
     // Servo myServo;  →  let myServo = new Servo();
@@ -124,6 +128,9 @@ class ArduinoSimulator {
     js = js.replace(/let\s+(\w+)\s*\[\s*\d*\s*\]\s*=\s*("[^"]*"|'[^']*')/g, 'let $1 = $2');
     // Pointer declarations: WiFiClient* stream = ... → var stream = ...
     js = js.replace(/\b(\w+)\s*\*\s+(\w+)\s*=/g, 'var $2 =');
+    // Re-clean const after pointer rule may have introduced 'const var' or 'const let'
+    js = js.replace(/\bconst\s+let\b/g, 'let');
+    js = js.replace(/\bconst\s+var\b/g, 'var');
 
     // 7. Boolean literals
     js = js.replace(/\btrue\b/g, 'true');
