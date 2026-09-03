@@ -136,6 +136,8 @@ class ArduinoSimulator {
     js = js.replace(/\btrue\b/g, 'true');
     // sizeof(expr) → expr.length (simplified — works for arrays/buffers)
     js = js.replace(/\bsizeof\s*\((\w+)\)/g, '$1.length');
+    // Arduino String .c_str() → already a JS string, just strip
+    js = js.replace(/\.\s*c_str\s*\(\s*\)/g, '');
     js = js.replace(/\bfalse\b/g, 'false');
 
     // Strip leftover C storage/qualifier keywords that are invalid JS
