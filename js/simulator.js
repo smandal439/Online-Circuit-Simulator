@@ -2003,6 +2003,57 @@ class ArduinoSimulator {
         rfidDumpSector(obj, uid, sector) { },
         rfidDumpClassic(obj, uid, type) { },
         rfidDumpUltralight(obj) { },
+        /* ESP32 HTTPClient stub — simulates HTTP GET with a synthetic PCM audio stream */
+        httpNew() {
+          return { _url: '', _timeout: 5000, _stream: null, __http: true };
+        },
+        httpBegin(obj, url) { obj._url = url; },
+        httpSetTimeout(obj, ms) { obj._timeout = ms; },
+        httpGet(obj) {
+          self._serialLog('[HTTP] GET ' + obj._url + '\n', 'system');
+          const sr = 44100, dur = 3, channels = 2, bps = 2;
+          const totalSamples = sr * dur * channels;
+          const buf = new ArrayBuffer(totalSamples * bps);
+          const view = new Int16Array(buf);
+          const freq = 440;
+          for (let i = 0; i < totalSamples; i += 2) {
+            const t = (i / 2) / sr;
+            const s = Math.round(16000 * Math.sin(2 * Math.PI * freq * t));
+            view[i] = s;
+            view[i + 1] = s;
+          }
+          obj._stream = new Uint8Array(buf);
+          obj._streamPos = 0;
+          return 200;
+        },
+        httpGetStream(obj) {
+          return {
+            connected() { return obj._stream && obj._streamPos < obj._stream.length; },
+            available() { return obj._stream ? obj._stream.length - obj._streamPos : 0; },
+            readBytes(dst, len) {
+              if (!obj._stream) return 0;
+              const remain = obj._stream.length - obj._streamPos;
+              const n = Math.min(len, remain);
+              for (let i = 0; i < n; i++) dst[i] = obj._stream[obj._streamPos++];
+              return n;
+            },
+          };
+        },
+        httpEnd(obj) { obj._stream = null; obj._streamPos = 0; },
+        /* ESP32 I2S driver stubs */
+        i2sDriverInstall(port, config, flags, arg) {
+          self._serialLog('[I2S] Driver installed\n', 'system');
+        },
+        i2sSetPin(port, pins) {
+          self._serialLog('[I2S] Pins set BCLK=' + (pins.bck_io_num ?? pins.bck ?? '?') +
+            ' LRCK=' + (pins.ws_io_num ?? pins.ws ?? '?') +
+            ' DOUT=' + (pins.data_out_num ?? pins.dout ?? '?') + '\n', 'system');
+        },
+        i2sWrite(port, buf, len, written, timeout) {
+          if (written) written.val = len;
+          return len;
+        },
+        i2sZeroDma(port) { },
       },
 
       /* Global constants */
@@ -2230,59 +2281,6 @@ class ArduinoSimulator {
          If no real broker can be reached, a local in-page broker is used as a
          fallback so the pub/sub demo still works offline. */
       WiFiClient: function () { return { connected() { return true; }, available() { return 0; }, readBytes() { return 0; } }; },
-      /* ESP32 HTTPClient stub — simulates HTTP GET with a synthetic PCM audio stream */
-      httpNew() {
-        return { _url: '', _timeout: 5000, _stream: null, __http: true };
-      },
-      httpBegin(obj, url) { obj._url = url; },
-      httpSetTimeout(obj, ms) { obj._timeout = ms; },
-      httpGet(obj) {
-        self._serialLog('[HTTP] GET ' + obj._url + '\n', 'system');
-        // Generate synthetic PCM sine-wave audio: 16-bit, 44100 Hz, stereo
-        const sr = 44100, dur = 3, channels = 2, bps = 2;
-        const totalSamples = sr * dur * channels;
-        const buf = new ArrayBuffer(totalSamples * bps);
-        const view = new Int16Array(buf);
-        const freq = 440; // A4
-        for (let i = 0; i < totalSamples; i += 2) {
-          const t = (i / 2) / sr;
-          const s = Math.round(16000 * Math.sin(2 * Math.PI * freq * t));
-          view[i] = s;     // left
-          view[i + 1] = s; // right
-        }
-        obj._stream = new Uint8Array(buf);
-        obj._streamPos = 0;
-        return 200; // HTTP_CODE_OK
-      },
-      httpGetStream(obj) {
-        return {
-          connected() { return obj._stream && obj._streamPos < obj._stream.length; },
-          available() { return obj._stream ? obj._stream.length - obj._streamPos : 0; },
-          readBytes(dst, len) {
-            if (!obj._stream) return 0;
-            const remain = obj._stream.length - obj._streamPos;
-            const n = Math.min(len, remain);
-            for (let i = 0; i < n; i++) dst[i] = obj._stream[obj._streamPos++];
-            return n;
-          },
-        };
-      },
-      httpEnd(obj) { obj._stream = null; obj._streamPos = 0; },
-      /* ESP32 I2S driver stubs */
-      i2sDriverInstall(port, config, flags, arg) {
-        self._serialLog('[I2S] Driver installed\n', 'system');
-      },
-      i2sSetPin(port, pins) {
-        self._serialLog('[I2S] Pins set BCLK=' + (pins.bck_io_num ?? pins.bck ?? '?') +
-          ' LRCK=' + (pins.ws_io_num ?? pins.ws ?? '?') +
-          ' DOUT=' + (pins.data_out_num ?? pins.dout ?? '?') + '\n', 'system');
-      },
-      i2sWrite(port, buf, len, written, timeout) {
-        // Consume the audio buffer — in a real sim we'd visualise this
-        if (written) written.val = len;
-        return len;
-      },
-      i2sZeroDma(port) { },
       /* ESP32 WebServer stub — routes are registered via _a.serverOn() and
          served by _a.serverHandleClient(), which generates a simulated HTTP
          request to each route every ~1.5s so you can watch requests/responses
