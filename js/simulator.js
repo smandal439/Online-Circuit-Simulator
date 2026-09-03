@@ -595,6 +595,8 @@ class ArduinoSimulator {
     js = js.replace(/\bAM2301\b/g, '22');
 
     // Adafruit_VL53L0X ToF ranging sensor library
+    js = js.replace(/\bAdafruit_VL53L0X\s+(\w+)\s*=\s*Adafruit_VL53L0X\s*\(\s*\)/g, 'var $1 = _a.Adafruit_VL53L0X()');
+    js = js.replace(/\bAdafruit_VL53L0X\s+(\w+)\s*\(\s*\)/g, 'var $1 = _a.Adafruit_VL53L0X()');
     js = js.replace(/\bVL53L0X_RangingMeasurementData_t\s+(\w+)\s*;/g, 'let $1 = { RangeStatus: 0, RangeMilliMeter: 0 };');
     // rangingTest: handle &measure pass-by-reference, route to _a.vl53l0xRangingTest
     js = js.replace(/\b(\w+)\.rangingTest\s*\(([^)]+)\)/g, function (match, varName, args) {
@@ -1166,6 +1168,10 @@ class ArduinoSimulator {
           }
           if (varName && varName.__oled) {
             self._emitEvent('oled_power', { on: true });
+            return;
+          }
+          if (varName && varName.__vl53l0x) {
+            varName.begin();
             return;
           }
           if (varName && varName.__tft) {
