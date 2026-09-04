@@ -3,6 +3,12 @@
  * 
  * This version uses the local Python radio server instead of external stations.
  * Run radio_server.py on your PC first, then update YOUR_PC_IP below.
+ * 
+ * Buttons:
+ *   D2 = Play/Pause (toggle)
+ *   D3 = Next station
+ *   D4 = Previous station
+ *   D5 = Momentary play (hold=play, release=stop)
  */
 
 #include <WiFi.h>
@@ -25,9 +31,10 @@ const char* SERVER_IP = "192.168.1.100";  // Change to your PC's IP
 #define I2S_BUF_COUNT  4
 
 // --- Button pins ---
-#define BTN_PLAY_PIN   2
-#define BTN_NEXT_PIN   3
-#define BTN_PREV_PIN   4
+#define BTN_PLAY_PIN   2   // Toggle play/pause
+#define BTN_NEXT_PIN   3   // Next station
+#define BTN_PREV_PIN   4   // Previous station
+#define BTN_MOMENT_PIN 5   // Momentary: hold=play, release=stop
 
 // --- Station list (local server) ---
 String STATION_URLS[3];
@@ -44,6 +51,7 @@ int  currentStation = 0;
 bool lastPlayState  = HIGH;
 bool lastNextState  = HIGH;
 bool lastPrevState  = HIGH;
+bool lastMomentState = HIGH;
 unsigned long lastDebounce = 0;
 #define DEBOUNCE_MS 200
 
@@ -88,6 +96,7 @@ void setup() {
   pinMode(BTN_PLAY_PIN, INPUT_PULLUP);
   pinMode(BTN_NEXT_PIN, INPUT_PULLUP);
   pinMode(BTN_PREV_PIN, INPUT_PULLUP);
+  pinMode(BTN_MOMENT_PIN, INPUT_PULLUP);
 
   // Connect to WiFi
   Serial.printf("[WIFI] Connecting to %s", ssid);
@@ -149,7 +158,9 @@ void checkButtons() {
   bool playState = digitalRead(BTN_PLAY_PIN);
   bool nextState = digitalRead(BTN_NEXT_PIN);
   bool prevState = digitalRead(BTN_PREV_PIN);
+  bool momentState = digitalRead(BTN_MOMENT_PIN);
 
+  // Toggle play/pause (press to toggle)
   if (playState == LOW && lastPlayState == HIGH) {
     playing = !playing;
     Serial.printf("[CTRL] %s\n", playing ? "PLAY" : "PAUSE");
@@ -157,6 +168,7 @@ void checkButtons() {
   }
   lastPlayState = playState;
 
+  // Next station
   if (nextState == LOW && lastNextState == HIGH) {
     currentStation = (currentStation + 1) % NUM_STATIONS;
     playing = true;
@@ -165,6 +177,7 @@ void checkButtons() {
   }
   lastNextState = nextState;
 
+  // Previous station
   if (prevState == LOW && lastPrevState == HIGH) {
     currentStation = (currentStation - 1 + NUM_STATIONS) % NUM_STATIONS;
     playing = true;
@@ -172,6 +185,19 @@ void checkButtons() {
     lastDebounce = now;
   }
   lastPrevState = prevState;
+
+  // Momentary button: hold=play, release=stop
+  if (momentState == LOW && lastMomentState == HIGH) {
+    playing = true;
+    Serial.println("[CTRL] MOMENT: HOLD -> PLAY");
+    lastDebounce = now;
+  }
+  if (momentState == HIGH && lastMomentState == LOW) {
+    playing = false;
+    Serial.println("[CTRL] MOMENT: RELEASE -> STOP");
+    lastDebounce = now;
+  }
+  lastMomentState = momentState;
 }
 
 void loop() {
