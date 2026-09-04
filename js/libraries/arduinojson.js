@@ -32,8 +32,8 @@ window.ArduinoLibs['ArduinoJson'] = {
     [/\.as\s*\(\s*\)/g, '._asType()'],
     // doc.size() → doc._size()
     [/\.size\s*\(\s*\)/g, '._size()'],
-    // doc.clear() → doc._clear()
-    [/\.clear\s*\(\s*\)/g, '._clear()'],
+    // doc.clear() → doc._clear()  (skip LCD/display objects — they have their own clear)
+    [/(\w+)\.clear\s*\(\s*\)/g, function(m, v) { if (/^(lcd|display|screen|tft|oled)$/i.test(v)) return m; return v + '._clear()'; }],
     // doc.shrinkToFit() → no-op
     [/\.shrinkToFit\s*\(\s*\)/g, '._noop()'],
     // doc.overflowed() → doc._overflowed()
