@@ -1,42 +1,96 @@
 """
-Simple Internet Radio Server for ESP32 I2S Music Player Testing
-Generates synthetic audio (sine waves) and serves as HTTP stream.
+Internet Radio Server for ESP32 I2S Music Player Testing
+Decodes MP3 files to raw PCM and serves as HTTP audio stream.
 """
 
-import socket
-import struct
-import math
+import os
 import time
-import threading
+import subprocess
+import struct
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import sys
 
-# Audio configuration
+# Audio configuration for I2S
 SAMPLE_RATE = 44100
 CHANNELS = 2
 BITS_PER_SAMPLE = 16
-BUFFER_SIZE = 1024
 
-# Station definitions (frequency in Hz)
-STATIONS = {
-    "/station1": {"name": "Station 1 (440Hz)", "freq": 440},
-    "/station2": {"name": "Station 2 (523Hz)", "freq": 523},
-    "/station3": {"name": "Station 3 (659Hz)", "freq": 659},
-}
+# Get directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Find all MP3 files in the script directory
+def find_mp3_files():
+    mp3_files = sorted([f for f in os.listdir(SCRIPT_DIR) if f.lower().endswith('.mp3')])
+    stations = {}
+    for i, filename in enumerate(mp3_files, 1):
+        path = f"/station{i}"
+        name = os.path.splitext(filename)[0].replace('_', ' ').replace('-', ' - ')
+        stations[path] = {
+            "name": f"Station {i}: {name}",
+            "file": os.path.join(SCRIPT_DIR, filename),
+            "filename": filename
+        }
+    return stations
+
+STATIONS = find_mp3_files()
+
+def decode_mp3_to_pcm(mp3_path):
+    """Decode MP3 to raw PCM using ffmpeg"""
+    cmd = [
+        'ffmpeg',
+        '-i', mp3_path,
+        '-f', 's16le',           # raw PCM 16-bit little-endian
+        '-acodec', 'pcm_s16le',  # PCM codec
+        '-ar', str(SAMPLE_RATE), # sample rate
+        '-ac', str(CHANNELS),    # channels
+        '-'
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, check=True)
+        return result.stdout
+    except FileNotFoundError:
+        print("[RADIO] ERROR: ffmpeg not found! Install ffmpeg first.")
+        print("[RADIO] Windows: winget install ffmpeg")
+        print("[RADIO] Or download from: https://ffmpeg.org/download.html")
+        return None
+    except subprocess.CalledProcessError as e:
+        print(f"[RADIO] ERROR: ffmpeg failed - {e}")
+        return None
 
 class RadioStreamHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in STATIONS:
+            station = STATIONS[self.path]
+            file_path = station['file']
+            
+            if not os.path.exists(file_path):
+                self.send_response(404)
+                self.end_headers()
+                return
+            
+            # Decode MP3 to PCM
+            print(f"[RADIO] Decoding {station['filename']}...")
+            pcm_data = decode_mp3_to_pcm(file_path)
+            
+            if pcm_data is None:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b"Failed to decode MP3")
+                return
+            
+            print(f"[RADIO] Decoded to {len(pcm_data)} bytes PCM")
+            
             self.send_response(200)
-            self.send_header('Content-Type', 'audio/wav')
-            self.send_header('Transfer-Encoding', 'chunked')
+            self.send_header('Content-Type', 'audio/pcm')
+            self.send_header('Content-Length', str(len(pcm_data)))
+            self.send_header('X-Sample-Rate', str(SAMPLE_RATE))
+            self.send_header('X-Channels', str(CHANNELS))
             self.end_headers()
             
-            station = STATIONS[self.path]
             print(f"[RADIO] Serving {station['name']} to {self.client_address[0]}")
             
             try:
-                self.stream_audio(station['freq'])
+                self.stream_pcm(pcm_data)
             except (BrokenPipeError, ConnectionResetError):
                 print(f"[RADIO] Client disconnected")
         elif self.path == '/':
@@ -48,34 +102,24 @@ class RadioStreamHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
     
-    def stream_audio(self, frequency):
-        phase = 0
-        phase_increment = 2 * math.pi * frequency / SAMPLE_RATE
-        
-        while True:
-            # Generate audio buffer
-            buffer = bytearray()
-            for _ in range(BUFFER_SIZE // 4):  # 2 channels * 2 bytes per sample
-                # Generate sine wave sample
-                sample = int(16000 * math.sin(phase))
-                # Left channel
-                buffer.extend(struct.pack('<h', sample))
-                # Right channel
-                buffer.extend(struct.pack('<h', sample))
-                phase += phase_increment
-                if phase >= 2 * math.pi:
-                    phase -= 2 * math.pi
-            
-            # Send chunk
-            chunk_size = len(buffer)
-            self.wfile.write(f"{chunk_size:x}\r\n".encode())
-            self.wfile.write(buffer)
-            self.wfile.write(b"\r\n")
+    def stream_pcm(self, pcm_data):
+        """Stream raw PCM data in chunks"""
+        CHUNK_SIZE = 4096
+        offset = 0
+        while offset < len(pcm_data):
+            chunk = pcm_data[offset:offset + CHUNK_SIZE]
+            self.wfile.write(chunk)
             self.wfile.flush()
-            
-            time.sleep(BUFFER_SIZE / SAMPLE_RATE)
+            offset += CHUNK_SIZE
     
     def get_index_page(self):
+        station_list = ""
+        for path, info in STATIONS.items():
+            station_list += f'<div class="station"><h3>{info["name"]}</h3><p>File: {info["filename"]}</p><p>URL: <code>http://YOUR_PC_IP:8000{path}</code></p></div>\n'
+        
+        num_stations = len(STATIONS)
+        station_urls = ", ".join([f'"http://YOUR_PC_IP:8000/station{i}"' for i in range(1, num_stations + 1)])
+        
         return f"""<!DOCTYPE html>
 <html>
 <head>
@@ -90,19 +134,15 @@ class RadioStreamHandler(BaseHTTPRequestHandler):
 </head>
 <body>
     <h1>ESP32 Internet Radio Server</h1>
-    <p>This server generates synthetic audio for testing your ESP32 I2S music player.</p>
+    <p>This server streams your MP3 files to test your ESP32 I2S music player.</p>
     
-    <h2>Available Stations:</h2>
-    {"".join(f'<div class="station"><h3>{info["name"]}</h3><p>URL: <code>http://{{SERVER_IP}}:8000{path}</code></p></div>' for path, info in STATIONS.items())}
+    <h2>Available Stations ({num_stations} MP3 files found):</h2>
+    {station_list}
     
     <h2>ESP32 Code Update:</h2>
     <p>Replace the station URLs in your code with:</p>
     <pre>
-const char* STATION_URLS[] = {{
-  "http://YOUR_PC_IP:8000/station1",
-  "http://YOUR_PC_IP:8000/station2", 
-  "http://YOUR_PC_IP:8000/station3"
-}};
+const char* STATION_URLS[] = {{{station_urls}}};
     </pre>
     
     <h2>Testing Instructions:</h2>
@@ -119,8 +159,16 @@ const char* STATION_URLS[] = {{
         print(f"[{time.strftime('%H:%M:%S')}] {args[0]}")
 
 def run_server(port=8000):
+    if not STATIONS:
+        print("[RADIO] ERROR: No MP3 files found in the script directory!")
+        print(f"[RADIO] Place MP3 files in: {SCRIPT_DIR}")
+        return
+    
     server = HTTPServer(('0.0.0.0', port), RadioStreamHandler)
     print(f"[RADIO] Server started on port {port}")
+    print(f"[RADIO] Found {len(STATIONS)} MP3 file(s):")
+    for path, info in STATIONS.items():
+        print(f"[RADIO]   {info['name']} -> {info['filename']}")
     print(f"[RADIO] Access at: http://localhost:{port}")
     print("[RADIO] Press Ctrl+C to stop")
     

@@ -31,7 +31,11 @@ const char* SERVER_IP = "192.168.1.100";  // Change to your PC's IP
 
 // --- Station list (local server) ---
 String STATION_URLS[3];
-const char* STATION_NAMES[] = { "Station 1 (440Hz)", "Station 2 (523Hz)", "Station 3 (659Hz)" };
+const char* STATION_NAMES[] = { 
+  "Jhuki Jhuki Si Nazar",
+  "Hotoon Say Chhu Lo Tum", 
+  "Jab Samne Tum Aa"
+};
 const int NUM_STATIONS = 3;
 
 // --- Playback state ---
