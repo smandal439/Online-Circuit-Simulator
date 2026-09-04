@@ -47,6 +47,11 @@ class ArduinoSimulator {
     this._ledcChannels = {};
   }
 
+  /* ══════════════ LIBRARY PLUGIN SYSTEM ══════════════ */
+  _getPlugins() {
+    return window.ArduinoLibs || {};
+  }
+
   /* ══════════════ TRANSPILER ══════════════ */
   transpile(code) {
     if (typeof code !== 'string') code = '';
@@ -117,6 +122,32 @@ class ArduinoSimulator {
     js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|Adafruit_ILI9341|SimpleBME280|Adafruit_VL53L0X|DHT)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
     // Adafruit_VL53L0X lox = Adafruit_VL53L0X();  →  let lox = new Adafruit_VL53L0X();
     js = js.replace(/\b(Adafruit_VL53L0X)\s+(\w+)\s*=\s*\1\s*\(([^)]*)\)\s*;/g, function(_, t, n, a) { return 'let ' + n + ' = new ' + t + '(' + a + ')'; });
+
+    // Plugin-provided class constructors
+    const plugins = this._getPlugins();
+    for (const [libName, lib] of Object.entries(plugins)) {
+      if (lib.classes) {
+        for (const cls of lib.classes) {
+          // ClassName varName; or ClassName varName(args);
+          js = js.replace(new RegExp(`\\b${cls}\\s+(\\w+)\\s*(?:\\(([^)]*)\\))?\\s*;`, 'g'), 'var $1 = new $2($3)');
+          // ClassName varName = ClassName(args);
+          js = js.replace(new RegExp(`\\b${cls}\\s+(\\w+)\\s*=\\s*${cls}\\s*\\(([^)]*)\\)\\s*;`, 'g'), 'var $1 = new $2($3)');
+        }
+      }
+      // Plugin-specific transpile rules
+      if (lib.transpile) {
+        for (const [pattern, replacement] of lib.transpile) {
+          js = js.replace(pattern, replacement);
+        }
+      }
+    }
+
+    // Generic fallback: any PascalCase identifier used as constructor
+    js = js.replace(/\b([A-Z][A-Za-z0-9_]{2,})\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, function(match, cls, name, args) {
+      // Skip already-handled known types and JS keywords
+      if (/^(Servo|LiquidCrystal|WiFiClient|PubSubClient|WebServer|Serial|String|Array|Object|Math|Date|RegExp|Error|Promise|Map|Set|JSON|Number|Boolean|Function|true|false|null|undefined|NaN|Infinity)$/.test(cls)) return match;
+      return `var ${name} = new ${cls}(${args || ''})`;
+    });
 
     // C++ passes I2C objects by reference: `&Wire` is invalid JS. Strip the `&`
     // only inside Adafruit_SSD1306 constructors to avoid breaking `a & b`.
@@ -795,7 +826,7 @@ class ArduinoSimulator {
   buildContext() {
     const self = this;
 
-    return {
+    const result = {
       _a: {
         /* Pin control */
         pinMode(pin, mode) {
@@ -2524,6 +2555,19 @@ class ArduinoSimulator {
         };
       },
     };
+
+    // Inject plugin-provided constructors and constants
+    const plugins = this._getPlugins();
+    for (const [libName, lib] of Object.entries(plugins)) {
+      if (lib.constructor) {
+        result[libName] = lib.constructor;
+      }
+      if (lib.constants) {
+        Object.assign(result, lib.constants);
+      }
+    }
+
+    return result;
   }
 
   /* ══════════════ COMPILE & RUN ══════════════ */
