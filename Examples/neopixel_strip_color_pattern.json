@@ -4,9 +4,11 @@
   "icon": "🔧",
   "desc": "A custom NeoPixel Strip Color pattern circuit example.",
   "tags": [
-    "custom",
-    "circuit",
-    "neopixel"
+    "neopixel",
+    "color",
+    "pattern",
+    "led",
+    "LED_ARRAY"
   ],
   "circuit": {
     "components": [

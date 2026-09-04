@@ -4,8 +4,12 @@
   "icon": "🔧",
   "desc": "A custom LM35 Temperature Sensor circuit example.",
   "tags": [
-    "custom",
-    "circuit"
+    "temperature",
+    "sensor",
+    "lm35",
+    "arduino",
+    "lcd",
+    "i2c"
   ],
   "circuit": {
     "components": [
