@@ -8,7 +8,7 @@ window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['LiquidCrystal'] = {
   classes: ['LiquidCrystal'],
   includes: ['<LiquidCrystal.h>'],
-  priority: 98,
+  priority: 100,
 
   transpile: [
     // begin(digits,digits): LCD only — exclude everything with its own begin
