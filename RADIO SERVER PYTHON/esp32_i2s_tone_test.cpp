@@ -17,6 +17,7 @@
 
 #include <driver/i2s.h>
 #include <math.h>
+#include <stdint.h>
 
 #define I2S_PORT       I2S_NUM_0
 #define I2S_BCLK_PIN   26
