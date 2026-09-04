@@ -1,6 +1,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['DHT'] = {
   classes: ['DHT'],
+  includes: ['<DHT.h>'],
   transpile: [],
   constants: {
     DHT11: 11,

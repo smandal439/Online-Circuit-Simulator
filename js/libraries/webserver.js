@@ -1,6 +1,10 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['WebServer'] = {
   classes: ['WebServer'],
+  includes: ['<ESP8266WebServer.h>'],
+  constructor: function(port) {
+    return { __class: 'WebServer', port: port };
+  },
   transpile: [
     [/(\w+)\.on\(/g, '_a.serverOn($1, '],
     [/(\w+)\.send\(/g, '_a.serverSend($1, '],
@@ -17,7 +21,9 @@ window.ArduinoLibs['WebServer'] = {
     HTTP_PATCH: 'PATCH',
     HTTP_ANY: 'ANY',
   },
-  constructor: null,
+  constructor: function(port) {
+    return { __webserver: true, port: port };
+  },
   runtime: function(self) {
     return {
       serverOn: function(server, path, m3, m4) {

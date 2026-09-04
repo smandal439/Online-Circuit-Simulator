@@ -83,19 +83,25 @@ class ArduinoSimulator {
     const userFnNames = new Set();
     js = js.replace(/\bF\s*\(\s*("[^"]*"|'[^']*')\s*\)/g, '$1');
     js = js.replace(
-      /\b(?:void|int|float|double|long|unsigned\s+long|unsigned\s+int|byte|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+(\w+)\s*\(([^)]*)\)\s*\{/g,
+      /\b(?:void|int|float|double|long|unsigned|unsigned\s+long|unsigned\s+int|unsigned\s+char|byte|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+(\w+)\s*\(([^)]*)\)\s*\{/g,
       (match, name, params) => {
         userFnNames.add(name);
-        const cleanParams = params.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte\s*\*?|float|double|boolean|bool|char\s*\*?|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s+/g, '');
+        const cleanParams = params.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|char|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\s*\*?\s*/g, '');
         return `async function ${name}(${cleanParams}) {`;
       }
     );
 
     // 5. Handle variable declarations (not already transformed)
+    // Strip C-style casts first: (unsigned char)1 → 1, (long)expr → expr
+    js = js.replace(/\((?:unsigned\s+char|unsigned\s+long|unsigned\s+int|unsigned\s+short|unsigned|long\s+long|long|int|short|byte|float|double)\)\s*(?=[a-zA-Z0-9_\(])/g, '');
+    // unsigned char x; → let x;  (MUST be before plain char rule)
+    js = js.replace(/\bunsigned\s+char\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
     // int x = 5; → let x = 5;
     js = js.replace(/\b(?:unsigned\s+)?(?:int|long|short|byte|float|double|boolean|bool|String|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|size_t)\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
     // char x = 'a'; → let x = 'a';
     js = js.replace(/\bchar\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
+    // Standalone unsigned x; → let x; (unsigned alone = unsigned int in C)
+    js = js.replace(/\bunsigned\s+(\w+)(?=\s*[=;,\[\)])/g, 'let $1');
     // Handle const
     js = js.replace(/\bconst\s+let\b/g, 'let');
     js = js.replace(/\bconst\s+var\b/g, 'var');
@@ -125,13 +131,16 @@ class ArduinoSimulator {
 
     // Plugin-provided class constructors
     const plugins = this._getPlugins();
-    for (const [libName, lib] of Object.entries(plugins)) {
+    // Sort plugins: lower priority runs first; LCD plugins run last (priority 100) so their
+    // broad \w+ rules don't hijack method calls from Servo, Wire, SPI, etc.
+    const pluginEntries = Object.entries(plugins).sort((a, b) => (a[1].priority || 50) - (b[1].priority || 50));
+    for (const [libName, lib] of pluginEntries) {
       if (lib.classes) {
         for (const cls of lib.classes) {
           // ClassName varName; or ClassName varName(args);
-          js = js.replace(new RegExp(`\\b${cls}\\s+(\\w+)\\s*(?:\\(([^)]*)\\))?\\s*;`, 'g'), 'var $1 = new $2($3)');
+          js = js.replace(new RegExp(`\\b${cls}\\s+(\\w+)\\s*(?:\\(([^)]*)\\))?\\s*;`, 'g'), `var $1 = new ${cls}($2)`);
           // ClassName varName = ClassName(args);
-          js = js.replace(new RegExp(`\\b${cls}\\s+(\\w+)\\s*=\\s*${cls}\\s*\\(([^)]*)\\)\\s*;`, 'g'), 'var $1 = new $2($3)');
+          js = js.replace(new RegExp(`\\b${cls}\\s+(\\w+)\\s*=\\s*${cls}\\s*\\(([^)]*)\\)\\s*;`, 'g'), `var $1 = new ${cls}($2)`);
         }
       }
       // Plugin-specific transpile rules
@@ -307,24 +316,6 @@ class ArduinoSimulator {
     for (const [orig, mapped] of API) {
       js = js.replace(new RegExp(`\\b${orig}\\b(?=\\s*\\()`, 'g'), mapped);
     }
-
-    // Serial.*
-    js = js.replace(/\bSerial\.begin\s*\(/g, '_a.serialBegin(');
-    js = js.replace(/\bSerial\.print\s*\(/g, '_a.serialPrint(');
-    js = js.replace(/\bSerial\.println\s*\(/g, '_a.serialPrintln(');
-    js = js.replace(/\bSerial\.printf\s*\(/g, '_a.serialPrintf(');
-    js = js.replace(/\bSerial\.read\s*\(/g, '_a.serialRead(');
-    js = js.replace(/\bSerial\.available\s*\(/g, '_a.serialAvailable(');
-    js = js.replace(/\bSerial\.write\s*\(/g, '_a.serialWrite(');
-    js = js.replace(/\bSerial\.flush\s*\(/g, '_a.serialFlush(');
-    js = js.replace(/\bSerial\.parseInt\s*\(/g, '_a.serialParseInt(');
-    js = js.replace(/\bSerial\.parseFloat\s*\(/g, '_a.serialParseFloat(');
-    js = js.replace(/\bSerial\.peek\s*\(/g, '_a.serialPeek(');
-    js = js.replace(/\bSerial\.readString\s*\(/g, '_a.serialReadString(');
-    js = js.replace(/\bSerial\.readStringUntil\s*\(/g, '_a.serialReadStringUntil(');
-    js = js.replace(/\bSerial\.readBytes\s*\(/g, '_a.serialReadBytes(');
-    js = js.replace(/\bSerial\.readBytesUntil\s*\(/g, '_a.serialReadBytesUntil(');
-    js = js.replace(/\bSerial\.readLine\s*\(/g, '_a.serialReadLine(');
 
     // Convert &ref args in I2S calls to reference objects: &bytesWritten → __i2sRef1
     // then read back after: bytesWritten = __i2sRef1.val
@@ -526,66 +517,6 @@ class ArduinoSimulator {
         /* NTP — returns current UTC epoch seconds from the browser clock */
         ntpEpoch() { return Math.floor(Date.now() / 1000); },
 
-        /* Serial */
-        serialBegin(baud) {
-          self.serialBaud = baud;
-          self._serialLog(`[Serial] Opened at ${baud} baud`, 'system');
-        },
-        serialPrint(val, fmt) {
-          let str;
-          if (fmt === 16) str = parseInt(val).toString(16).toUpperCase();
-          else if (fmt === 2) str = parseInt(val).toString(2);
-          else if (fmt === 8) str = parseInt(val).toString(8);
-          else if (typeof val === 'number' && !Number.isInteger(val)) {
-            const dec = fmt !== undefined ? fmt : 2;
-            str = val.toFixed(dec);
-          } else str = String(val);
-          self._serialLog(str, 'data');
-        },
-        serialPrintln(val, fmt) {
-          let str;
-          if (val === undefined) str = '';
-          else if (fmt === 16) str = parseInt(val).toString(16).toUpperCase();
-          else if (fmt === 2) str = parseInt(val).toString(2);
-          else if (fmt === 8) str = parseInt(val).toString(8);
-          else if (typeof val === 'number' && !Number.isInteger(val)) {
-            const dec = fmt !== undefined ? fmt : 2;
-            str = val.toFixed(dec);
-          } else str = String(val);
-          self._serialLog(str + '\n', 'data');
-        },
-        serialPrintf(fmt, ...args) {
-          let i = 0;
-          const str = String(fmt).replace(/%([-+# 0]*)(\d*)(?:\.(\d+))?([dusfxXeEgGoc])/g, function(_, flags, width, prec, spec) {
-            const v = args[i++];
-            if (v === undefined) return '';
-            const decimals = prec !== undefined ? Number(prec) : (spec === 'f' ? 6 : undefined);
-            switch (spec) {
-              case 'd': case 'u': return String(Math.round(Number(v)));
-              case 's': return String(v);
-              case 'f': return Number(v).toFixed(decimals);
-              case 'x': return Math.round(Number(v)).toString(16);
-              case 'X': return Math.round(Number(v)).toString(16).toUpperCase();
-              case 'e': return Number(v).toExponential();
-              case 'E': return Number(v).toExponential().toUpperCase();
-              case 'g': return String(Number(v));
-              case 'G': return String(Number(v)).toUpperCase();
-              case 'o': return Math.round(Number(v)).toString(8);
-              case 'c': return String.fromCharCode(v);
-              default: return String(v);
-            }
-          });
-          self._serialLog(str, 'data');
-        },
-        serialRead() {
-          return self.serialInputBuffer.length > 0
-            ? self.serialInputBuffer.shift().charCodeAt(0)
-            : -1;
-        },
-        serialAvailable() { return self.serialInputBuffer.length; },
-        serialWrite(val) { self._serialLog(String.fromCharCode(val), 'data'); },
-        serialFlush() { },
-
         /* Math helpers */
         map(val, inMin, inMax, outMin, outMax) {
           if (inMax === inMin) return outMin;
@@ -635,59 +566,6 @@ class ArduinoSimulator {
           if (rs[field] !== undefined) return rs[field];
           const props = inst.props || {};
           return props[field] !== undefined ? props[field] : -999;
-        },
-
-        /* Serial extras */
-        serialParseInt() { return 0; },
-        serialParseFloat() { return 0.0; },
-        serialPeek() { return self.serialInputBuffer.length > 0 ? self.serialInputBuffer[0].charCodeAt(0) : -1; },
-        serialReadString() { const s = self.serialInputBuffer.join(''); self.serialInputBuffer = []; return s; },
-        serialReadStringUntil(terminator) {
-          const t = typeof terminator === 'number' ? String.fromCharCode(terminator) : String(terminator);
-          const currentString = self.serialInputBuffer.join('');
-          const index = currentString.indexOf(t);
-
-          if (index === -1) {
-            // Terminator not found yet — Arduino would block until timeout.
-            // Simulator returns what's available so the loop doesn't spin forever.
-            if (currentString.length > 0) {
-              const partial = currentString;
-              self.serialInputBuffer = [];
-              return partial;
-            }
-            return '';
-          }
-
-          const lengthToRead = index + t.length;
-          const result = currentString.slice(0, lengthToRead);
-
-          // Clear the old buffer and store the leftover string as a single chunk
-          const leftover = currentString.slice(lengthToRead);
-          self.serialInputBuffer = leftover ? [leftover] : [];
-
-          return result;
-        }
-        ,
-        serialReadBytes(count) {
-          const n = Math.min(count || 1, self.serialInputBuffer.length);
-          const chars = self.serialInputBuffer.splice(0, n);
-          return chars.map(c => c.charCodeAt(0));
-        },
-        serialReadBytesUntil(terminator) {
-          const t = typeof terminator === 'number' ? String.fromCharCode(terminator) : String(terminator);
-          const result = [];
-          while (self.serialInputBuffer.length > 0) {
-            const ch = self.serialInputBuffer.shift();
-            result.push(ch.charCodeAt(0));
-            if (ch === t) break;
-          }
-          return result;
-        },
-        serialReadLine() {
-          const idx = self.serialInputBuffer.indexOf('\n');
-          if (idx === -1) { const s = self.serialInputBuffer.join(''); self.serialInputBuffer = []; return s; }
-          const line = self.serialInputBuffer.splice(0, idx + 1).join('');
-          return line.endsWith('\n') ? line.slice(0, -1) : line;
         },
 
         /* Tone */

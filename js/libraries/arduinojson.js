@@ -16,7 +16,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['ArduinoJson'] = {
   classes: ['StaticJsonDocument', 'DynamicJsonDocument', 'JsonDocument'],
-
+  includes: ['<ArduinoJson.h>'],
   transpile: [
     // deserializeJson(doc, input) → doc._deserialize(input)
     [/\bdeserializeJson\s*\(([^,]+),\s*([^)]+)\)/g, '$1._deserialize($2)'],

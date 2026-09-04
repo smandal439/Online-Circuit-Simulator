@@ -13,6 +13,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['BME280'] = {
   classes: ['SimpleBME280'],
+  includes: ['<SimpleBME280.h>'],
 
   transpile: [
     // .begin() — match bme/sensor/bmp/bme280 prefix + class name

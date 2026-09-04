@@ -1,6 +1,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['Adafruit_VL53L0X'] = {
   classes: ['Adafruit_VL53L0X'],
+  includes: ['<Adafruit_VL53L0X.h>'],
   transpile: [
     [/\bAdafruit_VL53L0X\s+(\w+)\s*=\s*Adafruit_VL53L0X\s*\(\s*\)/g, 'var $1 = _a.Adafruit_VL53L0X()'],
     [/\bAdafruit_VL53L0X\s+(\w+)\s*\(\s*\)/g, 'var $1 = _a.Adafruit_VL53L0X()'],
@@ -11,6 +12,9 @@ window.ArduinoLibs['Adafruit_VL53L0X'] = {
     }],
   ],
   constants: {},
+  constructor: function() {
+    return { __vl53l0x: true };
+  },
 
   runtime: function(self) {
     return {

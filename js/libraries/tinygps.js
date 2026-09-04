@@ -17,6 +17,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['TinyGPSPlus'] = {
   classes: ['TinyGPSPlus'],
+  includes: ['<TinyGPS++.h>'],
 
   transpile: [
     // Location methods

@@ -6,6 +6,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['NewPing'] = {
   classes: ['NewPing'],
+  includes: ['<NewPing.h>'],
 
   transpile: [
     [/\bNewPing\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.newPingNew($2)'],

@@ -6,6 +6,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['MFRC522'] = {
   classes: ['MFRC522'],
+  includes: ['<MFRC522.h>'],
 
   transpile: [
     [/\bMFRC522\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.rfidNew($2)'],

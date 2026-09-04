@@ -18,7 +18,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['Wire'] = {
   classes: [],
-
+  includes: ['<Wire.h>'],
   transpile: [
     [/\bWire\.begin\s*\(/g, '_a.wireBegin('],
     [/\bWire\.requestFrom\s*\(/g, '_a.wireRequestFrom('],

@@ -17,6 +17,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['EEPROM'] = {
   classes: [],
+  includes: ['<EEPROM.h>'],
 
   transpile: [
     [/\bEEPROM\.read\s*\(/g, '_a.eepromRead('],

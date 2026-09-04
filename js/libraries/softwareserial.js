@@ -7,6 +7,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['SoftwareSerial'] = {
   classes: ['SoftwareSerial'],
+  includes: ['<SoftwareSerial.h>'],
 
   transpile: [
     [/\bSoftwareSerial\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.softwareSerialNew($2)'],

@@ -6,6 +6,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['Stepper'] = {
   classes: ['Stepper'],
+  includes: ['<Stepper.h>'],
 
   transpile: [
     [/\bStepper\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.stepperNew($2)'],

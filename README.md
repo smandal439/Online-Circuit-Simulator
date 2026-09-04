@@ -184,7 +184,7 @@ No build step or Node.js environment is required. You can host this static web a
 │   ├── canvas.js       # Circuit canvas, wiring, pan/zoom
 │   ├── simulator.js    # Arduino code transpilation & execution
 │   ├── editor.js       # Monaco editor integration
-│   ├── serial.js       # Serial monitor
+│   ├── serial_monitor.js # Serial monitor
 │   ├── oscilloscope.js # Oscilloscope rendering
 │   ├── plotter.js      # Serial plotter
 │   ├── output.js       # Compile & debug output

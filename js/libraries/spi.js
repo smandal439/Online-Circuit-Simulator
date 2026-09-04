@@ -13,6 +13,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['SPI'] = {
   classes: [],
+  includes: ['<SPI.h>'],
 
   transpile: [
     [/\bSPI\.begin\s*\(/g, '_a.spiBegin('],

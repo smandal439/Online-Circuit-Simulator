@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   serial.js — Serial Monitor (enhanced)
+   serial_monitor.js — Serial Monitor (enhanced)
    ═══════════════════════════════════════════════════════ */
 
 'use strict';

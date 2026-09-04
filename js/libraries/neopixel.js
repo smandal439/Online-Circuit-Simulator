@@ -6,6 +6,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['Adafruit_NeoPixel'] = {
   classes: ['Adafruit_NeoPixel'],
+  includes: ['<Adafruit_NeoPixel.h>'],
 
   transpile: [
     [/Adafruit_NeoPixel\s+(\w+)\s*=\s*Adafruit_NeoPixel\((\d+)\s*,\s*(\d+)\s*,\s*(\w+)\)/g, 'var $1 = _a.neopixelNew($2, $3, $4)'],

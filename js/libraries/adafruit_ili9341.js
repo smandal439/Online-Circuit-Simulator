@@ -1,6 +1,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['Adafruit_ILI9341'] = {
   classes: ['Adafruit_ILI9341'],
+  includes:['<Adafruit_ILI9341.h>'],
   transpile: [
     [/(\w+)\.drawPixel\(/g, '_a.tftDrawPixel($1, '],
     [/(\w+)\.drawLine\(/g, '_a.tftDrawLine($1, '],
@@ -34,7 +35,9 @@ window.ArduinoLibs['Adafruit_ILI9341'] = {
     ILI9341_LIGHTGREY: 0xC618,
     ILI9341_DARKCYAN: 0x03EF,
   },
-  constructor: null,
+  constructor: function(cs, dc, mosi, sck, rst) {
+    return { __tft: true, cs: cs, dc: dc, mosi: mosi, sck: sck, rst: rst };
+  },
   runtime: function(self) {
     var num = function(v) { return Math.round(Number(v) || 0); };
     var drawTft = function(op, extra) { self._emitEvent('tft_draw', Object.assign({ op: op }, extra)); };

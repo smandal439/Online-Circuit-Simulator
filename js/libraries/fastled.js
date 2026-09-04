@@ -6,6 +6,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['FastLED'] = {
   classes: ['CRGB', 'CHSV'],
+  includes: ['<FastLED.h>'],
 
   transpile: [
     [/FastLED\.addLeds\(/g, '_a.fastledAddLeds('],

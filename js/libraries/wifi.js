@@ -18,6 +18,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['WiFi'] = {
   classes: [],
+  includes: ['<WiFi.h>'],
 
   transpile: [
     // WiFi.begin() → _a.wifiBegin()
@@ -38,7 +39,7 @@ window.ArduinoLibs['WiFi'] = {
     [/\bWiFi\.reconnect\s*\(/g, '_a.wifiReconnect('],
   ],
 
-  constants: {},
+  constants: { WL_CONNECTED: 3, WL_IDLE_STATUS: 0, WL_NO_SSID_AVAIL: 1, WL_SCAN_COMPLETED: 2, WL_CONNECT_FAILED: 4, WL_CONNECTION_LOST: 5, WL_DISCONNECTED: 6, WIFI_STA: 1, WIFI_AP: 2, WIFI_AP_STA: 3 },
 
   constructor: null,
 

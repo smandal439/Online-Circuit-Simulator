@@ -29,7 +29,7 @@ const STATIC_ASSETS = [
   'js/components/multimeter.js',
   'js/components/probe.js',
   'js/components/function_generator.js',
-  'js/serial.js',
+  'js/serial_monitor.js',
   'js/output.js',
   'js/oscilloscope.js',
   'js/logic-analyzer.js',

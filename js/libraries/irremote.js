@@ -6,6 +6,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['IRremote'] = {
   classes: ['IRsend', 'IRrecv'],
+  includes: ['<IRremote.h>'],
 
   transpile: [
     [/IRsend\s+(\w+)\((\d+)\)/g, 'var $1 = _a.irsendNew($2)'],

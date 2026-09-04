@@ -7,32 +7,42 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['LiquidCrystal'] = {
   classes: ['LiquidCrystal'],
+  includes: ['<LiquidCrystal.h>'],
+  priority: 98,
 
   transpile: [
-    [/\.begin\s*\(\s*\)/g, '._lcdBegin()'],
-    [/\.begin\s*\(/g, '._lcdBegin('],
-    [/\.setCursor\s*\(/g, '._lcdSetCursor('],
-    [/\.print\s*\(/g, '._lcdPrint('],
-    [/\.println\s*\(/g, '._lcdPrintln('],
-    [/\.clear\s*\(\s*\)/g, '._lcdClear()'],
-    [/\.home\s*\(\s*\)/g, '._lcdHome()'],
-    [/\.write\s*\(/g, '._lcdWrite('],
-    [/\.noDisplay\s*\(\s*\)/g, '._lcdNoDisplay()'],
-    [/\.display\s*\(\s*\)/g, '._lcdDisplay()'],
-    [/\.noBlink\s*\(\s*\)/g, '._lcdNoBlink()'],
-    [/\.blink\s*\(\s*\)/g, '._lcdBlink()'],
-    [/\.noCursor\s*\(\s*\)/g, '._lcdNoCursor()'],
-    [/\.cursor\s*\(\s*\)/g, '._lcdCursor()'],
-    [/\.scrollDisplayLeft\s*\(\s*\)/g, '._lcdScrollDisplayLeft()'],
-    [/\.scrollDisplayRight\s*\(\s*\)/g, '._lcdScrollDisplayRight()'],
-    [/\.autoscroll\s*\(\s*\)/g, '._lcdAutoscroll()'],
-    [/\.noAutoscroll\s*\(\s*\)/g, '._lcdNoAutoscroll()'],
-    [/\.leftToRight\s*\(\s*\)/g, '._lcdLeftToRight()'],
-    [/\.rightToLeft\s*\(\s*\)/g, '._lcdRightToLeft()'],
-    [/\.createChar\s*\(/g, '._lcdCreateChar('],
+    // begin(digits,digits): LCD only — exclude everything with its own begin
+    [/(\w+)\.begin\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/g, function(m, v, a, b) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ', ' + a + ', ' + b + ')'; }],
+    // begin(): universal dispatcher — only exclude objects with independent begin handling
+    [/(\w+)\.begin\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ')'; }],
+    // setCursor: LCD-specific
+    [/(\w+)\.setCursor\s*\(([^)]+)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdSetCursor(' + v + ', ' + a + ')'; }],
+    // print/println: exclude Serial, Wire, SPI, WiFi, client, http, stream, server, SoftwareSerial
+    [/(\w+)\.print\s*\(([^)]*)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdPrint(' + v + ', ' + a + ')'; }],
+    [/(\w+)\.println\s*\(([^)]*)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdPrintln(' + v + ', ' + a + ')'; }],
+    // clear/home: exclude things that have their own clear
+    [/(\w+)\.clear\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdClear(' + v + ')'; }],
+    [/(\w+)\.home\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdHome(' + v + ')'; }],
+    // write: exclude Serial, Wire, SPI, WiFi, Servo, client, http, stream, server, SoftwareSerial
+    [/(\w+)\.write\s*\(([^)]*)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|Servo|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdWrite(' + v + ', ' + a + ')'; }],
+    [/(\w+)\.noDisplay\s*\(\s*\)/g, '_a.lcdNoDisplay($1)'],
+    [/(\w+)\.display\s*\(\s*\)/g, '_a.lcdDisplay($1)'],
+    [/(\w+)\.noBlink\s*\(\s*\)/g, '_a.lcdNoBlink($1)'],
+    [/(\w+)\.blink\s*\(\s*\)/g, '_a.lcdBlink($1)'],
+    [/(\w+)\.noCursor\s*\(\s*\)/g, '_a.lcdNoCursor($1)'],
+    [/(\w+)\.cursor\s*\(\s*\)/g, '_a.lcdCursor($1)'],
+    [/(\w+)\.scrollDisplayLeft\s*\(\s*\)/g, '_a.lcdScrollDisplayLeft($1)'],
+    [/(\w+)\.scrollDisplayRight\s*\(\s*\)/g, '_a.lcdScrollDisplayRight($1)'],
+    [/(\w+)\.autoscroll\s*\(\s*\)/g, '_a.lcdAutoscroll($1)'],
+    [/(\w+)\.noAutoscroll\s*\(\s*\)/g, '_a.lcdNoAutoscroll($1)'],
+    [/(\w+)\.leftToRight\s*\(\s*\)/g, '_a.lcdLeftToRight($1)'],
+    [/(\w+)\.rightToLeft\s*\(\s*\)/g, '_a.lcdRightToLeft($1)'],
+    [/(\w+)\.createChar\s*\(([^)]*)\)/g, '_a.lcdCreateChar($1, $2)'],
   ],
 
-  constructor: null,
+  constructor: function(rs, en, d4, d5, d6, d7) {
+    return { __class: 'LiquidCrystal', rs: rs, en: en, d4: d4, d5: d5, d6: d6, d7: d7 };
+  },
 
   runtime: function(self) {
     return {

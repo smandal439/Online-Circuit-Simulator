@@ -6,6 +6,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['HTTPClient'] = {
   classes: ['HTTPClient'],
+  includes: ['<HTTPClient.h>'],
 
   transpile: [
     [/^HTTPClient\s+(\w+)\s*;/gm, function(m, v) {

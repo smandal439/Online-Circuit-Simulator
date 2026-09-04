@@ -13,12 +13,13 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['Servo'] = {
   classes: ['Servo'],
+  includes: ['<Servo.h>'],
 
   transpile: [
-    [/(\w+)\.attach\((\w+)\)/g, '_a.servoAttach($1, $2)'],
-    [/(\w+)\.write\((\w+)\)/g, '_a.servoWrite($1, $2)'],
-    [/(\w+)\.writeMicroseconds\((\w+)\)/g, '_a.servoWriteMs($1, $2)'],
-    [/(\w+)\.read\(\)/g, '_a.servoRead($1)'],
+    [/(\w+)\.attach\((\w+)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|SoftwareSerial)$/i.test(v)) return m; return '_a.servoAttach(' + v + ', ' + a + ')'; }],
+    [/(\w+)\.write\((\w+)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|SoftwareSerial)$/i.test(v)) return m; return '_a.servoWrite(' + v + ', ' + a + ')'; }],
+    [/(\w+)\.writeMicroseconds\((\w+)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|SoftwareSerial)$/i.test(v)) return m; return '_a.servoWriteMs(' + v + ', ' + a + ')'; }],
+    [/(\w+)\.read\(\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|SoftwareSerial)$/i.test(v)) return m; return '_a.servoRead(' + v + ')'; }],
   ],
 
   runtime: function(self) {

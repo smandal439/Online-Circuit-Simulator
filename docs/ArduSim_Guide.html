@@ -84,7 +84,7 @@ a{color:#00979c}
 |   +-- canvas.js              Circuit canvas - rendering, placement, wiring
 |   +-- editor.js              Monaco Editor + Arduino language
 |   +-- simulator.js           Arduino C++ to JS transpiler + runtime
-|   +-- serial.js              Serial Monitor UI
+|   +-- serial_monitor.js        Serial Monitor UI
 |   +-- oscilloscope.js        Oscilloscope UI
 |   +-- plotter.js             Serial Plotter UI
 |   +-- output.js              Compile/debug output panel
@@ -168,7 +168,7 @@ ICs/sensors are simulated in canvas.updateSimState()</pre>
 <tr><td><code>window.CircuitCanvasClass</code></td><td>canvas.js</td><td>Class constructor</td></tr>
 <tr><td><code>window.CircuitCanvas</code></td><td>app.js</td><td>CircuitCanvas instance</td></tr>
 <tr><td><code>window.EditorManager</code></td><td>editor.js</td><td>Singleton</td></tr>
-<tr><td><code>window.SerialMonitorClass</code></td><td>serial.js</td><td>Class constructor</td></tr>
+<tr><td><code>window.SerialMonitorClass</code></td><td>serial_monitor.js</td><td>Class constructor</td></tr>
 <tr><td><code>window.SerialMonitor</code></td><td>app.js</td><td>SerialMonitor instance</td></tr>
 <tr><td><code>window.OutputPanelClass</code></td><td>output.js</td><td>Class constructor</td></tr>
 <tr><td><code>window.OutputPanel</code></td><td>app.js</td><td>OutputPanel instance</td></tr>
@@ -241,7 +241,7 @@ ICs/sensors are simulated in canvas.updateSimState()</pre>
 <li>Arduino IntelliSense, error markers, falls back to textarea on mobile</li>
 </ul>
 
-<h3>4.7 js/serial.js, oscilloscope.js, plotter.js, output.js</h3>
+<h3>4.7 js/serial_monitor.js, oscilloscope.js, plotter.js, output.js</h3>
 <p>Independent UI modules for Serial Monitor (5K line buffer, baud selector), Oscilloscope (dual-channel), Plotter (auto-parses numeric output), and Output (compile/debug log).</p>
 
 <h3>4.8 js/storage.js + api.js</h3>
@@ -527,7 +527,7 @@ Canvas re-draws LED with glow effect at 60 FPS</pre>
 <li><strong>js/components/ics.js</strong> &mdash; Calls defComp() for ICs</li>
 <li><strong>js/simulator.js</strong> &mdash; ArduinoSimulator class (needs COMPONENT_DEFS)</li>
 <li><strong>js/canvas.js</strong> &mdash; CircuitCanvas class (needs COMPONENT_DEFS)</li>
-<li><strong>js/serial.js, oscilloscope.js, plotter.js, output.js</strong> &mdash; Independent UI</li>
+<li><strong>js/serial_monitor.js, oscilloscope.js, plotter.js, output.js</strong> &mdash; Independent UI</li>
 <li><strong>js/storage.js, api.js, sharing.js</strong> &mdash; Data modules</li>
 <li><strong>js/editor.js</strong> &mdash; Monaco integration</li>
 <li><strong>js/thumbnails.js, guide.js</strong> &mdash; Need COMPONENT_DEFS</li>

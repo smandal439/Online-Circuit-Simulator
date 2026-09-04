@@ -6,6 +6,7 @@
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['I2S'] = {
   classes: [],
+  includes: ['<driver/i2s.h>'],
 
   transpile: [
     [/i2s_driver_install\s*\(([^)]*)\)\s*;/g, '_a.i2sDriverInstall($1);'],
