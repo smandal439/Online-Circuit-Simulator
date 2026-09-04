@@ -1005,12 +1005,13 @@ Serial.println("Hello from Arduino!");
 <p>ArduSim supports Arduino libraries through a plugin system. You can add support for any new Arduino library <strong>without editing simulator.js</strong>. Just drop a <code>.js</code> file in the <code>js/libraries/</code> folder.</p>
 
 <h3>16.1 How It Works</h3>
-<p>Each library plugin is a JavaScript file that tells the simulator:</p>
+<p>Each library plugin is a JavaScript file with up to 5 properties:</p>
 <ul>
-<li><strong>Class names</strong> — What C++ class names to recognize (e.g., <code>TinyGPSPlus</code>)</li>
-<li><strong>Transpile rules</strong> — How to convert method calls to JavaScript (e.g., <code>.encode()</code> → <code>._gps_encode()</code>)</li>
-<li><strong>Constructor</strong> — What <code>new ClassName()</code> returns (a mock object with stub methods)</li>
-<li><strong>Constants</strong> — Any constants the library defines (e.g., <code>DHT11</code>, <code>SSD1306_WHITE</code>)</li>
+<li><strong>classes</strong> — C++ class names to auto-detect (e.g., <code>['MyClass']</code>)</li>
+<li><strong>transpile</strong> — Regex rules converting Arduino C++ to JavaScript</li>
+<li><strong>runtime(self)</strong> — Functions merged into the <code>_a</code> object (actual simulation logic)</li>
+<li><strong>constructor</strong> — What <code>new ClassName()</code> returns (set to <code>null</code> if it needs <code>self</code>)</li>
+<li><strong>constants</strong> — Global constants (e.g., <code>DHT11</code>, <code>SSD1306_WHITE</code>)</li>
 </ul>
 
 <h3>16.2 Plugin File Format</h3>
@@ -1019,33 +1020,37 @@ window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['MyLibrary'] = {
 
   // Class names this library provides
-  // The simulator auto-detects: MyClass varName; or MyClass varName(args);
   classes: ['MyClass'],
 
-  // Method transpilation rules
-  // Each entry: [regex, replacement]
+  // Transpile rules: [regex, replacement]
   transpile: [
-    // .myMethod(args) → ._myMethod(args)
     [/\.myMethod\s*\(/g, '._myMethod('],
-    // .getValue() → ._getValue()
     [/\.getValue\s*\(\s*\)/g, '._getValue()'],
   ],
 
-  // Constructor stub — what `new MyClass(args)` returns
-  constructor: function(args) {
+  // Runtime functions — merged into _a object
+  // 'self' is the ArduinoSimulator instance
+  runtime: function(self) {
     return {
-      // Internal methods (called by transpiled code)
       _myMethod: function(arg) {
-        // Simulation logic here
-        console.log('[MyLibrary] myMethod called with', arg);
+        self._serialLog('[MyLib] myMethod(' + arg + ')\n', 'system');
       },
       _getValue: function() {
-        return 42; // Return simulated value
+        return 42;
       },
     };
   },
 
-  // Constants to inject (available as global variables)
+  // Constructor — what `new MyClass(args)` returns
+  // Set to null if constructor needs 'self' (stays in simulator.js)
+  constructor: function(args) {
+    return {
+      myMethod: function(arg) {},
+      getValue: function() { return 42; },
+    };
+  },
+
+  // Constants — injected as global variables
   constants: {
     MY_CONST_A: 100,
     MY_CONST_B: 0xFF,
@@ -1082,72 +1087,118 @@ void loop() {
 
 <div class="tip"><strong>No simulator.js edits needed!</strong> The plugin system auto-loads all <code>.js</code> files from <code>js/libraries/</code> at startup.</div>
 
-<h3>16.4 Transpile Rules Explained</h3>
+<h3>16.4 The runtime(self) Pattern</h3>
+<p>The <code>runtime(self)</code> function receives the <code>ArduinoSimulator</code> instance and returns functions that get merged into the <code>_a</code> object. This gives plugins full access to simulator internals:</p>
+
+<pre>runtime: function(self) {
+  return {
+    // Access serial logging
+    myFunc: function() {
+      self._serialLog('[MyLib] message\n', 'system');
+    },
+
+    // Emit events to canvas
+    myShow: function() {
+      self._emitEvent('my_event', { data: 123 });
+    },
+
+    // Access pin states
+    readPin: function(pin) {
+      return self.pinStates['pin_' + pin] || 0;
+    },
+
+    // Async functions (for delays, animations)
+    myAsyncFunc: async function(obj) {
+      await self._delayPromise(1000);
+      self._serialLog('[MyLib] done\n', 'system');
+    },
+  };
+},</pre>
+
+<h3>16.5 When to Use constructor: null</h3>
+<p>If your constructor needs access to <code>self</code> (e.g., to read from CircuitCanvas or emit events), set <code>constructor: null</code> and keep the constructor in <code>simulator.js</code>:</p>
+
+<pre>// Plugin file
+window.ArduinoLibs['MySensor'] = {
+  classes: ['MySensor'],
+  transpile: [...],
+  runtime: function(self) {
+    return {
+      // _a.* functions that use self
+    };
+  },
+  constructor: null, // Stays in simulator.js because it needs self
+  constants: {},
+};</pre>
+
+<p>Constructors that DON'T need <code>self</code> can be defined in the plugin:</p>
+
+<pre>constructor: function(args) {
+  return {
+    begin: function() {},
+    read: function() { return 42; },
+  };
+},</pre>
+
+<h3>16.6 Transpile Rules Explained</h3>
 <p>Transpile rules are <code>[regex, replacement]</code> pairs that transform Arduino C++ code to JavaScript.</p>
 
 <table>
 <tr><th>Arduino C++</th><th>Regex</th><th>Replacement</th><th>JavaScript Output</th></tr>
 <tr><td><code>gps.encode(c)</code></td><td><code>/\.encode\s*\(/g</code></td><td><code>._encode(</code></td><td><code>gps._encode(c)</code></td></tr>
 <tr><td><code>gps.location.lat()</code></td><td><code>/\.location\.lat\s*\(\s*\)/g</code></td><td><code>._lat()</code></td><td><code>gps._lat()</code></td></tr>
-<tr><td><code>doc["key"]</code></td><td>N/A (native JS)</td><td>N/A</td><td><code>doc["key"]</code></td></tr>
+<tr><td><code>SPI.transfer(data)</code></td><td><code>/\bSPI\.transfer\s*\(/g</code></td><td><code>_a.spiTransfer(</code></td><td><code>_a.spiTransfer(data)</code></td></tr>
 </table>
 
-<h3>16.5 Advanced: Variable-Name Prefix Matching</h3>
+<h3>16.7 Advanced: Variable-Name Prefix Matching</h3>
 <p>Some libraries need to match only specific variable names. Use a function callback:</p>
 <pre>transpile: [
-  // Only match variables starting with bme/sensor/bmp
   [/\b(\w+)\.begin\s*\(\s*\)\s*;/g, function(m, v) {
     if (/^(bme|sensor|bmp)/i.test(v)) return '_a.bme280Begin(' + v + ');';
     return m; // Leave other .begin() calls alone
   }],
 ]</pre>
 
-<h3>16.6 Advanced: Handling Nested Properties</h3>
-<p>For libraries with nested property access like <code>gps.location.lat()</code>:</p>
-<pre>transpile: [
-  [/\.location\.lat\s*\(\s*\)/g, '._lat()'],
-  [/\.location\.lng\s*\(\s*\)/g, '._lng()'],
-  [/\.date\.year\s*\(\s*\)/g, '._year()'],
-]</pre>
-
-<h3>16.7 Existing Libraries</h3>
+<h3>16.8 Existing Libraries</h3>
 <p>The following libraries are already included as plugins in <code>js/libraries/</code>:</p>
 <table>
-<tr><th>Library</th><th>Plugin File</th><th>Classes</th></tr>
-<tr><td>Wire (I2C)</td><td>wire.js</td><td>Wire (singleton)</td></tr>
-<tr><td>SPI</td><td>spi.js</td><td>SPI (singleton)</td></tr>
-<tr><td>EEPROM</td><td>eeprom.js</td><td>EEPROM (singleton)</td></tr>
-<tr><td>WiFi</td><td>wifi.js</td><td>WiFi (singleton)</td></tr>
-<tr><td>HTTPClient</td><td>httpclient.js</td><td>HTTPClient</td></tr>
-<tr><td>WebServer</td><td>webserver.js</td><td>WebServer</td></tr>
-<tr><td>Servo</td><td>servo.js</td><td>Servo</td></tr>
-<tr><td>LiquidCrystal</td><td>liquidcrystal.js</td><td>LiquidCrystal</td></tr>
-<tr><td>LiquidCrystal_I2C</td><td>liquidcrystal_i2c.js</td><td>LiquidCrystal_I2C</td></tr>
-<tr><td>DHT</td><td>dht.js</td><td>DHT</td></tr>
-<tr><td>BME280</td><td>bme280.js</td><td>SimpleBME280</td></tr>
-<tr><td>Adafruit_SSD1306</td><td>adafruit_ssd1306.js</td><td>Adafruit_SSD1306</td></tr>
-<tr><td>Adafruit_ILI9341</td><td>adafruit_ili9341.js</td><td>Adafruit_ILI9341</td></tr>
-<tr><td>NeoPixel</td><td>neopixel.js</td><td>Adafruit_NeoPixel</td></tr>
-<tr><td>FastLED</td><td>fastled.js</td><td>CRGB, CHSV</td></tr>
-<tr><td>SoftwareSerial</td><td>softwareserial.js</td><td>SoftwareSerial</td></tr>
-<tr><td>Stepper</td><td>stepper.js</td><td>Stepper</td></tr>
-<tr><td>NewPing</td><td>newping.js</td><td>NewPing</td></tr>
-<tr><td>IRremote</td><td>irremote.js</td><td>IRsend, IRrecv</td></tr>
-<tr><td>MFRC522</td><td>mfrc522.js</td><td>MFRC522</td></tr>
-<tr><td>VL53L0X</td><td>vl53l0x.js</td><td>Adafruit_VL53L0X</td></tr>
-<tr><td>PubSubClient (MQTT)</td><td>pubsubclient.js</td><td>PubSubClient</td></tr>
-<tr><td>ESP32 I2S</td><td>i2s.js</td><td>(free functions)</td></tr>
-<tr><td>TinyGPS++</td><td>tinygps.js</td><td>TinyGPSPlus</td></tr>
-<tr><td>ArduinoJson</td><td>arduinojson.js</td><td>StaticJsonDocument, DynamicJsonDocument</td></tr>
+<tr><th>Library</th><th>Plugin File</th><th>Has runtime(self)</th></tr>
+<tr><td>Wire (I2C)</td><td>wire.js</td><td>Yes</td></tr>
+<tr><td>SPI</td><td>spi.js</td><td>Yes</td></tr>
+<tr><td>EEPROM</td><td>eeprom.js</td><td>Yes</td></tr>
+<tr><td>WiFi</td><td>wifi.js</td><td>Yes</td></tr>
+<tr><td>HTTPClient</td><td>httpclient.js</td><td>Yes</td></tr>
+<tr><td>WebServer</td><td>webserver.js</td><td>Yes</td></tr>
+<tr><td>Servo</td><td>servo.js</td><td>Yes</td></tr>
+<tr><td>LiquidCrystal</td><td>liquidcrystal.js</td><td>Yes</td></tr>
+<tr><td>LiquidCrystal_I2C</td><td>liquidcrystal_i2c.js</td><td>Yes</td></tr>
+<tr><td>DHT</td><td>dht.js</td><td>Yes</td></tr>
+<tr><td>BME280</td><td>bme280.js</td><td>Yes</td></tr>
+<tr><td>Adafruit_SSD1306</td><td>adafruit_ssd1306.js</td><td>Yes</td></tr>
+<tr><td>Adafruit_ILI9341</td><td>adafruit_ili9341.js</td><td>Yes</td></tr>
+<tr><td>NeoPixel</td><td>neopixel.js</td><td>Yes</td></tr>
+<tr><td>FastLED</td><td>fastled.js</td><td>Yes</td></tr>
+<tr><td>SoftwareSerial</td><td>softwareserial.js</td><td>Yes</td></tr>
+<tr><td>Stepper</td><td>stepper.js</td><td>Yes</td></tr>
+<tr><td>NewPing</td><td>newping.js</td><td>Yes</td></tr>
+<tr><td>IRremote</td><td>irremote.js</td><td>Yes</td></tr>
+<tr><td>MFRC522</td><td>mfrc522.js</td><td>Yes</td></tr>
+<tr><td>VL53L0X</td><td>vl53l0x.js</td><td>Yes</td></tr>
+<tr><td>PubSubClient (MQTT)</td><td>pubsubclient.js</td><td>Yes</td></tr>
+<tr><td>ESP32 I2S</td><td>i2s.js</td><td>Yes</td></tr>
+<tr><td>TinyGPS++</td><td>tinygps.js</td><td>No</td></tr>
+<tr><td>ArduinoJson</td><td>arduinojson.js</td><td>No</td></tr>
 </table>
 
-<h3>16.8 Troubleshooting</h3>
+<h3>16.9 Troubleshooting</h3>
 <table>
 <tr><th>Issue</th><th>Solution</th></tr>
 <tr><td>Class not recognized</td><td>Check that the class name is in the <code>classes</code> array and the script tag is before simulator.js</td></tr>
 <tr><td>Method not working</td><td>Check the transpile regex matches the exact method call syntax</td></tr>
-<tr><td>Constructor error</td><td>Ensure the constructor returns a valid object with all required methods</td></tr>
+<tr><td>Runtime function not called</td><td>Verify the function name matches what the transpiler outputs (e.g., <code>_a.myFunc</code>)</td></tr>
+<tr><td>Constructor error</td><td>Ensure the constructor returns a valid object with all required methods, or set to <code>null</code></td></tr>
 <tr><td>Constants not available</td><td>Check the <code>constants</code> object is properly formatted</td></tr>
+<tr><td>Need access to self in constructor</td><td>Set <code>constructor: null</code> and keep the constructor in simulator.js</td></tr>
 </table>
 
 <div class="info"><strong>Need a library not listed?</strong> Just create a new <code>.js</code> file in <code>js/libraries/</code> following the format above. No changes to simulator.js required!</div>
