@@ -46,6 +46,7 @@ a{color:#00979c}
 <li><a href="#relay-circuits">Relay Circuit Best Practices</a></li>
 <li><a href="#sim-internals">Simulation Internals &amp; Gotchas</a></li>
 <li><a href="#remote-control">Remote Control (Phone Control)</a></li>
+<li><a href="#library-plugins">How to Add a New Library (Plugin System)</a></li>
 </ol>
 
 <h2 id="overview">1. Project Overview</h2>
@@ -998,6 +999,158 @@ Serial.println("Hello from Arduino!");
 <tr><td>Session code not showing</td><td>Click the Remote button <em>after</em> starting the simulation.</td></tr>
 <tr><td>Phone and PC on different networks</td><td>Both must be on the same WiFi network for the MQTT broker to relay messages between them.</td></tr>
 </table>
+
+<h2 id="library-plugins">16. How to Add a New Library (Plugin System)</h2>
+
+<p>ArduSim supports Arduino libraries through a plugin system. You can add support for any new Arduino library <strong>without editing simulator.js</strong>. Just drop a <code>.js</code> file in the <code>js/libraries/</code> folder.</p>
+
+<h3>16.1 How It Works</h3>
+<p>Each library plugin is a JavaScript file that tells the simulator:</p>
+<ul>
+<li><strong>Class names</strong> — What C++ class names to recognize (e.g., <code>TinyGPSPlus</code>)</li>
+<li><strong>Transpile rules</strong> — How to convert method calls to JavaScript (e.g., <code>.encode()</code> → <code>._gps_encode()</code>)</li>
+<li><strong>Constructor</strong> — What <code>new ClassName()</code> returns (a mock object with stub methods)</li>
+<li><strong>Constants</strong> — Any constants the library defines (e.g., <code>DHT11</code>, <code>SSD1306_WHITE</code>)</li>
+</ul>
+
+<h3>16.2 Plugin File Format</h3>
+<pre>// js/libraries/mylibrary.js
+window.ArduinoLibs = window.ArduinoLibs || {};
+window.ArduinoLibs['MyLibrary'] = {
+
+  // Class names this library provides
+  // The simulator auto-detects: MyClass varName; or MyClass varName(args);
+  classes: ['MyClass'],
+
+  // Method transpilation rules
+  // Each entry: [regex, replacement]
+  transpile: [
+    // .myMethod(args) → ._myMethod(args)
+    [/\.myMethod\s*\(/g, '._myMethod('],
+    // .getValue() → ._getValue()
+    [/\.getValue\s*\(\s*\)/g, '._getValue()'],
+  ],
+
+  // Constructor stub — what `new MyClass(args)` returns
+  constructor: function(args) {
+    return {
+      // Internal methods (called by transpiled code)
+      _myMethod: function(arg) {
+        // Simulation logic here
+        console.log('[MyLibrary] myMethod called with', arg);
+      },
+      _getValue: function() {
+        return 42; // Return simulated value
+      },
+    };
+  },
+
+  // Constants to inject (available as global variables)
+  constants: {
+    MY_CONST_A: 100,
+    MY_CONST_B: 0xFF,
+  },
+};</pre>
+
+<h3>16.3 Step-by-Step: Adding a New Library</h3>
+
+<h4>Step 1: Create the plugin file</h4>
+<p>Create <code>js/libraries/mylibrary.js</code> with the format above.</p>
+
+<h4>Step 2: Add script tag to index.html</h4>
+<p>Add this line <strong>before</strong> the simulator.js script tag:</p>
+<pre>&lt;script src="js/libraries/mylibrary.js?v=20260904-1"&gt;&lt;/script&gt;</pre>
+
+<h4>Step 3: Use it in Arduino code</h4>
+<pre>#include &lt;MyLibrary.h&gt;
+
+MyClass myObj(42);
+
+void setup() {
+  Serial.begin(9600);
+  myObj.myMethod("hello");
+}
+
+void loop() {
+  int val = myObj.getValue();
+  Serial.println(val);
+  delay(1000);
+}</pre>
+
+<h4>Step 4: Refresh and run</h4>
+<p>Refresh the browser. The simulator will automatically detect <code>MyClass</code> and use your plugin.</p>
+
+<div class="tip"><strong>No simulator.js edits needed!</strong> The plugin system auto-loads all <code>.js</code> files from <code>js/libraries/</code> at startup.</div>
+
+<h3>16.4 Transpile Rules Explained</h3>
+<p>Transpile rules are <code>[regex, replacement]</code> pairs that transform Arduino C++ code to JavaScript.</p>
+
+<table>
+<tr><th>Arduino C++</th><th>Regex</th><th>Replacement</th><th>JavaScript Output</th></tr>
+<tr><td><code>gps.encode(c)</code></td><td><code>/\.encode\s*\(/g</code></td><td><code>._encode(</code></td><td><code>gps._encode(c)</code></td></tr>
+<tr><td><code>gps.location.lat()</code></td><td><code>/\.location\.lat\s*\(\s*\)/g</code></td><td><code>._lat()</code></td><td><code>gps._lat()</code></td></tr>
+<tr><td><code>doc["key"]</code></td><td>N/A (native JS)</td><td>N/A</td><td><code>doc["key"]</code></td></tr>
+</table>
+
+<h3>16.5 Advanced: Variable-Name Prefix Matching</h3>
+<p>Some libraries need to match only specific variable names. Use a function callback:</p>
+<pre>transpile: [
+  // Only match variables starting with bme/sensor/bmp
+  [/\b(\w+)\.begin\s*\(\s*\)\s*;/g, function(m, v) {
+    if (/^(bme|sensor|bmp)/i.test(v)) return '_a.bme280Begin(' + v + ');';
+    return m; // Leave other .begin() calls alone
+  }],
+]</pre>
+
+<h3>16.6 Advanced: Handling Nested Properties</h3>
+<p>For libraries with nested property access like <code>gps.location.lat()</code>:</p>
+<pre>transpile: [
+  [/\.location\.lat\s*\(\s*\)/g, '._lat()'],
+  [/\.location\.lng\s*\(\s*\)/g, '._lng()'],
+  [/\.date\.year\s*\(\s*\)/g, '._year()'],
+]</pre>
+
+<h3>16.7 Existing Libraries</h3>
+<p>The following libraries are already included as plugins in <code>js/libraries/</code>:</p>
+<table>
+<tr><th>Library</th><th>Plugin File</th><th>Classes</th></tr>
+<tr><td>Wire (I2C)</td><td>wire.js</td><td>Wire (singleton)</td></tr>
+<tr><td>SPI</td><td>spi.js</td><td>SPI (singleton)</td></tr>
+<tr><td>EEPROM</td><td>eeprom.js</td><td>EEPROM (singleton)</td></tr>
+<tr><td>WiFi</td><td>wifi.js</td><td>WiFi (singleton)</td></tr>
+<tr><td>HTTPClient</td><td>httpclient.js</td><td>HTTPClient</td></tr>
+<tr><td>WebServer</td><td>webserver.js</td><td>WebServer</td></tr>
+<tr><td>Servo</td><td>servo.js</td><td>Servo</td></tr>
+<tr><td>LiquidCrystal</td><td>liquidcrystal.js</td><td>LiquidCrystal</td></tr>
+<tr><td>LiquidCrystal_I2C</td><td>liquidcrystal_i2c.js</td><td>LiquidCrystal_I2C</td></tr>
+<tr><td>DHT</td><td>dht.js</td><td>DHT</td></tr>
+<tr><td>BME280</td><td>bme280.js</td><td>SimpleBME280</td></tr>
+<tr><td>Adafruit_SSD1306</td><td>adafruit_ssd1306.js</td><td>Adafruit_SSD1306</td></tr>
+<tr><td>Adafruit_ILI9341</td><td>adafruit_ili9341.js</td><td>Adafruit_ILI9341</td></tr>
+<tr><td>NeoPixel</td><td>neopixel.js</td><td>Adafruit_NeoPixel</td></tr>
+<tr><td>FastLED</td><td>fastled.js</td><td>CRGB, CHSV</td></tr>
+<tr><td>SoftwareSerial</td><td>softwareserial.js</td><td>SoftwareSerial</td></tr>
+<tr><td>Stepper</td><td>stepper.js</td><td>Stepper</td></tr>
+<tr><td>NewPing</td><td>newping.js</td><td>NewPing</td></tr>
+<tr><td>IRremote</td><td>irremote.js</td><td>IRsend, IRrecv</td></tr>
+<tr><td>MFRC522</td><td>mfrc522.js</td><td>MFRC522</td></tr>
+<tr><td>VL53L0X</td><td>vl53l0x.js</td><td>Adafruit_VL53L0X</td></tr>
+<tr><td>PubSubClient (MQTT)</td><td>pubsubclient.js</td><td>PubSubClient</td></tr>
+<tr><td>ESP32 I2S</td><td>i2s.js</td><td>(free functions)</td></tr>
+<tr><td>TinyGPS++</td><td>tinygps.js</td><td>TinyGPSPlus</td></tr>
+<tr><td>ArduinoJson</td><td>arduinojson.js</td><td>StaticJsonDocument, DynamicJsonDocument</td></tr>
+</table>
+
+<h3>16.8 Troubleshooting</h3>
+<table>
+<tr><th>Issue</th><th>Solution</th></tr>
+<tr><td>Class not recognized</td><td>Check that the class name is in the <code>classes</code> array and the script tag is before simulator.js</td></tr>
+<tr><td>Method not working</td><td>Check the transpile regex matches the exact method call syntax</td></tr>
+<tr><td>Constructor error</td><td>Ensure the constructor returns a valid object with all required methods</td></tr>
+<tr><td>Constants not available</td><td>Check the <code>constants</code> object is properly formatted</td></tr>
+</table>
+
+<div class="info"><strong>Need a library not listed?</strong> Just create a new <code>.js</code> file in <code>js/libraries/</code> following the format above. No changes to simulator.js required!</div>
 
 <hr>
 <p style="text-align:center;color:#666;margin-top:40px">ArduSim Project Guide v1.3 &mdash; Updated August 2026</p>
