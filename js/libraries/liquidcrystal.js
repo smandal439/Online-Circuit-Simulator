@@ -32,28 +32,78 @@ window.ArduinoLibs['LiquidCrystal'] = {
     [/\.createChar\s*\(/g, '._lcdCreateChar('],
   ],
 
-  constructor: function() {
+  constructor: null,
+
+  runtime: function(self) {
     return {
-      _lcdBegin: function() {},
-      _lcdSetCursor: function() {},
-      _lcdPrint: function() {},
-      _lcdPrintln: function() {},
-      _lcdClear: function() {},
-      _lcdHome: function() {},
-      _lcdWrite: function() {},
-      _lcdNoDisplay: function() {},
-      _lcdDisplay: function() {},
-      _lcdNoBlink: function() {},
-      _lcdBlink: function() {},
-      _lcdNoCursor: function() {},
-      _lcdCursor: function() {},
-      _lcdScrollDisplayLeft: function() {},
-      _lcdScrollDisplayRight: function() {},
-      _lcdAutoscroll: function() {},
-      _lcdNoAutoscroll: function() {},
-      _lcdLeftToRight: function() {},
-      _lcdRightToLeft: function() {},
-      _lcdCreateChar: function() {},
+      lcdBegin: function(varName, cols, rows) {
+        if (varName && varName._ssId) {
+          var ch = self._softSerial && self._softSerial[varName._ssId];
+          if (ch) { ch.listening = true; ch.baud = cols; }
+          self._serialLog('[SoftwareSerial] begin(' + cols + ')\n', 'system');
+          return;
+        }
+        if (varName && varName._npId) { self._serialLog('[NeoPixel] begin\n', 'system'); return; }
+        if (varName && varName.__webserver) {
+          var cfg = (self._web = self._web || { port: 80, routes: [], reqIdx: 0, lastHit: 0 });
+          cfg.port = Number(cols) || cfg.port || 80;
+          self._serialLog('[WebServer] HTTP server started on port ' + cfg.port + '\n', 'system');
+          return;
+        }
+        if (varName && varName.__oled) { self._emitEvent('oled_power', { on: true }); return; }
+        if (varName && varName.__vl53l0x) { return varName.begin(); }
+        if (varName && varName.__tft) { self._emitEvent('tft_power', { on: true }); return; }
+        self._emitEvent('lcd_power', { on: true });
+      },
+      lcdSetCursor: function(varName, col, row) {
+        if (varName && varName.__tft) { self._tftCursor = { col: Number(col) || 0, row: Number(row) || 0 }; return; }
+        self._lcdCursor = { col: Number(col) || 0, row: Number(row) || 0 };
+      },
+      lcdPrint: function(varName, val, decimals) {
+        if (varName && varName._ssId) {
+          var ch = self._softSerial && self._softSerial[varName._ssId];
+          if (ch) self._serialLog(String(val) + '\n', 'data');
+          return;
+        }
+        var numericValue = typeof val === 'number' ? val : Number(val);
+        var hasNumericValue = typeof val === 'number' || (typeof val === 'string' && val.trim() !== '' && Number.isFinite(numericValue));
+        var text = hasNumericValue && Number.isFinite(numericValue) && !Number.isInteger(numericValue)
+          ? numericValue.toFixed(Number.isFinite(Number(decimals)) ? Math.max(0, Math.min(6, Number(decimals))) : 2)
+          : String(val);
+        if (varName && varName.__tft) {
+          var tc = self._tftCursor || { col: 0, row: 0 };
+          var ts = self._tftTextSize || 1;
+          var fg = self._tftFgColor != null ? self._tftFgColor : 0xFFFF;
+          var bg = self._tftBgColor != null ? self._tftBgColor : 0x0000;
+          self._emitEvent('tft_draw', { op: 'print', text: text, x: tc.col, y: tc.row, size: ts, fg: fg, bg: bg });
+          self._tftCursor = { col: tc.col + text.length * 6 * ts, row: tc.row };
+          return;
+        }
+        var cursor = self._lcdCursor || { col: 0, row: 0 };
+        if (varName && varName.__oled) {
+          var os = self._oledTextSize || 1;
+          self._emitEvent('oled_draw', { op: 'print', text: text, cursor: { col: cursor.col, row: cursor.row }, size: os, color: self._oledTextColor === 0 ? 0 : 1 });
+          self._lcdCursor = { col: cursor.col + text.length * 6 * os, row: cursor.row };
+          return;
+        }
+        self._emitEvent('lcd_print', { text: text, cursor: { col: cursor.col, row: cursor.row } });
+        var col = cursor.col + text.length;
+        var row = cursor.row;
+        if (col >= 16 && row === 0) { col -= 16; row = 1; }
+        if (col >= 16) col = 15;
+        self._lcdCursor = { col: col, row: row };
+      },
+      lcdClear: function(varName) {
+        if (varName && varName._npId) {
+          var np = self._neopixels && self._neopixels[varName._npId];
+          if (np) np.pixels.fill(0);
+          return;
+        }
+        if (varName && varName.__oled) { self._emitEvent('oled_draw', { op: 'clear' }); return; }
+        if (varName && varName.__tft) { self._emitEvent('tft_draw', { op: 'fillScreen', color: 0x0000 }); return; }
+        self._emitEvent('lcd_clear', {});
+      },
+      lcdHome: function(varName) { self._lcdCursor = { col: 0, row: 0 }; },
     };
   },
 };

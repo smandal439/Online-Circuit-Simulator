@@ -11,4 +11,26 @@ window.ArduinoLibs['Adafruit_VL53L0X'] = {
     }],
   ],
   constants: {},
+
+  runtime: function(self) {
+    return {
+      vl53l0xRangingTest: function(varName, measure, debug) {
+        var dist = 100;
+        try {
+          var cc = window.CircuitCanvas;
+          if (cc && cc.components) {
+            var vl = cc.components.find(function(c) { return c.type === 'vl53l0x'; });
+            if (vl) dist = Number(vl.runtimeState && vl.runtimeState.distance !== undefined ? vl.runtimeState.distance : (vl.props && vl.props.distance !== undefined ? vl.props.distance : 100));
+          }
+        } catch (e) { }
+        if (measure) {
+          measure.RangeStatus = dist > 0 ? 0 : 4;
+          measure.RangeMilliMeter = dist;
+        }
+        if (debug) {
+          self._serialLog('[VL53L0X] Range: ' + dist + 'mm (status=' + (measure ? measure.RangeStatus : 4) + ')\n', 'system');
+        }
+      },
+    };
+  },
 };

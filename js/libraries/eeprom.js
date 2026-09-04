@@ -19,23 +19,27 @@ window.ArduinoLibs['EEPROM'] = {
   classes: [],
 
   transpile: [
-    // EEPROM.read() → _a.eepromRead()
     [/\bEEPROM\.read\s*\(/g, '_a.eepromRead('],
-    // EEPROM.write() → _a.eepromWrite()
     [/\bEEPROM\.write\s*\(/g, '_a.eepromWrite('],
-    // EEPROM.update() → _a.eepromUpdate()
     [/\bEEPROM\.update\s*\(/g, '_a.eepromUpdate('],
-    // EEPROM.get() → _a.eepromGet()
     [/\bEEPROM\.get\s*\(/g, '_a.eepromGet('],
-    // EEPROM.put() → _a.eepromPut()
     [/\bEEPROM\.put\s*\(/g, '_a.eepromPut('],
-    // EEPROM.begin() → _a.eepromBegin()
     [/\bEEPROM\.begin\s*\(/g, '_a.eepromBegin('],
-    // EEPROM.commit() → _a.eepromCommit()
     [/\bEEPROM\.commit\s*\(/g, '_a.eepromCommit('],
-    // EEPROM.length → 512
     [/\bEEPROM\.length\b/g, '512'],
   ],
+
+  runtime: function(self) {
+    return {
+      eepromRead: function(addr) { return self._eeprom[addr & 511] || 0; },
+      eepromWrite: function(addr, val) { self._eeprom[addr & 511] = val & 0xFF; },
+      eepromUpdate: function(addr, val) { self._eeprom[addr & 511] = val & 0xFF; },
+      eepromGet: function(addr, obj) { return obj; },
+      eepromPut: function(addr, val) { },
+      eepromBegin: function(size) { self._serialLog('[EEPROM] begin(' + (size || 512) + ')\n', 'system'); },
+      eepromCommit: function() { self._serialLog('[EEPROM] commit\n', 'system'); },
+    };
+  },
 
   constants: {},
 };

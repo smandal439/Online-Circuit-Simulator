@@ -1,7 +1,7 @@
 /**
  * Wire (I2C) Library Plugin for ArduSim
  *
- * Provides I2C simulation.
+ * Provides I2C simulation with MPU6050 (0x68) register emulation.
  * Supports: begin, requestFrom, beginTransmission, endTransmission, write, read, available.
  *
  * Usage in Arduino code:
@@ -17,25 +17,47 @@
  */
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['Wire'] = {
-  classes: [],  // Wire is a singleton, not instantiated
+  classes: [],
 
   transpile: [
-    // Wire.begin() → _a.wireBegin()
     [/\bWire\.begin\s*\(/g, '_a.wireBegin('],
-    // Wire.requestFrom() → _a.wireRequestFrom()
     [/\bWire\.requestFrom\s*\(/g, '_a.wireRequestFrom('],
-    // Wire.beginTransmission() → _a.wireBeginTransmission()
     [/\bWire\.beginTransmission\s*\(/g, '_a.wireBeginTransmission('],
-    // Wire.endTransmission() → _a.wireEndTransmission()
     [/\bWire\.endTransmission\s*\(/g, '_a.wireEndTransmission('],
-    // Wire.write() → _a.wireWrite()
     [/\bWire\.write\s*\(/g, '_a.wireWrite('],
-    // Wire.read() → _a.wireRead()
     [/\bWire\.read\s*\(/g, '_a.wireRead('],
-    // Wire.available() → _a.wireAvailable()
     [/\bWire\.available\s*\(/g, '_a.wireAvailable('],
   ],
 
+  runtime: function(self) {
+    return {
+      wireBegin: function() { self._serialLog('[Wire] I2C begin\n', 'system'); },
+      wireBeginTransmission: function(addr) {
+        self._wireTxAddr = Number(addr) || 0;
+      },
+      wireWrite: function(val) {
+        if (self._wireTxAddr === 0x68) self._wireRegPtr = Number(val) & 0xFF;
+        return 1;
+      },
+      wireEndTransmission: function() {
+        self._wireTxAddr = null;
+        return 0;
+      },
+      wireRequestFrom: function(addr, qty) {
+        qty = Number(qty) || 0;
+        if ((Number(addr) || 0) === 0x68) {
+          self._wireRxQueue = self._mpuReadRegs(self._wireRegPtr ?? 0x3B, qty);
+        } else {
+          self._wireRxQueue = [];
+        }
+        return qty;
+      },
+      wireRead: function() {
+        return (self._wireRxQueue && self._wireRxQueue.length) ? self._wireRxQueue.shift() : 0;
+      },
+      wireAvailable: function() { return (self._wireRxQueue && self._wireRxQueue.length) || 0; },
+    };
+  },
+
   constants: {},
-  // No constructor needed - Wire is a global singleton
 };

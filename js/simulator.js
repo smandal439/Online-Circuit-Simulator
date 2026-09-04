@@ -2556,9 +2556,13 @@ class ArduinoSimulator {
       },
     };
 
-    // Inject plugin-provided constructors and constants
+    // Inject plugin-provided runtime functions, constructors, and constants
     const plugins = this._getPlugins();
     for (const [libName, lib] of Object.entries(plugins)) {
+      if (lib.runtime) {
+        const rt = lib.runtime(self);
+        if (rt && typeof rt === 'object') Object.assign(result._a, rt);
+      }
       if (lib.constructor) {
         result[libName] = lib.constructor;
       }
@@ -3163,7 +3167,7 @@ window.loadExamplesFromFiles = async function () {
     'l298n_dc_motor', 'servo_continuous_spin', 'rotary_encoder_counter',
     'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo',
     'opamp_741_non_inverting','vl53l0x_proximity_sensor','esp32_i2s_music_player',
-    'esp32_i2s_local_radio_player'];
+    'esp32_i2s_local_radio_player','lcd'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {

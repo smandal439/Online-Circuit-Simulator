@@ -34,5 +34,82 @@ window.ArduinoLibs['Adafruit_ILI9341'] = {
     ILI9341_LIGHTGREY: 0xC618,
     ILI9341_DARKCYAN: 0x03EF,
   },
-  constructor: function(args) { return { cs: args[0] || 0, dc: args[1] || 0, rst: args[2] || 0 }; },
+  constructor: null,
+  runtime: function(self) {
+    var num = function(v) { return Math.round(Number(v) || 0); };
+    var drawTft = function(op, extra) { self._emitEvent('tft_draw', Object.assign({ op: op }, extra)); };
+    return {
+      tftBegin: function(varName) { self._emitEvent('tft_power', { on: true }); },
+      tftSetCursor: function(varName, col, row) {
+        if (varName && varName.__tft) self._tftCursor = { col: num(col), row: num(row) };
+      },
+      tftPrint: function(varName, val) {
+        if (!varName || !varName.__tft) return;
+        var text = String(val);
+        var cursor = self._tftCursor || { col: 0, row: 0 };
+        var size = self._tftTextSize || 1;
+        var fg = self._tftFgColor != null ? self._tftFgColor : 0xFFFF;
+        var bg = self._tftBgColor != null ? self._tftBgColor : 0x0000;
+        drawTft('print', { text: text, x: cursor.col, y: cursor.row, size: size, fg: fg, bg: bg });
+        self._tftCursor = { col: cursor.col + text.length * 6 * size, row: cursor.row };
+      },
+      tftPrintln: function(varName, val) {
+        if (!varName || !varName.__tft) return;
+        var text = String(val);
+        var cursor = self._tftCursor || { col: 0, row: 0 };
+        var size = self._tftTextSize || 1;
+        var fg = self._tftFgColor != null ? self._tftFgColor : 0xFFFF;
+        var bg = self._tftBgColor != null ? self._tftBgColor : 0x0000;
+        drawTft('print', { text: text, x: cursor.col, y: cursor.row, size: size, fg: fg, bg: bg });
+        self._tftCursor = { col: 0, row: cursor.row + 8 * size };
+      },
+      tftSetTextColor: function(varName, fg, bg) {
+        if (varName && varName.__tft) {
+          self._tftFgColor = num(fg) || 0xFFFF;
+          self._tftBgColor = bg != null ? (num(bg) || 0x0000) : self._tftFgColor;
+        }
+      },
+      tftSetTextSize: function(varName, s) {
+        if (varName && varName.__tft) self._tftTextSize = Math.max(1, Math.round(Number(s) || 1));
+      },
+      tftSetTextWrap: function(varName, w) { },
+      tftSetRotation: function(varName, r) { },
+      tftDrawPixel: function(varName, x, y, color) {
+        if (varName && varName.__tft) drawTft('pixel', { x: num(x), y: num(y), color: num(color) || 0xFFFF });
+      },
+      tftDrawLine: function(varName, x0, y0, x1, y1, color) {
+        if (varName && varName.__tft) drawTft('line', { x0: num(x0), y0: num(y0), x1: num(x1), y1: num(y1), color: num(color) || 0xFFFF });
+      },
+      tftDrawRect: function(varName, x, y, w, h, color) {
+        if (varName && varName.__tft) drawTft('rect', { x: num(x), y: num(y), w: num(w), h: num(h), color: num(color) || 0xFFFF });
+      },
+      tftFillRect: function(varName, x, y, w, h, color) {
+        if (varName && varName.__tft) drawTft('fillRect', { x: num(x), y: num(y), w: num(w), h: num(h), color: num(color) || 0x0000 });
+      },
+      tftDrawCircle: function(varName, cx, cy, r, color) {
+        if (varName && varName.__tft) drawTft('circle', { x: num(cx), y: num(cy), r: num(r), color: num(color) || 0xFFFF });
+      },
+      tftFillCircle: function(varName, cx, cy, r, color) {
+        if (varName && varName.__tft) drawTft('fillCircle', { x: num(cx), y: num(cy), r: num(r), color: num(color) || 0x0000 });
+      },
+      tftFillScreen: function(varName, color) {
+        if (varName && varName.__tft) drawTft('fillScreen', { color: num(color) || 0x0000 });
+      },
+      tftDrawRoundRect: function(varName, x, y, w, h, r, color) {
+        if (varName && varName.__tft) drawTft('roundRect', { x: num(x), y: num(y), w: num(w), h: num(h), r: num(r), color: num(color) || 0xFFFF });
+      },
+      tftFillRoundRect: function(varName, x, y, w, h, r, color) {
+        if (varName && varName.__tft) drawTft('fillRoundRect', { x: num(x), y: num(y), w: num(w), h: num(h), r: num(r), color: num(color) || 0x0000 });
+      },
+      tftDrawTriangle: function(varName, x0, y0, x1, y1, x2, y2, color) {
+        if (varName && varName.__tft) drawTft('triangle', { x0: num(x0), y0: num(y0), x1: num(x1), y1: num(y1), x2: num(x2), y2: num(y2), color: num(color) || 0xFFFF });
+      },
+      tftFillTriangle: function(varName, x0, y0, x1, y1, x2, y2, color) {
+        if (varName && varName.__tft) drawTft('fillTriangle', { x0: num(x0), y0: num(y0), x1: num(x1), y1: num(y1), x2: num(x2), y2: num(y2), color: num(color) || 0x0000 });
+      },
+      tftDrawChar: function(varName, x, y, c, color, bg, size) {
+        if (varName && varName.__tft) drawTft('char', { x: num(x), y: num(y), char: String(c), color: num(color) || 0xFFFF, bg: num(bg) || 0x0000, size: num(size) || 1 });
+      },
+    };
+  },
 };

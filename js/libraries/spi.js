@@ -15,13 +15,18 @@ window.ArduinoLibs['SPI'] = {
   classes: [],
 
   transpile: [
-    // SPI.begin() → _a.spiBegin()
     [/\bSPI\.begin\s*\(/g, '_a.spiBegin('],
-    // SPI.transfer() → _a.spiTransfer()
     [/\bSPI\.transfer\s*\(/g, '_a.spiTransfer('],
-    // SPI.end() → _a.spiEnd()
     [/\bSPI\.end\s*\(/g, '_a.spiEnd('],
   ],
+
+  runtime: function(self) {
+    return {
+      spiBegin: function() { self._serialLog('[SPI] begin\n', 'system'); },
+      spiTransfer: function(val) { return 0; },
+      spiEnd: function() { },
+    };
+  },
 
   constants: {},
 };

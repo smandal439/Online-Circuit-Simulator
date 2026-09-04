@@ -10,20 +10,7 @@ window.ArduinoLibs['LiquidCrystal_I2C'] = {
     [/(\w+)\.home\(\)/g, '_a.lcdHome($1)'],
   ],
   constants: {},
-  constructor: function () {
-    return {
-      init: function () {},
-      begin: function () {},
-      backlight: function () {},
-      noBacklight: function () {},
-      setBacklight: function () {},
-      display: function () {},
-      noDisplay: function () {},
-      blink: function () {},
-      noBlink: function () {},
-      cursor: function () {},
-      noCursor: function () {},
-      createChar: function () {},
-    };
-  },
+  constructor: null,
+
+  runtime: function(self) { return {}; },
 };

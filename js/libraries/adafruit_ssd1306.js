@@ -11,5 +11,8 @@ window.ArduinoLibs['Adafruit_SSD1306'] = {
     SSD1306_SETCONTRAST: 0x81,
     SSD1306_SETVCOMDETECT: 0xDB,
   },
-  constructor: function(args) { return { width: args[0] || 128, height: args[1] || 64, type: args[2] || 0 }; },
+  constructor: null,
+  runtime: function(self) {
+    return {};
+  },
 };

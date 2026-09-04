@@ -8,5 +8,8 @@ window.ArduinoLibs['DHT'] = {
     DHT21: 21,
     AM2301: 22,
   },
-  constructor: function(args) { return { type: args[0] || 11, pin: args[1] || 0 }; },
+  constructor: null,
+  runtime: function(self) {
+    return {};
+  },
 };

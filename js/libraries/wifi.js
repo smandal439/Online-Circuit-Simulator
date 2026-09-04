@@ -39,4 +39,26 @@ window.ArduinoLibs['WiFi'] = {
   ],
 
   constants: {},
+
+  constructor: null,
+
+  runtime: function(self) {
+    return {
+      wifiBegin: function(ssid, pass) {
+        self._serialLog('[ESP32 Wi-Fi] Connecting to "' + ssid + '"...\n', 'system');
+        setTimeout(function() {
+          self._serialLog('[ESP32 Wi-Fi] Connected! IP: 192.168.1.105\n', 'system');
+        }, Math.max(50, 800 / self.speed));
+      },
+      wifiLocalIP: function() { return '192.168.1.105'; },
+      wifiSoftAPIP: function() { return '192.168.4.1'; },
+      wifiStatus: function() { return 3; },
+      wifiDisconnect: function() { self._serialLog('[ESP32 Wi-Fi] Disconnected\n', 'system'); },
+      wifiReconnect: function() { self._serialLog('[ESP32 Wi-Fi] Reconnected\n', 'system'); },
+      wifiMode: function() { },
+      wifiSoftAP: function(ssid, pass) {
+        self._serialLog('[ESP32 Wi-Fi] SoftAP "' + ssid + '" started\n', 'system');
+      },
+    };
+  },
 };
