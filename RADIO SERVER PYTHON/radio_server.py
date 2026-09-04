@@ -34,6 +34,9 @@ def find_mp3_files():
 
 STATIONS = find_mp3_files()
 
+# Cache decoded PCM data
+PCM_CACHE = {}
+
 def decode_mp3_to_pcm(mp3_path):
     """Decode MP3 to raw PCM using ffmpeg"""
     cmd = [
@@ -57,28 +60,37 @@ def decode_mp3_to_pcm(mp3_path):
         print(f"[RADIO] ERROR: ffmpeg failed - {e}")
         return None
 
+def get_pcm_data(station_key):
+    """Get PCM data, decoding and caching if needed"""
+    if station_key not in PCM_CACHE:
+        station = STATIONS[station_key]
+        print(f"[RADIO] Decoding {station['filename']}...")
+        pcm_data = decode_mp3_to_pcm(station['file'])
+        if pcm_data:
+            PCM_CACHE[station_key] = pcm_data
+            print(f"[RADIO] Cached {len(pcm_data)} bytes PCM")
+        else:
+            return None
+    return PCM_CACHE[station_key]
+
 class RadioStreamHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in STATIONS:
             station = STATIONS[self.path]
-            file_path = station['file']
             
-            if not os.path.exists(file_path):
+            if not os.path.exists(station['file']):
                 self.send_response(404)
                 self.end_headers()
                 return
             
-            # Decode MP3 to PCM
-            print(f"[RADIO] Decoding {station['filename']}...")
-            pcm_data = decode_mp3_to_pcm(file_path)
+            # Get PCM data (cached after first decode)
+            pcm_data = get_pcm_data(self.path)
             
             if pcm_data is None:
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b"Failed to decode MP3")
                 return
-            
-            print(f"[RADIO] Decoded to {len(pcm_data)} bytes PCM")
             
             self.send_response(200)
             self.send_header('Content-Type', 'audio/pcm')
