@@ -8,56 +8,40 @@ window.ArduinoLibs['DHT'] = {
     DHT22: 22,
     DHT21: 21,
     AM2301: 22,
-  },
-  constructor: null,
-  runtime: function(self) {
-    return {};
-  },
-};
-
-/*
-window.ArduinoLibs = window.ArduinoLibs || {};
-window.ArduinoLibs['DHT'] = {
-  classes: ['DHT'],
-  includes: ['<DHT.h>'],
-  constants: {
-    DHT11: 11,
-    DHT22: 22,
-    DHT21: 21,
-    AM2301: 22,
     AM2302: 22,
     DHT12: 12
   },
-  
-  // Instance constructor generator
-  constructor: function(pin = 2, type = 11, instanceName = 'dht') {
+  constructor: function (pin, type) {
+    function findInst() {
+      var canvas = window.CircuitCanvas;
+      if (!canvas || !Array.isArray(canvas.components)) return null;
+      return canvas.components.find(function(c) { return c.type === 'dht11'; }) || null;
+    }
     return {
-      name: instanceName,
-      pin: pin,
-      type: type,
-      declaration: `DHT ${instanceName}(${pin}, ${type});`,
-      setup: `${instanceName}.begin();`
+      __dht: true,
+      _pin: Number(pin) || 2,
+      _type: Number(type) || 11,
+      begin() { },
+      readTemperature(scale) {
+        var inst = findInst();
+        if (!inst) return NaN;
+        var t = (inst.runtimeState && inst.runtimeState.temperature !== undefined)
+          ? inst.runtimeState.temperature : (inst.props ? inst.props.temperature : 25);
+        if (scale === 'F' || scale === 1) t = t * 9.0 / 5.0 + 32;
+        return t;
+      },
+      readHumidity() {
+        var inst = findInst();
+        if (!inst) return NaN;
+        return (inst.runtimeState && inst.runtimeState.humidity !== undefined)
+          ? inst.runtimeState.humidity : (inst.props ? inst.props.humidity : 60);
+      },
+      convertCtoF(c) { return c * 9.0 / 5.0 + 32; },
+      convertFtoC(f) { return (f - 32) * 5.0 / 9.0; },
+      computeHeatIndex(t, h, si) { return si ? t : (t - 0.55 * (1 - h / 100) * (t - 14.5)); },
     };
   },
-
-  // Code generation mappings for library methods
-  methods: {
-    begin: (instance) => `${instance}.begin();`,
-    readTemperature: (instance, isFahrenheit = false) => 
-      `${instance}.readTemperature(${isFahrenheit ? 'true' : ''})`,
-    readHumidity: (instance) => `${instance}.readHumidity()`,
-    computeHeatIndex: (instance, tempVar, humVar, isFahrenheit = false) => 
-      `${instance}.computeHeatIndex(${tempVar}, ${humVar}${isFahrenheit ? ', true' : ''})`
+  runtime: function (self) {
+    return {};
   },
-
-  // Helper validation for invalid pin/type configs
-  validate: function(pin, type) {
-    const validTypes = Object.values(this.constants);
-    return {
-      isValidPin: Number.isInteger(pin) && pin >= 0,
-      isValidType: validTypes.includes(type)
-    };
-  }
 };
-
-*/

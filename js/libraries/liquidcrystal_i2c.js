@@ -5,10 +5,10 @@ window.ArduinoLibs['LiquidCrystal_I2C'] = {
   priority: 98,
   transpile: [
     // init()/begin(): universal dispatcher — only exclude objects with independent begin handling
-    [/(\w+)\.init\(\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ')'; }],
-    [/(\w+)\.init\((\w+),\s*(\w+)\)/g, function(m, v, a, b) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ', ' + a + ', ' + b + ')'; }],
-    [/(\w+)\.begin\(\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ')'; }],
-    [/(\w+)\.begin\((\w+),\s*(\w+)\)/g, function(m, v, a, b) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ', ' + a + ', ' + b + ')'; }],
+    [/(\w+)\.init\(\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ')'; }],
+    [/(\w+)\.init\((\w+),\s*(\w+)\)/g, function(m, v, a, b) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ', ' + a + ', ' + b + ')'; }],
+    [/(\w+)\.begin\(\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ')'; }],
+    [/(\w+)\.begin\((\w+),\s*(\w+)\)/g, function(m, v, a, b) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ', ' + a + ', ' + b + ')'; }],
     // setCursor: LCD-specific
     [/(\w+)\.setCursor\((\w+),\s*(\w+)\)/g, function(m, v, a, b) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdSetCursor(' + v + ', ' + a + ', ' + b + ')'; }],
     // print/println: exclude Serial, Wire, SPI, WiFi, client, http, stream, server, SoftwareSerial

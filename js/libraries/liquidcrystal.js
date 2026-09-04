@@ -12,9 +12,9 @@ window.ArduinoLibs['LiquidCrystal'] = {
 
   transpile: [
     // begin(digits,digits): LCD only — exclude everything with its own begin
-    [/(\w+)\.begin\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/g, function(m, v, a, b) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ', ' + a + ', ' + b + ')'; }],
+    [/(\w+)\.begin\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/g, function(m, v, a, b) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ', ' + a + ', ' + b + ')'; }],
     // begin(): universal dispatcher — only exclude objects with independent begin handling
-    [/(\w+)\.begin\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ')'; }],
+    [/(\w+)\.begin\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.lcdBegin(' + v + ')'; }],
     // setCursor: LCD-specific
     [/(\w+)\.setCursor\s*\(([^)]+)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdSetCursor(' + v + ', ' + a + ')'; }],
     // print/println: exclude Serial, Wire, SPI, WiFi, client, http, stream, server, SoftwareSerial
