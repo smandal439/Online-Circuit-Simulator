@@ -1,0 +1,31 @@
+window.ArduinoLibs = window.ArduinoLibs || {};
+window.ArduinoLibs['I2S'] = {
+  classes: [],
+  transpile: [
+    [/i2s_driver_install\s*\(([^)]*)\)\s*;/g, '_a.i2sDriverInstall($1);'],
+    [/i2s_set_pin\s*\(([^)]*)\)\s*;/g, '_a.i2sSetPin($1);'],
+    [/await\s+i2s_write\s*\(([^)]*)\)\s*;/g, 'await _a.i2sWrite($1);'],
+    [/i2s_write\s*\(([^)]*)\)\s*;/g, 'await _a.i2sWrite($1);'],
+    [/i2s_zero_dma_buffer\s*\(([^)]*)\)\s*;/g, '_a.i2sZeroDma($1);'],
+  ],
+  constants: {
+    I2S_NUM_0: 0,
+    I2S_NUM_1: 1,
+    I2S_MODE_MASTER: 1,
+    I2S_MODE_SLAVE: 2,
+    I2S_MODE_TX: 4,
+    I2S_MODE_RX: 8,
+    I2S_BITS_PER_SAMPLE_8BIT: 1,
+    I2S_BITS_PER_SAMPLE_16BIT: 2,
+    I2S_BITS_PER_SAMPLE_24BIT: 3,
+    I2S_BITS_PER_SAMPLE_32BIT: 4,
+    I2S_CHANNEL_FMT_RIGHT_LEFT: 0,
+    I2S_CHANNEL_FMT_ONLY_LEFT: 1,
+    I2S_CHANNEL_FMT_ONLY_RIGHT: 2,
+    I2S_COMM_FORMAT_I2S: 0,
+    I2S_COMM_FORMAT_STAND_I2S: 1,
+    ESP_INTR_FLAG_LEVEL1: 0,
+    I2S_PIN_NO_CHANGE: -1,
+  },
+  constructor: null,
+};
