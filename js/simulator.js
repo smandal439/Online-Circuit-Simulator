@@ -127,7 +127,7 @@ class ArduinoSimulator {
     // Adafruit_ILI9341 tft(CS, DC, MOSI, SCK, RESET);  →  let tft = new Adafruit_ILI9341(CS, DC, MOSI, SCK, RESET);
     js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|Adafruit_ILI9341|SimpleBME280|Adafruit_VL53L0X|DHT)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
     // Adafruit_VL53L0X lox = Adafruit_VL53L0X();  →  let lox = new Adafruit_VL53L0X();
-    js = js.replace(/\b(Adafruit_VL53L0X)\s+(\w+)\s*=\s*\1\s*\(([^)]*)\)\s*;/g, function(_, t, n, a) { return 'let ' + n + ' = new ' + t + '(' + a + ')'; });
+    js = js.replace(/\b(Adafruit_VL53L0X)\s+(\w+)\s*=\s*\1\s*\(([^)]*)\)\s*;/g, function (_, t, n, a) { return 'let ' + n + ' = new ' + t + '(' + a + ')'; });
 
     // Plugin-provided class constructors
     const plugins = this._getPlugins();
@@ -152,7 +152,7 @@ class ArduinoSimulator {
     }
 
     // Generic fallback: any PascalCase identifier used as constructor
-    js = js.replace(/\b([A-Z][A-Za-z0-9_]{2,})\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, function(match, cls, name, args) {
+    js = js.replace(/\b([A-Z][A-Za-z0-9_]{2,})\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, function (match, cls, name, args) {
       // Skip already-handled known types and JS keywords
       if (/^(Servo|LiquidCrystal|WiFiClient|PubSubClient|WebServer|Serial|String|Array|Object|Math|Date|RegExp|Error|Promise|Map|Set|JSON|Number|Boolean|Function|true|false|null|undefined|NaN|Infinity)$/.test(cls)) return match;
       return `var ${name} = new ${cls}(${args || ''})`;
@@ -376,9 +376,9 @@ class ArduinoSimulator {
     // Convert: command.trim();  →  command = command.trim();
     // Convert: command.toLowerCase();  →  command = command.toLowerCase();
     // Convert: command.toUpperCase();  →  command = command.toUpperCase();
-    js = js.replace(/\b(\w+)\.trim\(\)\s*;/g, function(_, v) { return v + ' = ' + v + '.trim();'; });
-    js = js.replace(/\b(\w+)\.toLowerCase\(\)\s*;/g, function(_, v) { return v + ' = ' + v + '.toLowerCase();'; });
-    js = js.replace(/\b(\w+)\.toUpperCase\(\)\s*;/g, function(_, v) { return v + ' = ' + v + '.toUpperCase();'; });
+    js = js.replace(/\b(\w+)\.trim\(\)\s*;/g, function (_, v) { return v + ' = ' + v + '.trim();'; });
+    js = js.replace(/\b(\w+)\.toLowerCase\(\)\s*;/g, function (_, v) { return v + ' = ' + v + '.toLowerCase();'; });
+    js = js.replace(/\b(\w+)\.toUpperCase\(\)\s*;/g, function (_, v) { return v + ' = ' + v + '.toUpperCase();'; });
 
     return js;
   }
@@ -1425,18 +1425,18 @@ class ArduinoSimulator {
         // IC output pins
         const IC_OUT = {
           ic_555: ['OUT'],
-          ic_74hc00: ['Y1','Y2','Y3','Y4'],
-          ic_74hc04: ['Y1','Y2','Y3','Y4','Y5','Y6'],
-          ic_74hc08: ['Y1','Y2','Y3','Y4'],
-          ic_74hc32: ['Y1','Y2','Y3','Y4'],
-          ic_74hc595: ['QA','QB','QC','QD','QE','QF','QG','QH'],
-          ic_74hc138: ['Y0','Y1','Y2','Y3','Y4','Y5','Y6','Y7'],
-          ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
-          ic_74hc74: ['Q1','Q1n','Q2','Q2n'],
-          ic_74hc165: ['Q7','Q7n'],
-          ic_74hc193: ['QA','QB','CO','BO','TC_U','TC_D'],
-          ic_74hc47: ['a','b','c','d','e','f','g'],
-          ic_74hc148: ['A0','A1','A2','GS','EO'],
+          ic_74hc00: ['Y1', 'Y2', 'Y3', 'Y4'],
+          ic_74hc04: ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'],
+          ic_74hc08: ['Y1', 'Y2', 'Y3', 'Y4'],
+          ic_74hc32: ['Y1', 'Y2', 'Y3', 'Y4'],
+          ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
+          ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
+          ic_74hc245: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'],
+          ic_74hc74: ['Q1', 'Q1n', 'Q2', 'Q2n'],
+          ic_74hc165: ['Q7', 'Q7n'],
+          ic_74hc193: ['QA', 'QB', 'CO', 'BO', 'TC_U', 'TC_D'],
+          ic_74hc47: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+          ic_74hc148: ['A0', 'A1', 'A2', 'GS', 'EO'],
           lm741: ['OUT'],
         };
         if (IC_OUT[other.type] && IC_OUT[other.type].includes(target.pinId)) {
@@ -1498,18 +1498,19 @@ window.loadExamplesFromFiles = async function () {
 
   const files = ['blink', 'esp32_blink', 'fade', 'button', 'potentiometer', 'servo_sweep',
     'traffic_light', 'counter', 'rainbow_rgb', 'morse', 'temperature', 'ultrasonic',
-    'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306', 'esp32_server', 'serial_plotter',
-    'buzzer_melody', 'seg7_counter', 'relay_control', 'dc_motor_speed', 'stepper_motor',
-    'neopixel_color_cycle', 'mpu6050_accel', 'ldr_lamp', 'pir_alarm', 'joystick_led',
-    'esp32_ntp_lcd','esp32_ntp_clock_lcd', 'ic_nand_test', 'logic_analyzer_test', 'temperature_LCD', 'dmm_current',
+    'ultrasonic_distance_pulsein', 'esp32_fade', 'mqtt_esp32', 'lcd_i2c', 'oled_ssd1306',
+    'esp32_server', 'serial_plotter', 'buzzer_melody', 'seg7_counter', 'relay_control',
+    'dc_motor_speed', 'stepper_motor', 'neopixel_color_cycle', 'mpu6050_accel',
+    'ldr_lamp', 'pir_alarm', 'joystick_led', 'esp32_ntp_lcd', 'esp32_ntp_clock_lcd',
+    'ic_nand_test', 'logic_analyzer_test', 'temperature_LCD', 'dmm_current',
     'dmm_resistance', 'dmm_voltage', 'func_gen_dual', 'func_gen_led', 'remote_control_leds',
     'remote_servo_control', 'lm35_temperature', 'keypad_interfacing', 'bme280_weather',
     'bmp280_altitude', 'dso_oscilloscope', 'simplebme280_basic', 'simplebme280_altitude',
     'max7219', 'ili9341', 'astable_555', 'neopixel_strip_chase', 'ir_obstacle_led',
     'l298n_dc_motor', 'servo_continuous_spin', 'rotary_encoder_counter',
     'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo',
-    'opamp_741_non_inverting','vl53l0x_proximity_sensor','esp32_i2s_music_player',
-    'esp32_i2s_local_radio_player','lcd'];
+    'opamp_741_non_inverting', 'vl53l0x_proximity_sensor', 'esp32_i2s_music_player',
+    'esp32_i2s_local_radio_player', 'lcd'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {
