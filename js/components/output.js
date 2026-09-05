@@ -849,8 +849,8 @@ defComp({
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const line1 = ((inst.runtimeState && inst.runtimeState.line1) || inst.props.line1 || '').padEnd(16, ' ').substring(0, 16);
-    const line2 = ((inst.runtimeState && inst.runtimeState.line2) || inst.props.line2 || '').padEnd(16, ' ').substring(0, 16);
+    const line1 = (inst.runtimeState && inst.runtimeState.line1 !== undefined ? inst.runtimeState.line1 : (inst.props.line1 || '')).padEnd(16, ' ').substring(0, 16);
+    const line2 = (inst.runtimeState && inst.runtimeState.line2 !== undefined ? inst.runtimeState.line2 : (inst.props.line2 || '')).padEnd(16, ' ').substring(0, 16);
     const powered = Boolean(inst.runtimeState && inst.runtimeState.powered);
 
     ctx.save();
@@ -996,8 +996,8 @@ defComp({
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const line1 = ((inst.runtimeState && inst.runtimeState.line1) || inst.props.line1 || '').padEnd(16, ' ').substring(0, 16);
-    const line2 = ((inst.runtimeState && inst.runtimeState.line2) || inst.props.line2 || '').padEnd(16, ' ').substring(0, 16);
+    const line1 = (inst.runtimeState && inst.runtimeState.line1 !== undefined ? inst.runtimeState.line1 : (inst.props.line1 || '')).padEnd(16, ' ').substring(0, 16);
+    const line2 = (inst.runtimeState && inst.runtimeState.line2 !== undefined ? inst.runtimeState.line2 : (inst.props.line2 || '')).padEnd(16, ' ').substring(0, 16);
     const powered = Boolean(inst.runtimeState && inst.runtimeState.powered);
 
     ctx.save();
