@@ -1064,7 +1064,7 @@ void loop() {
                   label: cls,
                   kind: monaco.languages.CompletionItemKind.Class,
                   insertTextRules: 4,
-                  insertText: `${cls} ${1:varName}` + (lib.constructor ? '($2);' : ';'),
+                  insertText: cls + ' ${1:varName}' + (lib.constructor ? '($2);' : ';'),
                   documentation: `Construct a ${cls} instance (${libName} library)`
                 });
               }
