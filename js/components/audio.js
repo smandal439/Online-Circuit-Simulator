@@ -22,9 +22,9 @@ defComp({
       label: 'Gain Select',
       type: 'select',
       options: [
-        { value: '3dB',  label: '3 dB' },
-        { value: '6dB',  label: '6 dB' },
-        { value: '9dB',  label: '9 dB' },
+        { value: '3dB', label: '3 dB' },
+        { value: '6dB', label: '6 dB' },
+        { value: '9dB', label: '9 dB' },
         { value: '12dB', label: '12 dB (Default)' },
         { value: '15dB', label: '15 dB' },
       ],
@@ -34,8 +34,8 @@ defComp({
       label: 'Channel Mode',
       type: 'select',
       options: [
-        { value: 'left',       label: 'Left Channel' },
-        { value: 'right',      label: 'Right Channel' },
+        { value: 'left', label: 'Left Channel' },
+        { value: 'right', label: 'Right Channel' },
         { value: 'stereo_mix', label: 'Stereo Mix (L+R)/2' },
       ],
     },
@@ -43,17 +43,17 @@ defComp({
 
   pins: [
     // Speaker Output Terminals (Top)
-    { id: 'out_p', label: 'OUT+', type: PIN_TYPE.SIGNAL, x: 30, y: 0,   side: 'top' },
-    { id: 'out_n', label: 'OUT-', type: PIN_TYPE.SIGNAL, x: 60, y: 0,   side: 'top' },
+    { id: 'out_p', label: 'OUT+', type: PIN_TYPE.SIGNAL, x: 30, y: 0, side: 'top' },
+    { id: 'out_n', label: 'OUT-', type: PIN_TYPE.SIGNAL, x: 60, y: 0, side: 'top' },
 
     // Digital & Power Header Pins (Bottom)
-    { id: 'lrc',   label: 'LRC',  type: PIN_TYPE.SIGNAL, x: 12, y: 110, side: 'bottom' },
-    { id: 'bclk',  label: 'BCLK', type: PIN_TYPE.SIGNAL, x: 24, y: 110, side: 'bottom' },
-    { id: 'din',   label: 'DIN',  type: PIN_TYPE.SIGNAL, x: 36, y: 110, side: 'bottom' },
-    { id: 'gain',  label: 'GAIN', type: PIN_TYPE.SIGNAL, x: 48, y: 110, side: 'bottom' },
-    { id: 'sd',    label: 'SD',   type: PIN_TYPE.SIGNAL, x: 60, y: 110, side: 'bottom' },
-    { id: 'gnd',   label: 'GND',  type: PIN_TYPE.GND,    x: 72, y: 110, side: 'bottom' },
-    { id: 'vin',   label: 'VIN',  type: PIN_TYPE.POWER,  x: 84, y: 110, side: 'bottom' },
+    { id: 'lrc', label: 'LRC', type: PIN_TYPE.SIGNAL, x: 12, y: 110, side: 'bottom' },
+    { id: 'bclk', label: 'BCLK', type: PIN_TYPE.SIGNAL, x: 24, y: 110, side: 'bottom' },
+    { id: 'din', label: 'DIN', type: PIN_TYPE.SIGNAL, x: 36, y: 110, side: 'bottom' },
+    { id: 'gain', label: 'GAIN', type: PIN_TYPE.SIGNAL, x: 48, y: 110, side: 'bottom' },
+    { id: 'sd', label: 'SD', type: PIN_TYPE.SIGNAL, x: 60, y: 110, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 72, y: 110, side: 'bottom' },
+    { id: 'vin', label: 'VIN', type: PIN_TYPE.POWER, x: 84, y: 110, side: 'bottom' },
   ],
 
   /**
@@ -67,7 +67,7 @@ defComp({
     const props = inst.props || {};
     const vVin = (sim && typeof sim.getPinVoltage === 'function') ? sim.getPinVoltage(inst, 'vin') : 0;
     const vGnd = (sim && typeof sim.getPinVoltage === 'function') ? sim.getPinVoltage(inst, 'gnd') : 0;
-    const vSd  = (sim && typeof sim.getPinVoltage === 'function') ? sim.getPinVoltage(inst, 'sd')  : 0;
+    const vSd = (sim && typeof sim.getPinVoltage === 'function') ? sim.getPinVoltage(inst, 'sd') : 0;
     const vDin = (sim && typeof sim.getPinVoltage === 'function') ? sim.getPinVoltage(inst, 'din') : 0;
 
     const vSupply = vVin - vGnd;
@@ -294,8 +294,8 @@ defComp({
       label: 'Impedance',
       type: 'select',
       options: [
-        { value: 4,  label: '4 Ω (3.2W Max @ 5V)' },
-        { value: 8,  label: '8 Ω (1.8W Max @ 5V)' },
+        { value: 4, label: '4 Ω (3.2W Max @ 5V)' },
+        { value: 8, label: '8 Ω (1.8W Max @ 5V)' },
         { value: 16, label: '16 Ω' },
       ],
     },
@@ -343,7 +343,7 @@ defComp({
     inst.runtimeState.vDiff = vDiff;
     inst.runtimeState.vRms = vRms;
     inst.runtimeState.power = power;
-    
+
     // Normalized cone displacement offset (-1.0 to +1.0)
     inst.runtimeState.excursion = Math.min(Math.max(vDiff / 5.0, -1.0), 1.0);
   },
