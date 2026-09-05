@@ -1157,9 +1157,9 @@ defComp({
   width: 132,
   height: 76,
   defaultProps: { address: '0x3C' },
-  // interactive: [
-  //   { field: 'address', label: 'I2C Addr', type: 'text' },
-  // ],
+  interactive: [
+    { field: 'address', label: 'I2C Addr', type: 'text' },
+  ],
   pins: [
     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 36, y: 76, side: 'bottom' },
     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 52, y: 76, side: 'bottom' },
