@@ -9,8 +9,12 @@ window.ArduinoLibs['Adafruit_NeoPixel'] = {
   includes: ['<Adafruit_NeoPixel.h>'],
 
   transpile: [
-    [/Adafruit_NeoPixel\s+(\w+)\s*=\s*Adafruit_NeoPixel\((\d+)\s*,\s*(\d+)\s*,\s*(\w+)\)/g, 'var $1 = _a.neopixelNew($2, $3, $4)'],
-    [/Adafruit_NeoPixel\s+(\w+)\((\d+)\s*,\s*(\d+)\s*,\s*(\w+)\)/g, 'var $1 = _a.neopixelNew($2, $3, $4)'],
+    // Handle `var x = new Adafruit_NeoPixel(args)` produced by the classes mechanism
+    [/\bnew\s+Adafruit_NeoPixel\s*\(([^)]+)\)/g, '_a.neopixelNew($1)'],
+    // Handle `Adafruit_NeoPixel x = Adafruit_NeoPixel(args)` (old style)
+    [/Adafruit_NeoPixel\s+(\w+)\s*=\s*Adafruit_NeoPixel\(([^)]+)\)/g, 'var $1 = _a.neopixelNew($2)'],
+    // Handle `Adafruit_NeoPixel x(args)` (old style)
+    [/Adafruit_NeoPixel\s+(\w+)\(([^)]+)\)/g, 'var $1 = _a.neopixelNew($2)'],
     [/(?<!Serial|WiFi|Wire|SPI)(\w+)\.show\(\)/g, '_a.neopixelShow($1)'],
     [/(\w+)\.setPixelColor\(/g, '_a.neopixelSetPixelColor($1, '],
     [/(\w+)\.getPixelColor\(/g, '_a.neopixelGetPixelColor($1, '],
@@ -19,6 +23,7 @@ window.ArduinoLibs['Adafruit_NeoPixel'] = {
     [/(\w+)\.numPixels\(\)/g, '_a.neopixelNumPixels($1)'],
     [/(\w+)\.ColorHSV\(/g, '_a.neopixelColorHSV($1, '],
     [/(\w+)\.gamma32\(/g, '_a.neopixelGamma32($1, '],
+    [/(?<!Serial|WiFi|Wire|SPI)(\w+)\.clear\(\)/g, '_a.neopixelClear($1)'],
   ],
 
   runtime: function(self) {
@@ -29,7 +34,23 @@ window.ArduinoLibs['Adafruit_NeoPixel'] = {
         var id = '_np_' + pin;
         self._neopixels = self._neopixels || {};
         self._neopixels[id] = { pin: pin, numLeds: numLeds, brightness: 255, pixels: new Array(numLeds).fill(0) };
-        return { _npId: id };
+        return {
+          _npId: id,
+          begin: function() {},
+          show: function() {
+            var np = self._neopixels && self._neopixels[id];
+            if (np) {
+              var leds = np.pixels.map(function(c) {
+                return { r: (c >> 16) & 0xFF, g: (c >> 8) & 0xFF, b: c & 0xFF };
+              });
+              self._emitEvent('fastled_show', { leds: leds, brightness: np.brightness });
+            }
+          },
+          clear: function() {
+            var np = self._neopixels && self._neopixels[id];
+            if (np) np.pixels.fill(0);
+          }
+        };
       },
       neopixelBegin: function(obj) {
         self._serialLog('[NeoPixel] begin\n', 'system');
