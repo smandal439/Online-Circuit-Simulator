@@ -866,6 +866,8 @@
 const EditorManager = {
   editor: null,
   monacoReady: false,
+  _autoCompileTimer: null,
+  _lastCompileCode: '',
 
   DEFAULT_CODE: `/*
  * ArduSim — Arduino Online Simulator
@@ -958,6 +960,15 @@ void loop() {
         'ledcSetup', 'ledcAttachPin', 'ledcWrite', 'hallRead', 'touchRead', 'analogReadMilliVolts',
         'Serial', 'Servo', 'LiquidCrystal', 'Wire',
       ],
+      arduino_library_classes: (() => {
+        const cls = ['DHT', 'SimpleBME280', 'Adafruit_VL53L0X', 'Adafruit_SSD1306', 'Adafruit_ILI9341', 'Adafruit_GFX'];
+        if (window.ArduinoLibs) {
+          for (const lib of Object.values(window.ArduinoLibs)) {
+            if (lib.classes) cls.push(...lib.classes);
+          }
+        }
+        return cls;
+      })(),
       tokenizer: {
         root: [
           [/\/\/.*$/, 'comment'],
@@ -971,6 +982,7 @@ void loop() {
           [/\b(HIGH|LOW|INPUT|OUTPUT|INPUT_PULLUP|LED_BUILTIN|A[0-5]|D\d+|HEX|DEC|OCT|BIN|RISING|FALLING|CHANGE|PI|TWO_PI|HALF_PI)\b/, 'constant'],
           [/\b(void|int|long|float|double|byte|boolean|bool|char|String|unsigned|const|return|if|else|for|while|do|switch|case|break|continue|true|false|static|volatile|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t)\b/, 'keyword'],
           [/\b(setup|loop|pinMode|digitalWrite|digitalRead|analogWrite|analogRead|delay|delayMicroseconds|millis|micros|tone|noTone|pulseIn|map|constrain|random|randomSeed|ledcSetup|ledcAttachPin|ledcWrite|hallRead|touchRead|analogReadMilliVolts|Serial|Servo|LiquidCrystal|Wire)\b/, 'arduino-api'],
+          [/\b(DHT|SimpleBME280|Adafruit_VL53L0X|Adafruit_SSD1306|Adafruit_ILI9341|Adafruit_GFX|NeoPixel|FastLED|MFRC522|NewPing|Stepper|TinyGPS|ArduinoJson|WiFiClient|PubSubClient|WebServer|SoftwareSerial)\b/, 'arduino-api'],
           [/[a-zA-Z_]\w*/, 'identifier'],
         ],
         block_comment: [
@@ -995,7 +1007,7 @@ void loop() {
       },
     });
 
-    // Register completions
+    // Register completions (dynamic — includes library functions)
     monaco.languages.registerCompletionItemProvider('arduino', {
       provideCompletionItems(model, position) {
         const word = model.getWordUntilPosition(position);
@@ -1025,22 +1037,78 @@ void loop() {
           },
           { label: 'Serial.begin', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'Serial.begin(${1:9600});' },
           { label: 'Serial.println', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'Serial.println(${1:value});' },
+          { label: 'Serial.print', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'Serial.print(${1:value});' },
           { label: 'pinMode', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'pinMode(${1:pin}, ${2:OUTPUT});' },
           { label: 'digitalWrite', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'digitalWrite(${1:pin}, ${2:HIGH});' },
           { label: 'digitalRead', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'digitalRead(${1:pin})' },
           { label: 'analogWrite', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'analogWrite(${1:pin}, ${2:value});' },
           { label: 'analogRead', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'analogRead(${1:pin})' },
           { label: 'delay', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'delay(${1:1000});' },
+          { label: 'millis', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'millis()' },
+          { label: 'micros', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'micros()' },
+          { label: 'map', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'map(${1:value}, ${2:0}, ${3:1023}, ${4:0}, ${5:255})' },
+          { label: 'constrain', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'constrain(${1:value}, ${2:low}, ${3:high})' },
+          { label: 'random', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'random(${1:max})' },
           { label: 'ledcSetup', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'ledcSetup(${1:channel}, ${2:freq}, ${3:resolution});' },
           { label: 'ledcAttachPin', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'ledcAttachPin(${1:pin}, ${2:channel});' },
           { label: 'ledcWrite', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'ledcWrite(${1:channel}, ${2:duty});' },
         ];
 
+        // Dynamically add library functions from ArduinoLibs
+        if (window.ArduinoLibs) {
+          for (const [libName, lib] of Object.entries(window.ArduinoLibs)) {
+            // Add library classes as constructors
+            if (lib.classes) {
+              for (const cls of lib.classes) {
+                snippets.push({
+                  label: cls,
+                  kind: monaco.languages.CompletionItemKind.Class,
+                  insertTextRules: 4,
+                  insertText: `${cls} ${1:varName}` + (lib.constructor ? '($2);' : ';'),
+                  documentation: `Construct a ${cls} instance (${libName} library)`
+                });
+              }
+            }
+
+            // Add library include hints
+            if (lib.includes) {
+              for (const inc of lib.includes) {
+                snippets.push({
+                  label: `#include ${inc}`,
+                  kind: monaco.languages.CompletionItemKind.Snippet,
+                  insertText: `#include ${inc}`,
+                  documentation: `Include ${libName} library header`
+                });
+              }
+            }
+
+            // Add library runtime methods
+            if (lib.runtime) {
+              try {
+                const rt = lib.runtime({ _getPlugins: () => window.ArduinoLibs || {} });
+                if (rt && typeof rt === 'object') {
+                  for (const methodName of Object.keys(rt)) {
+                    if (typeof rt[methodName] === 'function' && !methodName.startsWith('_')) {
+                      snippets.push({
+                        label: methodName,
+                        kind: monaco.languages.CompletionItemKind.Function,
+                        insertTextRules: 4,
+                        insertText: `${methodName}($1)`,
+                        documentation: `Call ${methodName} from ${libName} library`
+                      });
+                    }
+                  }
+                }
+              } catch (e) { /* plugin runtime init may fail without canvas */ }
+            }
+          }
+        }
+
         return { suggestions: snippets.map(s => ({ ...s, range })) };
       }
     });
 
-    // Register hover documentation for Arduino APIs
+    // Register hover documentation for Arduino APIs and libraries
     monaco.languages.registerHoverProvider('arduino', {
       provideHover(model, position) {
         const word = model.getWordAtPosition(position);
@@ -1052,8 +1120,41 @@ void loop() {
           digitalRead: '**digitalRead(pin)**\n\nReads the value from a specified digital pin (`HIGH` or `LOW`).',
           analogRead: '**analogRead(pin)**\n\nReads the value from the specified analog pin.',
           analogWrite: '**analogWrite(pin, value)**\n\nWrites an analog value (PWM wave) to a pin.',
-          delay: '**delay(ms)**\n\nPauses the program for the amount of time (in milliseconds) specified.'
+          delay: '**delay(ms)**\n\nPauses the program for the amount of time (in milliseconds) specified.',
+          millis: '**millis()**\n\nReturns the number of milliseconds since the Arduino board began running.',
+          micros: '**micros()**\n\nReturns the number of microseconds since the Arduino board began running.',
+          map: '**map(value, fromLow, fromHigh, toLow, toHigh)**\n\nRemaps a number from one range to another.',
+          constrain: '**constrain(value, low, high)**\n\nConstrains a number to be within a range.',
+          random: '**random(max)** or **random(min, max)**\n\nGenerate a random long integer.',
+          tone: '**tone(pin, frequency, duration)**\n\nGenerates a square wave of the specified frequency.',
+          noTone: '**noTone(pin)**\n\nStops the tone generated on a pin.',
+          pulseIn: '**pulseIn(pin, value, timeout)**\n\nReads a pulse (either HIGH or LOW) on a pin.',
         };
+
+        // Check library runtime methods
+        if (window.ArduinoLibs) {
+          for (const [libName, lib] of Object.entries(window.ArduinoLibs)) {
+            if (lib.runtime) {
+              try {
+                const rt = lib.runtime({ _getPlugins: () => window.ArduinoLibs || {} });
+                if (rt && typeof rt === 'object') {
+                  for (const [methodName, methodFn] of Object.entries(rt)) {
+                    if (typeof methodFn === 'function' && !docs[methodName]) {
+                      docs[methodName] = `**${methodName}()**\n\nMethod from ${libName} library.`;
+                    }
+                  }
+                }
+              } catch (e) { /* plugin may need canvas */ }
+            }
+            if (lib.classes) {
+              for (const cls of lib.classes) {
+                if (!docs[cls]) {
+                  docs[cls] = `**${cls}**\n\nClass from ${libName} library. Use \`new ${cls}()\` to create an instance.`;
+                }
+              }
+            }
+          }
+        }
 
         if (docs[word.word]) {
           return { contents: [{ value: docs[word.word] }] };
@@ -1258,6 +1359,8 @@ void loop() {
           window.StorageManager.autoSave(this.getCode(), window.CircuitCanvas.serialize(), projectName);
         }
       }, 2000);
+
+      this._autoCompile();
     });
 
     // Keyboard Shortcuts
@@ -1662,7 +1765,10 @@ void loop() {
       message: msg,
     }]);
     const el = document.getElementById('editor-errors');
-    if (el) el.textContent = `⛔ ${msg}`;
+    if (el) {
+      el.textContent = `\u26D4 ${msg}`;
+      el.style.color = '#f85149';
+    }
   },
 
   clearErrors() {
@@ -1670,7 +1776,108 @@ void loop() {
     const model = this.editor.getModel();
     if (model) monaco.editor.setModelMarkers(model, 'ardusim', []);
     const el = document.getElementById('editor-errors');
-    if (el) el.textContent = '';
+    if (el) {
+      el.textContent = '';
+      el.style.color = '';
+    }
+  },
+
+  /**
+   * Auto-compile code on editor changes (debounced).
+   * Validates syntax and shows errors as Monaco markers.
+   */
+  _autoCompile() {
+    if (!window.App || !window.App.sim) return;
+    if (window.App.isRunning) return;
+
+    clearTimeout(this._autoCompileTimer);
+    this._autoCompileTimer = setTimeout(() => this._doAutoCompile(), 800);
+  },
+
+  async _doAutoCompile() {
+    const code = this.getCode();
+    if (!code || code === this._lastCompileCode) return;
+    this._lastCompileCode = code;
+
+    try {
+      const sim = window.App.sim;
+      const board = window.App.canvas ? window.App.canvas.boardType || 'arduino_uno' : 'arduino_uno';
+      sim.setBoard(board);
+
+      const result = await sim.compile(code);
+
+      if (result.ok) {
+        this.clearErrors();
+        const el = document.getElementById('editor-errors');
+        if (el) {
+          el.textContent = '\u2705 Compiled successfully';
+          el.style.color = '#3fb950';
+          setTimeout(() => { if (el) el.textContent = ''; }, 2000);
+        }
+      } else {
+        this._showCompileError(result.error, result.rawError);
+      }
+    } catch (err) {
+      // Silently ignore — don't show transient errors during typing
+    }
+  },
+
+  _showCompileError(errorMsg, rawError) {
+    const { line, message } = this._extractLineFromError(errorMsg, rawError);
+
+    if (line > 0) {
+      this.showError(line, message);
+    } else {
+      const el = document.getElementById('editor-errors');
+      if (el) el.textContent = `\u26D4 ${message}`;
+    }
+  },
+
+  _extractLineFromError(errorMsg, rawError) {
+    let line = 0;
+    let message = errorMsg || 'Unknown error';
+
+    // Try to extract line from stack trace (compiled JS line)
+    if (rawError && rawError.stack) {
+      const m = rawError.stack.match(/<anonymous>:(\d+)(?::\d+)?/);
+      if (m) {
+        const compiledLine = parseInt(m[1], 10) - 1;
+        if (compiledLine > 0) {
+          line = this._mapCompiledLineToSource(compiledLine);
+        }
+      }
+    }
+
+    // Fallback: extract "line N" from error message
+    if (line === 0) {
+      const lineMatch = errorMsg.match(/line\s+(\d+)/i);
+      if (lineMatch) line = parseInt(lineMatch[1], 10);
+    }
+
+    return { line, message };
+  },
+
+  /**
+   * Best-effort mapping: compiled JS line → original Arduino source line.
+   * The transpiler adds ~6-8 preamble lines (#define comments, preprocessor
+   * stripping, constant replacements). We scan the original source for a
+   * distinctive token near the error region.
+   */
+  _mapCompiledLineToSource(compiledLine) {
+    const code = this.getCode();
+    if (!code) return compiledLine;
+    const srcLines = code.split('\n');
+
+    // Heuristic: the transpiler strips comments and preprocessor lines,
+    // so the compiled line count is <= source line count. Use a simple
+    // ratio mapping and adjust for preprocessor/comment lines.
+    const preprocessorOffset = srcLines.filter(l => {
+      const t = l.trim();
+      return t.startsWith('#') || t.startsWith('//') || t.startsWith('/*') || t.startsWith('*');
+    }).length;
+
+    const estimated = Math.max(1, compiledLine - Math.floor(preprocessorOffset * 0.3));
+    return Math.min(estimated, srcLines.length);
   },
 
   dispose() {
