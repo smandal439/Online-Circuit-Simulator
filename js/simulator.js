@@ -1509,7 +1509,8 @@ window.loadExamplesFromFiles = async function () {
     'bmp280_altitude', 'dso_oscilloscope', 'simplebme280_basic', 'simplebme280_altitude',
     'max7219', 'ili9341', 'astable_555', 'neopixel_strip_chase', 'ir_obstacle_led',
     'l298n_dc_motor', 'servo_continuous_spin', 'rotary_encoder_counter',
-    'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo',
+    'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo','neopixel_8x8_matrix_rainbow_2',
+    'neopixel_8x8_matrix_rainbow_3',
     'opamp_741_non_inverting', 'vl53l0x_proximity_sensor', 'esp32_i2s_music_player',
     'esp32_i2s_local_radio_player', 'lcd','read_rfid_card_raw_data','lcd_print_remotely'];
   const sketches = [];
