@@ -149,9 +149,16 @@ void loop() {
       },
     });
 
-    // Register completions (dynamic — includes library functions)
+    // Register completions (dynamic — includes library functions + instance methods)
     monaco.languages.registerCompletionItemProvider('arduino', {
       provideCompletionItems(model, position) {
+        const textUntilPosition = model.getValueInRange({
+          startLineNumber: position.lineNumber,
+          startColumn: 1,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column,
+        });
+
         const word = model.getWordUntilPosition(position);
         const range = {
           startLineNumber: position.lineNumber,
@@ -159,6 +166,31 @@ void loop() {
           startColumn: word.startColumn,
           endColumn: word.endColumn,
         };
+
+        // ── Instance method completion (user typed "varName.") ──
+        const dotMatch = textUntilPosition.match(/(\w+)\.\s*$/);
+        if (dotMatch) {
+          const varName = dotMatch[1];
+          const fullCode = model.getValue();
+          const varType = EditorManager._detectVarType(fullCode, varName);
+          if (varType) {
+            const methods = EditorManager._getInstanceMethods(varType);
+            if (methods && methods.length) {
+              return {
+                suggestions: methods.map(m => ({
+                  label: m.name,
+                  kind: monaco.languages.CompletionItemKind.Function,
+                  insertTextRules: m.snippet ? 4 : undefined,
+                  insertText: m.snippet || m.name + '($1)',
+                  documentation: m.doc || '',
+                  range,
+                }))
+              };
+            }
+          }
+          // If we can't resolve the type, still allow typing
+          return { suggestions: [] };
+        }
 
         const snippets = [
           {
@@ -196,10 +228,9 @@ void loop() {
           { label: 'ledcWrite', kind: monaco.languages.CompletionItemKind.Function, insertTextRules: 4, insertText: 'ledcWrite(${1:channel}, ${2:duty});' },
         ];
 
-        // Dynamically add library functions from ArduinoLibs
+        // Dynamically add library classes and include hints
         if (window.ArduinoLibs) {
           for (const [libName, lib] of Object.entries(window.ArduinoLibs)) {
-            // Add library classes as constructors
             if (lib.classes) {
               for (const cls of lib.classes) {
                 snippets.push({
@@ -207,41 +238,19 @@ void loop() {
                   kind: monaco.languages.CompletionItemKind.Class,
                   insertTextRules: 4,
                   insertText: cls + ' ${1:varName}' + (lib.constructor ? '($2);' : ';'),
-                  documentation: `Construct a ${cls} instance (${libName} library)`
+                  documentation: 'Construct a ' + cls + ' instance (' + libName + ' library)'
                 });
               }
             }
-
-            // Add library include hints
             if (lib.includes) {
               for (const inc of lib.includes) {
                 snippets.push({
-                  label: `#include ${inc}`,
+                  label: '#include ' + inc,
                   kind: monaco.languages.CompletionItemKind.Snippet,
-                  insertText: `#include ${inc}`,
-                  documentation: `Include ${libName} library header`
+                  insertText: '#include ' + inc,
+                  documentation: 'Include ' + libName + ' library header'
                 });
               }
-            }
-
-            // Add library runtime methods
-            if (lib.runtime) {
-              try {
-                const rt = lib.runtime({ _getPlugins: () => window.ArduinoLibs || {} });
-                if (rt && typeof rt === 'object') {
-                  for (const methodName of Object.keys(rt)) {
-                    if (typeof rt[methodName] === 'function' && !methodName.startsWith('_')) {
-                      snippets.push({
-                        label: methodName,
-                        kind: monaco.languages.CompletionItemKind.Function,
-                        insertTextRules: 4,
-                        insertText: `${methodName}($1)`,
-                        documentation: `Call ${methodName} from ${libName} library`
-                      });
-                    }
-                  }
-                }
-              } catch (e) { /* plugin runtime init may fail without canvas */ }
             }
           }
         }
@@ -1020,6 +1029,288 @@ void loop() {
 
     const estimated = Math.max(1, compiledLine - Math.floor(preprocessorOffset * 0.3));
     return Math.min(estimated, srcLines.length);
+  },
+
+  /**
+   * Detect the type of a variable by scanning the source code for declarations.
+   * e.g. "LiquidCrystal lcd(12, 11, 5, 4, 3, 2);" → "LiquidCrystal"
+   */
+  _detectVarType(code, varName) {
+    if (!code || !varName) return null;
+
+    // Pattern: TypeName varName(...)
+    // Matches: LiquidCrystal lcd(...), Servo myServo(...), DHT dht(...), etc.
+    const ctorPatterns = [
+      /\b(\w+)\s+\w+\s*\([^)]*\)\s*;/g,
+      /\b(\w+)\s+\w+\s*;/g,
+    ];
+
+    for (const pat of ctorPatterns) {
+      let m;
+      while ((m = pat.exec(code)) !== null) {
+        const typeName = m[1];
+        const line = code.substring(m.index, m.index + m[0].length);
+        // Extract the variable name from the match
+        const varMatch = line.match(new RegExp('\\b' + typeName + '\\s+(\\w+)'));
+        if (varMatch && varMatch[1] === varName) {
+          return typeName;
+        }
+      }
+    }
+    return null;
+  },
+
+  /**
+   * Get instance methods for a library class type.
+   * Returns an array of { name, snippet, doc } objects.
+   */
+  _getInstanceMethods(typeName) {
+    const METHOD_MAP = {
+      LiquidCrystal: [
+        { name: 'begin', snippet: 'begin(${1:cols}, ${2:rows})', doc: 'Initialize the LCD (cols, rows)' },
+        { name: 'setCursor', snippet: 'setCursor(${1:col}, ${2:row})', doc: 'Set the cursor position' },
+        { name: 'print', snippet: 'print(${1:text})', doc: 'Print text to the LCD' },
+        { name: 'println', snippet: 'println(${1:text})', doc: 'Print text with newline' },
+        { name: 'write', snippet: 'write(${1:char})', doc: 'Write a single character' },
+        { name: 'clear', snippet: 'clear()', doc: 'Clear the LCD screen' },
+        { name: 'home', snippet: 'home()', doc: 'Move cursor to home position (0,0)' },
+        { name: 'noDisplay', snippet: 'noDisplay()', doc: 'Turn off the display' },
+        { name: 'display', snippet: 'display()', doc: 'Turn on the display' },
+        { name: 'noBacklight', snippet: 'noBacklight()', doc: 'Turn off the backlight' },
+        { name: 'backlight', snippet: 'backlight()', doc: 'Turn on the backlight' },
+        { name: 'autoscroll', snippet: 'autoscroll()', doc: 'Enable autoscroll' },
+        { name: 'noAutoscroll', snippet: 'noAutoscroll()', doc: 'Disable autoscroll' },
+        { name: 'leftToRight', snippet: 'leftToRight()', doc: 'Set text direction left-to-right' },
+        { name: 'rightToLeft', snippet: 'rightToLeft()', doc: 'Set text direction right-to-left' },
+        { name: 'createChar', snippet: 'createChar(${1:location}, ${2:charmap})', doc: 'Create a custom character' },
+      ],
+      LiquidCrystal_I2C: [
+        { name: 'init', snippet: 'init()', doc: 'Initialize the I2C LCD' },
+        { name: 'begin', snippet: 'begin(${1:cols}, ${2:rows})', doc: 'Initialize the LCD (cols, rows)' },
+        { name: 'setBacklight', snippet: 'setBacklight(${1:0or1})', doc: 'Set backlight on/off' },
+        { name: 'setCursor', snippet: 'setCursor(${1:col}, ${2:row})', doc: 'Set the cursor position' },
+        { name: 'print', snippet: 'print(${1:text})', doc: 'Print text to the LCD' },
+        { name: 'println', snippet: 'println(${1:text})', doc: 'Print text with newline' },
+        { name: 'write', snippet: 'write(${1:char})', doc: 'Write a single character' },
+        { name: 'clear', snippet: 'clear()', doc: 'Clear the LCD screen' },
+        { name: 'home', snippet: 'home()', doc: 'Move cursor to home position' },
+        { name: 'noDisplay', snippet: 'noDisplay()', doc: 'Turn off the display' },
+        { name: 'display', snippet: 'display()', doc: 'Turn on the display' },
+        { name: 'noBacklight', snippet: 'noBacklight()', doc: 'Turn off the backlight' },
+        { name: 'backlight', snippet: 'backlight()', doc: 'Turn on the backlight' },
+        { name: 'autoscroll', snippet: 'autoscroll()', doc: 'Enable autoscroll' },
+        { name: 'noAutoscroll', snippet: 'noAutoscroll()', doc: 'Disable autoscroll' },
+        { name: 'leftToRight', snippet: 'leftToRight()', doc: 'Set text direction left-to-right' },
+        { name: 'rightToLeft', snippet: 'rightToLeft()', doc: 'Set text direction right-to-left' },
+        { name: 'createChar', snippet: 'createChar(${1:location}, ${2:charmap})', doc: 'Create a custom character' },
+      ],
+      Servo: [
+        { name: 'attach', snippet: 'attach(${1:pin})', doc: 'Attach the servo to a pin' },
+        { name: 'write', snippet: 'write(${1:angle})', doc: 'Set servo angle (0-180 degrees)' },
+        { name: 'writeMicroseconds', snippet: 'writeMicroseconds(${1:value})', doc: 'Set servo position in microseconds' },
+        { name: 'read', snippet: 'read()', doc: 'Read the current servo angle' },
+        { name: 'readMicroseconds', snippet: 'readMicroseconds()', doc: 'Read the current pulse width in microseconds' },
+        { name: 'attached', snippet: 'attached()', doc: 'Check if the servo is attached' },
+        { name: 'detach', snippet: 'detach()', doc: 'Detach the servo' },
+      ],
+      DHT: [
+        { name: 'begin', snippet: 'begin()', doc: 'Initialize the DHT sensor' },
+        { name: 'readTemperature', snippet: 'readTemperature(${1:scale})', doc: 'Read temperature (no arg=Celsius, "F"=Fahrenheit)' },
+        { name: 'readHumidity', snippet: 'readHumidity()', doc: 'Read relative humidity (%)' },
+        { name: 'convertCtoF', snippet: 'convertCtoF(${1:c})', doc: 'Convert Celsius to Fahrenheit' },
+        { name: 'convertFtoC', snippet: 'convertFtoC(${1:f})', doc: 'Convert Fahrenheit to Celsius' },
+        { name: 'computeHeatIndex', snippet: 'computeHeatIndex(${1:temp}, ${2:humidity}, ${3:fahrenheit})', doc: 'Compute heat index' },
+        { name: 'read32', snippet: 'read32(${1:scale})', doc: 'Read 32-bit temperature value' },
+      ],
+      Adafruit_SSD1306: [
+        { name: 'begin', snippet: 'begin(${1:SSD1306_SWITCHCAPVCC}, ${2:0x3C})', doc: 'Initialize the OLED display' },
+        { name: 'clearDisplay', snippet: 'clearDisplay()', doc: 'Clear the display buffer' },
+        { name: 'display', snippet: 'display()', doc: 'Push buffer to screen' },
+        { name: 'drawPixel', snippet: 'drawPixel(${1:x}, ${2:y}, ${3:color})', doc: 'Draw a single pixel' },
+        { name: 'drawLine', snippet: 'drawLine(${1:x0}, ${2:y0}, ${3:x1}, ${4:y1}, ${5:color})', doc: 'Draw a line' },
+        { name: 'drawRect', snippet: 'drawRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:color})', doc: 'Draw a rectangle outline' },
+        { name: 'fillRect', snippet: 'fillRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:color})', doc: 'Draw a filled rectangle' },
+        { name: 'drawRoundRect', snippet: 'drawRoundRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:r}, ${6:color})', doc: 'Draw a rounded rectangle' },
+        { name: 'fillRoundRect', snippet: 'fillRoundRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:r}, ${6:color})', doc: 'Draw a filled rounded rectangle' },
+        { name: 'drawCircle', snippet: 'drawCircle(${1:x0}, ${2:y0}, ${3:r}, ${4:color})', doc: 'Draw a circle outline' },
+        { name: 'fillCircle', snippet: 'fillCircle(${1:x0}, ${2:y0}, ${3:r}, ${4:color})', doc: 'Draw a filled circle' },
+        { name: 'drawTriangle', snippet: 'drawTriangle(${1:x0}, ${2:y0}, ${3:x1}, ${4:y1}, ${5:x2}, ${6:y2}, ${7:color})', doc: 'Draw a triangle outline' },
+        { name: 'fillTriangle', snippet: 'fillTriangle(${1:x0}, ${2:y0}, ${3:x1}, ${4:y1}, ${5:x2}, ${6:y2}, ${7:color})', doc: 'Draw a filled triangle' },
+        { name: 'drawChar', snippet: 'drawChar(${1:x}, ${2:y}, ${3:ch}, ${4:color}, ${5:bg}, ${6:size})', doc: 'Draw a single character' },
+        { name: 'setCursor', snippet: 'setCursor(${1:x}, ${2:y})', doc: 'Set the text cursor position' },
+        { name: 'setTextColor', snippet: 'setTextColor(${1:color})', doc: 'Set the text color' },
+        { name: 'setTextSize', snippet: 'setTextSize(${1:size})', doc: 'Set the text size (1=small, 2=medium, etc.)' },
+        { name: 'setTextWrap', snippet: 'setTextWrap(${1:wrap})', doc: 'Enable or disable text wrapping' },
+        { name: 'print', snippet: 'print(${1:text})', doc: 'Print text at cursor position' },
+        { name: 'println', snippet: 'println(${1:text})', doc: 'Print text with newline' },
+        { name: 'cp437', snippet: 'cp437(${1:enable})', doc: 'Enable Code Page 437 font' },
+        { name: 'setFont', snippet: 'setFont(${1:font})', doc: 'Set a custom font' },
+        { name: 'getRotation', snippet: 'getRotation()', doc: 'Get current display rotation' },
+        { name: 'getwidth', snippet: 'getwidth()', doc: 'Get display width' },
+        { name: 'getheight', snippet: 'getheight()', doc: 'Get display height' },
+        { name: 'dim', snippet: 'dim(${1:dim})', doc: 'Dim the display (true/false)' },
+        { name: 'setContrast', snippet: 'setContrast(${1:contrast})', doc: 'Set display contrast (0-255)' },
+        { name: 'invertDisplay', snippet: 'invertDisplay(${1:invert})', doc: 'Invert display colors' },
+        { name: 'drawBitmap', snippet: 'drawBitmap(${1:x}, ${2:y}, ${3:bitmap}, ${4:w}, ${5:h}, ${6:color})', doc: 'Draw a bitmap image' },
+      ],
+      Adafruit_ILI9341: [
+        { name: 'begin', snippet: 'begin()', doc: 'Initialize the TFT display' },
+        { name: 'setRotation', snippet: 'setRotation(${1:rotation})', doc: 'Set display rotation (0-3)' },
+        { name: 'fillScreen', snippet: 'fillScreen(${1:color})', doc: 'Fill entire screen with color' },
+        { name: 'drawPixel', snippet: 'drawPixel(${1:x}, ${2:y}, ${3:color})', doc: 'Draw a single pixel' },
+        { name: 'drawLine', snippet: 'drawLine(${1:x0}, ${2:y0}, ${3:x1}, ${4:y1}, ${5:color})', doc: 'Draw a line' },
+        { name: 'drawRect', snippet: 'drawRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:color})', doc: 'Draw a rectangle outline' },
+        { name: 'fillRect', snippet: 'fillRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:color})', doc: 'Draw a filled rectangle' },
+        { name: 'drawCircle', snippet: 'drawCircle(${1:x0}, ${2:y0}, ${3:r}, ${4:color})', doc: 'Draw a circle outline' },
+        { name: 'fillCircle', snippet: 'fillCircle(${1:x0}, ${2:y0}, ${3:r}, ${4:color})', doc: 'Draw a filled circle' },
+        { name: 'drawTriangle', snippet: 'drawTriangle(${1:x0}, ${2:y0}, ${3:x1}, ${4:y1}, ${5:x2}, ${6:y2}, ${7:color})', doc: 'Draw a triangle' },
+        { name: 'fillTriangle', snippet: 'fillTriangle(${1:x0}, ${2:y0}, ${3:x1}, ${4:y1}, ${5:x2}, ${6:y2}, ${7:color})', doc: 'Draw a filled triangle' },
+        { name: 'setCursor', snippet: 'setCursor(${1:x}, ${2:y})', doc: 'Set text cursor position' },
+        { name: 'setTextColor', snippet: 'setTextColor(${1:fg}, ${2:bg})', doc: 'Set text foreground and background color' },
+        { name: 'setTextSize', snippet: 'setTextSize(${1:size})', doc: 'Set text size' },
+        { name: 'setTextWrap', snippet: 'setTextWrap(${1:wrap})', doc: 'Enable/disable text wrapping' },
+        { name: 'print', snippet: 'print(${1:text})', doc: 'Print text' },
+        { name: 'println', snippet: 'println(${1:text})', doc: 'Print text with newline' },
+        { name: 'drawChar', snippet: 'drawChar(${1:x}, ${2:y}, ${3:ch}, ${4:color}, ${5:bg}, ${6:size})', doc: 'Draw a character' },
+        { name: 'drawBitmap', snippet: 'drawBitmap(${1:x}, ${2:y}, ${3:bitmap}, ${4:w}, ${5:h}, ${6:color})', doc: 'Draw a bitmap' },
+        { name: 'invertDisplay', snippet: 'invertDisplay(${1:i})', doc: 'Invert display' },
+        { name: 'width', snippet: 'width()', doc: 'Get display width' },
+        { name: 'height', snippet: 'height()', doc: 'Get display height' },
+      ],
+      Adafruit_GFX: [
+        { name: 'begin', snippet: 'begin(${1:args})', doc: 'Initialize the display' },
+        { name: 'clearDisplay', snippet: 'clearDisplay()', doc: 'Clear the display buffer' },
+        { name: 'display', snippet: 'display()', doc: 'Push buffer to screen' },
+        { name: 'fillScreen', snippet: 'fillScreen(${1:color})', doc: 'Fill screen with color' },
+        { name: 'drawPixel', snippet: 'drawPixel(${1:x}, ${2:y}, ${3:color})', doc: 'Draw a pixel' },
+        { name: 'drawLine', snippet: 'drawLine(${1:x0}, ${2:y0}, ${3:x1}, ${4:y1}, ${5:color})', doc: 'Draw a line' },
+        { name: 'drawRect', snippet: 'drawRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:color})', doc: 'Draw rectangle outline' },
+        { name: 'fillRect', snippet: 'fillRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:color})', doc: 'Draw filled rectangle' },
+        { name: 'drawCircle', snippet: 'drawCircle(${1:x0}, ${2:y0}, ${3:r}, ${4:color})', doc: 'Draw circle outline' },
+        { name: 'fillCircle', snippet: 'fillCircle(${1:x0}, ${2:y0}, ${3:r}, ${4:color})', doc: 'Draw filled circle' },
+        { name: 'drawTriangle', snippet: 'drawTriangle(${1:x0}, ${2:y0}, ${3:x1}, ${4:y1}, ${5:x2}, ${6:y2}, ${7:color})', doc: 'Draw triangle' },
+        { name: 'fillTriangle', snippet: 'fillTriangle(${1:x0}, ${2:y0}, ${3:x1}, ${4:y1}, ${5:x2}, ${6:y2}, ${7:color})', doc: 'Draw filled triangle' },
+        { name: 'drawRoundRect', snippet: 'drawRoundRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:r}, ${6:color})', doc: 'Draw rounded rectangle' },
+        { name: 'fillRoundRect', snippet: 'fillRoundRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:r}, ${6:color})', doc: 'Draw filled rounded rectangle' },
+        { name: 'setCursor', snippet: 'setCursor(${1:x}, ${2:y})', doc: 'Set cursor position' },
+        { name: 'setTextColor', snippet: 'setTextColor(${1:color})', doc: 'Set text color' },
+        { name: 'setTextSize', snippet: 'setTextSize(${1:size})', doc: 'Set text size' },
+        { name: 'setTextWrap', snippet: 'setTextWrap(${1:wrap})', doc: 'Enable text wrapping' },
+        { name: 'print', snippet: 'print(${1:text})', doc: 'Print text' },
+        { name: 'println', snippet: 'println(${1:text})', doc: 'Print text with newline' },
+        { name: 'drawChar', snippet: 'drawChar(${1:x}, ${2:y}, ${3:ch}, ${4:color}, ${5:bg}, ${6:size})', doc: 'Draw a character' },
+        { name: 'drawBitmap', snippet: 'drawBitmap(${1:x}, ${2:y}, ${3:bitmap}, ${4:w}, ${5:h}, ${6:color})', doc: 'Draw bitmap' },
+        { name: 'cp437', snippet: 'cp437(${1:enable})', doc: 'Enable CP437 charset' },
+        { name: 'setRotation', snippet: 'setRotation(${1:r})', doc: 'Set rotation (0-3)' },
+        { name: 'getRotation', snippet: 'getRotation()', doc: 'Get current rotation' },
+        { name: 'width', snippet: 'width()', doc: 'Get width' },
+        { name: 'height', snippet: 'height()', doc: 'Get height' },
+      ],
+      Adafruit_NeoPixel: [
+        { name: 'begin', snippet: 'begin()', doc: 'Initialize the NeoPixel strip' },
+        { name: 'show', snippet: 'show()', doc: 'Push pixel data to the strip' },
+        { name: 'setPixelColor', snippet: 'setPixelColor(${1:n}, ${2:color})', doc: 'Set pixel color (n, packed RGB)' },
+        { name: 'setPixelColorRGB', snippet: 'setPixelColor(${1:n}, ${2:r}, ${3:g}, ${4:b})', doc: 'Set pixel color (n, R, G, B)' },
+        { name: 'getPixelColor', snippet: 'getPixelColor(${1:n})', doc: 'Get packed color of pixel n' },
+        { name: 'setBrightness', snippet: 'setBrightness(${1:brightness})', doc: 'Set brightness (0-255)' },
+        { name: 'getBrightness', snippet: 'getBrightness()', doc: 'Get current brightness' },
+        { name: 'Color', snippet: 'Color(${1:r}, ${2:g}, ${3:b})', doc: 'Pack R, G, B into a single color value' },
+        { name: 'numPixels', snippet: 'numPixels()', doc: 'Get number of pixels in the strip' },
+        { name: 'clear', snippet: 'clear()', doc: 'Set all pixels to off' },
+        { name: 'gamma32', snippet: 'gamma32(${1:color})', doc: 'Apply gamma correction (2.8)' },
+      ],
+      FastLED: [
+        { name: 'addLeds', snippet: 'addLeds(${1:leds}, ${2:numLeds})', doc: 'Add LED array to FastLED' },
+        { name: 'show', snippet: 'show()', doc: 'Push data to LEDs' },
+        { name: 'setBrightness', snippet: 'setBrightness(${1:brightness})', doc: 'Set global brightness (0-255)' },
+        { name: 'setPixelColor', snippet: 'setPixelColor(${1:n}, ${2:r}, ${3:g}, ${4:b})', doc: 'Set pixel RGB color' },
+        { name: 'getPixelColor', snippet: 'getPixelColor(${1:n})', doc: 'Get pixel color' },
+        { name: 'clear', snippet: 'clear()', doc: 'Clear all pixels' },
+        { name: 'clear true', snippet: 'clear(${1:true})', doc: 'Clear including async data' },
+        { name: 'delay', snippet: 'delay(${1:ms})', doc: 'Delay with show()' },
+        { name: 'Color', snippet: 'Color(${1:r}, ${2:g}, ${3:b})', doc: 'Create a CRGB color' },
+        { name: 'HSVtoRGB', snippet: 'HSVtoRGB(${1:h}, ${2:s}, ${3:v})', doc: 'Convert HSV to RGB' },
+      ],
+      NewPing: [
+        { name: 'ping_cm', snippet: 'ping_cm()', doc: 'Measure distance in centimeters' },
+        { name: 'ping_in', snippet: 'ping_in()', doc: 'Measure distance in inches' },
+        { name: 'ping_median', snippet: 'ping_median(${1:iterations})', doc: 'Median of multiple readings (default 5)' },
+        { name: 'ping', snippet: 'ping()', doc: 'Measure distance (cm)' },
+        { name: 'convert_cm', snippet: 'convert_cm(${1:microseconds})', doc: 'Convert echo time to cm' },
+        { name: 'convert_in', snippet: 'convert_in(${1:microseconds})', doc: 'Convert echo time to inches' },
+        { name: 'timer_stop', snippet: 'timer_stop()', doc: 'Stop the ping timer' },
+        { name: 'ping_timer', snippet: 'ping_timer(${1:callback})', doc: 'Non-blocking ping with callback' },
+      ],
+      Wire: [
+        { name: 'begin', snippet: 'begin()', doc: 'Initialize I2C as master' },
+        { name: 'beginTransmission', snippet: 'beginTransmission(${1:address})', doc: 'Begin transmission to device' },
+        { name: 'write', snippet: 'write(${1:value})', doc: 'Write data to transmission buffer' },
+        { name: 'endTransmission', snippet: 'endTransmission()', doc: 'End transmission and send data' },
+        { name: 'requestFrom', snippet: 'requestFrom(${1:address}, ${2:quantity})', doc: 'Request bytes from a device' },
+        { name: 'read', snippet: 'read()', doc: 'Read a byte from the buffer' },
+        { name: 'available', snippet: 'available()', doc: 'Check bytes available to read' },
+        { name: 'peek', snippet: 'peek()', doc: 'Peek at next byte without reading' },
+        { name: 'flush', snippet: 'flush()', doc: 'Wait for transmission to complete' },
+        { name: 'setClock', snippet: 'setClock(${1:freq})', doc: 'Set I2C clock frequency' },
+        { name: 'onReceive', snippet: 'onReceive(${1:handler})', doc: 'Register receive handler' },
+        { name: 'onRequest', snippet: 'onRequest(${1:handler})', doc: 'Register request handler' },
+      ],
+      Stepper: [
+        { name: 'setSpeed', snippet: 'setSpeed(${1:rpm})', doc: 'Set motor speed in RPM' },
+        { name: 'step', snippet: 'step(${1:steps})', doc: 'Move motor by number of steps' },
+      ],
+      SimpleBME280: [
+        { name: 'begin', snippet: 'begin()', doc: 'Initialize the BME280 sensor' },
+        { name: 'readTemperature', snippet: 'readTemperature()', doc: 'Read temperature in Celsius' },
+        { name: 'readHumidity', snippet: 'readHumidity()', doc: 'Read humidity (%)' },
+        { name: 'readPressure', snippet: 'readPressure()', doc: 'Read pressure (Pa)' },
+        { name: 'readAltitude', snippet: 'readAltitude(${1:sealevel})', doc: 'Read altitude in meters' },
+      ],
+      Adafruit_VL53L0X: [
+        { name: 'begin', snippet: 'begin()', doc: 'Initialize the ToF sensor' },
+        { name: 'startRangeRead', snippet: 'startRangeRead()', doc: 'Start a non-blocking range reading' },
+        { name: 'readRange', snippet: 'readRange()', doc: 'Read range in mm' },
+        { name: 'readRangeComplete', snippet: 'readRangeComplete()', doc: 'Check if range reading is complete' },
+        { name: 'rangeReadMillimeters', snippet: 'rangeReadMillimeters()', doc: 'Get range in mm (blocking)' },
+      ],
+      MFRC522: [
+        { name: 'begin', snippet: 'begin(${1:mfrc522_bus}, ${2:slaveSelectPin})', doc: 'Initialize RFID reader' },
+        { name: 'PICC_IsNewCardPresent', snippet: 'PICC_IsNewCardPresent()', doc: 'Check if a new card is present' },
+        { name: 'PICC_ReadCardSerial', snippet: 'PICC_ReadCardSerial()', doc: 'Read card serial number' },
+        { name: 'PICC_HaltA', snippet: 'PICC_HaltA()', doc: 'Halt the current card' },
+        { name: 'PICC_DumpToSerial', snippet: 'PICC_DumpToSerial(&(mfrc522.uid))', doc: 'Dump card data to Serial' },
+      ],
+      TinyGPS: [
+        { name: 'encode', snippet: 'encode(${1:c})', doc: 'Feed a character to the parser' },
+        { name: 'is_Valid', snippet: 'is_Valid()', doc: 'Check if GPS fix is valid' },
+        { name: 'f_get_position', snippet: 'f_get_position(${1:flat}, ${2:flon})', doc: 'Get latitude and longitude' },
+        { name: 'f_altitude', snippet: 'f_altitude()', doc: 'Get altitude in meters' },
+        { name: 'f_speed_kmph', snippet: 'f_speed_kmph()', doc: 'Get speed in km/h' },
+        { name: 'f_course', snippet: 'f_course()', doc: 'Get course/bearing in degrees' },
+        { name: 'satellites', snippet: 'satellites()', doc: 'Get number of satellites' },
+      ],
+      SoftwareSerial: [
+        { name: 'begin', snippet: 'begin(${1:baud})', doc: 'Set baud rate' },
+        { name: 'read', snippet: 'read()', doc: 'Read a byte' },
+        { name: 'write', snippet: 'write(${1:value})', doc: 'Write a byte' },
+        { name: 'print', snippet: 'print(${1:text})', doc: 'Print text' },
+        { name: 'println', snippet: 'println(${1:text})', doc: 'Print text with newline' },
+        { name: 'available', snippet: 'available()', doc: 'Check bytes available' },
+        { name: 'peek', snippet: 'peek()', doc: 'Peek at next byte' },
+        { name: 'listen', snippet: 'listen()', doc: 'Enable listening' },
+        { name: 'isListening', snippet: 'isListening()', doc: 'Check if listening' },
+        { name: 'overflow', snippet: 'overflow()', doc: 'Check buffer overflow' },
+        { name: 'flush', snippet: 'flush()', doc: 'Wait for TX to complete' },
+      ],
+    };
+
+    // Check direct match
+    if (METHOD_MAP[typeName]) return METHOD_MAP[typeName];
+
+    // Check if it inherits from Adafruit_GFX (SSD1306, ILI9341, etc.)
+    if (METHOD_MAP.Adafruit_GFX) return METHOD_MAP.Adafruit_GFX;
+
+    return null;
   },
 
   dispose() {
