@@ -78,7 +78,7 @@ self.addEventListener('fetch', (e) => {
 
   // API calls: network first — never cache API responses
   if (url.pathname.startsWith('/api/')) {
-    e.respondWith(fetch(e.request));
+    e.respondWith(fetch(e.request).catch(() => new Response('{"error":"Network error"}', { status: 503, headers: { 'Content-Type': 'application/json' } })));
     return;
   }
 
