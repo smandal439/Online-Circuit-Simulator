@@ -704,14 +704,14 @@
                     <p style="color:var(--text-muted);font-size:12px;">The simulator connects to a public MQTT broker. Your phone opens a web page that also connects to the same broker — no app install needed.</p>
                 </div>
                 <div id="remote-active" class="hidden">
-                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Session Code</label>
+                    <label for="remote-session-id" style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Session Code</label>
                     <div style="display:flex;gap:8px;margin-bottom:12px;">
                         <input type="text" id="remote-session-id" readonly
                             style="flex:1;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-family:var(--font-mono);font-size:20px;letter-spacing:3px;text-align:center;font-weight:700;">
                         <button class="hdr-btn hdr-btn-ghost" id="btn-copy-session" title="Copy to clipboard"
                             style="padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;">Copy</button>
                     </div>
-                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Remote URL</label>
+                    <label for="remote-url" style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Remote URL</label>
                     <div style="display:flex;gap:8px;margin-bottom:12px;">
                         <input type="text" id="remote-url" readonly
                             style="flex:1;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-family:var(--font-mono);font-size:11px;letter-spacing:0;">
