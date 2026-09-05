@@ -2638,11 +2638,15 @@ class CircuitCanvas {
           break;
         }
         case 'dc_motor': {
-          const inPin = this._getConnectedPinNum(inst.id, 'in');
           let pwm = 0;
+
+          // 1. Try Arduino PWM pin
+          const inPin = this._getConnectedPinNum(inst.id, 'in');
           if (inPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
             pwm = window.ArduinoSim.pinStates[`pin_${inPin}`] || 0;
           }
+
+          // 2. Try L298N motor driver output
           if (pwm === 0) {
             const target = this._getWireTarget(inst.id, 'in');
             if (target && target.inst.type === 'l298n') {
@@ -2652,7 +2656,21 @@ class CircuitCanvas {
               else if (pinId === 'OUT3' || pinId === 'OUT4') pwm = Math.abs((l298.runtimeState?.motorB || 0)) * 255;
             }
           }
-          const speed = Math.max(0, Math.min(1, (Number(pwm) || 0) / 255));
+
+          // 3. Direct DC power (bench supply, power_5v, battery, etc.)
+          let speed = Math.max(0, Math.min(1, (Number(pwm) || 0) / 255));
+          if (speed === 0) {
+            const inNet = this._tracePinNet(inst.id, 'in');
+            const gndNet = this._tracePinNet(inst.id, 'gnd');
+            const hasGnd = gndNet.grounds.length > 0;
+            if (hasGnd && inNet.sources.length > 0) {
+              const bestSource = inNet.sources.sort((a, b) => b.voltage - a.voltage)[0];
+              if (bestSource && bestSource.voltage > 0) {
+                speed = Math.min(1, bestSource.voltage / 12);
+              }
+            }
+          }
+
           inst.runtimeState.speed = speed;
           inst.runtimeState.rpm = Math.round(speed * 120);
           break;
