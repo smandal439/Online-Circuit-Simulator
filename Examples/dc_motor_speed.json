@@ -88,5 +88,5 @@
       }
     ]
   },
-  "code": "/*\n * DC Motor Speed — potentiometer controls PWM speed\n * Turn the potentiometer slider to speed the motor up or down.\n */\n\nint motorPin = 9;\nint potPin = A0;\n\nvoid setup() {\n  pinMode(motorPin, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(\"DC motor speed control started\");\n}\n\nvoid loop() {\n  int pot = analogRead(potPin);            // 0..1023\n  int speed = map(pot, 0, 1023, 0, 255);   // 0..255 PWM\n  analogWrite(motorPin, speed);\n\n  Serial.print(\"Pot: \");\n  Serial.print(pot);\n  Serial.print(\"  Speed: \");\n  Serial.println(speed);\n  delay(50);\n}"
+  "code": "/*\n * DC Motor Speed — potentiometer controls PWM speed\n * Turn the potentiometer slider to speed the motor up or down.\n */\n\nint motorPin = 9;\nint potPin = A0;\n\nvoid setup() {\n  pinMode(motorPin, OUTPUT);\n  Serial.begin(115200);\n  Serial.println(\"DC motor speed control started\");\n}\n\nvoid loop() {\n  int pot = analogRead(potPin);            // 0..1023\n  int speed = map(pot, 0, 1023, 0, 255);   // 0..255 PWM\n  analogWrite(motorPin, speed);\n\n  Serial.print(\"Pot: \");\n  Serial.print(pot);\n  Serial.print(\"  Speed: \");\n  Serial.println(speed);\n  delay(50);\n}"
 }
