@@ -9,7 +9,7 @@ window.ArduinoLibs['Stepper'] = {
   includes: ['<Stepper.h>'],
 
   transpile: [
-    [/\bStepper\s+(\w+)\s*\(([^)]+)\)/g, 'var $1 = _a.stepperNew($2)'],
+    [/\bnew\s+Stepper\s*\(([^)]+)\)/g, '_a.stepperNew($1)'],
     [/\b(\w+)\.setSpeed\s*\(/g, function(match, varName) {
       if (varName === 'Serial' || varName === 'WiFi' || varName === 'Wire' || varName === 'SPI') return match;
       return '_a.stepperSetSpeed(' + varName + ', ';
@@ -159,7 +159,4 @@ window.ArduinoLibs['Stepper'] = {
   },
 
   constants: {},
-  constructor: function(args) {
-    return { stepsPerRev: args[0] || 200, pin1: args[1] || 0, pin2: args[2] || 0, pin3: args[3] || 0, pin4: args[4] || 0 };
-  },
 };

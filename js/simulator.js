@@ -988,6 +988,7 @@ class ArduinoSimulator {
     this.simTime = 0;
     this.pinStates = {};
     this.pinModes = {};
+    this._steppers = {};
     this._delays = [];
     this._wireTxAddr = null;
     this._wireRegPtr = 0x3B;
