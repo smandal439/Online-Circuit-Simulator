@@ -97,12 +97,12 @@ defComp({
   height: 60,
   defaultProps: { label: 'RELAY' },
   pins: [
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER,   x: 12, y: 60, side: 'bottom' },
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND,     x: 24, y: 60, side: 'bottom' },
-    { id: 'sig', label: 'IN',  type: PIN_TYPE.DIGITAL, x: 36, y: 60, side: 'bottom' },
-    { id: 'com', label: 'COM', type: PIN_TYPE.SIGNAL,  x: 54, y: 60, side: 'bottom' },
-    { id: 'no',  label: 'NO',  type: PIN_TYPE.SIGNAL,  x: 66, y: 60, side: 'bottom' },
-    { id: 'nc',  label: 'NC',  type: PIN_TYPE.SIGNAL,  x: 78, y: 60, side: 'bottom' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 60, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 24, y: 60, side: 'bottom' },
+    { id: 'sig', label: 'IN', type: PIN_TYPE.DIGITAL, x: 36, y: 60, side: 'bottom' },
+    { id: 'com', label: 'COM', type: PIN_TYPE.SIGNAL, x: 54, y: 60, side: 'bottom' },
+    { id: 'no', label: 'NO', type: PIN_TYPE.SIGNAL, x: 66, y: 60, side: 'bottom' },
+    { id: 'nc', label: 'NC', type: PIN_TYPE.SIGNAL, x: 78, y: 60, side: 'bottom' },
   ],
   draw(ctx, inst, sim) {
     const { x, y } = inst;
@@ -285,7 +285,7 @@ defComp({
       ctx.lineWidth = 0.6;
       ctx.beginPath();
       ctx.moveTo(sx - 1.2, termY + 5); ctx.lineTo(sx + 1.2, termY + 5);
-      ctx.moveTo(sx, termY + 3.8);     ctx.lineTo(sx, termY + 6.2);
+      ctx.moveTo(sx, termY + 3.8); ctx.lineTo(sx, termY + 6.2);
       ctx.stroke();
     });
 
@@ -355,6 +355,163 @@ defComp({
   }
 });
 /* ─── DC MOTOR ─── */
+// defComp({
+//   id: 'dc_motor',
+//   name: 'DC Motor',
+//   category: 'Actuators',
+//   icon: '🌀',
+//   desc: 'Brushed DC motor (Enlarged Front View) — speed controlled by PWM',
+//   width: 80,
+//   height: 100,
+//   defaultProps: { label: 'MOTOR' },
+//   pins: [
+//     { id: 'in', label: 'IN', type: PIN_TYPE.PWM, x: 30, y: 100, side: 'bottom' },
+//     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 50, y: 100, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const speed = inst.runtimeState?.speed ?? 0;
+//     const rpm = inst.runtimeState?.rpm ?? Math.round(Math.abs(speed) * 3000);
+//     const t = sim?.simTime ?? 0;
+//     const cx = 40, cy = 40; // Center of front casing
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // --- 1. Rear Terminal Leads & Solder Tabs ---
+//     ctx.lineWidth = 3;
+//     // IN Pin (Brass Lead)
+//     ctx.strokeStyle = '#d4af37';
+//     ctx.beginPath(); ctx.moveTo(30, 68); ctx.lineTo(30, 100); ctx.stroke();
+//     // GND Pin (Silver Lead)
+//     ctx.strokeStyle = '#a0a5aa';
+//     ctx.beginPath(); ctx.moveTo(50, 68); ctx.lineTo(50, 100); ctx.stroke();
+
+//     // Red (+) and Black (-) Terminal Solder Points
+//     ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(30, 68, 4.5, 0, Math.PI * 2); ctx.fill();
+//     ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.arc(50, 68, 4.5, 0, Math.PI * 2); ctx.fill();
+
+//     // --- 2. Outer Metallic Motor Body ---
+//     // Casing Drop Shadow
+//     ctx.fillStyle = 'rgba(0,0,0,0.25)';
+//     ctx.beginPath(); ctx.arc(cx, cy + 3, 34, 0, Math.PI * 2); ctx.fill();
+
+//     // Metallic Can Body
+//     const casingGrad = ctx.createRadialGradient(cx - 10, cy - 10, 3, cx, cy, 34);
+//     casingGrad.addColorStop(0.0, '#ffffff');
+//     casingGrad.addColorStop(0.3, '#bcc1c9');
+//     casingGrad.addColorStop(0.7, '#676b73');
+//     casingGrad.addColorStop(1.0, '#2b2d31');
+
+//     ctx.fillStyle = casingGrad;
+//     ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2); ctx.fill();
+//     ctx.strokeStyle = '#1d1f22';
+//     ctx.lineWidth = 1.5;
+//     ctx.stroke();
+
+//     // Front Face Stamped Ring
+//     ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+//     ctx.lineWidth = 1.2;
+//     ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.stroke();
+
+//     // --- 3. Mounting Holes & Heat Vents ---
+//     ctx.fillStyle = '#18191c';
+//     // Left & Right Screw Mounts
+//     ctx.beginPath(); ctx.arc(22, cy, 3.2, 0, Math.PI * 2); ctx.fill();
+//     ctx.beginPath(); ctx.arc(58, cy, 3.2, 0, Math.PI * 2); ctx.fill();
+
+//     // Stamped Air Vent Slits
+//     roundRect(ctx, 33, 13, 14, 3.5, 1.5); ctx.fill();
+//     roundRect(ctx, 33, 63.5, 14, 3.5, 1.5); ctx.fill();
+
+//     // --- 4. Central Raised Bearing Hub ---
+//     const hubGrad = ctx.createRadialGradient(cx - 3, cy - 3, 2, cx, cy, 11);
+//     hubGrad.addColorStop(0, '#f0f3f7');
+//     hubGrad.addColorStop(0.5, '#959a9e');
+//     hubGrad.addColorStop(1, '#3a3d42');
+
+//     ctx.fillStyle = hubGrad;
+//     ctx.beginPath(); ctx.arc(cx, cy, 11, 0, Math.PI * 2); ctx.fill();
+//     ctx.strokeStyle = '#222';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Brass Bushing Ring
+//     ctx.strokeStyle = '#d4af37';
+//     ctx.lineWidth = 1.5;
+//     ctx.beginPath(); ctx.arc(cx, cy, 7.5, 0, Math.PI * 2); ctx.stroke();
+
+//     // --- 5. Front Fan & Rotor Shaft ---
+//     ctx.save();
+//     ctx.translate(cx, cy);
+
+//     const absSpeed = Math.abs(speed);
+//     const angle = t * 0.05 * speed;
+//     ctx.rotate(angle);
+
+//     const opacity = Math.max(0.35, 1 - absSpeed * 0.45);
+
+//     // 3-Blade Front Fan
+//     ctx.fillStyle = `rgba(52, 152, 219, ${opacity})`;
+//     ctx.strokeStyle = `rgba(41, 128, 185, ${opacity})`;
+//     ctx.lineWidth = 1.5;
+
+//     for (let i = 0; i < 3; i++) {
+//       ctx.save();
+//       ctx.rotate((i * Math.PI * 2) / 3);
+
+//       ctx.beginPath();
+//       ctx.moveTo(0, 0);
+//       ctx.bezierCurveTo(-10, -10, -11, -25, 0, -27);
+//       ctx.bezierCurveTo(11, -25, 10, -10, 0, 0);
+//       ctx.fill();
+//       ctx.stroke();
+
+//       ctx.restore();
+//     }
+
+//     // High-Speed Motion Blur Arc
+//     if (absSpeed > 0.1) {
+//       ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.65, absSpeed * 0.5)})`;
+//       ctx.lineWidth = 3;
+//       ctx.beginPath();
+//       ctx.arc(0, 0, 21, 0, Math.PI * 1.6 * Math.sign(speed));
+//       ctx.stroke();
+//     }
+
+//     // Steel Shaft Tip (D-Profile)
+//     const shaftGrad = ctx.createRadialGradient(-1.5, -1.5, 0, 0, 0, 5.5);
+//     shaftGrad.addColorStop(0, '#ffffff');
+//     shaftGrad.addColorStop(0.7, '#7f8c8d');
+//     shaftGrad.addColorStop(1, '#2c3e50');
+
+//     ctx.fillStyle = shaftGrad;
+//     ctx.beginPath(); ctx.arc(0, 0, 5.5, 0, Math.PI * 2); ctx.fill();
+
+//     // D-Shaft Cutout Line
+//     ctx.strokeStyle = '#1a1a1a';
+//     ctx.lineWidth = 1.5;
+//     ctx.beginPath(); ctx.moveTo(-4, -1.5); ctx.lineTo(4, -1.5); ctx.stroke();
+
+//     ctx.restore();
+
+//     // --- 6. RPM & Readout Text ---
+//     const isActive = absSpeed > 0.01;
+//     ctx.fillStyle = isActive ? '#00ffcc' : '#8a8e96';
+//     ctx.font = '600 10px "Courier New", monospace';
+//     ctx.textAlign = 'center';
+
+//     const dirSymbol = speed > 0.01 ? '↻ ' : speed < -0.01 ? '↺ ' : '';
+//     ctx.fillText(`${dirSymbol}${rpm} RPM`, cx, 94);
+
+//     if (inst.selected && typeof drawSelectionRect === 'function') {
+//       drawSelectionRect(ctx, 3, 3, 74, 95);
+//     }
+
+//     ctx.restore();
+//   }
+// });
+
 defComp({
   id: 'dc_motor',
   name: 'DC Motor',
@@ -421,8 +578,13 @@ defComp({
     ctx.beginPath(); ctx.arc(58, cy, 3.2, 0, Math.PI * 2); ctx.fill();
 
     // Stamped Air Vent Slits
-    roundRect(ctx, 33, 13, 14, 3.5, 1.5); ctx.fill();
-    roundRect(ctx, 33, 63.5, 14, 3.5, 1.5); ctx.fill();
+    if (typeof roundRect === 'function') {
+      roundRect(ctx, 33, 13, 14, 3.5, 1.5); ctx.fill();
+      roundRect(ctx, 33, 63.5, 14, 3.5, 1.5); ctx.fill();
+    } else {
+      ctx.fillRect(33, 13, 14, 3.5);
+      ctx.fillRect(33, 63.5, 14, 3.5);
+    }
 
     // --- 4. Central Raised Bearing Hub ---
     const hubGrad = ctx.createRadialGradient(cx - 3, cy - 3, 2, cx, cy, 11);
@@ -441,45 +603,92 @@ defComp({
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(cx, cy, 7.5, 0, Math.PI * 2); ctx.stroke();
 
-    // --- 5. Front Fan & Rotor Shaft ---
+    // --- 5. Front Fan & Rotor Shaft (Spinning Blade Animation) ---
     ctx.save();
     ctx.translate(cx, cy);
 
     const absSpeed = Math.abs(speed);
-    const angle = t * 0.05 * speed;
-    ctx.rotate(angle);
 
-    const opacity = Math.max(0.35, 1 - absSpeed * 0.45);
+    // Continuous angle integration (prevents jump when speed changes dynamically)
+    if (!inst.runtimeState) inst.runtimeState = {};
+    if (inst.runtimeState.angle === undefined) inst.runtimeState.angle = 0;
 
-    // 3-Blade Front Fan
-    ctx.fillStyle = `rgba(52, 152, 219, ${opacity})`;
-    ctx.strokeStyle = `rgba(41, 128, 185, ${opacity})`;
-    ctx.lineWidth = 1.5;
+    if (sim?.dt) {
+      inst.runtimeState.angle += speed * sim.dt * 12;
+    } else {
+      inst.runtimeState.angle = t * 0.02 * speed;
+    }
+    const angle = inst.runtimeState.angle;
 
-    for (let i = 0; i < 3; i++) {
-      ctx.save();
-      ctx.rotate((i * Math.PI * 2) / 3);
+    // A. Swept Motion Blur Radial Disk (High RPM illusion)
+    if (absSpeed > 0.05) {
+      const blurAlpha = Math.min(0.5, absSpeed * 0.55);
+      const blurGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 27);
+      blurGrad.addColorStop(0, 'rgba(52, 152, 219, 0)');
+      blurGrad.addColorStop(0.6, `rgba(52, 152, 219, ${blurAlpha * 0.6})`);
+      blurGrad.addColorStop(1, `rgba(41, 128, 185, ${blurAlpha * 0.2})`);
 
+      ctx.fillStyle = blurGrad;
       ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(-10, -10, -11, -25, 0, -27);
-      ctx.bezierCurveTo(11, -25, 10, -10, 0, 0);
+      ctx.arc(0, 0, 27, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
+    }
+
+    // B. Multi-pass Motion Blur Trails (Ghost Blades)
+    const blurSteps = absSpeed > 0.3 ? 3 : 1;
+    const baseOpacity = Math.max(0.25, 1 - absSpeed * 0.45);
+
+    for (let step = blurSteps - 1; step >= 0; step--) {
+      const stepOffset = Math.sign(speed || 1) * step * 0.12 * Math.min(1, absSpeed);
+      const stepAngle = angle - stepOffset;
+      const stepAlpha = step === 0 ? baseOpacity : (baseOpacity * 0.3) / step;
+
+      ctx.save();
+      ctx.rotate(stepAngle);
+
+      ctx.fillStyle = `rgba(52, 152, 219, ${stepAlpha})`;
+      ctx.strokeStyle = `rgba(41, 128, 185, ${stepAlpha})`;
+      ctx.lineWidth = 1.5;
+
+      for (let i = 0; i < 3; i++) {
+        ctx.save();
+        ctx.rotate((i * Math.PI * 2) / 3);
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-10, -10, -11, -25, 0, -27);
+        ctx.bezierCurveTo(11, -25, 10, -10, 0, 0);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.restore();
+      }
 
       ctx.restore();
     }
 
-    // High-Speed Motion Blur Arc
-    if (absSpeed > 0.1) {
-      ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.65, absSpeed * 0.5)})`;
-      ctx.lineWidth = 3;
+    // C. Dynamic Rotational Arc Streaks
+    if (absSpeed > 0.08) {
+      const arcAlpha = Math.min(0.7, absSpeed * 0.7);
+      const arcDir = Math.sign(speed || 1);
+
+      ctx.strokeStyle = `rgba(255, 255, 255, ${arcAlpha})`;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(0, 0, 21, 0, Math.PI * 1.6 * Math.sign(speed));
+      ctx.arc(0, 0, 24, angle, angle + Math.PI * 1.2 * arcDir, arcDir < 0);
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(174, 214, 241, ${arcAlpha * 0.7})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, angle + 0.8, angle + 0.8 + Math.PI * 0.8 * arcDir, arcDir < 0);
       ctx.stroke();
     }
 
-    // Steel Shaft Tip (D-Profile)
+    // D. Central Steel D-Shaft Tip (Rotates in sync)
+    ctx.save();
+    ctx.rotate(angle);
+
     const shaftGrad = ctx.createRadialGradient(-1.5, -1.5, 0, 0, 0, 5.5);
     shaftGrad.addColorStop(0, '#ffffff');
     shaftGrad.addColorStop(0.7, '#7f8c8d');
@@ -493,6 +702,7 @@ defComp({
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(-4, -1.5); ctx.lineTo(4, -1.5); ctx.stroke();
 
+    ctx.restore();
     ctx.restore();
 
     // --- 6. RPM & Readout Text ---
@@ -511,6 +721,7 @@ defComp({
     ctx.restore();
   }
 });
+
 /* -------------- 28BYJ-48 Stepper Motor + ULN2003 Driver (Realistic Design) ------------------ */
 defComp({
   id: 'stepper_28byj',
@@ -854,7 +1065,7 @@ defComp({
 });
 
 /*------------------Continuous rotation servo motor------------------ */
-   defComp({
+defComp({
   id: 'servo_continuous',
   name: 'Cont. Rotation Servo',
   category: 'Actuators',
