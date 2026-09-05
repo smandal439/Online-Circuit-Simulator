@@ -888,6 +888,7 @@ class App {
         for (const inst of insts) {
           if (inst.type === 'servo') {
             inst.runtimeState.angle = angle;
+            inst.runtimeState._servoDriven = true;
             break;
           }
         }

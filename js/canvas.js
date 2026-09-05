@@ -2568,6 +2568,7 @@ class CircuitCanvas {
           break;
         }
         case 'servo': {
+          if (inst.runtimeState._servoDriven) break;
           const sigPin = this._getConnectedPinNum(inst.id, 'signal');
           let pwm = 0;
           if (sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
