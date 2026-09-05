@@ -587,7 +587,10 @@ class App {
 
           // Route by I2C address — only handle events for this LCD's address
           if (data && data.addr != null) {
-            const instAddr = parseInt(inst.props && inst.props.address || '0x27', 16) || 0x27;
+            const raw = String(inst.props && inst.props.address || '0x27').trim();
+            const instAddr = raw.startsWith('0x') || raw.startsWith('0X')
+              ? parseInt(raw, 16) || 0x27
+              : Number(raw) || 0x27;
             const evtAddr = Number(data.addr) || 0;
             if (instAddr !== evtAddr) continue;
           }
@@ -611,6 +614,9 @@ class App {
             line[col + i] = text[i];
           }
           inst.runtimeState[lineKey] = line.join('');
+        } else if (type === 'lcd_backlight') {
+          if (!inst.runtimeState) inst.runtimeState = {};
+          inst.runtimeState.backlight = data && data.backlight;
         }
       }
 
