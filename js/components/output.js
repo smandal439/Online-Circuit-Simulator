@@ -834,7 +834,7 @@ defComp({
   desc: '16x2 character LCD display with HD44780-compatible 4-bit parallel interface (Enlarged)',
   width: 170,
   height: 90,
-  defaultProps: { line1: 'Hello, World!  ', line2: 'ArduSim v1.0   ' },
+  // defaultProps: { line1: 'Hello, World!  ', line2: 'ArduSim v1.0   ' },
   pins: [
     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 14, y: 90, side: 'bottom' },
     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 28, y: 90, side: 'bottom' },
@@ -985,9 +985,9 @@ defComp({
   width: 170,
   height: 90,
   defaultProps: { address: '0x27', line1: 'Hello, I2C!    ', line2: 'Addr: 0x27      ' },
-  // interactive: [
-  //   { field: 'address', label: 'I2C Addr', type: 'text' },
-  // ],
+  interactive: [
+    { field: 'address', label: 'I2C Address', type: 'text' },
+  ],
   pins: [
     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 50, y: 90, side: 'bottom' },
     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 70, y: 90, side: 'bottom' },

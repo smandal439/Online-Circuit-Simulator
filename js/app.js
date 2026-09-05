@@ -578,12 +578,30 @@ class App {
       // LCD display events (16×2 parallel and I2C/PCF8574 versions)
       for (const inst of insts) {
         if (inst.type !== 'lcd1602' && inst.type !== 'lcd1602_i2c') continue;
+
+        // I2C LCD: skip if SDA or SCL not wired to a board
+        if (inst.type === 'lcd1602_i2c') {
+          const sdaPin = this.canvas._getConnectedPinNum(inst.id, 'sda');
+          const sclPin = this.canvas._getConnectedPinNum(inst.id, 'scl');
+          if (sdaPin === null || sclPin === null) continue;
+
+          // Route by I2C address — only handle events for this LCD's address
+          if (data && data.addr != null) {
+            const instAddr = parseInt(inst.props && inst.props.address || '0x27', 16) || 0x27;
+            const evtAddr = Number(data.addr) || 0;
+            if (instAddr !== evtAddr) continue;
+          }
+        }
+
         if (type === 'lcd_power') {
+          if (!inst.runtimeState) inst.runtimeState = {};
           inst.runtimeState.powered = true;
         } else if (type === 'lcd_clear') {
+          if (!inst.runtimeState) inst.runtimeState = {};
           inst.runtimeState.line1 = '';
           inst.runtimeState.line2 = '';
         } else if (type === 'lcd_print') {
+          if (!inst.runtimeState) inst.runtimeState = {};
           const cursor = (data && data.cursor) || { col: 0, row: 0 };
           const lineKey = cursor.row === 1 ? 'line2' : 'line1';
           const text = String(data && data.text !== undefined ? data.text : '');
