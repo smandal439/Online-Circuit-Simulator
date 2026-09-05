@@ -2568,16 +2568,12 @@ class CircuitCanvas {
           break;
         }
         case 'servo': {
-          if (data && data.angle !== undefined) {
-            inst.runtimeState.angle = Math.round(data.angle);
-          } else {
-            const sigPin = this._getConnectedPinNum(inst.id, 'signal');
-            let pwm = 0;
-            if (sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
-              pwm = window.ArduinoSim.pinStates[`pin_${sigPin}`] || 0;
-            }
-            inst.runtimeState.angle = Math.round((pwm / 255) * 180);
+          const sigPin = this._getConnectedPinNum(inst.id, 'signal');
+          let pwm = 0;
+          if (sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+            pwm = window.ArduinoSim.pinStates[`pin_${sigPin}`] || 0;
           }
+          inst.runtimeState.angle = Math.round((pwm / 255) * 180);
           break;
         }
         case 'servo_continuous': {
