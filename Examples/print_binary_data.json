@@ -1,0 +1,28 @@
+{
+  "id": "print_binary_data",
+  "name": "print binary data",
+  "icon": "🔧",
+  "desc": "A custom print binary data circuit example.",
+  "tags": [
+    "custom",
+    "circuit",
+    "binary",
+    "data"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "comp_1788706273945_u18lf",
+        "type": "arduino_uno",
+        "x": 235,
+        "y": 120,
+        "rotation": 0,
+        "props": {
+          "label": "UNO"
+        }
+      }
+    ],
+    "wires": []
+  },
+  "code": "void setup() {\n  Serial.begin(9600);\n  \n  int myNumber = 84; \n  \n  // This will print \"1010100\" on the Serial Monitor\n  Serial.println(myNumber, BIN);\n  printFormattedBinary(myNumber); \n}\n\nvoid loop() {\n  // Empty\n}\nvoid printFormattedBinary(byte myByte) {\n  for (int i = 7; i >= 0; i--) {\n    Serial.print(bitRead(myByte, i));\n  }\n  Serial.println(); // New line after printing the full byte\n}\n\n"
+}

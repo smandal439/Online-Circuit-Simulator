@@ -502,10 +502,10 @@ class ArduinoSimulator {
             if (board) {
               let label = null;
               if (board.type === 'arduino_uno') {
-                const unoMap = {14:'A0', 15:'A1', 16:'A2', 17:'A3', 18:'A4', 19:'A5'};
+                const unoMap = { 14: 'A0', 15: 'A1', 16: 'A2', 17: 'A3', 18: 'A4', 19: 'A5' };
                 label = unoMap[pinNum] || null;
               } else if (board.type === 'esp32_devkit_v1') {
-                const espMap = {36:'A0', 39:'A1', 34:'A2', 35:'A3', 32:'A4', 33:'A5'};
+                const espMap = { 36: 'A0', 39: 'A1', 34: 'A2', 35: 'A3', 32: 'A4', 33: 'A5' };
                 label = espMap[pinNum] || null;
               }
 
@@ -1542,11 +1542,12 @@ window.loadExamplesFromFiles = async function () {
     'remote_servo_control', 'lm35_temperature', 'keypad_interfacing', 'bme280_weather',
     'bmp280_altitude', 'dso_oscilloscope', 'simplebme280_basic', 'simplebme280_altitude',
     'max7219', 'ili9341', 'astable_555', 'neopixel_strip_chase', 'ir_obstacle_led',
-    'l298n_dc_motor', 'servo_continuous_spin', 'rotary_encoder_counter',
-    'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo','neopixel_8x8_matrix_rainbow_2',
-    'neopixel_8x8_matrix_rainbow_3',
+    'l298n_dc_motor', 'servo_continuous_spin', 'rotary_encoder_counter', 'print_binary_data',
+    'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo',
+    'neopixel_8x8_matrix_rainbow_2', 'neopixel_8x8_matrix_rainbow_3',
     'opamp_741_non_inverting', 'vl53l0x_proximity_sensor', 'esp32_i2s_music_player',
-    'esp32_i2s_local_radio_player', 'lcd','read_rfid_card_raw_data','lcd_print_remotely','rfid_inventory_tracker'];
+    'esp32_i2s_local_radio_player', 'lcd', 'read_rfid_card_raw_data', 'lcd_print_remotely',
+    'rfid_inventory_tracker'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {
