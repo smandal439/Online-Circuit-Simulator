@@ -219,6 +219,15 @@ class ArduinoSimulator {
       js = js.replace(/\bA3\b/g, '35');
       js = js.replace(/\bA4\b/g, '32');
       js = js.replace(/\bA5\b/g, '33');
+    } else if (this.board === 'arduino_nano') {
+      // Arduino Nano: ATmega328P, LED on D13, A0-A7 analog pins
+      js = js.replace(/\bLED_BUILTIN\b/g, '13');
+      js = js.replace(/\bA0\b/g, 'A0');
+      js = js.replace(/\bA1\b/g, 'A1');
+      js = js.replace(/\bA2\b/g, 'A2');
+      js = js.replace(/\bA3\b/g, 'A3');
+      js = js.replace(/\bA4\b/g, 'A4');
+      js = js.replace(/\bA5\b/g, 'A5');
     } else {
       js = js.replace(/\bLED_BUILTIN\b/g, '13');
       js = js.replace(/\bA0\b/g, '14');
@@ -1262,7 +1271,7 @@ class ArduinoSimulator {
   }
 
   setBoard(board) {
-    this.board = (board === 'esp32_devkit_v1') ? 'esp32_devkit_v1' : 'arduino_uno';
+    this.board = ['arduino_uno', 'esp32_devkit_v1', 'arduino_nano'].includes(board) ? board : 'arduino_uno';
   }
 
   /* ── FPS tracking ── */

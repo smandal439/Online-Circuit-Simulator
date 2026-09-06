@@ -436,7 +436,7 @@ class App {
   /* ══════════════════════ BOARD SELECTOR ══════════════════════ */
   _initBoardSelector() {
     const settings = window.StorageManager?.loadSettings?.() || {};
-    const board = (settings.board === 'esp32_devkit_v1') ? 'esp32_devkit_v1' : 'arduino_uno';
+    const board = ['arduino_uno', 'esp32_devkit_v1', 'arduino_nano'].includes(settings.board) ? settings.board : 'arduino_uno';
     this.sim.setBoard(board);
     const sel = document.getElementById('board-select');
     if (sel) sel.value = board;
@@ -464,7 +464,8 @@ class App {
   }
 
   _setBoard(board) {
-    const b = (board === 'esp32_devkit_v1') ? 'esp32_devkit_v1' : 'arduino_uno';
+    const b = ['arduino_uno', 'esp32_devkit_v1', 'arduino_nano'].includes(board) ? board : 'arduino_uno';
+    const boardName = b === 'esp32_devkit_v1' ? 'ESP32 DevKit V1' : b === 'arduino_nano' ? 'Arduino Nano' : 'Arduino Uno';
     this.sim.setBoard(b);
     window.StorageManager?.saveSettings?.({ ...(window.StorageManager.loadSettings() || {}), board: b });
 
@@ -473,12 +474,12 @@ class App {
 
     // If the canvas only holds the default starter circuit, reload it for the new board
     const comps = this.canvas?.components || [];
-    const hasOnlyStarterBoard = comps.length === 1 && (comps[0].type === 'arduino_uno' || comps[0].type === 'esp32_devkit_v1');
+    const hasOnlyStarterBoard = comps.length === 1 && (comps[0].type === 'arduino_uno' || comps[0].type === 'esp32_devkit_v1' || comps[0].type === 'arduino_nano');
     if (hasOnlyStarterBoard || comps.length === 0) {
       this._loadExampleCircuit('blink');
-      this.showToast(`${b === 'esp32_devkit_v1' ? 'ESP32 DevKit V1' : 'Arduino Uno'} starter circuit loaded`, 'success');
+      this.showToast(`${boardName} starter circuit loaded`, 'success');
     } else {
-      this.showToast(`Board set to ${b === 'esp32_devkit_v1' ? 'ESP32 DevKit V1' : 'Arduino Uno'} — existing wiring assumes the previous board`, 'info');
+      this.showToast(`Board set to ${boardName} — existing wiring assumes the previous board`, 'info');
     }
   }
 
@@ -2248,7 +2249,8 @@ _newProject() {
     const lower = String(key || '').toLowerCase();
     if (lower === 'led_on_13' || lower === 'blink') {
       this.canvas.clearCanvas();
-      const boardType = this.sim.board === 'esp32_devkit_v1' ? 'esp32_devkit_v1' : 'arduino_uno';
+      const boardType = this.sim.board === 'esp32_devkit_v1' ? 'esp32_devkit_v1'
+        : this.sim.board === 'arduino_nano' ? 'arduino_nano' : 'arduino_uno';
       const board = this.canvas.addComponent(boardType, 200, 100);
       const led   = this.canvas.addComponent('led', 120, 280);
       const res   = this.canvas.addComponent('resistor', 120, 360);

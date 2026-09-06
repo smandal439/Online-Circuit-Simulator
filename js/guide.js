@@ -102,6 +102,39 @@ void loop() {
     exampleId: 'esp32_blink',
   },
 
+  arduino_nano: {
+    id: 'arduino_nano',
+    name: 'Arduino Nano R3',
+    icon: '🎛️',
+    category: 'Boards',
+    grouped: true,
+    longDesc: 'Arduino Nano R3 is a compact, breadboard-friendly board based on the ATmega328P microcontroller. It offers the same functionality as the Arduino Uno R3 in a smaller form factor, ideal for space-constrained projects. The board runs at 16 MHz with 32 KB of Flash and 2 KB of RAM. Digital pin 13 controls the built-in LED.',
+    use: 'Connect output components (LEDs, buzzers, displays) to digital pins and read input components (buttons, sensors, potentiometers) from analog pins. Perfect for compact projects that don\'t need the full size of an Uno.',
+    pins: {
+      'D0–D13': { label: 'D0–D13', type: 'digital', desc: 'Digital I/O pins. D0 (RX) and D1 (TX) double as the serial port. PWM capable pins are D3, D5, D6, D9, D10 and D11.' },
+      'D13':     { label: 'D13', type: 'digital', desc: 'Also drives the built-in "L" LED (LED_BUILTIN).' },
+      'A0–A5':   { label: 'A0–A5', type: 'analog', desc: 'Analog input pins (10-bit, 0–1023).' },
+      '5V':      { label: '5V', type: 'power', desc: '5 V regulated output for powering external components.' },
+      '3V3':     { label: '3.3V', type: 'power', desc: '3.3 V regulated output for low-voltage modules.' },
+      'VIN':     { label: 'VIN', type: 'power', desc: 'Input voltage to the board (7–12 V via barrel jack).' },
+      'GND':     { label: 'GND', type: 'gnd', desc: 'Common ground — every component must share this reference.' },
+      'RST':     { label: 'RST', type: 'signal', desc: 'Reset line — pulling it low restarts the sketch.' },
+    },
+    props: { label: 'Board label shown on the canvas.' },
+    wiring: 'Place the board, then wire every other component back to it: outputs to digital pins, sensors to analog pins, and always connect a GND rail.',
+    code: `void setup() {
+  pinMode(13, OUTPUT);   // built-in LED
+  Serial.begin(9600);
+}
+void loop() {
+  digitalWrite(13, HIGH);
+  delay(500);
+  digitalWrite(13, LOW);
+  delay(500);
+}`,
+    exampleId: 'blink',
+  },
+
   /* ── OUTPUTS ── */
   led: {
     id: 'led',
