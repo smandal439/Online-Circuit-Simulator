@@ -2036,10 +2036,15 @@ class DCMotorComponent extends Component {
       pwm = window.ArduinoSim.pinStates[`pin_${inPin}`] || 0;
     }
     if (pwm === 0) {
-      const target = this.findConnected('in');
-      if (target && target.inst.type === 'l298n') {
-        const l298 = target.inst;
-        const pinId = target.pinId;
+      const targets = this.findConnected('in', 'l298n');
+      if (targets.length > 0) {
+        const l298 = targets[0];
+        const canvas = window.CircuitCanvas;
+        let pinId = null;
+        if (canvas && canvas._getWireTarget) {
+          const wt = canvas._getWireTarget(this.id, 'in');
+          if (wt && wt.inst.type === 'l298n') pinId = wt.pinId;
+        }
         if (pinId === 'OUT1' || pinId === 'OUT2') pwm = Math.abs((l298.runtimeState?.motorA || 0)) * 255;
         else if (pinId === 'OUT3' || pinId === 'OUT4') pwm = Math.abs((l298.runtimeState?.motorB || 0)) * 255;
       }
@@ -2144,9 +2149,9 @@ class Stepper28BYJComponent extends Component {
   }
 }
 
-registerComponent(ServoComponent, ['servo']);
-registerComponent(ServoContinuousComponent, ['servo_continuous']);
-registerComponent(RelayComponent, ['relay']);
-registerComponent(DCMotorComponent, ['dc_motor']);
-registerComponent(L298NComponent, ['l298n']);
-registerComponent(Stepper28BYJComponent, ['stepper_28byj']);
+registerComponent('servo', ServoComponent);
+registerComponent('servo_continuous', ServoContinuousComponent);
+registerComponent('relay', RelayComponent);
+registerComponent('dc_motor', DCMotorComponent);
+registerComponent('l298n', L298NComponent);
+registerComponent('stepper_28byj', Stepper28BYJComponent);

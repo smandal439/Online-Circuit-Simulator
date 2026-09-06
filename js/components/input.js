@@ -797,7 +797,7 @@ class DipSwitchComponent extends Component {
   }
 }
 
-registerComponent(PushButtonComponent, ['push_button']);
-registerComponent(JoystickComponent, ['joystick']);
-registerComponent(RotaryEncoderComponent, ['rotary_encoder']);
-registerComponent(DipSwitchComponent, ['dip_switch']);
+registerComponent('push_button', PushButtonComponent);
+registerComponent('joystick', JoystickComponent);
+registerComponent('rotary_encoder', RotaryEncoderComponent);
+registerComponent('dip_switch', DipSwitchComponent);

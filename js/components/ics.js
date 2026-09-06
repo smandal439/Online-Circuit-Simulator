@@ -1473,8 +1473,8 @@ class IC74HC595Component extends Component {
   }
 }
 
-registerComponent(IC74HC00Component, ['ic_74hc00']);
-registerComponent(IC74HC04Component, ['ic_74hc04']);
-registerComponent(IC74HC08Component, ['ic_74hc08']);
-registerComponent(IC74HC32Component, ['ic_74hc32']);
-registerComponent(IC74HC595Component, ['ic_74hc595']);
+registerComponent('ic_74hc00', IC74HC00Component);
+registerComponent('ic_74hc04', IC74HC04Component);
+registerComponent('ic_74hc08', IC74HC08Component);
+registerComponent('ic_74hc32', IC74HC32Component);
+registerComponent('ic_74hc595', IC74HC595Component);

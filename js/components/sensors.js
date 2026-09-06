@@ -2958,10 +2958,10 @@ class MPU6050Component extends Component {
   }
 }
 
-registerComponent(LDRComponent, ['ldr']);
-registerComponent(PIRComponent, ['pir']);
-registerComponent(LM35SensorComponent, ['lm35_sensor']);
-registerComponent(IRObstacleComponent, ['ir_obstacle']);
-registerComponent(FlexSensorComponent, ['flex_sensor']);
-registerComponent(ThermistorComponent, ['thermistor']);
-registerComponent(MPU6050Component, ['mpu6050']);
+registerComponent('ldr', LDRComponent);
+registerComponent('pir', PIRComponent);
+registerComponent('lm35_sensor', LM35SensorComponent);
+registerComponent('ir_obstacle', IRObstacleComponent);
+registerComponent('flex_sensor', FlexSensorComponent);
+registerComponent('thermistor', ThermistorComponent);
+registerComponent('mpu6050', MPU6050Component);

@@ -2313,7 +2313,7 @@ class Bulb12VComponent extends Component {
     }
   }
 }
-registerComponent(Bulb12VComponent, ['bulb_12v']);
+registerComponent('bulb_12v', Bulb12VComponent);
 
 class RGBLEDComponent extends Component {
   getPins() {
@@ -2359,7 +2359,7 @@ class RGBLEDComponent extends Component {
     }
   }
 }
-registerComponent(RGBLEDComponent, ['rgb_led']);
+registerComponent('rgb_led', RGBLEDComponent);
 
 class BuzzerComponent extends Component {
   getPins() {
@@ -2374,4 +2374,4 @@ class BuzzerComponent extends Component {
     this.runtimeState.active = source && source.voltage > 1.5 && hasGnd;
   }
 }
-registerComponent(BuzzerComponent, ['buzzer']);
+registerComponent('buzzer', BuzzerComponent);
