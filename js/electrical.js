@@ -282,24 +282,28 @@ class ElectricalEngine {
       case 'arduino_uno':
       case 'esp32_devkit_v1': {
         const maxV = inst.type === 'esp32_devkit_v1' ? 3.3 : 5.0;
-        const rawFull = inst.type === 'esp32_devkit_v1' ? 168 : 255;
         const sim = window.ArduinoSim;
 
-        if (inst.pinId === '5V' || inst.pinId === 'VIN' || inst.pinId === '5V2') {
-          addSource('5V', '5v', 5.0, 255);
-        } else if (inst.pinId === '3V3') {
-          addSource('3V3', '3v3', 3.3, 168);
-        } else if (inst.pinId === 'GND1' || inst.pinId === 'GND2' || inst.pinId === 'GND_D' || inst.pinId === 'GND') {
-          addGround(inst.pinId, 'gnd');
-        } else {
-          // Digital/Analog pin
-          const pinNum = this._canvas?._pinToNumber?.(inst.pinId);
-          if (pinNum != null) {
-            const rawVal = sim?.pinStates?.[`pin_${pinNum}`] || 0;
-            if (rawVal > 0) {
-              addSource(inst.pinId, 'digital', maxV * (rawVal > 1 ? rawVal / 255 : 1), rawVal);
-            } else {
-              addGround(inst.pinId, 'digital_low');
+        // Iterate over all pins on this component that have nets
+        for (const [pinKey, net] of this.pinToNet) {
+          if (!pinKey.startsWith(inst.id + ':')) continue;
+          const pinId = pinKey.slice(inst.id.length + 1);
+
+          if (pinId === '5V' || pinId === 'VIN' || pinId === '5V2') {
+            addSource(pinId, '5v', 5.0, 255);
+          } else if (pinId === '3V3') {
+            addSource(pinId, '3v3', 3.3, 168);
+          } else if (pinId === 'GND1' || pinId === 'GND2' || pinId === 'GND_D' || pinId === 'GND') {
+            addGround(pinId, 'gnd');
+          } else {
+            const pinNum = this._canvas?._pinToNumber?.(pinId);
+            if (pinNum != null) {
+              const rawVal = sim?.pinStates?.[`pin_${pinNum}`] || 0;
+              if (rawVal > 0) {
+                addSource(pinId, 'digital', maxV * (rawVal > 1 ? rawVal / 255 : 1), rawVal);
+              } else {
+                addGround(pinId, 'digital_low');
+              }
             }
           }
         }
