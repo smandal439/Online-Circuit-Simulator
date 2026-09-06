@@ -1,0 +1,150 @@
+{
+  "id": "plugin_tutorial",
+  "name": "Plugin Tutorial: 7-Segment Display Driver",
+  "icon": "🔢",
+  "desc": "Step-by-step tutorial for creating a custom 7-segment display driver plugin",
+  "tags": [
+    "plugin",
+    "tutorial",
+    "7segment",
+    "display"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "arduino1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100
+      },
+      {
+        "id": "seg1",
+        "type": "seven_segment",
+        "x": 100,
+        "y": 320
+      },
+      {
+        "id": "btn1",
+        "type": "pushbutton",
+        "x": 350,
+        "y": 320,
+        "props": {
+          "pressed": false
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "D2"
+        },
+        "to": {
+          "instId": "seg1",
+          "pinId": "A"
+        }
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "D3"
+        },
+        "to": {
+          "instId": "seg1",
+          "pinId": "B"
+        }
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "D4"
+        },
+        "to": {
+          "instId": "seg1",
+          "pinId": "C"
+        }
+      },
+      {
+        "id": "w4",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "D5"
+        },
+        "to": {
+          "instId": "seg1",
+          "pinId": "D"
+        }
+      },
+      {
+        "id": "w5",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "D6"
+        },
+        "to": {
+          "instId": "seg1",
+          "pinId": "E"
+        }
+      },
+      {
+        "id": "w6",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "D7"
+        },
+        "to": {
+          "instId": "seg1",
+          "pinId": "F"
+        }
+      },
+      {
+        "id": "w7",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "D8"
+        },
+        "to": {
+          "instId": "seg1",
+          "pinId": "G"
+        }
+      },
+      {
+        "id": "w8",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "GND1"
+        },
+        "to": {
+          "instId": "seg1",
+          "pinId": "COM"
+        }
+      },
+      {
+        "id": "w9",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "D9"
+        },
+        "to": {
+          "instId": "btn1",
+          "pinId": "1"
+        }
+      },
+      {
+        "id": "w10",
+        "from": {
+          "instId": "arduino1",
+          "pinId": "GND1"
+        },
+        "to": {
+          "instId": "btn1",
+          "pinId": "2"
+        }
+      }
+    ]
+  },
+  "code": "/*\n * Plugin Tutorial: 7-Segment Display Driver\n * \n * This tutorial shows how to create a custom plugin for a 7-segment display.\n * \n * STEPS TO CREATE THE PLUGIN:\n * \n * 1. Create js/libraries/sevensegment.js with this structure:\n * \n *    window.ArduinoLibs = window.ArduinoLibs || {};\n *    window.ArduinoLibs['SevenSegment'] = {\n *      classes: ['SevenSegment'],\n *      includes: ['<SevenSegment.h>'],\n *      priority: 50,\n *      transpile: [\n *        [/\\b(\\w+)\\.begin\\s*\\(/g, fn],\n *        [/\\b(\\w+)\\.writeDigit\\s*\\(/g, fn],\n *        [/\\b(\\w+)\\.clear\\s*\\(/g, fn],\n *      ],\n *      runtime: function(self) { return { ... }; },\n *      constructor: function(args) { return { ... }; },\n *      constants: { COMMON_ANODE: 0, COMMON_CATHODE: 1 },\n *    };\n * \n * 2. Add to index.html: <script src=\"js/libraries/sevensegment.js\"></script>\n * \n * 3. Use in sketch: #include <SevenSegment.h>\n * \n * Circuit: 7-segment on D2-D8, Button on D9\n */\n\n#include <SevenSegment.h>\n\n// 7-segment pins: A=D2, B=D3, C=D4, D=D5, E=D6, F=D7, G=D8\nSevenSegment display(2, 3, 4, 5, 6, 7, 8);\n\nconst int buttonPin = 9;\nint count = 0;\nbool lastButton = HIGH;\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(buttonPin, INPUT_PULLUP);\n  \n  display.begin(COMMON_CATHODE);\n  display.clear();\n  \n  Serial.println(F(\"SevenSegment Plugin Demo\"));\n  Serial.println(F(\"Press button to increment\"));\n}\n\nvoid loop() {\n  bool button = digitalRead(buttonPin);\n  \n  if (button == LOW && lastButton == HIGH) {\n    count = (count + 1) % 10;\n    display.writeDigit(count);\n    Serial.print(F(\"Display: \"));\n    Serial.println(count);\n  }\n  lastButton = button;\n  \n  delay(50);\n}"
+}
