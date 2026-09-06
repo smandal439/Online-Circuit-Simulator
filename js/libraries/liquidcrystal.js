@@ -19,19 +19,19 @@ window.ArduinoLibs['LiquidCrystal'] = {
     [/(\w+)\.clear\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdClear(' + v + ')'; }],
     [/(\w+)\.home\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdHome(' + v + ')'; }],
     [/(\w+)\.write\s*\(([^)]*)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|Servo|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdWrite(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.noDisplay\s*\(\s*\)/g, '_a.lcdNoDisplay($1)'],
-    [/(\w+)\.display\s*\(\s*\)/g, '_a.lcdDisplay($1)'],
-    [/(\w+)\.noBlink\s*\(\s*\)/g, '_a.lcdNoBlink($1)'],
-    [/(\w+)\.blink\s*\(\s*\)/g, '_a.lcdBlink($1)'],
-    [/(\w+)\.noCursor\s*\(\s*\)/g, '_a.lcdNoCursor($1)'],
-    [/(\w+)\.cursor\s*\(\s*\)/g, '_a.lcdCursor($1)'],
-    [/(\w+)\.scrollDisplayLeft\s*\(\s*\)/g, '_a.lcdScrollDisplayLeft($1)'],
-    [/(\w+)\.scrollDisplayRight\s*\(\s*\)/g, '_a.lcdScrollDisplayRight($1)'],
-    [/(\w+)\.autoscroll\s*\(\s*\)/g, '_a.lcdAutoscroll($1)'],
-    [/(\w+)\.noAutoscroll\s*\(\s*\)/g, '_a.lcdNoAutoscroll($1)'],
-    [/(\w+)\.leftToRight\s*\(\s*\)/g, '_a.lcdLeftToRight($1)'],
-    [/(\w+)\.rightToLeft\s*\(\s*\)/g, '_a.lcdRightToLeft($1)'],
-    [/(\w+)\.createChar\s*\(([^)]*)\)/g, '_a.lcdCreateChar($1, $2)'],
+    [/(\w+)\.noDisplay\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdNoDisplay(' + v + ')'; }],
+    [/(\w+)\.display\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdDisplay(' + v + ')'; }],
+    [/(\w+)\.noBlink\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdNoBlink(' + v + ')'; }],
+    [/(\w+)\.blink\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdBlink(' + v + ')'; }],
+    [/(\w+)\.noCursor\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdNoCursor(' + v + ')'; }],
+    [/(\w+)\.cursor\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdCursor(' + v + ')'; }],
+    [/(\w+)\.scrollDisplayLeft\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdScrollDisplayLeft(' + v + ')'; }],
+    [/(\w+)\.scrollDisplayRight\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdScrollDisplayRight(' + v + ')'; }],
+    [/(\w+)\.autoscroll\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdAutoscroll(' + v + ')'; }],
+    [/(\w+)\.noAutoscroll\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdNoAutoscroll(' + v + ')'; }],
+    [/(\w+)\.leftToRight\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdLeftToRight(' + v + ')'; }],
+    [/(\w+)\.rightToLeft\s*\(\s*\)/g, function(m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdRightToLeft(' + v + ')'; }],
+    [/(\w+)\.createChar\s*\(([^)]*)\)/g, function(m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.lcdCreateChar(' + v + ', ' + a + ')'; }],
   ],
 
   constructor: function(rs, en, d4, d5, d6, d7) {
@@ -139,6 +139,32 @@ window.ArduinoLibs['LiquidCrystal'] = {
         setCursor(varName, { col: 0, row: 0 });
       },
       lcdHome: function(varName) { setCursor(varName, { col: 0, row: 0 }); },
+      lcdWrite: function(varName, val) {
+        if (varName && varName.__oled) { if (varName.print) varName.print(String.fromCharCode(Number(val))); return; }
+        var cursor = getCursor(varName);
+        self._emitEvent('lcd_print', { text: String.fromCharCode(Number(val)), cursor: { col: cursor.col, row: cursor.row } });
+        var dims = getDims(varName);
+        setCursor(varName, advanceCursor(cursor, 1, dims));
+      },
+      lcdDisplay: function(varName) {
+        if (varName && varName.__oled) return;
+        self._emitEvent('lcd_power', { on: true });
+      },
+      lcdNoDisplay: function(varName) {
+        if (varName && varName.__oled) return;
+        self._emitEvent('lcd_power', { on: false });
+      },
+      lcdNoBlink: function(varName) { /* cursor blink off — visual only, no-op in sim */ },
+      lcdBlink: function(varName) { /* cursor blink on — visual only, no-op in sim */ },
+      lcdNoCursor: function(varName) { /* hide cursor — visual only, no-op in sim */ },
+      lcdCursor: function(varName) { /* show cursor — visual only, no-op in sim */ },
+      lcdScrollDisplayLeft: function(varName) { self._emitEvent('lcd_scroll', { dir: 'left' }); },
+      lcdScrollDisplayRight: function(varName) { self._emitEvent('lcd_scroll', { dir: 'right' }); },
+      lcdAutoscroll: function(varName) { /* autoscroll on — no-op in sim */ },
+      lcdNoAutoscroll: function(varName) { /* autoscroll off — no-op in sim */ },
+      lcdLeftToRight: function(varName) { /* text direction — no-op in sim */ },
+      lcdRightToLeft: function(varName) { /* text direction — no-op in sim */ },
+      lcdCreateChar: function(varName, slot, bitmap) { /* custom char — no-op in sim */ },
     };
   },
 };
