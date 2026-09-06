@@ -2108,8 +2108,15 @@ class CircuitCanvas {
   zoomOut() { this.zoom = Math.max(0.1, this.zoom / 1.2); this._updateZoomDisplay(); }
 
   /* ══════════════ HISTORY ══════════════ */
+  _serializeState() {
+    return JSON.stringify({ components: this.components, wires: this.wires }, (key, val) => {
+      if (key === '_componentInstance') return undefined;
+      return val;
+    });
+  }
+
   _pushHistory() {
-    const state = JSON.stringify({ components: this.components, wires: this.wires });
+    const state = this._serializeState();
     this.history = this.history.slice(0, this.historyIdx + 1);
     this.history.push(state);
     if (this.history.length > 50) this.history.shift();
@@ -2223,7 +2230,7 @@ class CircuitCanvas {
     this.selectedWire = null;
 
     // Reset history so undo can't roll back into a blank/empty state
-    this.history = [JSON.stringify({ components: this.components, wires: this.wires })];
+    this.history = [this._serializeState()];
     this.historyIdx = 0;
 
     this._onChanged();
