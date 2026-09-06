@@ -236,7 +236,19 @@ class LEDComponent extends Component {
       this.runtimeState.blown = false;
       this.runtimeState._warnedBlown = false;
     } else {
-      const rTotal = Math.max(10, (source.resistance || 0) + 25);
+      // Measure actual path resistance from cathode to ground through the circuit
+      let pathR = 0;
+      const engine = this.engine;
+      if (engine) {
+        const cathodeNet = this.getNet('cathode');
+        if (cathodeNet) {
+          for (const gnd of cathodeNet.grounds) {
+            const r = engine.measureResistance(this.id, 'cathode', gnd.instId, gnd.pinId);
+            if (r < Infinity) { pathR = r; break; }
+          }
+        }
+      }
+      const rTotal = Math.max(10, pathR + 25);
       const vSource = source.voltage;
       const vf = 2.0;
       const rawVal = source.rawVal;
@@ -2268,6 +2280,18 @@ class Bulb12VComponent extends Component {
       this.runtimeState.blown = false;
       this.runtimeState._warnedBlown = false;
     } else {
+      // Measure path resistance from cathode to ground
+      let pathR = 0;
+      const engine = this.engine;
+      if (engine) {
+        const cathodeNet = this.getNet('cathode');
+        if (cathodeNet) {
+          for (const gnd of cathodeNet.grounds) {
+            const r = engine.measureResistance(this.id, 'cathode', gnd.instId, gnd.pinId);
+            if (r < Infinity) { pathR = r; break; }
+          }
+        }
+      }
       const vSource = source.voltage;
       this.runtimeState.brightness = Math.max(0, Math.min(1.0, vSource / 12.0));
       if (vSource > 16) {
@@ -2306,10 +2330,22 @@ class RGBLEDComponent extends Component {
       this.runtimeState.r = 0; this.runtimeState.g = 0; this.runtimeState.b = 0;
       this.runtimeState.red = 0; this.runtimeState.green = 0; this.runtimeState.blue = 0;
     } else {
+      // Measure path resistance from gnd to ground through the circuit
+      let gndPathR = 0;
+      const engine = this.engine;
+      if (engine) {
+        const gndNet = this.getNet('gnd');
+        if (gndNet) {
+          for (const gnd of gndNet.grounds) {
+            const r = engine.measureResistance(this.id, 'gnd', gnd.instId, gnd.pinId);
+            if (r < Infinity) { gndPathR = r; break; }
+          }
+        }
+      }
       const traceChannel = (pinId, vf) => {
         const src = this.getSource(pinId);
         if (!src || src.voltage < vf) return 0;
-        const rTotal = Math.max(10, (src.resistance || 0) + 25);
+        const rTotal = Math.max(10, gndPathR + 25);
         const i_mA = ((src.voltage - vf) / rTotal) * 1000;
         const norm = Math.max(0, Math.min(1.0, Math.pow(i_mA / 14.0, 0.55)));
         return Math.round(norm * 255);
