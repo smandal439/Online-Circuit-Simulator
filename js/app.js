@@ -539,6 +539,9 @@ class App {
       if (this.la && !this.la.paused) {
         this.la.sample(simTime, this.sim.pinStates);
       }
+      // Keep the Pin Monitor live even when an input component changes without
+      // causing an Arduino output pin event.
+      this._updatePinMonitor();
       const simTimeEl = document.getElementById('sim-time');
       const fpsEl     = document.getElementById('sim-fps');
       if (simTimeEl) simTimeEl.textContent = `⏱ ${(simTime / 1000).toFixed(2)}s`;
@@ -603,9 +606,6 @@ class App {
           if (!inst.runtimeState) inst.runtimeState = {};
           inst.runtimeState.line1 = '';
           inst.runtimeState.line2 = '';
-          // Reset cursor for this LCD instance so subsequent prints start at (0,0)
-          if (!self._lcdCursors) self._lcdCursors = {};
-          self._lcdCursors[inst.addr] = { col: 0, row: 0 };
         } else if (type === 'lcd_print') {
           if (!inst.runtimeState) inst.runtimeState = {};
           const cursor = (data && data.cursor) || { col: 0, row: 0 };

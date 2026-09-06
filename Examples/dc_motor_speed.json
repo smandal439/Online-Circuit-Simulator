@@ -1,13 +1,12 @@
 {
   "id": "dc_motor_speed",
   "name": "DC Motor Speed",
-  "icon": "🌀",
-  "desc": "Control DC motor speed with a potentiometer — analogRead A0 maps to PWM on D9",
+  "icon": "🔧",
+  "desc": "A custom DC Motor Speed circuit example.",
   "tags": [
-    "beginner",
     "motor",
-    "PWM",
-    "analog"
+    "speed",
+    "pwm"
   ],
   "circuit": {
     "components": [
@@ -15,19 +14,33 @@
         "id": "b1",
         "type": "arduino_uno",
         "x": 200,
-        "y": 100
+        "y": 100,
+        "rotation": 0,
+        "props": {
+          "label": "UNO"
+        }
       },
       {
         "id": "pot1",
         "type": "potentiometer",
         "x": 120,
-        "y": 300
+        "y": 300,
+        "rotation": 0,
+        "props": {
+          "value": 512,
+          "maxValue": 1023,
+          "resistance": 10000
+        }
       },
       {
         "id": "mt1",
         "type": "dc_motor",
-        "x": 340,
-        "y": 300
+        "x": 490,
+        "y": 160,
+        "rotation": 0,
+        "props": {
+          "label": "MOTOR"
+        }
       }
     ],
     "wires": [
@@ -40,7 +53,9 @@
         "to": {
           "instId": "pot1",
           "pinId": "vcc"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w2",
@@ -51,7 +66,9 @@
         "to": {
           "instId": "b1",
           "pinId": "A0"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w3",
@@ -62,7 +79,9 @@
         "to": {
           "instId": "b1",
           "pinId": "GND1"
-        }
+        },
+        "color": null,
+        "waypoints": []
       },
       {
         "id": "w4",
@@ -73,18 +92,31 @@
         "to": {
           "instId": "mt1",
           "pinId": "in"
-        }
+        },
+        "color": null,
+        "waypoints": [
+          {
+            "x": 336,
+            "y": 284
+          },
+          {
+            "x": 520,
+            "y": 284
+          }
+        ]
       },
       {
-        "id": "w5",
+        "id": "wire_1788683184007_250fc",
         "from": {
+          "instId": "b1",
+          "pinId": "GND1"
+        },
+        "to": {
           "instId": "mt1",
           "pinId": "gnd"
         },
-        "to": {
-          "instId": "b1",
-          "pinId": "GND1"
-        }
+        "color": null,
+        "waypoints": []
       }
     ]
   },

@@ -909,10 +909,10 @@ class CircuitCanvas {
     const defs = window.ArduinoComponents && window.ArduinoComponents.COMPONENT_DEFS;
     if (!defs) return null;
     const keyMap = [
-      ['1', '2', '3', 'A'],
-      ['4', '5', '6', 'B'],
-      ['7', '8', '9', 'C'],
-      ['*', '0', '#', 'D']
+      ['1','2','3','A'],
+      ['4','5','6','B'],
+      ['7','8','9','C'],
+      ['*','0','#','D']
     ];
     const btnW = 24, btnH = 20, startX = 14, startY = 14, gapX = 6, gapY = 6;
     for (const inst of this.components) {
@@ -2633,94 +2633,46 @@ class CircuitCanvas {
               gain.connect(ctx.destination);
               osc.start();
               osc.stop(ctx.currentTime + 0.05);
-            } catch (e) { }
+            } catch (e) {}
           }
           break;
         }
-        // case 'dc_motor': {
-        //   let pwm = 0;
-
-        //   // 1. Try Arduino PWM pin
-        //   const inPin = this._getConnectedPinNum(inst.id, 'in');
-        //   if (inPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
-        //     pwm = window.ArduinoSim.pinStates[`pin_${inPin}`] || 0;
-        //   }
-
-        //   // 2. Try L298N motor driver output
-        //   if (pwm === 0) {
-        //     const target = this._getWireTarget(inst.id, 'in');
-        //     if (target && target.inst.type === 'l298n') {
-        //       const l298 = target.inst;
-        //       const pinId = target.pinId;
-        //       if (pinId === 'OUT1' || pinId === 'OUT2') pwm = Math.abs((l298.runtimeState?.motorA || 0)) * 255;
-        //       else if (pinId === 'OUT3' || pinId === 'OUT4') pwm = Math.abs((l298.runtimeState?.motorB || 0)) * 255;
-        //     }
-        //   }
-
-        //   // 3. Direct DC power (bench supply, power_5v, battery, etc.)
-        //   let speed = Math.max(0, Math.min(1, (Number(pwm) || 0) / 255));
-        //   if (speed === 0) {
-        //     const inNet = this._tracePinNet(inst.id, 'in');
-        //     const gndNet = this._tracePinNet(inst.id, 'gnd');
-        //     const hasGnd = gndNet.grounds.length > 0;
-        //     if (hasGnd && inNet.sources.length > 0) {
-        //       const bestSource = inNet.sources.sort((a, b) => b.voltage - a.voltage)[0];
-        //       if (bestSource && bestSource.voltage > 0) {
-        //         speed = Math.min(1, bestSource.voltage / 12);
-        //       }
-        //     }
-        //   }
-
-        //   inst.runtimeState.speed = speed;
-        //   inst.runtimeState.rpm = Math.round(speed * 120);
-        //   break;
-        // }
         case 'dc_motor': {
           let pwm = 0;
 
-          // Arduino PWM output
+          // 1. Try Arduino PWM pin
           const inPin = this._getConnectedPinNum(inst.id, 'in');
-
-          if (inPin !== null &&
-            window.ArduinoSim &&
-            window.ArduinoSim.pinStates) {
-            pwm = Number(
-              window.ArduinoSim.pinStates[`pin_${inPin}`] || 0
-            );
+          if (inPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+            pwm = window.ArduinoSim.pinStates[`pin_${inPin}`] || 0;
           }
 
-          // L298N output
+          // 2. Try L298N motor driver output
           if (pwm === 0) {
             const target = this._getWireTarget(inst.id, 'in');
-
             if (target && target.inst.type === 'l298n') {
               const l298 = target.inst;
+              const pinId = target.pinId;
+              if (pinId === 'OUT1' || pinId === 'OUT2') pwm = Math.abs((l298.runtimeState?.motorA || 0)) * 255;
+              else if (pinId === 'OUT3' || pinId === 'OUT4') pwm = Math.abs((l298.runtimeState?.motorB || 0)) * 255;
+            }
+          }
 
-              if (target.pinId === 'OUT1' ||
-                target.pinId === 'OUT2') {
-                pwm = Math.abs(l298.runtimeState?.motorA || 0) * 255;
-              }
-
-              if (target.pinId === 'OUT3' ||
-                target.pinId === 'OUT4') {
-                pwm = Math.abs(l298.runtimeState?.motorB || 0) * 255;
+          // 3. Direct DC power (bench supply, power_5v, battery, etc.)
+          let speed = Math.max(0, Math.min(1, (Number(pwm) || 0) / 255));
+          if (speed === 0) {
+            const inNet = this._tracePinNet(inst.id, 'in');
+            const gndNet = this._tracePinNet(inst.id, 'gnd');
+            const hasGnd = gndNet.grounds.length > 0;
+            if (hasGnd && inNet.sources.length > 0) {
+              const bestSource = inNet.sources.sort((a, b) => b.voltage - a.voltage)[0];
+              if (bestSource && bestSource.voltage > 0) {
+                speed = Math.min(1, bestSource.voltage / 12);
               }
             }
           }
 
-          // Convert PWM 0-255 → motor speed 0.0-1.0
-          const speed = Math.max(
-            0,
-            Math.min(1, pwm / 255)
-          );
-
-          inst.runtimeState = inst.runtimeState || {};
-          inst.runtimeState.pwm = pwm;
           inst.runtimeState.speed = speed;
-
-          // Simulation RPM
           inst.runtimeState.rpm = Math.round(speed * 120);
-
           break;
         }
         case 'l298n': {
@@ -3175,7 +3127,7 @@ class CircuitCanvas {
             // Parallel load A-H
             let val = 0;
             for (let i = 0; i < 8; i++) {
-              const pinId = ['A', 'E', 'F', 'G', 'H', 'Fn', 'Gn', 'Hn'][i];
+              const pinId = ['A','E','F','G','H','Fn','Gn','Hn'][i];
               if (read(pinId)) val |= (1 << i);
             }
             inst.runtimeState.bits = val;
@@ -3212,9 +3164,9 @@ class CircuitCanvas {
           } else if (pl === 0) {
             // Parallel load from A,B,C,D,DD inputs
             let val = 0;
-            if (read('A')) val |= 1;
-            if (read('B')) val |= 2;
-            if (read('C')) val |= 4;
+            if (read('A'))  val |= 1;
+            if (read('B'))  val |= 2;
+            if (read('C'))  val |= 4;
             if (read('DD')) val |= 8;
             inst.runtimeState.count = val & 0xF;
           } else {
@@ -3252,7 +3204,7 @@ class CircuitCanvas {
           if (read('C')) bcd |= 4;
           if (read('D')) bcd |= 8;
           // 7-segment decode table (active LOW: 0=on, 1=off) — segments a-g
-          const segTable = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71];
+          const segTable = [0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,0x7F,0x6F,0x77,0x7C,0x39,0x5E,0x79,0x71];
           const lt = read('LT');
           const bi = read('BI');
           let segments;
@@ -3286,7 +3238,7 @@ class CircuitCanvas {
           };
           const ei = read('EI'); // active LOW enable
           // Read inputs I0-I7 (active LOW: 0 = active)
-          const inputs = [0, 1, 2, 3, 4, 5, 6, 7].map(i => !read(`I${i}`));
+          const inputs = [0,1,2,3,4,5,6,7].map(i => !read(`I${i}`));
           let activeIdx = -1;
           for (let i = 7; i >= 0; i--) {
             if (inputs[i]) { activeIdx = i; break; }
@@ -3716,8 +3668,8 @@ class CircuitCanvas {
           const outPin = this._getConnectedPinNum(inst.id, 'OUT');
           if (outPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
             // Temperature in °C (default 25°C)
-            const temp = inst.runtimeState.temp !== undefined
-              ? inst.runtimeState.temp
+            const temp = inst.runtimeState.temp !== undefined 
+              ? inst.runtimeState.temp 
               : (inst.props.temp ?? 25);
 
             // LM35 outputs 10mV/°C (0.01V/°C). Map to 10-bit ADC (0-1023) based on a 5.0V VREF:
@@ -3740,11 +3692,11 @@ class CircuitCanvas {
           if (!sim || !sim.pinStates) break;
 
           const dinPn = this._getConnectedPinNum(inst.id, 'DIN');
-          const csPn = this._getConnectedPinNum(inst.id, 'CS');
+          const csPn  = this._getConnectedPinNum(inst.id, 'CS');
           const clkPn = this._getConnectedPinNum(inst.id, 'CLK');
 
           const dinVal = dinPn !== null ? (sim.pinStates[`pin_${dinPn}`] ? 1 : 0) : this._readDigitalInput(inst.id, 'DIN');
-          const csVal = csPn !== null ? (sim.pinStates[`pin_${csPn}`] ? 1 : 0) : this._readDigitalInput(inst.id, 'CS');
+          const csVal  = csPn !== null ? (sim.pinStates[`pin_${csPn}`]  ? 1 : 0) : this._readDigitalInput(inst.id, 'CS');
           const clkVal = clkPn !== null ? (sim.pinStates[`pin_${clkPn}`] ? 1 : 0) : this._readDigitalInput(inst.id, 'CLK');
 
           if (!inst.runtimeState._spi) {
@@ -3758,7 +3710,7 @@ class CircuitCanvas {
             };
           }
           const spi = inst.runtimeState._spi;
-          const prevCs = spi.prevCs;
+          const prevCs  = spi.prevCs;
           const prevClk = spi.prevClk;
 
           if (prevCs === 1 && csVal === 0) {
@@ -3782,7 +3734,7 @@ class CircuitCanvas {
           }
 
           spi.prevClk = clkVal;
-          spi.prevCs = csVal;
+          spi.prevCs  = csVal;
           break;
         }
       }
@@ -3844,7 +3796,7 @@ class CircuitCanvas {
         const pinId = current.pinId;
         if (pinId === 'GND1' || pinId === 'GND2' || pinId === 'GND_D' || pinId === 'GND') {
           grounds.push({ type: 'gnd', instId: inst.id, pinId, resistance: current.resistance });
-        } else if (pinId === '5V' || pinId === 'VIN' || pinId === '5V2') {
+        } else if (pinId === '5V' || pinId === 'VIN'||pinId === '5V2') {
           sources.push({ type: '5v', voltage: 5.0, rawVal: 255, resistance: current.resistance });
         } else if (pinId === '3V3') {
           sources.push({ type: '3v3', voltage: 3.3, rawVal: 168, resistance: current.resistance });
@@ -4317,7 +4269,7 @@ class CircuitCanvas {
       ic_74hc32: ['Y1', 'Y2', 'Y3', 'Y4'],
       ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
       ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
-      ic_74hc245: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'],
+      ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
       ic_74hc74: ['Q1', 'Q1n', 'Q2', 'Q2n'],
       ic_74hc165: ['Q7', 'Q7n'],
       ic_74hc193: ['QA', 'QB', 'CO', 'BO', 'TC_U', 'TC_D'],
@@ -4352,13 +4304,19 @@ class CircuitCanvas {
       if (tp === 'p4') return this._readAnalogInput(other.id, 'p3');
       return 0;
     }
+    // For a potentiometer wiper, return the component's live value directly.
+    // Do this before resolving the Arduino pin number; otherwise analogRead()
+    // can simply read the previous cached pinState value.
+    if (other.type === 'potentiometer' && wireTarget.pinId === 'wiper') {
+      const value = other.runtimeState?.value ?? other.props?.value ?? 512;
+      const maxValue = Number(other.props?.maxValue ?? 1023);
+      return Math.max(0, Math.min(1023, Math.round((Number(value) / maxValue) * 1023)));
+    }
+
     const pn = this._getConnectedPinNum(fromInstId, pinId);
     if (pn !== null) {
       const sim = window.ArduinoSim;
       return (sim && sim.pinStates) ? (sim.pinStates[`pin_${pn}`] || 0) : 0;
-    }
-    if (other.type === 'potentiometer' && wireTarget.pinId === 'wiper') {
-      return other.runtimeState && other.runtimeState.wiper != null ? other.runtimeState.wiper : 0;
     }
     const IC_OUT2 = {
       ic_555: ['OUT'],
@@ -4369,7 +4327,7 @@ class CircuitCanvas {
       ic_74hc32: ['Y1', 'Y2', 'Y3', 'Y4'],
       ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
       ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
-      ic_74hc245: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'],
+      ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
       ic_74hc74: ['Q1', 'Q1n', 'Q2', 'Q2n'],
       ic_74hc165: ['Q7', 'Q7n'],
       ic_74hc193: ['QA', 'QB', 'CO', 'BO', 'TC_U', 'TC_D'],
@@ -4401,7 +4359,7 @@ class CircuitCanvas {
       ic_74hc32: ['Y1', 'Y2', 'Y3', 'Y4'],
       ic_74hc595: ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'],
       ic_74hc138: ['Y0', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6', 'Y7'],
-      ic_74hc245: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'],
+      ic_74hc245: ['A1','A2','A3','A4','A5','A6','A7','A8','B1','B2','B3','B4','B5','B6','B7','B8'],
       ic_74hc74: ['Q1', 'Q1n', 'Q2', 'Q2n'],
       ic_74hc165: ['Q7', 'Q7n'],
       ic_74hc193: ['QA', 'QB', 'CO', 'BO', 'TC_U', 'TC_D'],
