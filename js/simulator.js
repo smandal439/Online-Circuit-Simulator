@@ -120,7 +120,7 @@ class ArduinoSimulator {
     js = js.replace(/\bconst\s+var\b/g, 'var');
 
     // C++ std math functions → JavaScript Math.*
-    js = js.replace(/\batan2\s*\(/g, 'Math.atan2(');
+    // atan2 is provided by js/libraries/math.js plugin
     js = js.replace(/\bsqrt\s*\(/g, 'Math.sqrt(');
     js = js.replace(/\babs\s*\(/g, 'Math.abs(');
     js = js.replace(/\bpow\s*\(/g, 'Math.pow(');
@@ -301,6 +301,7 @@ class ArduinoSimulator {
       ['ntpEpoch', '_a.ntpEpoch'],
       ['map', '_a.map'],
       ['constrain', '_a.constrain'],
+      ['atan2', '_a.atan2'],
       ['min', '_a.min'],
       ['max', '_a.max'],
       ['sin8', '_a.sin8'],

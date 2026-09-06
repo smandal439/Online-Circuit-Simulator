@@ -85,6 +85,12 @@ window.ArduinoLibs['ArduinoMath'] = {
     function arduinoIsinf(x) { return !Number.isFinite(x); }
     function arduinoIsfinite(x) { return Number.isFinite(x); }
 
+    /**
+     * atan2(y, x) — 2-argument arctangent.
+     * Arduino: atan2(dy, dx) → angle in radians (-π to π)
+     */
+    function arduinoAtan2(y, x) { return Math.atan2(y, x); }
+
     /* ════════════════════════════════════════════════════════════════
      *  SECTION 2 — Arduino Bit Manipulation
      * ════════════════════════════════════════════════════════════════ */
@@ -346,6 +352,7 @@ window.ArduinoLibs['ArduinoMath'] = {
       isnan: arduinoIsnan,
       isinf: arduinoIsinf,
       isfinite: arduinoIsfinite,
+      atan2: arduinoAtan2,
       fmod: fmod,
 
       // ── Bit Manipulation ──
