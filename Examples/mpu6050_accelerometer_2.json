@@ -1,0 +1,95 @@
+{
+  "id": "mpu6050_accelerometer_2",
+  "name": "MPU6050 Accelerometer 2",
+  "icon": "🔧",
+  "desc": "A custom MPU6050 Accelerometer 2 circuit example.",
+  "tags": [
+    "accelerometer",
+    "gyroscope",
+    "sensor"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "b1",
+        "type": "arduino_uno",
+        "x": 200,
+        "y": 100,
+        "rotation": 0,
+        "props": {
+          "label": "UNO"
+        }
+      },
+      {
+        "id": "mpu1",
+        "type": "mpu6050",
+        "x": 380,
+        "y": 320,
+        "rotation": 0,
+        "props": {
+          "accelX": 0,
+          "accelY": 0,
+          "accelZ": 1024,
+          "gyroX": 0,
+          "gyroY": 0,
+          "gyroZ": 0
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": {
+          "instId": "b1",
+          "pinId": "5V"
+        },
+        "to": {
+          "instId": "mpu1",
+          "pinId": "VCC"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "w2",
+        "from": {
+          "instId": "mpu1",
+          "pinId": "GND"
+        },
+        "to": {
+          "instId": "b1",
+          "pinId": "GND1"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "w3",
+        "from": {
+          "instId": "b1",
+          "pinId": "A5"
+        },
+        "to": {
+          "instId": "mpu1",
+          "pinId": "SCL"
+        },
+        "color": null,
+        "waypoints": []
+      },
+      {
+        "id": "w4",
+        "from": {
+          "instId": "b1",
+          "pinId": "A4"
+        },
+        "to": {
+          "instId": "mpu1",
+          "pinId": "SDA"
+        },
+        "color": null,
+        "waypoints": []
+      }
+    ]
+  },
+  "code": "#include <Wire.h>\n#include <Adafruit_MPU6050.h>\n#include <Adafruit_Sensor.h>\n\nAdafruit_MPU6050 mpu;\n\nvoid setup(void) {\n  Serial.begin(115200);\n  while (!Serial) delay(10);\n\n  if (!mpu.begin()) {\n    Serial.println(\"Failed to find MPU6050 chip\");\n    while (1) { delay(10); }\n  }\n\n  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);\n  mpu.setGyroRange(MPU6050_RANGE_500_DEG);\n  mpu.setFilterBandwidth(MPU6050_BAND_5_HZ);\n}\n\nvoid loop() {\n  sensors_event_t a, g, temp;\n  mpu.getEvent(&a, &g, &temp);\n\n  Serial.print(\"Accel X: \"); Serial.print(a.acceleration.x);\n  Serial.print(\", Y: \"); Serial.print(a.acceleration.y);\n  Serial.print(\", Z: \"); Serial.print(a.acceleration.z);\n  Serial.println(\" m/s^2\");\n\n  delay(500);\n}\n"
+}

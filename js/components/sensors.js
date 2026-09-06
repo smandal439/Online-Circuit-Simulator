@@ -159,24 +159,23 @@ defComp({
 });
 
 /* ----------------------------Ultrasonic Sensor HC-SR04 -------------------------------- */
-
 defComp({
   id: 'hcsr04',
-  name: 'HC-SR04 Ultrasonic',
+  name: 'HC-SR04 Ultrasonic Sensor',
   category: 'Sensors',
   icon: '📡',
-  desc: 'Ultrasonic distance sensor — measures 2cm to 400cm range. Drag the slider to set distance.',
-  width: 90,
+  desc: 'Authentic HC-SR04 Ultrasonic Ranging Module. Measures distance from 2cm to 400cm with real-time sonar wave visualization and high-precision transducer geometry.',
+  width: 100,
   height: 85,
   defaultProps: { distance: 20 },
   interactive: [
     { field: 'distance', label: 'Distance', min: 2, max: 400, step: 1, unit: ' cm' },
   ],
   pins: [
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 10, y: 0, side: 'top' },
-    { id: 'trig', label: 'TRIG', type: PIN_TYPE.DIGITAL, x: 30, y: 0, side: 'top' },
-    { id: 'echo', label: 'ECHO', type: PIN_TYPE.DIGITAL, x: 54, y: 0, side: 'top' },
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 74, y: 0, side: 'top' },
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 16, y: 0, side: 'top' },
+    { id: 'trig', label: 'TRIG', type: PIN_TYPE.DIGITAL, x: 38, y: 0, side: 'top' },
+    { id: 'echo', label: 'ECHO', type: PIN_TYPE.DIGITAL, x: 60, y: 0, side: 'top' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 82, y: 0, side: 'top' },
   ],
   step(inst, sim) {
     if (!sim || !sim.isRunning) return;
@@ -190,206 +189,728 @@ defComp({
     const trigKey = `pin_${trigPin}`;
     const echoKey = `pin_${echoPin}`;
     const trigHigh = !!sim.pinStates[trigKey];
-    const prevTrigHigh = !!inst.runtimeState._prevTrig;
-    const distance = Number(inst.runtimeState && inst.runtimeState.distance !== undefined ? inst.runtimeState.distance : inst.props.distance) || 20;
+    const prevTrigHigh = !!(inst.runtimeState && inst.runtimeState._prevTrig);
+    const distance = Number(
+      inst.runtimeState && inst.runtimeState.distance !== undefined
+        ? inst.runtimeState.distance
+        : inst.props.distance
+    ) || 20;
     const simMs = sim.simTime || 0;
 
-    // Detect falling edge of trigger (end of 10 µs pulse)
+    // Trigger pulse detection (10µs trigger pulse falling edge)
     if (prevTrigHigh && !trigHigh) {
-      const echoDurationUs = Math.max(100, Math.round(distance * 58));
+      const echoDurationUs = Math.max(116, Math.round(distance * 58)); // 58 µs per cm
       inst.runtimeState._echoEndMs = simMs + (echoDurationUs / 1000);
+      inst.runtimeState._lastTrigTime = simMs;
       sim.pinStates[echoKey] = 1;
       sim._emitPinChange(echoKey, 1);
     }
 
-    // End echo pulse when time expires
+    // Terminate echo pulse
     if (inst.runtimeState._echoEndMs && simMs >= inst.runtimeState._echoEndMs) {
       sim.pinStates[echoKey] = 0;
       sim._emitPinChange(echoKey, 0);
       inst.runtimeState._echoEndMs = null;
     }
 
+    if (!inst.runtimeState) inst.runtimeState = {};
     inst.runtimeState._prevTrig = trigHigh;
   },
   draw(ctx, inst, sim) {
     const { x, y } = inst;
     const dist = (inst.runtimeState && inst.runtimeState.distance !== undefined)
-      ? inst.runtimeState.distance : ((inst.props && inst.props.distance) || 20);
+      ? inst.runtimeState.distance
+      : ((inst.props && inst.props.distance) || 20);
     const pct = Math.max(0, Math.min(1, (dist - 2) / 398));
+    const isRunning = !!(sim && sim.isRunning);
+    const simMs = sim ? (sim.simTime || 0) : 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // --- Helper Routine for Rounded Rectangles ---
+    const drawRR = (rx, ry, rw, rh, rad = 3) => {
+      ctx.beginPath();
+      if (typeof roundRect === 'function') {
+        roundRect(ctx, rx, ry, rw, rh, rad);
+      } else if (ctx.roundRect) {
+        ctx.roundRect(rx, ry, rw, rh, rad);
+      } else {
+        ctx.rect(rx, ry, rw, rh);
+      }
+    };
+
+    // --- 1. PCB Drop Shadow & Blue Substrate ---
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    drawRR(2, 8, 96, 36, 4);
+    ctx.fill();
+
+    // Classic Blue HC-SR04 PCB Gradient
+    const pcbGrad = ctx.createLinearGradient(0, 6, 100, 42);
+    pcbGrad.addColorStop(0, '#1a56a6');
+    pcbGrad.addColorStop(0.5, '#124182');
+    pcbGrad.addColorStop(1, '#0b2b57');
+    ctx.fillStyle = pcbGrad;
+    drawRR(0, 6, 100, 36, 4);
+    ctx.fill();
+
+    // Copper Edge Chamfer & Silkscreen Border Line
+    ctx.strokeStyle = '#081d3d';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 0.7;
+    drawRR(2, 8, 96, 32, 2);
+    ctx.stroke();
+
+    // Gold Corner Mounting Holes
+    [[5, 11], [95, 11], [5, 37], [95, 37]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#d4af37';
+      ctx.beginPath(); ctx.arc(hx, hy, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#081d3d';
+      ctx.beginPath(); ctx.arc(hx, hy, 1.4, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // --- 2. SMD Components & Crystal Oscillator ---
+    // 8MHz Crystal Oscillator (HC-49S Silver Oval Package)
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    drawRR(45, 18, 10, 6, 3); ctx.fill();
+    const xtalGrad = ctx.createLinearGradient(45, 17, 55, 23);
+    xtalGrad.addColorStop(0, '#e6e6e6');
+    xtalGrad.addColorStop(0.5, '#ffffff');
+    xtalGrad.addColorStop(1, '#999999');
+    ctx.fillStyle = xtalGrad;
+    drawRR(45, 17, 10, 6, 3); ctx.fill();
+    ctx.strokeStyle = '#666666'; ctx.lineWidth = 0.5; ctx.stroke();
+
+    // SMD Microcontroller IC (Max232 / LM324 Sub-circuit)
+    ctx.fillStyle = '#181818';
+    drawRR(43, 27, 14, 8, 1); ctx.fill();
+    ctx.fillStyle = '#444444';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(44 + i * 3, 25.5, 1.5, 1.5); // Top leads
+      ctx.fillRect(44 + i * 3, 35, 1.5, 1.5);   // Bottom leads
+    }
+    // IC Pin 1 Dot
+    ctx.fillStyle = '#666';
+    ctx.beginPath(); ctx.arc(45, 29, 0.8, 0, Math.PI * 2); ctx.fill();
+
+    // Passives (Resistors & Capacitors)
+    ctx.fillStyle = '#222';
+    [[11, 28], [11, 33], [86, 28], [86, 33]].forEach(([rx, ry]) => {
+      ctx.fillRect(rx, ry, 3, 1.8);
+      ctx.fillStyle = '#aaa';
+      ctx.fillRect(rx, ry, 0.6, 1.8);
+      ctx.fillRect(rx + 2.4, ry, 0.6, 1.8);
+      ctx.fillStyle = '#222';
+    });
+
+    // --- 3. Ultrasonic Transducer Cans (T & R) ---
+    const drawTransducer = (cx, cy, label) => {
+      // Outer Casing Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath(); ctx.arc(cx + 1, cy + 1, 15, 0, Math.PI * 2); ctx.fill();
+
+      // Metallic Aluminum Can Outer Bezel
+      const canGrad = ctx.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, 15);
+      canGrad.addColorStop(0, '#ffffff');
+      canGrad.addColorStop(0.4, '#d0d5dd');
+      canGrad.addColorStop(0.8, '#858e99');
+      canGrad.addColorStop(1, '#4b525a');
+      ctx.fillStyle = canGrad;
+      ctx.beginPath(); ctx.arc(cx, cy, 15, 0, Math.PI * 2); ctx.fill();
+
+      // Inner Dark Chamber Recess
+      const innerGrad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 11);
+      innerGrad.addColorStop(0, '#111317');
+      innerGrad.addColorStop(0.8, '#23272e');
+      innerGrad.addColorStop(1, '#515861');
+      ctx.fillStyle = innerGrad;
+      ctx.beginPath(); ctx.arc(cx, cy, 11.5, 0, Math.PI * 2); ctx.fill();
+
+      // Mesh Screen Pattern (Diagonal Metallic Mesh Grille)
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, 11, 0, Math.PI * 2); ctx.clip();
+      ctx.strokeStyle = 'rgba(200, 210, 220, 0.35)';
+      ctx.lineWidth = 0.6;
+      for (let i = -12; i <= 12; i += 3) {
+        ctx.beginPath(); ctx.moveTo(cx + i - 12, cy - 12); ctx.lineTo(cx + i + 12, cy + 12); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + i + 12, cy - 12); ctx.lineTo(cx + i - 12, cy + 12); ctx.stroke();
+      }
+
+      // Central Piezoceramic Element Core
+      const piezoGrad = ctx.createRadialGradient(cx - 1, cy - 1, 0, cx, cy, 4.5);
+      piezoGrad.addColorStop(0, '#4a5059');
+      piezoGrad.addColorStop(0.7, '#1a1d21');
+      piezoGrad.addColorStop(1, '#0d0e10');
+      ctx.fillStyle = piezoGrad;
+      ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#606873'; ctx.lineWidth = 0.5; ctx.stroke();
+
+      ctx.restore();
+
+      // Silkscreen Label under/near Transducers
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 7px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, cx, cy + 20);
+    };
+
+    // Draw Left (Transmitter 'T') & Right (Receiver 'R') Cans
+    drawTransducer(26, 22, 'T');
+    drawTransducer(74, 22, 'R');
+
+    // --- 4. Ultrasonic Pulse Wave Animation ---
+    if (isRunning) {
+      const activePulse = inst.runtimeState && inst.runtimeState._lastTrigTime && (simMs - inst.runtimeState._lastTrigTime < 150);
+      const waveAlpha = activePulse ? 0.85 : 0.35;
+      const waveOffset = (simMs / 15) % 12;
+
+      ctx.save();
+      ctx.strokeStyle = `rgba(0, 229, 255, ${waveAlpha})`;
+      ctx.lineWidth = 1.2;
+      for (let r = 16 + waveOffset; r <= 36; r += 8) {
+        const alphaArc = Math.max(0, 1 - (r / 38)) * waveAlpha;
+        ctx.strokeStyle = `rgba(0, 229, 255, ${alphaArc})`;
+        ctx.beginPath();
+        ctx.arc(26, 22, r, -Math.PI / 4, Math.PI / 4);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // --- 5. Pin Headers & Silkscreen Markings ---
+    // Black Header Base Shroud
+    ctx.fillStyle = '#111111';
+    drawRR(10, 3.5, 80, 5, 1); ctx.fill();
+
+    // Standard Pin Positions [16, 38, 60, 82]
+    const pinXList = [16, 38, 60, 82];
+    pinXList.forEach(px => {
+      // Gold Square Contact Pad
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(px - 1.5, 4, 3, 4);
+
+      // Metallic Header Pin Lead
+      const pinGrad = ctx.createLinearGradient(px - 1, 0, px + 1, 0);
+      pinGrad.addColorStop(0, '#999999');
+      pinGrad.addColorStop(0.5, '#ffffff');
+      pinGrad.addColorStop(1, '#666666');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(px - 0.8, 0, 1.6, 6);
+    });
+
+    // PCB Silkscreen Model Name & Pin Labels
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 5.5px "Arial", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('HC-SR04', 50, 14);
+
+    ctx.font = 'bold 4px "Courier New", monospace';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fillText('VCC', 16, 11);
+    ctx.fillText('TRIG', 38, 11);
+    ctx.fillText('ECHO', 60, 11);
+    ctx.fillText('GND', 82, 11);
+
+    // --- 6. Lower Distance HUD Panel ---
+    const hudY = 46;
+    ctx.fillStyle = '#080c14';
+    drawRR(-2, hudY, 104, 38, 5);
+    ctx.fill();
+    ctx.strokeStyle = isRunning ? 'rgba(0, 229, 255, 0.4)' : 'rgba(60, 70, 85, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // HUD Header Label
+    ctx.fillStyle = isRunning ? '#80deea' : '#546e7a';
+    ctx.font = 'bold 6px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('TARGET DISTANCE', 4, hudY + 11);
+
+    // Numeric Distance Readout
+    ctx.fillStyle = isRunning ? '#00e5ff' : '#607d8b';
+    ctx.font = 'bold 15px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${Math.round(dist)}`, 76, hudY + 15);
+
+    // Unit Label
+    ctx.fillStyle = isRunning ? 'rgba(0, 229, 255, 0.75)' : '#455a64';
+    ctx.font = 'bold 8px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('cm', 79, hudY + 15);
+
+    // Interactive Track Bar (2cm - 400cm)
+    const barX = 4, barY = hudY + 20, barW = 92, barH = 5;
+    ctx.fillStyle = '#121924';
+    drawRR(barX, barY, barW, barH, barH / 2);
+    ctx.fill();
+
+    if (pct > 0.005) {
+      const fillGrad = ctx.createLinearGradient(barX, 0, barX + pct * barW, 0);
+      fillGrad.addColorStop(0, isRunning ? '#00838f' : '#37474f');
+      fillGrad.addColorStop(1, isRunning ? '#00e5ff' : '#78909c');
+      ctx.fillStyle = fillGrad;
+      drawRR(barX, barY, Math.max(barH, pct * barW), barH, barH / 2);
+      ctx.fill();
+    }
+
+    // Slider Knob / Indicator
+    const thumbX = barX + pct * barW;
+    ctx.fillStyle = isRunning ? '#e0f7fa' : '#cfd8dc';
+    ctx.beginPath(); ctx.arc(thumbX, barY + barH / 2, 3.8, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = isRunning ? '#00e5ff' : '#78909c';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Scale Min / Max Labels
+    ctx.fillStyle = 'rgba(140, 160, 180, 0.6)';
+    ctx.font = '5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('2cm', barX, barY + barH + 7);
+    ctx.textAlign = 'right';
+    ctx.fillText('400cm', barX + barW, barY + barH + 7);
+
+    // Selection Box Overlay
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -4, 0, 108, 86);
+    }
+
+    ctx.restore();
+  }
+});
+
+// defComp({
+//   id: 'hcsr04',
+//   name: 'HC-SR04 Ultrasonic',
+//   category: 'Sensors',
+//   icon: '📡',
+//   desc: 'Ultrasonic distance sensor — measures 2cm to 400cm range. Drag the slider to set distance.',
+//   width: 90,
+//   height: 85,
+//   defaultProps: { distance: 20 },
+//   interactive: [
+//     { field: 'distance', label: 'Distance', min: 2, max: 400, step: 1, unit: ' cm' },
+//   ],
+//   pins: [
+//     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 10, y: 0, side: 'top' },
+//     { id: 'trig', label: 'TRIG', type: PIN_TYPE.DIGITAL, x: 30, y: 0, side: 'top' },
+//     { id: 'echo', label: 'ECHO', type: PIN_TYPE.DIGITAL, x: 54, y: 0, side: 'top' },
+//     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 74, y: 0, side: 'top' },
+//   ],
+//   step(inst, sim) {
+//     if (!sim || !sim.isRunning) return;
+//     const canvas = window.CircuitCanvas;
+//     if (!canvas || !canvas._getConnectedPinNum) return;
+
+//     const trigPin = canvas._getConnectedPinNum(inst.id, 'trig');
+//     const echoPin = canvas._getConnectedPinNum(inst.id, 'echo');
+//     if (trigPin === null || echoPin === null) return;
+
+//     const trigKey = `pin_${trigPin}`;
+//     const echoKey = `pin_${echoPin}`;
+//     const trigHigh = !!sim.pinStates[trigKey];
+//     const prevTrigHigh = !!inst.runtimeState._prevTrig;
+//     const distance = Number(inst.runtimeState && inst.runtimeState.distance !== undefined ? inst.runtimeState.distance : inst.props.distance) || 20;
+//     const simMs = sim.simTime || 0;
+
+//     // Detect falling edge of trigger (end of 10 µs pulse)
+//     if (prevTrigHigh && !trigHigh) {
+//       const echoDurationUs = Math.max(100, Math.round(distance * 58));
+//       inst.runtimeState._echoEndMs = simMs + (echoDurationUs / 1000);
+//       sim.pinStates[echoKey] = 1;
+//       sim._emitPinChange(echoKey, 1);
+//     }
+
+//     // End echo pulse when time expires
+//     if (inst.runtimeState._echoEndMs && simMs >= inst.runtimeState._echoEndMs) {
+//       sim.pinStates[echoKey] = 0;
+//       sim._emitPinChange(echoKey, 0);
+//       inst.runtimeState._echoEndMs = null;
+//     }
+
+//     inst.runtimeState._prevTrig = trigHigh;
+//   },
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const dist = (inst.runtimeState && inst.runtimeState.distance !== undefined)
+//       ? inst.runtimeState.distance : ((inst.props && inst.props.distance) || 20);
+//     const pct = Math.max(0, Math.min(1, (dist - 2) / 398));
+//     const isRunning = !!(sim && sim.isRunning);
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // PCB shadow
+//     ctx.fillStyle = 'rgba(0,0,0,0.18)';
+//     roundRect(ctx, 2, 10, 90, 34, 5);
+//     ctx.fill();
+
+//     // PCB
+//     ctx.fillStyle = '#0d3d0d';
+//     roundRect(ctx, 0, 8, 90, 34, 5);
+//     ctx.fill();
+//     ctx.strokeStyle = '#2d8c2d';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Transducer circles (eyes)
+//     [20, 62].forEach(cx => {
+//       ctx.fillStyle = '#999';
+//       ctx.beginPath(); ctx.arc(cx, 24, 13, 0, Math.PI * 2); ctx.fill();
+//       ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1; ctx.stroke();
+//       ctx.fillStyle = '#444';
+//       ctx.beginPath(); ctx.arc(cx, 24, 9, 0, Math.PI * 2); ctx.fill();
+//       ctx.fillStyle = '#666';
+//       ctx.beginPath(); ctx.arc(cx, 24, 5.5, 0, Math.PI * 2); ctx.fill();
+//       // Inner highlight
+//       ctx.fillStyle = 'rgba(255,255,255,0.08)';
+//       ctx.beginPath(); ctx.arc(cx - 2, 22, 3, 0, Math.PI * 2); ctx.fill();
+//     });
+
+//     // HC-SR04 label
+//     ctx.fillStyle = '#b0b0b0';
+//     ctx.font = 'bold 6.5px sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('HC-SR04', 45, 37);
+
+//     // Pin leads
+//     ctx.strokeStyle = '#c8a84b';
+//     ctx.lineWidth = 1.5;
+//     [10, 30, 54, 74].forEach(px => {
+//       ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, 8); ctx.stroke();
+//     });
+
+//     // ── Distance display panel below the PCB ──
+//     // Background
+//     ctx.fillStyle = '#0a0e13';
+//     roundRect(ctx, -2, 44, 94, 38, 4);
+//     ctx.fill();
+//     ctx.strokeStyle = isRunning ? 'rgba(0,229,255,0.35)' : 'rgba(60,65,75,0.5)';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // "DISTANCE" label
+//     ctx.fillStyle = isRunning ? 'rgba(200,220,240,0.7)' : 'rgba(130,140,150,0.6)';
+//     ctx.font = `bold ${6}px "JetBrains Mono", monospace`;
+//     ctx.textAlign = 'left';
+//     ctx.fillText('DISTANCE', 4, 55);
+
+//     // Distance value (large)
+//     ctx.fillStyle = isRunning ? '#00e5ff' : '#546e7a';
+//     ctx.font = `bold ${14}px "JetBrains Mono", monospace`;
+//     ctx.textAlign = 'right';
+//     ctx.fillText(`${Math.round(dist)}`, 72, 58);
+
+//     // Unit
+//     ctx.fillStyle = isRunning ? 'rgba(0,229,255,0.7)' : 'rgba(100,120,130,0.6)';
+//     ctx.font = `bold ${8}px "JetBrains Mono", monospace`;
+//     ctx.textAlign = 'left';
+//     ctx.fillText('cm', 75, 58);
+
+//     // Range bar (2–400 cm)
+//     const barX = 4, barY = 63, barW = 82, barH = 5;
+//     ctx.fillStyle = '#1a2230';
+//     roundRect(ctx, barX, barY, barW, barH, barH / 2);
+//     ctx.fill();
+//     if (pct > 0.01) {
+//       const grad = ctx.createLinearGradient(barX, 0, barX + pct * barW, 0);
+//       grad.addColorStop(0, isRunning ? 'rgba(0,200,255,0.4)' : 'rgba(80,100,110,0.3)');
+//       grad.addColorStop(1, isRunning ? '#00e5ff' : '#546e7a');
+//       ctx.fillStyle = grad;
+//       roundRect(ctx, barX, barY, Math.max(barH, pct * barW), barH, barH / 2);
+//       ctx.fill();
+//     }
+//     // Thumb dot
+//     const thumbX = barX + pct * barW;
+//     ctx.fillStyle = isRunning ? '#b2ebf2' : '#90a4ae';
+//     ctx.beginPath(); ctx.arc(thumbX, barY + barH / 2, 3.5, 0, Math.PI * 2); ctx.fill();
+//     ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+//     ctx.lineWidth = 0.7;
+//     ctx.stroke();
+
+//     // Min/Max labels
+//     ctx.fillStyle = 'rgba(140,160,170,0.5)';
+//     ctx.font = `${5}px "JetBrains Mono", monospace`;
+//     ctx.textAlign = 'left';
+//     ctx.fillText('2', barX, barY + barH + 7);
+//     ctx.textAlign = 'right';
+//     ctx.fillText('400 cm', barX + barW, barY + barH + 7);
+
+//     if (inst.selected) drawSelectionRect(ctx, -5, 5, 100, 80);
+//     ctx.restore();
+//   }
+// });
+
+/*---------------------------LDR Photoresistor ------------------------------------------ */
+defComp({
+  id: 'ldr',
+  name: 'LDR Photoresistor Module',
+  category: 'Sensors',
+  icon: '💡',
+  desc: 'Authentic Cadmium Sulfide (CdS) Photoresistor Module with voltage divider sub-circuit, dynamic light level aura, and real-time lux readout.',
+  width: 50,
+  height: 60,
+  defaultProps: { light: 512 },
+  interactive: [
+    { field: 'light', label: 'Light Level', min: 0, max: 1023, step: 1, unit: ' lx' },
+  ],
+  pins: [
+    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 10, y: 60, side: 'bottom' },
+    { id: 'a', label: 'AO', type: PIN_TYPE.ANALOG, x: 25, y: 60, side: 'bottom' },
+    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 40, y: 60, side: 'bottom' },
+  ],
+  draw(ctx, inst, sim) {
+    const { x, y } = inst;
+    const light = (inst.runtimeState && inst.runtimeState.light !== undefined)
+      ? inst.runtimeState.light
+      : ((inst.props && inst.props.light) || 512);
+    const pct = Math.max(0, Math.min(1, light / 1023));
     const isRunning = !!(sim && sim.isRunning);
 
     ctx.save();
     ctx.translate(x, y);
 
-    // PCB shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    roundRect(ctx, 2, 10, 90, 34, 5);
+    // --- Safe Rounded Rect Helper ---
+    const drawRR = (rx, ry, rw, rh, rad = 3) => {
+      ctx.beginPath();
+      if (typeof roundRect === 'function') {
+        roundRect(ctx, rx, ry, rw, rh, rad);
+      } else if (ctx.roundRect) {
+        ctx.roundRect(rx, ry, rw, rh, rad);
+      } else {
+        ctx.rect(rx, ry, rw, rh);
+      }
+    };
+
+    // --- 1. PCB Substrate & Shadow ---
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    drawRR(2, 4, 46, 52, 4);
     ctx.fill();
 
-    // PCB
-    ctx.fillStyle = '#0d3d0d';
-    roundRect(ctx, 0, 8, 90, 34, 5);
+    // Dark Matte Sensor Module PCB Gradient
+    const pcbGrad = ctx.createLinearGradient(0, 2, 50, 54);
+    pcbGrad.addColorStop(0, '#1c2430');
+    pcbGrad.addColorStop(0.5, '#121822');
+    pcbGrad.addColorStop(1, '#0a0d14');
+    ctx.fillStyle = pcbGrad;
+    drawRR(0, 2, 50, 52, 4);
     ctx.fill();
-    ctx.strokeStyle = '#2d8c2d';
-    ctx.lineWidth = 1;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 0.8;
+    drawRR(1.5, 3.5, 47, 49, 3);
     ctx.stroke();
 
-    // Transducer circles (eyes)
-    [20, 62].forEach(cx => {
-      ctx.fillStyle = '#999';
-      ctx.beginPath(); ctx.arc(cx, 24, 13, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1; ctx.stroke();
-      ctx.fillStyle = '#444';
-      ctx.beginPath(); ctx.arc(cx, 24, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#666';
-      ctx.beginPath(); ctx.arc(cx, 24, 5.5, 0, Math.PI * 2); ctx.fill();
-      // Inner highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      ctx.beginPath(); ctx.arc(cx - 2, 22, 3, 0, Math.PI * 2); ctx.fill();
+    // Corner Gold Mounting Hole Rings
+    [[5, 7], [45, 7]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#d4af37';
+      ctx.beginPath(); ctx.arc(hx, hy, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0a0d14';
+      ctx.beginPath(); ctx.arc(hx, hy, 1, 0, Math.PI * 2); ctx.fill();
     });
 
-    // HC-SR04 label
-    ctx.fillStyle = '#b0b0b0';
-    ctx.font = 'bold 6.5px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('HC-SR04', 45, 37);
+    // --- 2. Ambient Light Dynamic Rays & Photonic Aura ---
+    const centerX = 25, centerY = 20;
 
-    // Pin leads
-    ctx.strokeStyle = '#c8a84b';
-    ctx.lineWidth = 1.5;
-    [10, 30, 54, 74].forEach(px => {
-      ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, 8); ctx.stroke();
-    });
+    if (pct > 0.02) {
+      ctx.save();
+      const auraGlow = ctx.createRadialGradient(centerX, centerY, 4, centerX, centerY, 22);
+      auraGlow.addColorStop(0, `rgba(255, 235, 120, ${pct * 0.55})`);
+      auraGlow.addColorStop(0.6, `rgba(255, 200, 50, ${pct * 0.25})`);
+      auraGlow.addColorStop(1, 'rgba(255, 200, 50, 0)');
+      ctx.fillStyle = auraGlow;
+      ctx.beginPath(); ctx.arc(centerX, centerY, 22, 0, Math.PI * 2); ctx.fill();
 
-    // ── Distance display panel below the PCB ──
-    // Background
-    ctx.fillStyle = '#0a0e13';
-    roundRect(ctx, -2, 44, 94, 38, 4);
-    ctx.fill();
-    ctx.strokeStyle = isRunning ? 'rgba(0,229,255,0.35)' : 'rgba(60,65,75,0.5)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+      // Incoming Light Rays
+      ctx.strokeStyle = `rgba(255, 240, 150, ${Math.min(0.9, pct * 0.85)})`;
+      ctx.lineWidth = 1;
+      if (pct > 0.4) { ctx.shadowColor = '#ffe066'; ctx.shadowBlur = 4; }
 
-    // "DISTANCE" label
-    ctx.fillStyle = isRunning ? 'rgba(200,220,240,0.7)' : 'rgba(130,140,150,0.6)';
-    ctx.font = `bold ${6}px "JetBrains Mono", monospace`;
-    ctx.textAlign = 'left';
-    ctx.fillText('DISTANCE', 4, 55);
-
-    // Distance value (large)
-    ctx.fillStyle = isRunning ? '#00e5ff' : '#546e7a';
-    ctx.font = `bold ${14}px "JetBrains Mono", monospace`;
-    ctx.textAlign = 'right';
-    ctx.fillText(`${Math.round(dist)}`, 72, 58);
-
-    // Unit
-    ctx.fillStyle = isRunning ? 'rgba(0,229,255,0.7)' : 'rgba(100,120,130,0.6)';
-    ctx.font = `bold ${8}px "JetBrains Mono", monospace`;
-    ctx.textAlign = 'left';
-    ctx.fillText('cm', 75, 58);
-
-    // Range bar (2–400 cm)
-    const barX = 4, barY = 63, barW = 82, barH = 5;
-    ctx.fillStyle = '#1a2230';
-    roundRect(ctx, barX, barY, barW, barH, barH / 2);
-    ctx.fill();
-    if (pct > 0.01) {
-      const grad = ctx.createLinearGradient(barX, 0, barX + pct * barW, 0);
-      grad.addColorStop(0, isRunning ? 'rgba(0,200,255,0.4)' : 'rgba(80,100,110,0.3)');
-      grad.addColorStop(1, isRunning ? '#00e5ff' : '#546e7a');
-      ctx.fillStyle = grad;
-      roundRect(ctx, barX, barY, Math.max(barH, pct * barW), barH, barH / 2);
-      ctx.fill();
+      [[-10, -8], [0, -12], [10, -8]].forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.moveTo(centerX + dx * 1.5, centerY + dy * 1.5);
+        ctx.lineTo(centerX + dx * 0.6, centerY + dy * 0.6);
+        ctx.stroke();
+      });
+      ctx.restore();
     }
-    // Thumb dot
-    const thumbX = barX + pct * barW;
-    ctx.fillStyle = isRunning ? '#b2ebf2' : '#90a4ae';
-    ctx.beginPath(); ctx.arc(thumbX, barY + barH / 2, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+
+    // --- 3. Cadmium Sulfide (CdS) Sensor Cell ---
+    // Ceramic Base Disc
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.beginPath(); ctx.arc(centerX + 0.8, centerY + 0.8, 12, 0, Math.PI * 2); ctx.fill();
+
+    const ceramicGrad = ctx.createRadialGradient(centerX - 2, centerY - 2, 1, centerX, centerY, 12);
+    ceramicGrad.addColorStop(0, '#f2ece1');
+    ceramicGrad.addColorStop(0.7, '#dcd3c3');
+    ceramicGrad.addColorStop(1, '#b0a593');
+    ctx.fillStyle = ceramicGrad;
+    ctx.beginPath(); ctx.arc(centerX, centerY, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#8c806f'; ctx.lineWidth = 0.8; ctx.stroke();
+
+    // Interlocking Metallic Electrodes (Comb pattern)
+    ctx.strokeStyle = '#9ca5b0';
     ctx.lineWidth = 0.7;
-    ctx.stroke();
-
-    // Min/Max labels
-    ctx.fillStyle = 'rgba(140,160,170,0.5)';
-    ctx.font = `${5}px "JetBrains Mono", monospace`;
-    ctx.textAlign = 'left';
-    ctx.fillText('2', barX, barY + barH + 7);
-    ctx.textAlign = 'right';
-    ctx.fillText('400 cm', barX + barW, barY + barH + 7);
-
-    if (inst.selected) drawSelectionRect(ctx, -5, 5, 100, 80);
-    ctx.restore();
-  }
-});
-
-/*---------------------------LDR Photoresistor ------------------------------------------ */
-defComp({
-  id: 'ldr',
-  name: 'LDR Photoresistor',
-  category: 'Sensors',
-  icon: '💡',
-  desc: 'Light-dependent resistor — outputs analog light level from 0 to 1023',
-  width: 40,
-  height: 40,
-  defaultProps: { light: 512 },
-  interactive: [
-    { field: 'light', label: 'Light', min: 0, max: 1023, step: 1, unit: ' lx' },
-  ],
-  pins: [
-    { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 40, side: 'bottom' },
-    { id: 'a', label: 'A', type: PIN_TYPE.ANALOG, x: 20, y: 40, side: 'bottom' },
-    { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 32, y: 40, side: 'bottom' },
-  ],
-  draw(ctx, inst, sim) {
-    const { x, y } = inst;
-    const light = inst.runtimeState && inst.runtimeState.light !== undefined ? inst.runtimeState.light : (inst.props.light || 512);
-    const pct = light / 1023;
-
-    ctx.save();
-    ctx.translate(x, y);
-
-    // Leads
-    ctx.strokeStyle = '#c8a84b';
-    ctx.lineWidth = 1.5;
-    [[8, 40], [20, 40], [32, 40]].forEach(([px, py]) => {
-      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 34); ctx.stroke();
-    });
-
-    // Body
-    ctx.fillStyle = '#2a2a2a';
-    roundRect(ctx, 2, 3, 36, 31, 4);
-    ctx.fill();
-    ctx.strokeStyle = '#555';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Wavy resistive track
-    ctx.strokeStyle = '#c8b06a';
-    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(8, 18);
-    ctx.lineTo(14, 12); ctx.lineTo(18, 24); ctx.lineTo(22, 12); ctx.lineTo(26, 24); ctx.lineTo(31, 18);
+    ctx.moveTo(centerX - 8, centerY - 4); ctx.lineTo(centerX + 3, centerY - 4);
+    ctx.moveTo(centerX - 3, centerY); ctx.lineTo(centerX + 8, centerY);
+    ctx.moveTo(centerX - 8, centerY + 4); ctx.lineTo(centerX + 3, centerY + 4);
     ctx.stroke();
 
-    // Light rays (animated with brightness)
-    const rayOn = pct > 0.05;
-    ctx.strokeStyle = rayOn ? '#ffee88' : '#666';
-    ctx.lineWidth = 1;
-    if (rayOn) { ctx.shadowColor = '#ffee88'; ctx.shadowBlur = 5; }
-    [[-2, 4], [14, -2], [30, 4]].forEach(([rx, ry]) => {
-      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 3, ry - 5); ctx.stroke();
-    });
+    // Wavy Reddish-Orange Cadmium Sulfide (CdS) Zig-Zag Track
+    ctx.strokeStyle = '#d35400';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 8, centerY - 6);
+    ctx.lineTo(centerX + 7, centerY - 6);
+    ctx.lineTo(centerX + 7, centerY - 2);
+    ctx.lineTo(centerX - 7, centerY - 2);
+    ctx.lineTo(centerX - 7, centerY + 2);
+    ctx.lineTo(centerX + 7, centerY + 2);
+    ctx.lineTo(centerX + 7, centerY + 6);
+    ctx.lineTo(centerX - 8, centerY + 6);
+    ctx.stroke();
+
+    // Translucent Resin Glass Epoxy Dome Highlight
+    const domeGrad = ctx.createRadialGradient(centerX - 3, centerY - 4, 1, centerX, centerY, 11);
+    domeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+    domeGrad.addColorStop(0.4, 'rgba(255, 255, 255, 0.1)');
+    domeGrad.addColorStop(1, 'rgba(0, 0, 0, 0.15)');
+    ctx.fillStyle = domeGrad;
+    ctx.beginPath(); ctx.arc(centerX, centerY, 11.5, 0, Math.PI * 2); ctx.fill();
+
+    // --- 4. Voltage Divider Resistor & Sub-components ---
+    // SMD 10k Divider Resistor
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(8, 36, 5, 2.5);
+    ctx.fillStyle = '#b0b0b0';
+    ctx.fillRect(8, 36, 1, 2.5);
+    ctx.fillRect(12, 36, 1, 2.5);
+
+    // Power Indicator LED
+    ctx.fillStyle = isRunning ? '#ff3333' : '#441111';
+    if (isRunning) { ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 4; }
+    ctx.beginPath(); ctx.arc(42, 37, 1.2, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
 
-    ctx.fillStyle = '#aaa';
-    ctx.font = 'bold 6px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('LDR', 20, 30);
+    // --- 5. Pin Header Block (Bottom - Pins: 10, 25, 40) ---
+    ctx.fillStyle = '#111111';
+    drawRR(4, 50, 42, 4, 1); ctx.fill();
 
-    if (inst.selected) drawSelectionRect(ctx, -3, 0, 46, 46);
+    const pinXList = [10, 25, 40];
+    pinXList.forEach(px => {
+      // Gold Contact Pad
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(px - 1.5, 50, 3, 3);
+
+      // Silver Terminal Lead
+      const leadGrad = ctx.createLinearGradient(px - 0.8, 52, px + 0.8, 60);
+      leadGrad.addColorStop(0, '#cccccc');
+      leadGrad.addColorStop(0.5, '#ffffff');
+      leadGrad.addColorStop(1, '#888888');
+      ctx.fillStyle = leadGrad;
+      ctx.fillRect(px - 0.8, 53, 1.6, 7);
+    });
+
+    // --- 6. Silkscreen Labels & Mini Lux HUD ---
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 3.2px monospace';
+    ctx.textAlign = 'center';
+
+    ctx.fillText('VCC', 10, 48);
+    ctx.fillText('AO', 25, 48);
+    ctx.fillText('GND', 40, 48);
+
+    // Mini Lux Display Panel
+    ctx.fillStyle = '#080c14';
+    drawRR(12, 40, 26, 6, 1.5);
+    ctx.fill();
+    ctx.strokeStyle = isRunning ? 'rgba(0, 229, 255, 0.4)' : 'rgba(60, 70, 85, 0.4)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    ctx.fillStyle = isRunning ? '#00e5ff' : '#607d8b';
+    ctx.font = 'bold 4px "JetBrains Mono", monospace';
+    ctx.fillText(`${Math.round(light)}lx`, 25, 44.5);
+
+    // Selection Outline Overlay
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -2, 0, 54, 62);
+    }
+
     ctx.restore();
   }
 });
+
+// defComp({
+//   id: 'ldr',
+//   name: 'LDR Photoresistor',
+//   category: 'Sensors',
+//   icon: '💡',
+//   desc: 'Light-dependent resistor — outputs analog light level from 0 to 1023',
+//   width: 40,
+//   height: 40,
+//   defaultProps: { light: 512 },
+//   interactive: [
+//     { field: 'light', label: 'Light', min: 0, max: 1023, step: 1, unit: ' lx' },
+//   ],
+//   pins: [
+//     { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 40, side: 'bottom' },
+//     { id: 'a', label: 'A', type: PIN_TYPE.ANALOG, x: 20, y: 40, side: 'bottom' },
+//     { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 32, y: 40, side: 'bottom' },
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const light = inst.runtimeState && inst.runtimeState.light !== undefined ? inst.runtimeState.light : (inst.props.light || 512);
+//     const pct = light / 1023;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // Leads
+//     ctx.strokeStyle = '#c8a84b';
+//     ctx.lineWidth = 1.5;
+//     [[8, 40], [20, 40], [32, 40]].forEach(([px, py]) => {
+//       ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, 34); ctx.stroke();
+//     });
+
+//     // Body
+//     ctx.fillStyle = '#2a2a2a';
+//     roundRect(ctx, 2, 3, 36, 31, 4);
+//     ctx.fill();
+//     ctx.strokeStyle = '#555';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Wavy resistive track
+//     ctx.strokeStyle = '#c8b06a';
+//     ctx.lineWidth = 1.5;
+//     ctx.beginPath();
+//     ctx.moveTo(8, 18);
+//     ctx.lineTo(14, 12); ctx.lineTo(18, 24); ctx.lineTo(22, 12); ctx.lineTo(26, 24); ctx.lineTo(31, 18);
+//     ctx.stroke();
+
+//     // Light rays (animated with brightness)
+//     const rayOn = pct > 0.05;
+//     ctx.strokeStyle = rayOn ? '#ffee88' : '#666';
+//     ctx.lineWidth = 1;
+//     if (rayOn) { ctx.shadowColor = '#ffee88'; ctx.shadowBlur = 5; }
+//     [[-2, 4], [14, -2], [30, 4]].forEach(([rx, ry]) => {
+//       ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 3, ry - 5); ctx.stroke();
+//     });
+//     ctx.shadowBlur = 0;
+
+//     ctx.fillStyle = '#aaa';
+//     ctx.font = 'bold 6px sans-serif';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('LDR', 20, 30);
+
+//     if (inst.selected) drawSelectionRect(ctx, -3, 0, 46, 46);
+//     ctx.restore();
+//   }
+// });
 
 /* ------------------------------------PIR Motion Sensor --------------------------------- */
 // defComp({
@@ -804,74 +1325,325 @@ defComp({
 /*-----------------------MPU6050 6-axis Accelerometer + Gyroscope (I2C @ 0x68)------------------------ */
 defComp({
   id: 'mpu6050',
-  name: 'MPU6050 IMU',
+  name: 'MPU6050 6-Axis IMU Module',
   category: 'Sensors',
   icon: '🧭',
-  desc: '6-axis Accelerometer + Gyroscope (I2C @ 0x68). Provides accel X/Y/Z Â±2g and gyro X/Y/Z Â±250Â°/s',
-  width: 72,   // Scaled from 36 to 72 (2x)
-  height: 64,  // Scaled from 32 to 64 (2x)
+  desc: 'Authentic GY-521 MPU-6050 MotionTracking Module (3-axis Gyroscope + 3-axis Accelerometer with DMP). Features live 3D orientation vector visualization, I2C pull-ups, and onboard 3.3V LDO regulator.',
+  width: 80,
+  height: 85,
   defaultProps: { accelX: 0, accelY: 0, accelZ: 1024, gyroX: 0, gyroY: 0, gyroZ: 0 },
   interactive: [
-    { field: 'accelX', label: 'AccelX', min: -2048, max: 2047, step: 10, unit: '' },
-    { field: 'accelY', label: 'AccelY', min: -2048, max: 2047, step: 10, unit: '' },
-    { field: 'accelZ', label: 'AccelZ', min: -2048, max: 2047, step: 10, unit: '' },
+    { field: 'accelX', label: 'Accel X', min: -2048, max: 2047, step: 10, unit: '' },
+    { field: 'accelY', label: 'Accel Y', min: -2048, max: 2047, step: 10, unit: '' },
+    { field: 'accelZ', label: 'Accel Z', min: -2048, max: 2047, step: 10, unit: '' },
   ],
   pins: [
-    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 64, side: 'bottom' },
-    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 26, y: 64, side: 'bottom' },
-    { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 44, y: 64, side: 'bottom' },
-    { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 58, y: 64, side: 'bottom' },
+    { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 16, y: 85, side: 'bottom' },
+    { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 32, y: 85, side: 'bottom' },
+    { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 48, y: 85, side: 'bottom' },
+    { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 64, y: 85, side: 'bottom' },
   ],
-
   draw(ctx, inst, sim) {
     const { x, y } = inst;
-    const scale = 2; // Scale factor
+    const isRunning = !!(sim && sim.isRunning);
+
+    // Extract Accelerometer Values
+    const ax = inst.runtimeState && inst.runtimeState.accelX !== undefined ? inst.runtimeState.accelX : (inst.props.accelX ?? 0);
+    const ay = inst.runtimeState && inst.runtimeState.accelY !== undefined ? inst.runtimeState.accelY : (inst.props.accelY ?? 0);
+    const az = inst.runtimeState && inst.runtimeState.accelZ !== undefined ? inst.runtimeState.accelZ : (inst.props.accelZ ?? 1024);
 
     ctx.save();
     ctx.translate(x, y);
-    ctx.scale(scale, scale); // Scales all vector drawing, fonts, and borders
 
-    // PCB body
-    ctx.fillStyle = '#1a1a2e';
-    roundRect(ctx, 0, 0, 36, 28, 3);
+    // --- Helper: Safe Rounded Rectangles ---
+    const drawRR = (rx, ry, rw, rh, rad = 3) => {
+      ctx.beginPath();
+      if (typeof roundRect === 'function') {
+        roundRect(ctx, rx, ry, rw, rh, rad);
+      } else if (ctx.roundRect) {
+        ctx.roundRect(rx, ry, rw, rh, rad);
+      } else {
+        ctx.rect(rx, ry, rw, rh);
+      }
+    };
+
+    // --- 1. PCB Ground Shadow & Substrate ---
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    drawRR(2, 4, 76, 46, 4);
     ctx.fill();
-    ctx.strokeStyle = '#333355';
+
+    // Deep Cyan/Teal GY-521 PCB Gradient
+    const pcbGrad = ctx.createLinearGradient(0, 2, 80, 48);
+    pcbGrad.addColorStop(0, '#005b66');
+    pcbGrad.addColorStop(0.5, '#00424b');
+    pcbGrad.addColorStop(1, '#002930');
+    ctx.fillStyle = pcbGrad;
+    drawRR(0, 2, 80, 46, 4);
+    ctx.fill();
+
+    // PCB Edge Chamfer & Silkscreen Outer Border Line
+    ctx.strokeStyle = '#001a1f';
     ctx.lineWidth = 1;
-    roundRect(ctx, 0, 0, 36, 28, 3);
     ctx.stroke();
 
-    // MPU6050 chip
-    ctx.fillStyle = '#111';
-    roundRect(ctx, 8, 4, 20, 16, 2);
-    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 0.7;
+    drawRR(2, 4, 76, 42, 2.5);
+    ctx.stroke();
 
-    // Chip marking
-    ctx.fillStyle = '#666';
-    ctx.font = 'bold 4px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('MPU', 18, 11);
-    ctx.fillText('6050', 18, 16);
+    // Gold Corner Mounting Holes with Copper Rings
+    [[5, 7], [75, 7], [5, 41], [75, 41]].forEach(([hx, hy]) => {
+      ctx.fillStyle = '#d4af37';
+      ctx.beginPath(); ctx.arc(hx, hy, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#001a1f';
+      ctx.beginPath(); ctx.arc(hx, hy, 1.3, 0, Math.PI * 2); ctx.fill();
+    });
 
-    // I2C address label
-    ctx.fillStyle = '#00979c';
-    ctx.font = '4px monospace';
-    ctx.fillText('0x68', 18, 24);
+    // --- 2. Onboard Sub-components (Regulator, Resistors, Capacitors) ---
+    // KB33 / 662K LDO 3.3V Voltage Regulator (SOT-23 Package)
+    ctx.fillStyle = '#181818';
+    drawRR(12, 10, 6, 4, 0.8); ctx.fill();
+    ctx.fillStyle = '#555';
+    ctx.fillRect(11, 11, 1, 0.8);
+    ctx.fillRect(11, 12.2, 1, 0.8);
+    ctx.fillRect(18, 11.6, 1, 0.8);
 
-    // Pin leads
-    const pinXs = [6, 13, 22, 29];
-    ctx.strokeStyle = '#a0a0a0';
-    ctx.lineWidth = 1.5;
-    for (const px of pinXs) {
-      ctx.beginPath();
-      ctx.moveTo(px, 28);
-      ctx.lineTo(px, 32);
-      ctx.stroke();
+    // SMD I2C Pull-Up Resistor Packs (472 / 4.7k)
+    ctx.fillStyle = '#222';
+    [[12, 18], [12, 22], [12, 26]].forEach(([rx, ry]) => {
+      ctx.fillRect(rx, ry, 4, 2);
+      ctx.fillStyle = '#b0b0b0';
+      ctx.fillRect(rx, ry, 0.8, 2);
+      ctx.fillRect(rx + 3.2, ry, 0.8, 2);
+      ctx.fillStyle = '#222';
+    });
+
+    // SMD Decoupling Capacitors (0603 Brown/Tan Body)
+    ctx.fillStyle = '#b8860b';
+    [[64, 10], [64, 15], [64, 20]].forEach(([cx, cy]) => {
+      ctx.fillRect(cx, cy, 4, 2);
+      ctx.fillStyle = '#b0b0b0';
+      ctx.fillRect(cx, cy, 0.8, 2);
+      ctx.fillRect(cx + 3.2, cy, 0.8, 2);
+      ctx.fillStyle = '#b8860b';
+    });
+
+    // Power Indicator LED (Red)
+    ctx.fillStyle = isRunning ? '#ff3333' : '#441111';
+    if (isRunning) { ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 5; }
+    ctx.beginPath(); ctx.arc(66, 28, 1.3, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // --- 3. MPU-6050 Main QFN-24 IC Chip ---
+    const icX = 28, icY = 10, icW = 24, icH = 24;
+
+    // IC Body Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    drawRR(icX + 1, icY + 1, icW, icH, 1.5); ctx.fill();
+
+    // Matte Black Epoxy Package
+    const icGrad = ctx.createLinearGradient(icX, icY, icX + icW, icY + icH);
+    icGrad.addColorStop(0, '#2c2c2c');
+    icGrad.addColorStop(0.5, '#1a1a1a');
+    icGrad.addColorStop(1, '#111111');
+    ctx.fillStyle = icGrad;
+    drawRR(icX, icY, icW, icH, 1.5); ctx.fill();
+    ctx.strokeStyle = '#050505'; ctx.lineWidth = 0.5; ctx.stroke();
+
+    // QFN Metallic Pins around perimeter
+    ctx.fillStyle = '#cccccc';
+    for (let p = 0; p < 5; p++) {
+      ctx.fillRect(icX + 3 + p * 4, icY - 0.8, 2, 0.8);       // Top
+      ctx.fillRect(icX + 3 + p * 4, icY + icH, 2, 0.8);      // Bottom
+      ctx.fillRect(icX - 0.8, icY + 3 + p * 4, 0.8, 2);       // Left
+      ctx.fillRect(icX + icW, icY + 3 + p * 4, 0.8, 2);       // Right
     }
 
-    if (inst.selected) drawSelectionRect(ctx, 0, 0, 36, 32);
+    // Pin 1 Alignment Indentation Dot
+    ctx.fillStyle = '#444444';
+    ctx.beginPath(); ctx.arc(icX + 3.5, icY + 3.5, 1, 0, Math.PI * 2); ctx.fill();
+
+    // Laser-Etched Chip Markings
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.font = 'bold 3.8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('MPU-6050', icX + 12, icY + 12);
+    ctx.font = '3px monospace';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.fillText('INVEN SENSE', icX + 12, icY + 17);
+
+    // --- 4. Silkscreen Text & Axis Vectors (X / Y / Z) ---
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('GY-521', 40, 41);
+
+    // Silkscreen Coordinate Axes Diagram (Left side)
+    const axX = 21, axY = 35;
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.8;
+    // X-Axis
+    ctx.beginPath(); ctx.moveTo(axX, axY); ctx.lineTo(axX + 7, axY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(axX + 5, axY - 1.5); ctx.lineTo(axX + 7, axY); ctx.lineTo(axX + 5, axY + 1.5); ctx.fill();
+    // Y-Axis
+    ctx.beginPath(); ctx.moveTo(axX, axY); ctx.lineTo(axX, axY - 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(axX - 1.5, axY - 5); ctx.lineTo(axX, axY - 7); ctx.lineTo(axX + 1.5, axY - 5); ctx.fill();
+
+    ctx.font = 'bold 3.5px sans-serif';
+    ctx.fillText('X', axX + 9, axY + 1);
+    ctx.fillText('Y', axX - 3, axY - 5);
+
+    // --- 5. Pin Header Strip (Bottom - Pins: 16, 32, 48, 64) ---
+    ctx.fillStyle = '#151515';
+    drawRR(8, 44, 64, 5, 1); ctx.fill();
+
+    const pinXList = [16, 32, 48, 64];
+    pinXList.forEach(px => {
+      // Gold Contact Square Pad
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(px - 1.5, 45, 3, 3);
+
+      // Silver Terminal Pins
+      const pinGrad = ctx.createLinearGradient(px - 1, 48, px + 1, 85);
+      pinGrad.addColorStop(0, '#aaaaaa');
+      pinGrad.addColorStop(0.5, '#ffffff');
+      pinGrad.addColorStop(1, '#666666');
+      ctx.fillStyle = pinGrad;
+      ctx.fillRect(px - 0.9, 48, 1.8, 37);
+    });
+
+    // Pin Silkscreen Labels
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 3.8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('VCC', 16, 43);
+    ctx.fillText('GND', 32, 43);
+    ctx.fillText('SCL', 48, 43);
+    ctx.fillText('SDA', 64, 43);
+
+    // --- 6. Lower HUD 3D Orientation / Accel Data Panel ---
+    const hudY = 51;
+    ctx.fillStyle = '#060a12';
+    drawRR(-2, hudY, 84, 32, 4);
+    ctx.fill();
+    ctx.strokeStyle = isRunning ? 'rgba(0, 229, 255, 0.4)' : 'rgba(50, 60, 75, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Normalized acceleration vector components
+    const normX = Math.max(-1, Math.min(1, ax / 1024));
+    const normY = Math.max(-1, Math.min(1, ay / 1024));
+    const normZ = Math.max(-1, Math.min(1, az / 1024));
+
+    // Dynamic Artificial Horizon / Crosshair Bubble
+    const bubbleCenterX = 18, bubbleCenterY = hudY + 16;
+    ctx.fillStyle = '#101726';
+    ctx.beginPath(); ctx.arc(bubbleCenterX, bubbleCenterY, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.25)'; ctx.lineWidth = 0.8; ctx.stroke();
+
+    // Crosshair Lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.beginPath(); ctx.moveTo(bubbleCenterX - 9, bubbleCenterY); ctx.lineTo(bubbleCenterX + 9, bubbleCenterY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bubbleCenterX, bubbleCenterY - 9); ctx.lineTo(bubbleCenterX, bubbleCenterY + 9); ctx.stroke();
+
+    // Moving Tilt Target
+    const targetX = bubbleCenterX + normX * 7;
+    const targetY = bubbleCenterY - normY * 7;
+    ctx.fillStyle = isRunning ? '#00e5ff' : '#546e7a';
+    if (isRunning) { ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 4; }
+    ctx.beginPath(); ctx.arc(targetX, targetY, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Numeric G-Force Readouts
+    ctx.fillStyle = isRunning ? '#80deea' : '#546e7a';
+    ctx.font = 'bold 5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('ACCELERATION', 33, hudY + 9);
+
+    ctx.font = 'bold 4.5px "JetBrains Mono", monospace';
+    ctx.fillStyle = isRunning ? '#00e5ff' : '#607d8b';
+    ctx.fillText(`X:${normX >= 0 ? '+' : ''}${normX.toFixed(2)}g`, 33, hudY + 16);
+    ctx.fillText(`Y:${normY >= 0 ? '+' : ''}${normY.toFixed(2)}g`, 33, hudY + 22);
+    ctx.fillText(`Z:${normZ >= 0 ? '+' : ''}${normZ.toFixed(2)}g`, 33, hudY + 28);
+
+    // Selection Box Overlay
+    if (inst.selected && typeof drawSelectionRect === 'function') {
+      drawSelectionRect(ctx, -4, 0, 88, 86);
+    }
+
     ctx.restore();
   }
 });
+
+// defComp({
+//   id: 'mpu6050',
+//   name: 'MPU6050 IMU',
+//   category: 'Sensors',
+//   icon: '🧭',
+//   desc: '6-axis Accelerometer + Gyroscope (I2C @ 0x68). Provides accel X/Y/Z Â±2g and gyro X/Y/Z Â±250Â°/s',
+//   width: 72,   // Scaled from 36 to 72 (2x)
+//   height: 64,  // Scaled from 32 to 64 (2x)
+//   defaultProps: { accelX: 0, accelY: 0, accelZ: 1024, gyroX: 0, gyroY: 0, gyroZ: 0 },
+//   interactive: [
+//     { field: 'accelX', label: 'AccelX', min: -2048, max: 2047, step: 10, unit: '' },
+//     { field: 'accelY', label: 'AccelY', min: -2048, max: 2047, step: 10, unit: '' },
+//     { field: 'accelZ', label: 'AccelZ', min: -2048, max: 2047, step: 10, unit: '' },
+//   ],
+//   pins: [
+//     { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 64, side: 'bottom' },
+//     { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 26, y: 64, side: 'bottom' },
+//     { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 44, y: 64, side: 'bottom' },
+//     { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 58, y: 64, side: 'bottom' },
+//   ],
+
+//   draw(ctx, inst, sim) {
+//     const { x, y } = inst;
+//     const scale = 2; // Scale factor
+
+//     ctx.save();
+//     ctx.translate(x, y);
+//     ctx.scale(scale, scale); // Scales all vector drawing, fonts, and borders
+
+//     // PCB body
+//     ctx.fillStyle = '#1a1a2e';
+//     roundRect(ctx, 0, 0, 36, 28, 3);
+//     ctx.fill();
+//     ctx.strokeStyle = '#333355';
+//     ctx.lineWidth = 1;
+//     roundRect(ctx, 0, 0, 36, 28, 3);
+//     ctx.stroke();
+
+//     // MPU6050 chip
+//     ctx.fillStyle = '#111';
+//     roundRect(ctx, 8, 4, 20, 16, 2);
+//     ctx.fill();
+
+//     // Chip marking
+//     ctx.fillStyle = '#666';
+//     ctx.font = 'bold 4px monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('MPU', 18, 11);
+//     ctx.fillText('6050', 18, 16);
+
+//     // I2C address label
+//     ctx.fillStyle = '#00979c';
+//     ctx.font = '4px monospace';
+//     ctx.fillText('0x68', 18, 24);
+
+//     // Pin leads
+//     const pinXs = [6, 13, 22, 29];
+//     ctx.strokeStyle = '#a0a0a0';
+//     ctx.lineWidth = 1.5;
+//     for (const px of pinXs) {
+//       ctx.beginPath();
+//       ctx.moveTo(px, 28);
+//       ctx.lineTo(px, 32);
+//       ctx.stroke();
+//     }
+
+//     if (inst.selected) drawSelectionRect(ctx, 0, 0, 36, 32);
+//     ctx.restore();
+//   }
+// });
 
 
 /* -------------- IR Obstacle Avoidance Sensor Module (Enlarged) ------------------ */
