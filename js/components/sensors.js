@@ -2825,3 +2825,143 @@ defComp({
     ctx.restore();
   }
 });
+
+/* ══════════════ CLASS-BASED SENSOR COMPONENTS ══════════════ */
+
+class LDRComponent extends Component {
+  getPins() {
+    return [
+      { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 10, y: 60, side: 'bottom' },
+      { id: 'a', label: 'AO', type: PIN_TYPE.ANALOG, x: 25, y: 60, side: 'bottom' },
+      { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 40, y: 60, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const aPin = this.getConnectedPinNum('a');
+    if (aPin !== null) {
+      const val = this.runtimeState.light !== undefined ? this.runtimeState.light : (this.props.light || 512);
+      if (window.ArduinoSim && window.ArduinoSim.pinStates) {
+        window.ArduinoSim.pinStates[`pin_${aPin}`] = val;
+      }
+    }
+  }
+}
+
+class PIRComponent extends Component {
+  getPins() {
+    return [
+      { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 16, y: 62, side: 'bottom' },
+      { id: 'out', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 28, y: 62, side: 'bottom' },
+      { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 40, y: 62, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const outPin = this.getConnectedPinNum('out');
+    if (outPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+      const motion = this.runtimeState.motion !== undefined ? !!this.runtimeState.motion : !!(this.props.motion || 0);
+      window.ArduinoSim.pinStates[`pin_${outPin}`] = motion ? 1 : 0;
+    }
+  }
+}
+
+class LM35SensorComponent extends Component {
+  getPins() {
+    return [
+      { id: 'VCC', label: 'VCC (+5V)', type: PIN_TYPE.POWER, x: 15, y: 80, side: 'bottom' },
+      { id: 'OUT', label: 'VOUT', type: PIN_TYPE.ANALOG, x: 30, y: 80, side: 'bottom' },
+      { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 45, y: 80, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const outPin = this.getConnectedPinNum('OUT');
+    if (outPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+      const temp = this.runtimeState.temp !== undefined
+        ? this.runtimeState.temp
+        : (this.props.temp ?? 25);
+      const voltage = Math.max(0, temp * 0.01);
+      const adcVal = Math.max(0, Math.min(1023, Math.round((voltage / 5.0) * 1023)));
+      window.ArduinoSim.pinStates[`pin_${outPin}`] = adcVal;
+    }
+  }
+}
+
+class IRObstacleComponent extends Component {
+  getPins() {
+    return [
+      { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 15, y: 92, side: 'bottom' },
+      { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 27, y: 92, side: 'bottom' },
+      { id: 'OUT', label: 'OUT', type: PIN_TYPE.DIGITAL, x: 39, y: 92, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const detected = this.runtimeState?.detected ?? this.props.detected ?? 0;
+    this.runtimeState.detected = detected;
+    this.runtimeState.OUT = detected ? 0 : 1;
+    const outPn = this.getConnectedPinNum('OUT');
+    if (outPn !== null) sim.pinStates[`pin_${outPn}`] = detected ? 0 : 1;
+  }
+}
+
+class FlexSensorComponent extends Component {
+  getPins() {
+    return [
+      { id: 'SIG', label: 'SIG', type: PIN_TYPE.ANALOG, x: 15, y: 70, side: 'bottom' },
+      { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 30, y: 70, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const bend = this.props.bend ?? 0;
+    this.runtimeState.bend = bend;
+    const sigPn = this.getConnectedPinNum('SIG');
+    if (sigPn !== null) sim.pinStates[`pin_${sigPn}`] = bend;
+  }
+}
+
+class ThermistorComponent extends Component {
+  getPins() {
+    return [
+      { id: 'p1', label: '1', type: PIN_TYPE.ANALOG, x: 10, y: 50, side: 'bottom' },
+      { id: 'p2', label: '2', type: PIN_TYPE.GND, x: 30, y: 50, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const temp = this.props.temperature ?? 25;
+    this.runtimeState.temperature = temp;
+    const analogVal = Math.round(((temp + 10) / 90) * 1023);
+    const p1Pn = this.getConnectedPinNum('p1');
+    if (p1Pn !== null) sim.pinStates[`pin_${p1Pn}`] = Math.max(0, Math.min(1023, analogVal));
+  }
+}
+
+class MPU6050Component extends Component {
+  getPins() {
+    return [
+      { id: 'VCC', label: 'VCC', type: PIN_TYPE.POWER, x: 15, y: 70, side: 'bottom' },
+      { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 30, y: 70, side: 'bottom' },
+      { id: 'SCL', label: 'SCL', type: PIN_TYPE.DIGITAL, x: 45, y: 70, side: 'bottom' },
+      { id: 'SDA', label: 'SDA', type: PIN_TYPE.DIGITAL, x: 60, y: 70, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    this.runtimeState.accelX = this.props.accelX ?? 0;
+    this.runtimeState.accelY = this.props.accelY ?? 0;
+    this.runtimeState.accelZ = this.props.accelZ ?? 1024;
+    this.runtimeState.gyroX = this.props.gyroX ?? 0;
+    this.runtimeState.gyroY = this.props.gyroY ?? 0;
+    this.runtimeState.gyroZ = this.props.gyroZ ?? 0;
+  }
+}
+
+registerComponent(LDRComponent, ['ldr']);
+registerComponent(PIRComponent, ['pir']);
+registerComponent(LM35SensorComponent, ['lm35_sensor']);
+registerComponent(IRObstacleComponent, ['ir_obstacle']);
+registerComponent(FlexSensorComponent, ['flex_sensor']);
+registerComponent(ThermistorComponent, ['thermistor']);
+registerComponent(MPU6050Component, ['mpu6050']);

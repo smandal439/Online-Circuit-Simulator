@@ -2250,3 +2250,92 @@ defComp({
     ctx.restore();
   }
 });
+
+/* ══════════════ CLASS-BASED COMPONENTS ══════════════ */
+
+class Bulb12VComponent extends Component {
+  getPins() {
+    return [
+      { id: 'anode', label: '+', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+      { id: 'cathode', label: '−', type: PIN_TYPE.GND, x: 15, y: 55, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const source = this.getSource('anode');
+    const hasGnd = this.hasGround('cathode');
+    if (!hasGnd || !source || source.voltage <= 0) {
+      this.runtimeState.brightness = 0;
+      this.runtimeState.blown = false;
+      this.runtimeState._warnedBlown = false;
+    } else {
+      const vSource = source.voltage;
+      this.runtimeState.brightness = Math.max(0, Math.min(1.0, vSource / 12.0));
+      if (vSource > 16) {
+        this.runtimeState.blown = true;
+        this.runtimeState.brightness = 0;
+        if (!this.runtimeState._warnedBlown) {
+          this.runtimeState._warnedBlown = true;
+          if (window.OutputPanel) {
+            window.OutputPanel.log(
+              `12V Bulb (${this.id}) has blown! Applied voltage: ${vSource.toFixed(1)}V exceeds maximum rating.`,
+              'warn'
+            );
+          }
+        }
+      } else {
+        this.runtimeState.blown = false;
+        this.runtimeState._warnedBlown = false;
+      }
+    }
+  }
+}
+registerComponent(Bulb12VComponent, ['bulb_12v']);
+
+class RGBLEDComponent extends Component {
+  getPins() {
+    return [
+      { id: 'red', label: 'R', type: PIN_TYPE.PWM, x: 6, y: 0, side: 'top' },
+      { id: 'green', label: 'G', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+      { id: 'blue', label: 'B', type: PIN_TYPE.PWM, x: 24, y: 0, side: 'top' },
+      { id: 'gnd', label: '−', type: PIN_TYPE.GND, x: 15, y: 70, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const hasGnd = this.hasGround('gnd');
+    if (!hasGnd) {
+      this.runtimeState.r = 0; this.runtimeState.g = 0; this.runtimeState.b = 0;
+      this.runtimeState.red = 0; this.runtimeState.green = 0; this.runtimeState.blue = 0;
+    } else {
+      const traceChannel = (pinId, vf) => {
+        const src = this.getSource(pinId);
+        if (!src || src.voltage < vf) return 0;
+        const rTotal = Math.max(10, (src.resistance || 0) + 25);
+        const i_mA = ((src.voltage - vf) / rTotal) * 1000;
+        const norm = Math.max(0, Math.min(1.0, Math.pow(i_mA / 14.0, 0.55)));
+        return Math.round(norm * 255);
+      };
+      this.runtimeState.r = traceChannel('red', 1.8);
+      this.runtimeState.g = traceChannel('green', 2.2);
+      this.runtimeState.b = traceChannel('blue', 2.8);
+      this.runtimeState.red = this.runtimeState.r;
+      this.runtimeState.green = this.runtimeState.g;
+      this.runtimeState.blue = this.runtimeState.b;
+    }
+  }
+}
+registerComponent(RGBLEDComponent, ['rgb_led']);
+
+class BuzzerComponent extends Component {
+  getPins() {
+    return [
+      { id: 'vcc', label: '+', type: PIN_TYPE.DIGITAL, x: 12, y: 50, side: 'bottom' },
+      { id: 'gnd', label: '−', type: PIN_TYPE.GND, x: 28, y: 50, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const source = this.getSource('vcc');
+    const hasGnd = this.hasGround('gnd');
+    this.runtimeState.active = source && source.voltage > 1.5 && hasGnd;
+  }
+}
+registerComponent(BuzzerComponent, ['buzzer']);

@@ -1238,3 +1238,243 @@ defComp({
     ctx.restore();
   }
 });
+
+/* ══════════════ CLASS-BASED IC COMPONENTS ══════════════ */
+
+class IC74HC00Component extends Component {
+  getPins() {
+    return [
+      { id: 'A1', label: '1', type: PIN_TYPE.DIGITAL, x: 0, y: 50, side: 'bottom' },
+      { id: 'B1', label: '2', type: PIN_TYPE.DIGITAL, x: 17, y: 50, side: 'bottom' },
+      { id: 'Y1', label: '3', type: PIN_TYPE.DIGITAL, x: 34, y: 50, side: 'bottom' },
+      { id: 'A2', label: '4', type: PIN_TYPE.DIGITAL, x: 51, y: 50, side: 'bottom' },
+      { id: 'B2', label: '5', type: PIN_TYPE.DIGITAL, x: 68, y: 50, side: 'bottom' },
+      { id: 'Y2', label: '6', type: PIN_TYPE.DIGITAL, x: 85, y: 50, side: 'bottom' },
+      { id: 'GND', label: '7', type: PIN_TYPE.GND, x: 102, y: 50, side: 'bottom' },
+      { id: 'VCC', label: '14', type: PIN_TYPE.POWER, x: 0, y: 0, side: 'top' },
+      { id: 'B4', label: '13', type: PIN_TYPE.DIGITAL, x: 17, y: 0, side: 'top' },
+      { id: 'A4', label: '12', type: PIN_TYPE.DIGITAL, x: 34, y: 0, side: 'top' },
+      { id: 'Y4', label: '11', type: PIN_TYPE.DIGITAL, x: 51, y: 0, side: 'top' },
+      { id: 'B3', label: '10', type: PIN_TYPE.DIGITAL, x: 68, y: 0, side: 'top' },
+      { id: 'A3', label: '9', type: PIN_TYPE.DIGITAL, x: 85, y: 0, side: 'top' },
+      { id: 'Y3', label: '8', type: PIN_TYPE.DIGITAL, x: 102, y: 0, side: 'top' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const read = (id) => this._readDigitalInput(id);
+    const gates = [['A1', 'B1', 'Y1'], ['A2', 'B2', 'Y2'], ['A3', 'B3', 'Y3'], ['A4', 'B4', 'Y4']];
+    for (const [a, b, y] of gates) {
+      const outVal = (read(a) & read(b)) ? 0 : 1;
+      this.runtimeState[y] = outVal ? 255 : 0;
+      const pn = this.getConnectedPinNum(y);
+      if (pn !== null) sim.pinStates[`pin_${pn}`] = outVal ? 255 : 0;
+    }
+  }
+  _readDigitalInput(pinId) {
+    const pn = this.getConnectedPinNum(pinId);
+    if (pn === null) return 0;
+    const val = window.ArduinoSim?.pinStates?.[`pin_${pn}`] || 0;
+    return val > 128 ? 1 : 0;
+  }
+}
+
+class IC74HC04Component extends Component {
+  getPins() {
+    return [
+      { id: 'A1', label: '1', type: PIN_TYPE.DIGITAL, x: 0, y: 50, side: 'bottom' },
+      { id: 'Y1', label: '2', type: PIN_TYPE.DIGITAL, x: 17, y: 50, side: 'bottom' },
+      { id: 'A2', label: '3', type: PIN_TYPE.DIGITAL, x: 34, y: 50, side: 'bottom' },
+      { id: 'Y2', label: '4', type: PIN_TYPE.DIGITAL, x: 51, y: 50, side: 'bottom' },
+      { id: 'A3', label: '5', type: PIN_TYPE.DIGITAL, x: 68, y: 50, side: 'bottom' },
+      { id: 'Y3', label: '6', type: PIN_TYPE.DIGITAL, x: 85, y: 50, side: 'bottom' },
+      { id: 'GND', label: '7', type: PIN_TYPE.GND, x: 102, y: 50, side: 'bottom' },
+      { id: 'VCC', label: '14', type: PIN_TYPE.POWER, x: 0, y: 0, side: 'top' },
+      { id: 'A6', label: '13', type: PIN_TYPE.DIGITAL, x: 17, y: 0, side: 'top' },
+      { id: 'Y6', label: '12', type: PIN_TYPE.DIGITAL, x: 34, y: 0, side: 'top' },
+      { id: 'A5', label: '11', type: PIN_TYPE.DIGITAL, x: 51, y: 0, side: 'top' },
+      { id: 'Y5', label: '10', type: PIN_TYPE.DIGITAL, x: 68, y: 0, side: 'top' },
+      { id: 'A4', label: '9', type: PIN_TYPE.DIGITAL, x: 85, y: 0, side: 'top' },
+      { id: 'Y4', label: '8', type: PIN_TYPE.DIGITAL, x: 102, y: 0, side: 'top' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const read = (id) => this._readDigitalInput(id);
+    const gates = [['A1', 'Y1'], ['A2', 'Y2'], ['A3', 'Y3'], ['A4', 'Y4'], ['A5', 'Y5'], ['A6', 'Y6']];
+    for (const [a, y] of gates) {
+      const outVal = read(a) ? 0 : 1;
+      this.runtimeState[y] = outVal ? 255 : 0;
+      const pn = this.getConnectedPinNum(y);
+      if (pn !== null) sim.pinStates[`pin_${pn}`] = outVal ? 255 : 0;
+    }
+  }
+  _readDigitalInput(pinId) {
+    const pn = this.getConnectedPinNum(pinId);
+    if (pn === null) return 0;
+    const val = window.ArduinoSim?.pinStates?.[`pin_${pn}`] || 0;
+    return val > 128 ? 1 : 0;
+  }
+}
+
+class IC74HC08Component extends Component {
+  getPins() {
+    return [
+      { id: 'A1', label: '1', type: PIN_TYPE.DIGITAL, x: 0, y: 50, side: 'bottom' },
+      { id: 'B1', label: '2', type: PIN_TYPE.DIGITAL, x: 17, y: 50, side: 'bottom' },
+      { id: 'Y1', label: '3', type: PIN_TYPE.DIGITAL, x: 34, y: 50, side: 'bottom' },
+      { id: 'A2', label: '4', type: PIN_TYPE.DIGITAL, x: 51, y: 50, side: 'bottom' },
+      { id: 'B2', label: '5', type: PIN_TYPE.DIGITAL, x: 68, y: 50, side: 'bottom' },
+      { id: 'Y2', label: '6', type: PIN_TYPE.DIGITAL, x: 85, y: 50, side: 'bottom' },
+      { id: 'GND', label: '7', type: PIN_TYPE.GND, x: 102, y: 50, side: 'bottom' },
+      { id: 'VCC', label: '14', type: PIN_TYPE.POWER, x: 0, y: 0, side: 'top' },
+      { id: 'B4', label: '13', type: PIN_TYPE.DIGITAL, x: 17, y: 0, side: 'top' },
+      { id: 'A4', label: '12', type: PIN_TYPE.DIGITAL, x: 34, y: 0, side: 'top' },
+      { id: 'Y4', label: '11', type: PIN_TYPE.DIGITAL, x: 51, y: 0, side: 'top' },
+      { id: 'B3', label: '10', type: PIN_TYPE.DIGITAL, x: 68, y: 0, side: 'top' },
+      { id: 'A3', label: '9', type: PIN_TYPE.DIGITAL, x: 85, y: 0, side: 'top' },
+      { id: 'Y3', label: '8', type: PIN_TYPE.DIGITAL, x: 102, y: 0, side: 'top' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const read = (id) => this._readDigitalInput(id);
+    const gates = [['A1', 'B1', 'Y1'], ['A2', 'B2', 'Y2'], ['A3', 'B3', 'Y3'], ['A4', 'B4', 'Y4']];
+    for (const [a, b, y] of gates) {
+      const outVal = read(a) & read(b);
+      this.runtimeState[y] = outVal ? 255 : 0;
+      const pn = this.getConnectedPinNum(y);
+      if (pn !== null) sim.pinStates[`pin_${pn}`] = outVal ? 255 : 0;
+    }
+  }
+  _readDigitalInput(pinId) {
+    const pn = this.getConnectedPinNum(pinId);
+    if (pn === null) return 0;
+    const val = window.ArduinoSim?.pinStates?.[`pin_${pn}`] || 0;
+    return val > 128 ? 1 : 0;
+  }
+}
+
+class IC74HC32Component extends Component {
+  getPins() {
+    return [
+      { id: 'A1', label: '1', type: PIN_TYPE.DIGITAL, x: 0, y: 50, side: 'bottom' },
+      { id: 'B1', label: '2', type: PIN_TYPE.DIGITAL, x: 17, y: 50, side: 'bottom' },
+      { id: 'Y1', label: '3', type: PIN_TYPE.DIGITAL, x: 34, y: 50, side: 'bottom' },
+      { id: 'A2', label: '4', type: PIN_TYPE.DIGITAL, x: 51, y: 50, side: 'bottom' },
+      { id: 'B2', label: '5', type: PIN_TYPE.DIGITAL, x: 68, y: 50, side: 'bottom' },
+      { id: 'Y2', label: '6', type: PIN_TYPE.DIGITAL, x: 85, y: 50, side: 'bottom' },
+      { id: 'GND', label: '7', type: PIN_TYPE.GND, x: 102, y: 50, side: 'bottom' },
+      { id: 'VCC', label: '14', type: PIN_TYPE.POWER, x: 0, y: 0, side: 'top' },
+      { id: 'B4', label: '13', type: PIN_TYPE.DIGITAL, x: 17, y: 0, side: 'top' },
+      { id: 'A4', label: '12', type: PIN_TYPE.DIGITAL, x: 34, y: 0, side: 'top' },
+      { id: 'Y4', label: '11', type: PIN_TYPE.DIGITAL, x: 51, y: 0, side: 'top' },
+      { id: 'B3', label: '10', type: PIN_TYPE.DIGITAL, x: 68, y: 0, side: 'top' },
+      { id: 'A3', label: '9', type: PIN_TYPE.DIGITAL, x: 85, y: 0, side: 'top' },
+      { id: 'Y3', label: '8', type: PIN_TYPE.DIGITAL, x: 102, y: 0, side: 'top' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const read = (id) => this._readDigitalInput(id);
+    const gates = [['A1', 'B1', 'Y1'], ['A2', 'B2', 'Y2'], ['A3', 'B3', 'Y3'], ['A4', 'B4', 'Y4']];
+    for (const [a, b, y] of gates) {
+      const outVal = read(a) | read(b);
+      this.runtimeState[y] = outVal ? 255 : 0;
+      const pn = this.getConnectedPinNum(y);
+      if (pn !== null) sim.pinStates[`pin_${pn}`] = outVal ? 255 : 0;
+    }
+  }
+  _readDigitalInput(pinId) {
+    const pn = this.getConnectedPinNum(pinId);
+    if (pn === null) return 0;
+    const val = window.ArduinoSim?.pinStates?.[`pin_${pn}`] || 0;
+    return val > 128 ? 1 : 0;
+  }
+}
+
+class IC74HC595Component extends Component {
+  getPins() {
+    return [
+      { id: 'SER', label: '14', type: PIN_TYPE.DIGITAL, x: 0, y: 50, side: 'bottom' },
+      { id: 'OE', label: '13', type: PIN_TYPE.DIGITAL, x: 17, y: 50, side: 'bottom' },
+      { id: 'SRCLR', label: '10', type: PIN_TYPE.DIGITAL, x: 34, y: 50, side: 'bottom' },
+      { id: 'SRCLK', label: '11', type: PIN_TYPE.DIGITAL, x: 51, y: 50, side: 'bottom' },
+      { id: 'RCLK', label: '12', type: PIN_TYPE.DIGITAL, x: 68, y: 50, side: 'bottom' },
+      { id: 'GND', label: '8', type: PIN_TYPE.GND, x: 102, y: 50, side: 'bottom' },
+      { id: 'VCC', label: '16', type: PIN_TYPE.POWER, x: 0, y: 0, side: 'top' },
+      { id: 'QHn', label: '9', type: PIN_TYPE.DIGITAL, x: 17, y: 0, side: 'top' },
+      { id: 'QA', label: '15', type: PIN_TYPE.DIGITAL, x: 34, y: 0, side: 'top' },
+      { id: 'QB', label: '1', type: PIN_TYPE.DIGITAL, x: 51, y: 0, side: 'top' },
+      { id: 'QC', label: '2', type: PIN_TYPE.DIGITAL, x: 68, y: 0, side: 'top' },
+      { id: 'QD', label: '3', type: PIN_TYPE.DIGITAL, x: 85, y: 0, side: 'top' },
+      { id: 'QE', label: '4', type: PIN_TYPE.DIGITAL, x: 102, y: 0, side: 'top' },
+      { id: 'QF', label: '5', type: PIN_TYPE.DIGITAL, x: 119, y: 0, side: 'top' },
+      { id: 'QG', label: '6', type: PIN_TYPE.DIGITAL, x: 136, y: 0, side: 'top' },
+      { id: 'QH', label: '7', type: PIN_TYPE.DIGITAL, x: 153, y: 0, side: 'top' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const read = (id) => this._readDigitalInput(id);
+    const write = (id, val) => {
+      const pn = this.getConnectedPinNum(id);
+      if (pn !== null) sim.pinStates[`pin_${pn}`] = val ? 255 : 0;
+    };
+
+    if (this.runtimeState._shiftReg === undefined) this.runtimeState._shiftReg = 0;
+    if (this.runtimeState._latchReg === undefined) this.runtimeState._latchReg = 0;
+    if (this.runtimeState._lastSRCLK === undefined) this.runtimeState._lastSRCLK = 0;
+    if (this.runtimeState._lastRCLK === undefined) this.runtimeState._lastRCLK = 0;
+
+    const srclk = read('SRCLK');
+    const rclk = read('RCLK');
+    const oe = read('OE');
+    const srclr = read('SRCLR');
+
+    if (srclr === 0) {
+      this.runtimeState._shiftReg = 0;
+      this.runtimeState._lastSRCLK = srclk;
+      this.runtimeState._lastRCLK = rclk;
+      return;
+    }
+
+    if (srclk === 1 && this.runtimeState._lastSRCLK === 0) {
+      const ser = read('SER');
+      this.runtimeState._shiftReg = ((this.runtimeState._shiftReg << 1) | ser) & 0xFF;
+    }
+    this.runtimeState._lastSRCLK = srclk;
+
+    if (rclk === 1 && this.runtimeState._lastRCLK === 0) {
+      this.runtimeState._latchReg = this.runtimeState._shiftReg;
+    }
+    this.runtimeState._lastRCLK = rclk;
+
+    const outputActive = oe === 0;
+    const output = outputActive ? this.runtimeState._latchReg : 0;
+    this.runtimeState.bits = output;
+
+    ['QA', 'QB', 'QC', 'QD', 'QE', 'QF', 'QG', 'QH'].forEach((pinId, i) => {
+      const bitVal = (output >> i) & 1;
+      this.runtimeState[pinId] = bitVal ? 255 : 0;
+      write(pinId, bitVal);
+    });
+  }
+  _readDigitalInput(pinId) {
+    const pn = this.getConnectedPinNum(pinId);
+    if (pn === null) return 0;
+    const val = window.ArduinoSim?.pinStates?.[`pin_${pn}`] || 0;
+    return val > 128 ? 1 : 0;
+  }
+}
+
+registerComponent(IC74HC00Component, ['ic_74hc00']);
+registerComponent(IC74HC04Component, ['ic_74hc04']);
+registerComponent(IC74HC08Component, ['ic_74hc08']);
+registerComponent(IC74HC32Component, ['ic_74hc32']);
+registerComponent(IC74HC595Component, ['ic_74hc595']);

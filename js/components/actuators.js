@@ -1946,3 +1946,207 @@ defComp({
     ctx.restore();
   }
 });
+
+/* ══════════════ CLASS-BASED ACTUATOR COMPONENTS ══════════════ */
+
+class ServoComponent extends Component {
+  getPins() {
+    return [
+      { id: 'signal', label: 'SIG', type: PIN_TYPE.PWM, x: 8, y: 50, side: 'bottom' },
+      { id: 'vcc', label: '+', type: PIN_TYPE.POWER, x: 25, y: 50, side: 'bottom' },
+      { id: 'gnd', label: '−', type: PIN_TYPE.GND, x: 42, y: 50, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    if (this.runtimeState._servoDriven) return;
+    const sigPin = this.getConnectedPinNum('signal');
+    let pwm = 0;
+    if (sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+      pwm = window.ArduinoSim.pinStates[`pin_${sigPin}`] || 0;
+    }
+    this.runtimeState.angle = Math.round((pwm / 255) * 180);
+  }
+}
+
+class ServoContinuousComponent extends Component {
+  getPins() {
+    return [
+      { id: 'signal', label: 'SIG', type: PIN_TYPE.PWM, x: 8, y: 50, side: 'bottom' },
+      { id: 'vcc', label: '+', type: PIN_TYPE.POWER, x: 25, y: 50, side: 'bottom' },
+      { id: 'gnd', label: '−', type: PIN_TYPE.GND, x: 42, y: 50, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const sigPin = this.getConnectedPinNum('signal');
+    let pwm = 0;
+    if (sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+      pwm = window.ArduinoSim.pinStates[`pin_${sigPin}`] || 0;
+    }
+    const center = 127;
+    this.runtimeState.speed = Math.max(-100, Math.min(100, Math.round(((pwm - center) / center) * 100)));
+  }
+}
+
+class RelayComponent extends Component {
+  getPins() {
+    return [
+      { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 12, y: 60, side: 'bottom' },
+      { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 24, y: 60, side: 'bottom' },
+      { id: 'sig', label: 'IN', type: PIN_TYPE.DIGITAL, x: 36, y: 60, side: 'bottom' },
+      { id: 'com', label: 'COM', type: PIN_TYPE.SIGNAL, x: 54, y: 60, side: 'bottom' },
+      { id: 'no', label: 'NO', type: PIN_TYPE.SIGNAL, x: 66, y: 60, side: 'bottom' },
+      { id: 'nc', label: 'NC', type: PIN_TYPE.SIGNAL, x: 78, y: 60, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const sigPin = this.getConnectedPinNum('sig');
+    const sigOn = sigPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates
+      ? !!window.ArduinoSim.pinStates[`pin_${sigPin}`] : false;
+    const wasActive = this.runtimeState.active;
+    this.runtimeState.active = sigOn;
+    if (wasActive !== undefined && wasActive !== sigOn) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 1200;
+        gain.gain.value = 0.15;
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+      } catch (e) {}
+    }
+  }
+}
+
+class DCMotorComponent extends Component {
+  getPins() {
+    return [
+      { id: 'in', label: 'IN', type: PIN_TYPE.PWM, x: 30, y: 100, side: 'bottom' },
+      { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 50, y: 100, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    let pwm = 0;
+    const inPin = this.getConnectedPinNum('in');
+    if (inPin !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+      pwm = window.ArduinoSim.pinStates[`pin_${inPin}`] || 0;
+    }
+    if (pwm === 0) {
+      const target = this.findConnected('in');
+      if (target && target.inst.type === 'l298n') {
+        const l298 = target.inst;
+        const pinId = target.pinId;
+        if (pinId === 'OUT1' || pinId === 'OUT2') pwm = Math.abs((l298.runtimeState?.motorA || 0)) * 255;
+        else if (pinId === 'OUT3' || pinId === 'OUT4') pwm = Math.abs((l298.runtimeState?.motorB || 0)) * 255;
+      }
+    }
+    let speed = Math.max(0, Math.min(1, (Number(pwm) || 0) / 255));
+    if (speed === 0) {
+      const source = this.getSource('in');
+      const hasGnd = this.hasGround('gnd');
+      if (hasGnd && source && source.voltage > 0) {
+        speed = Math.min(1, source.voltage / 12);
+      }
+    }
+    this.runtimeState.speed = speed;
+    this.runtimeState.rpm = Math.round(speed * 120);
+  }
+}
+
+class L298NComponent extends Component {
+  getPins() {
+    return [
+      { id: 'IN1', label: 'IN1', type: PIN_TYPE.DIGITAL, x: 10, y: 80, side: 'bottom' },
+      { id: 'IN2', label: 'IN2', type: PIN_TYPE.DIGITAL, x: 23, y: 80, side: 'bottom' },
+      { id: 'IN3', label: 'IN3', type: PIN_TYPE.DIGITAL, x: 36, y: 80, side: 'bottom' },
+      { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 50, y: 80, side: 'bottom' },
+      { id: 'IN4', label: 'IN4', type: PIN_TYPE.DIGITAL, x: 64, y: 80, side: 'bottom' },
+      { id: 'ENA', label: 'ENA', type: PIN_TYPE.PWM, x: 77, y: 80, side: 'bottom' },
+      { id: 'ENB', label: 'ENB', type: PIN_TYPE.PWM, x: 90, y: 80, side: 'bottom' },
+      { id: 'OUT1', label: 'M1+', type: PIN_TYPE.SIGNAL, x: 10, y: 0, side: 'top' },
+      { id: 'OUT2', label: 'M1-', type: PIN_TYPE.SIGNAL, x: 30, y: 0, side: 'top' },
+      { id: 'VS', label: 'VS', type: PIN_TYPE.POWER, x: 50, y: 0, side: 'top' },
+      { id: 'OUT3', label: 'M2+', type: PIN_TYPE.SIGNAL, x: 70, y: 0, side: 'top' },
+      { id: 'OUT4', label: 'M2-', type: PIN_TYPE.SIGNAL, x: 90, y: 0, side: 'top' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const readPin = (pid) => {
+      const pn = this.getConnectedPinNum(pid);
+      return pn !== null ? (sim.pinStates[`pin_${pn}`] || 0) : 0;
+    };
+    const in1 = readPin('IN1'), in2 = readPin('IN2');
+    const in3 = readPin('IN3'), in4 = readPin('IN4');
+    const ena = readPin('ENA'), enb = readPin('ENB');
+    let motorA = 0;
+    if (in1 && !in2) motorA = ena / 255;
+    else if (!in1 && in2) motorA = -(ena / 255);
+    let motorB = 0;
+    if (in3 && !in4) motorB = enb / 255;
+    else if (!in3 && in4) motorB = -(enb / 255);
+    this.runtimeState.motorA = motorA;
+    this.runtimeState.motorB = motorB;
+  }
+}
+
+class Stepper28BYJComponent extends Component {
+  getPins() {
+    return [
+      { id: 'IN1', label: 'IN1', type: PIN_TYPE.DIGITAL, x: 20, y: 100, side: 'bottom' },
+      { id: 'IN2', label: 'IN2', type: PIN_TYPE.DIGITAL, x: 40, y: 100, side: 'bottom' },
+      { id: 'IN3', label: 'IN3', type: PIN_TYPE.DIGITAL, x: 60, y: 100, side: 'bottom' },
+      { id: 'IN4', label: 'IN4', type: PIN_TYPE.DIGITAL, x: 80, y: 100, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const ps = sim.pinStates;
+    const readBit = (id) => {
+      const pn = this.getConnectedPinNum(id);
+      return pn !== null ? ((ps[`pin_${pn}`] || 0) > 0 ? 1 : 0) : 0;
+    };
+    const in1 = readBit('IN1'), in2 = readBit('IN2');
+    const in3 = readBit('IN3'), in4 = readBit('IN4');
+    const pattern = (in1) | (in2 << 1) | (in3 << 2) | (in4 << 3);
+    const prev = this.runtimeState._lastPattern ?? 0;
+    const stepAngle = 5.625 / 64;
+
+    let matched = null;
+    const pinNums = ['IN1', 'IN2', 'IN3', 'IN4']
+      .map(id => this.getConnectedPinNum(id));
+    if (sim._steppers && pinNums.every(p => p !== null)) {
+      const want = [...new Set(pinNums)].sort((a, b) => a - b).join(',');
+      for (const k in sim._steppers) {
+        const s = sim._steppers[k];
+        const have = [...new Set([s.pin1, s.pin2, s.pin3, s.pin4].filter(p => p != null))]
+          .sort((a, b) => a - b).join(',');
+        if (have === want) { matched = s; break; }
+      }
+    }
+    if (matched) {
+      if (this.runtimeState._lastPos !== undefined) {
+        const delta = matched.pos - this.runtimeState._lastPos;
+        if (delta) this.runtimeState.angle = (this.runtimeState.angle ?? 0) + delta * stepAngle;
+      }
+      this.runtimeState._lastPos = matched.pos;
+    } else if (pattern !== 0 && pattern !== prev) {
+      this.runtimeState.angle = (this.runtimeState.angle ?? 0) + stepAngle;
+    }
+    this.runtimeState._lastPattern = pattern;
+    this.runtimeState.active = pattern !== 0 || (!!matched && matched.pos !== matched.target);
+  }
+}
+
+registerComponent(ServoComponent, ['servo']);
+registerComponent(ServoContinuousComponent, ['servo_continuous']);
+registerComponent(RelayComponent, ['relay']);
+registerComponent(DCMotorComponent, ['dc_motor']);
+registerComponent(L298NComponent, ['l298n']);
+registerComponent(Stepper28BYJComponent, ['stepper_28byj']);

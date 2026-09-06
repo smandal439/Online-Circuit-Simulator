@@ -1,9 +1,6 @@
 'use strict';
 /* components/input.js — Input component definitions */
 
-/* ─── PUSH BUTTON ─── */
-
-
 /* ═══════════════════════════════════════════════════════
    4-Pin Tactile Push Button Component
    ═══════════════════════════════════════════════════════ */
@@ -705,3 +702,102 @@ defComp({
     ctx.restore();
   }
 });
+
+/* ══════════════ CLASS-BASED INPUT COMPONENTS ══════════════ */
+
+class PushButtonComponent extends Component {
+  getPins() {
+    return [
+      { id: 'p1', label: '1', type: PIN_TYPE.DIGITAL, x: 8, y: 0, side: 'top' },
+      { id: 'p2', label: '2', type: PIN_TYPE.DIGITAL, x: 32, y: 0, side: 'top' },
+      { id: 'p3', label: '3', type: PIN_TYPE.DIGITAL, x: 8, y: 40, side: 'bottom' },
+      { id: 'p4', label: '4', type: PIN_TYPE.DIGITAL, x: 32, y: 40, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const pressed = this.runtimeState.pressed;
+    const p1 = this.getConnectedPinNum('p1');
+    if (p1 !== null && window.ArduinoSim && window.ArduinoSim.pinStates) {
+      window.ArduinoSim.pinStates[`pin_${p1}`] = pressed ? 0 : 1;
+    }
+  }
+}
+
+class JoystickComponent extends Component {
+  getPins() {
+    return [
+      { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 8, y: 60, side: 'bottom' },
+      { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 20, y: 60, side: 'bottom' },
+      { id: 'x', label: 'X', type: PIN_TYPE.ANALOG, x: 32, y: 60, side: 'bottom' },
+      { id: 'y', label: 'Y', type: PIN_TYPE.ANALOG, x: 44, y: 60, side: 'bottom' },
+      { id: 'sw', label: 'SW', type: PIN_TYPE.DIGITAL, x: 56, y: 60, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const xv = this.runtimeState.x !== undefined ? this.runtimeState.x : (this.props.x || 512);
+    const yv = this.runtimeState.y !== undefined ? this.runtimeState.y : (this.props.y || 512);
+    const swPressed = this.runtimeState.sw !== undefined ? !!this.runtimeState.sw : !!(this.props.sw || 0);
+    const xPin = this.getConnectedPinNum('x');
+    const yPin = this.getConnectedPinNum('y');
+    const swPin = this.getConnectedPinNum('sw');
+    if (xPin !== null) sim.pinStates[`pin_${xPin}`] = xv;
+    if (yPin !== null) sim.pinStates[`pin_${yPin}`] = yv;
+    if (swPin !== null) sim.pinStates[`pin_${swPin}`] = swPressed ? 0 : 1;
+  }
+}
+
+class RotaryEncoderComponent extends Component {
+  getPins() {
+    return [
+      { id: 'A', label: 'A', type: PIN_TYPE.DIGITAL, x: 6, y: 50, side: 'bottom' },
+      { id: 'B', label: 'B', type: PIN_TYPE.DIGITAL, x: 16, y: 50, side: 'bottom' },
+      { id: 'SW', label: 'SW', type: PIN_TYPE.DIGITAL, x: 26, y: 50, side: 'bottom' },
+      { id: 'GND', label: 'GND', type: PIN_TYPE.GND, x: 36, y: 50, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const position = this.runtimeState?.position ?? this.props.position ?? 0;
+    const pressed = this.runtimeState?.pressed ?? this.props.pressed ?? false;
+    const aPin = this.getConnectedPinNum('A');
+    const bPin = this.getConnectedPinNum('B');
+    const swPin = this.getConnectedPinNum('SW');
+    if (aPin !== null) sim.pinStates[`pin_${aPin}`] = Math.abs(position) % 2;
+    if (bPin !== null) sim.pinStates[`pin_${bPin}`] = Math.abs(Math.floor(position / 2)) % 2;
+    if (swPin !== null) sim.pinStates[`pin_${swPin}`] = pressed ? 0 : 1;
+  }
+}
+
+class DipSwitchComponent extends Component {
+  getPins() {
+    return [
+      { id: '1', label: '1', type: PIN_TYPE.DIGITAL, x: 12, y: 60, side: 'bottom' },
+      { id: '2', label: '2', type: PIN_TYPE.DIGITAL, x: 28, y: 60, side: 'bottom' },
+      { id: '3', label: '3', type: PIN_TYPE.DIGITAL, x: 44, y: 60, side: 'bottom' },
+      { id: '4', label: '4', type: PIN_TYPE.DIGITAL, x: 60, y: 60, side: 'bottom' },
+      { id: '5', label: '5', type: PIN_TYPE.DIGITAL, x: 76, y: 60, side: 'bottom' },
+      { id: '6', label: '6', type: PIN_TYPE.DIGITAL, x: 92, y: 60, side: 'bottom' },
+      { id: '7', label: '7', type: PIN_TYPE.DIGITAL, x: 108, y: 60, side: 'bottom' },
+      { id: '8', label: '8', type: PIN_TYPE.DIGITAL, x: 124, y: 60, side: 'bottom' },
+    ];
+  }
+  update(canvas) {
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return;
+    const switches = this.runtimeState?.switches ?? this.props.switches ?? 0;
+    for (let i = 0; i < 8; i++) {
+      const pinNum = this.getConnectedPinNum(String(i + 1));
+      if (pinNum !== null) {
+        sim.pinStates[`pin_${pinNum}`] = (switches >> i) & 1 ? 1 : 0;
+      }
+    }
+  }
+}
+
+registerComponent(PushButtonComponent, ['push_button']);
+registerComponent(JoystickComponent, ['joystick']);
+registerComponent(RotaryEncoderComponent, ['rotary_encoder']);
+registerComponent(DipSwitchComponent, ['dip_switch']);
