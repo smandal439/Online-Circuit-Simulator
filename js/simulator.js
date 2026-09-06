@@ -277,7 +277,10 @@ class ArduinoSimulator {
     js = js.replace(/\bbyte\s+(?=[a-zA-Z_])/g, 'var ');
     js = js.replace(/\bString\s+/g, 'var ');
 
-    // 9c. Map Arduino API calls
+    // 9c. Map Arduino API calls to _a.* (provided by buildContext + plugins)
+    // Standard C math (sin, cos, atan2, sqrt, etc.) is mapped by the regex
+    // rules in Section 4 to Math.*. Only Arduino-specific and plugin-provided
+    // functions that need _a.* prefix are listed here.
     const API = [
       ['delay', '_a.delay'],
       ['delayMicroseconds', '_a.delayMicroseconds'],
@@ -298,20 +301,10 @@ class ArduinoSimulator {
       ['ntpEpoch', '_a.ntpEpoch'],
       ['map', '_a.map'],
       ['constrain', '_a.constrain'],
-      ['abs', 'Math.abs'],
       ['min', '_a.min'],
       ['max', '_a.max'],
-      ['sqrt', 'Math.sqrt'],
-      ['pow', 'Math.pow'],
-      ['sin', 'Math.sin'],
-      ['cos', 'Math.cos'],
-      ['tan', 'Math.tan'],
-      ['floor', 'Math.floor'],
-      ['ceil', 'Math.ceil'],
-      ['round', 'Math.round'],
-      ['isnan', 'Number.isNaN'],
-      ['isinf', '!Number.isFinite'],
-      ['isfinite', 'Number.isFinite'],
+      ['sin8', '_a.sin8'],
+      ['cos8', '_a.cos8'],
       ['shiftIn', '_a.shiftIn'],
       ['shiftOut', '_a.shiftOut'],
       ['bitRead', '_a.bitRead'],
@@ -322,6 +315,7 @@ class ArduinoSimulator {
       ['lowByte', '_a.lowByte'],
       ['highByte', '_a.highByte'],
       ['sensorValue', '_a.sensorValue'],
+      ['digitalPinToInterrupt', '_a.digitalPinToInterrupt'],
       // ESP32 APIs
       ['ledcSetup', '_a.ledcSetup'],
       ['ledcSetupChannel', '_a.ledcSetupChannel'],
@@ -576,41 +570,7 @@ class ArduinoSimulator {
         /* NTP — returns current UTC epoch seconds from the browser clock */
         ntpEpoch() { return Math.floor(Date.now() / 1000); },
 
-        /* Math helpers */
-        map(val, inMin, inMax, outMin, outMax) {
-          if (inMax === inMin) return outMin;
-          return (val - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-        },
-        constrain(val, lo, hi) { return Math.max(lo, Math.min(hi, val)); },
-        random(minOrMax, max) {
-          if (max === undefined) {
-            const hi = Math.floor(Number(minOrMax) || 0);
-            if (hi <= 0) return 0;
-            return Math.floor(Math.random() * hi);
-          }
-          const lo = Math.floor(Number(minOrMax) || 0);
-          const hi = Math.floor(Number(max) || 0);
-          if (hi <= lo) return lo;
-          return Math.floor(Math.random() * (hi - lo)) + lo;
-        },
-        randomSeed(seed) { /* Can't set Math.random seed in JS easily */ },
-        min(a, b) { return Math.min(a, b); },
-        max(a, b) { return Math.max(a, b); },
-        // FastLED / NeoPixel 8-bit sine helper: sin8(0..255) → 0..255
-        sin8(x) { return Math.round(128 + 127 * Math.sin(((x & 0xFF) / 256) * 2 * Math.PI)); },
-
-        /* Bit operations */
-        bitRead(val, bit) { return (val >> bit) & 1; },
-        bitWrite(val, bit, bv) { return bv ? val | (1 << bit) : val & ~(1 << bit); },
-        bitSet(val, bit) { return val | (1 << bit); },
-        bitClear(val, bit) { return val & ~(1 << bit); },
-        bit(b) { return 1 << b; },
-        lowByte(val) { return val & 0xFF; },
-        highByte(val) { return (val >> 8) & 0xFF; },
-
-        /* Shift in/out */
-        shiftIn(dataPin, clockPin, bitOrder) { return 0; }, // stub
-        shiftOut(dataPin, clockPin, bitOrder, val) { }, // stub
+        /* Math, bit operations, shift — provided by js/libraries/math.js plugin */
 
         /* Interactive sensor widgets (sliders on the canvas).
            Reads a value from a placed sensor component by instance id or type.
@@ -788,16 +748,14 @@ class ArduinoSimulator {
       // Nano-only analog pins (ADC6/ADC7, no digital I/O on real hardware)
       ...(this.board === 'arduino_nano' ? { A6: 20, A7: 21 } : {}),
       LED_BUILTIN: this.board === 'esp32_devkit_v1' ? 2 : 13,
-      PI: Math.PI, TWO_PI: Math.PI * 2, HALF_PI: Math.PI / 2,
-      DEG_TO_RAD: Math.PI / 180, RAD_TO_DEG: 180 / Math.PI,
-      MSBFIRST: 1, LSBFIRST: 0,
-      BYTE: 0, WORD: 1,
+      // Math constants (PI, TWO_PI, HALF_PI, DEG_TO_RAD, RAD_TO_DEG, etc.)
+      // are provided by js/libraries/math.js plugin
       // ESP32 Wi-Fi constants
       WIFI_STA: 1, WIFI_AP: 2, WIFI_AP_STA: 3,
       WL_CONNECTED: 3, WL_DISCONNECTED: 6,
       HTTP_CODE_OK: 200, HTTP_CODE_NOT_FOUND: 404,
       portMAX_DELAY: 0xFFFFFFFF,
-      NULL: null,
+      // NULL is provided by js/libraries/math.js plugin
       // ESP32 I2S driver constants
       I2S_NUM_0: 0, I2S_NUM_1: 1,
       I2S_MODE_MASTER: 1, I2S_MODE_SLAVE: 2,
