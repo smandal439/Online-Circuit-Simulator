@@ -1546,7 +1546,7 @@ window.loadExamplesFromFiles = async function () {
     'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo','neopixel_8x8_matrix_rainbow_2',
     'neopixel_8x8_matrix_rainbow_3',
     'opamp_741_non_inverting', 'vl53l0x_proximity_sensor', 'esp32_i2s_music_player',
-    'esp32_i2s_local_radio_player', 'lcd','read_rfid_card_raw_data','lcd_print_remotely'];
+    'esp32_i2s_local_radio_player', 'lcd','read_rfid_card_raw_data','lcd_print_remotely','rfid_inventory_tracker'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {

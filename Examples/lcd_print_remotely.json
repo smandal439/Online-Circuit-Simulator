@@ -4,10 +4,10 @@
   "icon": "🔧",
   "desc": "A custom LCD PRINT REMOTELY circuit example.",
   "tags": [
-    "LCD",
-    "I2C",
-    "REMOTE",
-    "SERIAL"
+    "cld",
+    "i2c",
+    "remote",
+    "serial"    
   ],
   "circuit": {
     "components": [
