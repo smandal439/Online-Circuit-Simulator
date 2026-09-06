@@ -119,6 +119,20 @@ class ArduinoSimulator {
     js = js.replace(/\bconst\s+let\b/g, 'let');
     js = js.replace(/\bconst\s+var\b/g, 'var');
 
+    // C++ std math functions → JavaScript Math.*
+    js = js.replace(/\batan2\s*\(/g, 'Math.atan2(');
+    js = js.replace(/\bsqrt\s*\(/g, 'Math.sqrt(');
+    js = js.replace(/\babs\s*\(/g, 'Math.abs(');
+    js = js.replace(/\bpow\s*\(/g, 'Math.pow(');
+    js = js.replace(/\bsin\s*\(/g, 'Math.sin(');
+    js = js.replace(/\bcos\s*\(/g, 'Math.cos(');
+    js = js.replace(/\btan\s*\(/g, 'Math.tan(');
+    js = js.replace(/\bround\s*\(/g, 'Math.round(');
+    js = js.replace(/\bfloor\s*\(/g, 'Math.floor(');
+    js = js.replace(/\bceil\s*\(/g, 'Math.ceil(');
+    // Bare PI constant → Math.PI (word boundary so "Serial" etc. unchanged)
+    js = js.replace(/\bPI\b/g, 'Math.PI');
+
     // Object-style library declarations:
     // Servo myServo;  →  let myServo = new Servo();
     // LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  →  let lcd = new LiquidCrystal(12, 11, 5, 4, 3, 2);
@@ -582,6 +596,8 @@ class ArduinoSimulator {
         randomSeed(seed) { /* Can't set Math.random seed in JS easily */ },
         min(a, b) { return Math.min(a, b); },
         max(a, b) { return Math.max(a, b); },
+        // FastLED / NeoPixel 8-bit sine helper: sin8(0..255) → 0..255
+        sin8(x) { return Math.round(128 + 127 * Math.sin(((x & 0xFF) / 256) * 2 * Math.PI)); },
 
         /* Bit operations */
         bitRead(val, bit) { return (val >> bit) & 1; },
