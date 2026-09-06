@@ -1,0 +1,80 @@
+{
+  "id": "neopixel_8x8_matrix_rainbow_4",
+  "name": "NeoPixel 8x8 Matrix Rainbow 4",
+  "icon": "🔧",
+  "desc": "A custom NeoPixel 8x8 Matrix Rainbow 4 circuit example.",
+  "tags": [
+    "custom",
+    "circuit",
+    "neopixel",
+    "rainbow",
+    "pattern"
+  ],
+  "circuit": {
+    "components": [
+      {
+        "id": "comp_arduino_01",
+        "type": "arduino_uno",
+        "x": -60,
+        "y": -10,
+        "rotation": 0,
+        "props": {
+          "label": "UNO"
+        }
+      },
+      {
+        "id": "comp_neopixel_matrix_01",
+        "type": "neopixel_8x8_matrix",
+        "x": 280,
+        "y": -30,
+        "rotation": 0,
+        "props": {
+          "brightness": 1,
+          "pixels": null
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "wire_5v",
+        "from": {
+          "instId": "comp_neopixel_matrix_01",
+          "pinId": "5V"
+        },
+        "to": {
+          "instId": "comp_arduino_01",
+          "pinId": "5V2"
+        },
+        "color": "#ff0000",
+        "waypoints": []
+      },
+      {
+        "id": "wire_gnd",
+        "from": {
+          "instId": "comp_neopixel_matrix_01",
+          "pinId": "GND"
+        },
+        "to": {
+          "instId": "comp_arduino_01",
+          "pinId": "GND3"
+        },
+        "color": "#000000",
+        "waypoints": []
+      },
+      {
+        "id": "wire_din",
+        "from": {
+          "instId": "comp_neopixel_matrix_01",
+          "pinId": "DIN"
+        },
+        "to": {
+          "instId": "comp_arduino_01",
+          "pinId": "D6"
+        },
+        "color": "#00cc00",
+        "waypoints": []
+      }
+    ]
+  },
+  "code": "#include <Adafruit_NeoPixel.h>\r\n\r\n#define MATRIX_PIN 6\r\n#define MATRIX_SIZE 64\r\n\r\nAdafruit_NeoPixel matrix(MATRIX_SIZE, MATRIX_PIN,\r\n                         NEO_GRB + NEO_KHZ800);\r\n\r\nuint16_t offset = 0;\r\nuint8_t pattern = 0;\r\n\r\nvoid setup() {\r\n  Serial.begin(115200);\r\n\r\n  matrix.begin();\r\n  matrix.setBrightness(60);\r\n  matrix.show();\r\n}\r\n\r\nvoid loop() {\r\n\r\n  for (int i = 0; i < MATRIX_SIZE; i++) {\r\n\r\n    int row = i / 8;\r\n    int col = i % 8;\r\n\r\n    uint16_t hue;\r\n\r\n    if (pattern == 0) {\r\n      // Horizontal\r\n      hue = offset + col * 8192;\r\n    }\r\n\r\n    else if (pattern == 1) {\r\n      // Vertical\r\n      hue = offset + row * 8192;\r\n    }\r\n\r\n    else if (pattern == 2) {\r\n      // Diagonal\r\n      hue = offset + (row + col) * 4000;\r\n    }\r\n\r\n    else if (pattern == 3) {\r\n      // Circular\r\n      float dx = col - 3.5;\r\n      float dy = row - 3.5;\r\n\r\n      float angle = atan2(dy, dx);\r\n\r\n      hue = (uint16_t)(\r\n        (angle + PI) * 65535.0 / (2.0 * PI)\r\n      );\r\n\r\n      hue += offset;\r\n    }\r\n\r\n    else {\r\n      // Plasma\r\n      uint8_t w1 = sin8(col * 32 + offset / 4);\r\n      uint8_t w2 = sin8(row * 32 + offset / 3);\r\n      uint8_t w3 = sin8((row + col) * 32 + offset / 5);\r\n\r\n      hue = offset +\r\n            (uint16_t)w1 * 128 +\r\n            (uint16_t)w2 * 128 +\r\n            (uint16_t)w3 * 128;\r\n    }\r\n\r\n    matrix.setPixelColor(\r\n      i,\r\n      matrix.ColorHSV(hue, 255, 255)\r\n    );\r\n  }\r\n\r\n  matrix.show();\r\n\r\n  offset += 300;\r\n  delay(30);\r\n\r\n  // Change pattern every ~10 seconds\r\n  static unsigned long lastChange = 0;\r\n\r\n  if (millis() - lastChange > 10000) {\r\n    lastChange = millis();\r\n\r\n    pattern++;\r\n\r\n    if (pattern > 4) {\r\n      pattern = 0;\r\n    }\r\n\r\n    Serial.print(\"Rainbow Pattern: \");\r\n    Serial.println(pattern);\r\n  }\r\n}"
+}

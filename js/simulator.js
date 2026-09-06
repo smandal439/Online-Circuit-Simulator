@@ -129,7 +129,7 @@ class ArduinoSimulator {
     // Adafruit_ILI9341 tft(CS, DC, MOSI, SCK, RESET);  →  let tft = new Adafruit_ILI9341(CS, DC, MOSI, SCK, RESET);
     js = js.replace(/\b(Servo|LiquidCrystal|LiquidCrystal_I2C|WiFiClient|PubSubClient|WebServer|Adafruit_SSD1306|Adafruit_ILI9341|SimpleBME280|Adafruit_VL53L0X|DHT)\s+(\w+)\s*(?:\(([^)]*)\))?\s*;/g, 'let $2 = new $1($3)');
     // Adafruit_VL53L0X lox = Adafruit_VL53L0X();  →  let lox = new Adafruit_VL53L0X();
-    js = js.replace(/\b(Adafruit_VL53L0X)\s+(\w+)\s*=\s*\1\s*\(([^)]*)\)\s*;/g, function (_, t, n, a) { return 'let ' + n + ' = new ' + t + '(' + a + ')'; });
+    js = js.replace(/\b(Adafruit_VL53L0X)\s+(\w+)\s*=\s*\1\s*\(([^)]*)\)\s*;?/g, function (_, t, n, a) { return 'let ' + n + ' = new ' + t + '(' + a + ');'; });
 
     // Plugin-provided class constructors
     const plugins = this._getPlugins();
@@ -1580,7 +1580,7 @@ window.loadExamplesFromFiles = async function () {
     'max7219', 'ili9341', 'astable_555', 'neopixel_strip_chase', 'ir_obstacle_led',
     'l298n_dc_motor', 'servo_continuous_spin', 'rotary_encoder_counter', 'print_binary_data',
     'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo',
-    'neopixel_8x8_matrix_rainbow_2', 'neopixel_8x8_matrix_rainbow_3',
+    'neopixel_8x8_matrix_rainbow_2', 'neopixel_8x8_matrix_rainbow_3','neopixel_8x8_matrix_rainbow_4',
     'opamp_741_non_inverting', 'vl53l0x_proximity_sensor', 'esp32_i2s_music_player',
     'esp32_i2s_local_radio_player', 'lcd', 'read_rfid_card_raw_data', 'lcd_print_remotely',
     'rfid_inventory_tracker'];
