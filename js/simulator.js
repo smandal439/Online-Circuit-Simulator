@@ -113,6 +113,8 @@ class ArduinoSimulator {
 
     // C++ pointer dereference: stream->method() → stream.method()
     js = js.replace(/->/g, '.');
+    // C++ address-of in function args: func(&var) → func(var)
+    js = js.replace(/([,(]\s*)&(\w+)/g, '$1$2');
     // Re-clean const after pointer rule may have introduced 'const var'
     js = js.replace(/\bconst\s+let\b/g, 'let');
     js = js.replace(/\bconst\s+var\b/g, 'var');
@@ -796,7 +798,30 @@ class ArduinoSimulator {
       /* Servo/LCD class stubs */
       Servo: function () { return {}; },
 
+      /* VL53L0X ToF distance sensor stub — reads distance from placed component */
+      Adafruit_VL53L0X: function () {
+        return {
+          begin() { return true; },
+          rangingTest(measure, verbose) {
+            const canvas = window.CircuitCanvas;
+            const inst = canvas && canvas.components.find(c => c.type === 'vl53l0x');
+            if (inst) {
+              const dist = inst.runtimeState?.distance ?? inst.props?.distance ?? 100;
+              measure.RangeMilliMeter = dist;
+              measure.RangeStatus = dist > 0 ? 0 : 4;
+            } else {
+              measure.RangeMilliMeter = 0;
+              measure.RangeStatus = 4;
+            }
+          },
+        };
+      },
 
+      /* VL53L0X measurement data struct — used as VL53L0X_RangingMeasurementData_t measure; */
+      VL53L0X_RangingMeasurementData_t: function () {
+        this.RangeStatus = 4;
+        this.RangeMilliMeter = 0;
+      },
 
       /* Library stubs (instances) */
       Wire: { begin() { }, requestFrom() { return 0; }, beginTransmission() { }, endTransmission() { return 0; }, write() { return 1; }, read() { return 0; }, available() { return 0; } },
