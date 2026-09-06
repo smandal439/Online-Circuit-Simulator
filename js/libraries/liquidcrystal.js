@@ -74,16 +74,18 @@ window.ArduinoLibs['LiquidCrystal'] = {
           self._serialLog('[WebServer] HTTP server started on port ' + cfg.port + '\n', 'system');
           return;
         }
-        if (varName && varName.__oled) { self._emitEvent('oled_power', { on: true }); return; }
+        if (varName && varName.__oled) { if (varName.begin) varName.begin(cols, rows); return; }
         if (varName && varName.__vl53l0x) { return varName.begin(); }
         if (varName && varName.__tft) { self._emitEvent('tft_power', { on: true }); return; }
         self._emitEvent('lcd_power', { on: true });
       },
       lcdSetCursor: function(varName, col, row) {
+        if (varName && varName.__oled) { if (varName.setCursor) varName.setCursor(col, row); return; }
         if (varName && varName.__tft) { self._tftCursor = { col: Number(col) || 0, row: Number(row) || 0 }; return; }
         setCursor(varName, { col: Number(col) || 0, row: Number(row) || 0 });
       },
       lcdPrint: function(varName, val, decimals) {
+        if (varName && varName.__oled) { if (varName.print) varName.print(val); return; }
         if (varName && varName._ssId) {
           var ch = self._softSerial && self._softSerial[varName._ssId];
           if (ch) self._serialLog(String(val) + '\n', 'data');
@@ -104,17 +106,12 @@ window.ArduinoLibs['LiquidCrystal'] = {
           return;
         }
         var cursor = getCursor(varName);
-        if (varName && varName.__oled) {
-          var os = self._oledTextSize || 1;
-          self._emitEvent('oled_draw', { op: 'print', text: text, cursor: { col: cursor.col, row: cursor.row }, size: os, color: self._oledTextColor === 0 ? 0 : 1 });
-          setCursor(varName, { col: cursor.col + text.length * 6 * os, row: cursor.row });
-          return;
-        }
         self._emitEvent('lcd_print', { text: text, cursor: { col: cursor.col, row: cursor.row } });
         var dims = getDims(varName);
         setCursor(varName, advanceCursor(cursor, text.length, dims));
       },
       lcdPrintln: function(varName, val, decimals) {
+        if (varName && varName.__oled) { if (varName.println) varName.println(val); return; }
         if (varName && varName._ssId) {
           var ch = self._softSerial && self._softSerial[varName._ssId];
           if (ch) self._serialLog(String(val) + '\n', 'data');
@@ -136,7 +133,7 @@ window.ArduinoLibs['LiquidCrystal'] = {
           if (np) np.pixels.fill(0);
           return;
         }
-        if (varName && varName.__oled) { self._emitEvent('oled_draw', { op: 'clear' }); return; }
+        if (varName && varName.__oled) { self._emitEvent('oled_draw', { op: 'clear', addr: varName.addr || 0x3C }); return; }
         if (varName && varName.__tft) { self._emitEvent('tft_draw', { op: 'fillScreen', color: 0x0000 }); return; }
         self._emitEvent('lcd_clear', {});
         setCursor(varName, { col: 0, row: 0 });

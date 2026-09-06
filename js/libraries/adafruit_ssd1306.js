@@ -1,46 +1,23 @@
 // js/libraries/adafruit_ssd1306.js — Adafruit_SSD1306 128×64 OLED I2C plugin
+//
+// Strategy: Only transpile SSD1306-SPECIFIC methods (.clearDisplay, .display, etc.)
+// that have no overlap with LCD/GFX. All inherited Adafruit_GFX methods (.print,
+// .setCursor, .drawPixel, etc.) are implemented as real JS methods on the object
+// returned by the constructor. This avoids the transpiler hijacking lcd.print() etc.
 window.ArduinoLibs = window.ArduinoLibs || {};
 window.ArduinoLibs['Adafruit_SSD1306'] = {
+  priority: 101,
   classes: ['Adafruit_SSD1306'],
   includes: ['<Adafruit_SSD1306.h>'],
 
+  // Only SSD1306-SPECIFIC methods that no other plugin defines.
+  // Shared methods (.print, .setCursor, .drawPixel, etc.) live on the constructor object.
   transpile: [
-    // --- SSD1306-specific methods ---
-    [/(\w+)\.begin\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledBegin(' + v + ', ' + a + ')'; }],
     [/(\w+)\.clearDisplay\s*\(\s*\)/g, function (m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledClearDisplay(' + v + ')'; }],
     [/(\w+)\.display\s*\(\s*\)/g, function (m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledFlush(' + v + ')'; }],
     [/(\w+)\.invertDisplay\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledInvertDisplay(' + v + ', ' + a + ')'; }],
     [/(\w+)\.dim\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledDim(' + v + ', ' + a + ')'; }],
     [/(\w+)\.setContrast\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledSetContrast(' + v + ', ' + a + ')'; }],
-
-    // --- Adafruit_GFX inherited drawing methods ---
-    [/(\w+)\.drawPixel\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledDrawPixel(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.drawLine\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledDrawLine(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.drawFastHLine\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledDrawFastHLine(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.drawFastVLine\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledDrawFastVLine(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.drawRect\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledDrawRect(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.fillRect\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledFillRect(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.fillScreen\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledFillScreen(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.drawCircle\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledDrawCircle(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.fillCircle\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledFillCircle(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.drawTriangle\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledDrawTriangle(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.fillTriangle\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledFillTriangle(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.drawRoundRect\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledDrawRoundRect(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.fillRoundRect\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledFillRoundRect(' + v + ', ' + a + ')'; }],
-
-    // --- Adafruit_GFX inherited text methods ---
-    [/(\w+)\.setCursor\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.oledSetCursor(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.setTextColor\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.oledSetTextColor(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.setTextSize\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.oledSetTextSize(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.setTextWrap\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.oledSetTextWrap(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.setRotation\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.oledSetRotation(' + v + ', ' + a + ')'; }],
-    // --- print / println (exclude Serial, Wire, etc.) ---
-    [/(\w+)\.print\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledPrint(' + v + ', ' + a + ')'; }],
-    [/(\w+)\.println\s*\(([^)]*)\)/g, function (m, v, a) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1)$/i.test(v)) return m; return '_a.oledPrintln(' + v + ', ' + a + ')'; }],
-    // --- width / height / getRotation ---
-    [/(\w+)\.width\s*\(\s*\)/g, function (m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.oledWidth(' + v + ')'; }],
-    [/(\w+)\.height\s*\(\s*\)/g, function (m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '_a.oledHeight(' + v + ')'; }],
-    [/(\w+)\.getRotation\s*\(\s*\)/g, function (m, v) { if (/^(Serial|Wire|SPI|EEPROM|WiFi|client|http|stream|server|SoftwareSerial|Serial2|Serial1|dht)$/i.test(v)) return m; return '0'; }],
   ],
 
   constants: {
@@ -54,113 +31,97 @@ window.ArduinoLibs['Adafruit_SSD1306'] = {
   },
 
   constructor: function (width, height, wire, reset) {
-    return { __oled: true, width: width || 128, height: height || 64, wire: wire, reset: reset, addr: 0x3C };
+    // Lazily grab `self` from the runtime once it's available.
+    // By the time user code calls methods, the runtime has set _simSelf.
+    function getSelf() {
+      return window.ArduinoLibs['Adafruit_SSD1306']._simSelf || null;
+    }
+
+    var _addr = 0x3C;
+    var _cursorX = 0, _cursorY = 0;
+    var _textSize = 1, _textColor = 1, _textWrap = true;
+
+    function emit(data) {
+      var s = getSelf();
+      if (s) s._emitEvent('oled_draw', data);
+    }
+
+    return {
+      __oled: true,
+      addr: _addr,
+      _w: width || 128,
+      _h: height || 64,
+      wire: wire,
+      reset: reset,
+
+      // --- Adafruit_GFX inherited methods (no transpile needed) ---
+
+      begin: function (mode, addr) {
+        if (addr !== undefined) _addr = Number(addr) || 0x3C;
+        this.addr = _addr;
+        var s = getSelf();
+        if (s) s._emitEvent('oled_power', { addr: _addr });
+      },
+
+      print: function (msg) {
+        var text = String(msg !== undefined ? msg : '');
+        emit({ op: 'print', text: text, cursor: { col: _cursorX, row: _cursorY }, size: _textSize, color: _textColor, addr: _addr });
+        _cursorX += text.length * 6 * _textSize;
+      },
+
+      println: function (msg) {
+        var text = String(msg !== undefined ? msg : '');
+        emit({ op: 'print', text: text, cursor: { col: _cursorX, row: _cursorY }, size: _textSize, color: _textColor, addr: _addr });
+        _cursorX = 0;
+        _cursorY += 8 * _textSize;
+      },
+
+      setCursor: function (x, y) { _cursorX = Number(x) || 0; _cursorY = Number(y) || 0; },
+      setTextColor: function (fg, bg) { _textColor = fg !== undefined ? Number(fg) : 1; },
+      setTextSize: function (s) { _textSize = Number(s) || 1; },
+      setTextWrap: function (w) { _textWrap = !!w; },
+      setRotation: function (r) { /* ignored for 128×64 mono */ },
+
+      drawPixel: function (x, y, color) { emit({ op: 'pixel', x: Number(x) || 0, y: Number(y) || 0, color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      drawLine: function (x0, y0, x1, y1, color) { emit({ op: 'line', x0: Number(x0), y0: Number(y0), x1: Number(x1), y1: Number(y1), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      drawFastHLine: function (x, y, w, color) { emit({ op: 'line', x0: Number(x), y0: Number(y), x1: (Number(x) || 0) + (Number(w) || 0) - 1, y1: Number(y), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      drawFastVLine: function (x, y, h, color) { emit({ op: 'line', x0: Number(x), y0: Number(y), x1: Number(x), y1: (Number(y) || 0) + (Number(h) || 0) - 1, color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      drawRect: function (x, y, w, h, color) { emit({ op: 'rect', x: Number(x), y: Number(y), w: Number(w), h: Number(h), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      fillRect: function (x, y, w, h, color) { emit({ op: 'fillRect', x: Number(x), y: Number(y), w: Number(w), h: Number(h), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      fillScreen: function (color) { emit({ op: 'fillScreen', color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      drawCircle: function (cx, cy, r, color) { emit({ op: 'circle', x: Number(cx), y: Number(cy), r: Number(r), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      fillCircle: function (cx, cy, r, color) { emit({ op: 'fillCircle', x: Number(cx), y: Number(cy), r: Number(r), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      drawTriangle: function (x0, y0, x1, y1, x2, y2, color) { emit({ op: 'triangle', x0: Number(x0), y0: Number(y0), x1: Number(x1), y1: Number(y1), x2: Number(x2), y2: Number(y2), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      fillTriangle: function (x0, y0, x1, y1, x2, y2, color) { emit({ op: 'fillTriangle', x0: Number(x0), y0: Number(y0), x1: Number(x1), y1: Number(y1), x2: Number(x2), y2: Number(y2), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      drawRoundRect: function (x, y, w, h, r, color) { emit({ op: 'roundRect', x: Number(x), y: Number(y), w: Number(w), h: Number(h), r: Number(r), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+      fillRoundRect: function (x, y, w, h, r, color) { emit({ op: 'fillRoundRect', x: Number(x), y: Number(y), w: Number(w), h: Number(h), r: Number(r), color: color !== undefined ? Number(color) : 1, addr: _addr }); },
+
+      width: function () { return this._w || 128; },
+      height: function () { return this._h || 64; },
+      getRotation: function () { return 0; },
+    };
   },
 
   runtime: function (self) {
-    var _oledCursor = { x: 0, y: 0 };
-    var _oledTextSize = 1;
-    var _oledTextColor = SSD1306_WHITE || 1;
-    var _oledTextWrap = true;
-
-    function emit(addr, data) { self._emitEvent('oled_draw', data); }
+    // Expose self so constructor-created methods can emit events
+    window.ArduinoLibs['Adafruit_SSD1306']._simSelf = self;
 
     return {
-      oledBegin: function (v, mode, addr) {
-        if (addr !== undefined) v.addr = Number(addr) || 0x3C;
-        self._emitEvent('oled_power', { addr: v.addr });
-      },
       oledClearDisplay: function (v) {
-        emit(v.addr, { op: 'clear', addr: v.addr });
+        self._emitEvent('oled_draw', { op: 'clear', addr: v.addr || 0x3C });
       },
       oledFlush: function (v) {
-        // In the simulator, framebuffer updates are immediate — no-op
+        // Framebuffer updates are immediate in the simulator — no-op
       },
       oledInvertDisplay: function (v, flag) {
-        emit(v.addr, { op: 'invert', invert: !!flag, addr: v.addr });
+        self._emitEvent('oled_draw', { op: 'invert', invert: !!flag, addr: v.addr || 0x3C });
       },
       oledDim: function (v, flag) {
-        emit(v.addr, { op: 'dim', dimmed: !!flag, addr: v.addr });
+        self._emitEvent('oled_draw', { op: 'dim', dimmed: !!flag, addr: v.addr || 0x3C });
       },
       oledSetContrast: function (v, val) {
-        emit(v.addr, { op: 'contrast', contrast: Number(val) || 0, addr: v.addr });
+        self._emitEvent('oled_draw', { op: 'contrast', contrast: Number(val) || 0, addr: v.addr || 0x3C });
       },
-
-      // --- Drawing ---
-      oledDrawPixel: function (v, x, y, color) {
-        emit(v.addr, { op: 'pixel', x: Number(x) || 0, y: Number(y) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledDrawLine: function (v, x0, y0, x1, y1, color) {
-        emit(v.addr, { op: 'line', x0: Number(x0) || 0, y0: Number(y0) || 0, x1: Number(x1) || 0, y1: Number(y1) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledDrawFastHLine: function (v, x, y, w, color) {
-        emit(v.addr, { op: 'line', x0: Number(x) || 0, y0: Number(y) || 0, x1: (Number(x) || 0) + (Number(w) || 0) - 1, y1: Number(y) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledDrawFastVLine: function (v, x, y, h, color) {
-        emit(v.addr, { op: 'line', x0: Number(x) || 0, y0: Number(y) || 0, x1: Number(x) || 0, y1: (Number(y) || 0) + (Number(h) || 0) - 1, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledDrawRect: function (v, x, y, w, h, color) {
-        emit(v.addr, { op: 'rect', x: Number(x) || 0, y: Number(y) || 0, w: Number(w) || 0, h: Number(h) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledFillRect: function (v, x, y, w, h, color) {
-        emit(v.addr, { op: 'fillRect', x: Number(x) || 0, y: Number(y) || 0, w: Number(w) || 0, h: Number(h) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledFillScreen: function (v, color) {
-        emit(v.addr, { op: 'fillScreen', color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledDrawCircle: function (v, cx, cy, r, color) {
-        emit(v.addr, { op: 'circle', x: Number(cx) || 0, y: Number(cy) || 0, r: Number(r) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledFillCircle: function (v, cx, cy, r, color) {
-        emit(v.addr, { op: 'fillCircle', x: Number(cx) || 0, y: Number(cy) || 0, r: Number(r) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledDrawTriangle: function (v, x0, y0, x1, y1, x2, y2, color) {
-        emit(v.addr, { op: 'triangle', x0: Number(x0) || 0, y0: Number(y0) || 0, x1: Number(x1) || 0, y1: Number(y1) || 0, x2: Number(x2) || 0, y2: Number(y2) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledFillTriangle: function (v, x0, y0, x1, y1, x2, y2, color) {
-        emit(v.addr, { op: 'fillTriangle', x0: Number(x0) || 0, y0: Number(y0) || 0, x1: Number(x1) || 0, y1: Number(y1) || 0, x2: Number(x2) || 0, y2: Number(y2) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledDrawRoundRect: function (v, x, y, w, h, r, color) {
-        emit(v.addr, { op: 'roundRect', x: Number(x) || 0, y: Number(y) || 0, w: Number(w) || 0, h: Number(h) || 0, r: Number(r) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-      oledFillRoundRect: function (v, x, y, w, h, r, color) {
-        emit(v.addr, { op: 'fillRoundRect', x: Number(x) || 0, y: Number(y) || 0, w: Number(w) || 0, h: Number(h) || 0, r: Number(r) || 0, color: color !== undefined ? Number(color) : 1, addr: v.addr });
-      },
-
-      // --- Text ---
-      oledSetCursor: function (v, x, y) {
-        _oledCursor.x = Number(x) || 0;
-        _oledCursor.y = Number(y) || 0;
-      },
-      oledSetTextColor: function (v, fg, bg) {
-        _oledTextColor = fg !== undefined ? Number(fg) : 1;
-      },
-      oledSetTextSize: function (v, s) {
-        _oledTextSize = Number(s) || 1;
-      },
-      oledSetTextWrap: function (v, w) {
-        _oledTextWrap = !!w;
-      },
-      oledSetRotation: function (v, r) {
-        // Store rotation but ignore for 128×64 monochrome
-      },
-      oledPrint: function (v, msg) {
-        var text = String(msg !== undefined ? msg : '');
-        emit(v.addr, { op: 'print', text: text, cursor: { col: _oledCursor.x, row: _oledCursor.y }, size: _oledTextSize, color: _oledTextColor, addr: v.addr });
-        // Advance cursor by text width
-        var charW = 6 * _oledTextSize;
-        _oledCursor.x += text.length * charW;
-      },
-      oledPrintln: function (v, msg) {
-        var text = String(msg !== undefined ? msg : '');
-        emit(v.addr, { op: 'print', text: text, cursor: { col: _oledCursor.x, row: _oledCursor.y }, size: _oledTextSize, color: _oledTextColor, addr: v.addr });
-        // Advance to next line
-        _oledCursor.x = 0;
-        _oledCursor.y += 8 * _oledTextSize;
-      },
-
-      oledWidth: function (v) { return v.width || 128; },
-      oledHeight: function (v) { return v.height || 64; },
     };
   },
 };

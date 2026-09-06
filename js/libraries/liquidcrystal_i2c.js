@@ -51,17 +51,20 @@ window.ArduinoLibs['LiquidCrystal_I2C'] = {
 
     return {
       lcdBegin: function (varName, cols, rows) {
+        if (varName && varName.__oled) { if (varName.begin) varName.begin(cols, rows); return; }
+        if (varName && varName.__tft) { self._emitEvent('tft_power', { on: true }); return; }
         if (cols) varName.cols = Number(cols);
         if (rows) varName.rows = Number(rows);
-        if (varName && varName.__tft) { self._emitEvent('tft_power', { on: true }); return; }
         self._emitEvent('lcd_power', { addr: varName.addr });
       },
       lcdSetCursor: function (varName, col, row) {
+        if (varName && varName.__oled) { if (varName.setCursor) varName.setCursor(col, row); return; }
         if (varName && varName.__tft) { self._tftCursor = { col: Number(col) || 0, row: Number(row) || 0 }; return; }
         if (!self._lcdCursors) self._lcdCursors = {};
         self._lcdCursors[varName.addr] = { col: Number(col) || 0, row: Number(row) || 0 };
       },
       lcdPrint: function (varName, val, decimals) {
+        if (varName && varName.__oled) { if (varName.print) varName.print(val); return; }
         var text = formatText(val, decimals);
         if (!self._lcdCursors) self._lcdCursors = {};
         var cursor = self._lcdCursors[varName.addr] || { col: 0, row: 0 };
@@ -70,6 +73,7 @@ window.ArduinoLibs['LiquidCrystal_I2C'] = {
         self._lcdCursors[varName.addr] = advanceCursor(cursor, text.length, dims);
       },
       lcdPrintln: function (varName, val, decimals) {
+        if (varName && varName.__oled) { if (varName.println) varName.println(val); return; }
         var text = formatText(val, decimals);
         if (!self._lcdCursors) self._lcdCursors = {};
         var cursor = self._lcdCursors[varName.addr] || { col: 0, row: 0 };
@@ -78,15 +82,18 @@ window.ArduinoLibs['LiquidCrystal_I2C'] = {
         self._lcdCursors[varName.addr] = { col: 0, row: (cursor.row + 1) % dims.rows };
       },
       lcdClear: function (varName) {
+        if (varName && varName.__oled) { self._emitEvent('oled_draw', { op: 'clear', addr: varName.addr || 0x3C }); return; }
         self._emitEvent('lcd_clear', { addr: varName.addr });
         if (!self._lcdCursors) self._lcdCursors = {};
         self._lcdCursors[varName.addr] = { col: 0, row: 0 };
       },
       lcdHome: function (varName) {
+        if (varName && varName.__oled) { if (varName.setCursor) varName.setCursor(0, 0); return; }
         if (!self._lcdCursors) self._lcdCursors = {};
         self._lcdCursors[varName.addr] = { col: 0, row: 0 };
       },
       lcdWrite: function (varName, val) {
+        if (varName && varName.__oled) { if (varName.print) varName.print(val); return; }
         var text = typeof val === 'number' ? String.fromCharCode(val) : String(val);
         if (!self._lcdCursors) self._lcdCursors = {};
         var cursor = self._lcdCursors[varName.addr] || { col: 0, row: 0 };
@@ -95,9 +102,11 @@ window.ArduinoLibs['LiquidCrystal_I2C'] = {
         self._lcdCursors[varName.addr] = advanceCursor(cursor, text.length, dims);
       },
       lcdBacklight: function (varName, state) {
+        if (varName && varName.__oled) { return; }
         self._emitEvent('lcd_backlight', { backlight: Boolean(state), addr: varName.addr });
       },
       lcdCreateChar: function (varName, location, charmap) {
+        if (varName && varName.__oled) { return; }
         self._emitEvent('lcd_create_char', { location: Number(location), charmap: charmap, addr: varName.addr });
       }
     };
