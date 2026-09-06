@@ -83,12 +83,8 @@ class Component {
    */
   update(canvas) { }
 
-  /**
-   * Visual rendering — called each frame.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {Object|null} sim — simulator instance (null when stopped)
-   */
-  render(ctx, sim) { }
+  // No default render() — subclasses that need custom drawing override this.
+  // Components without render() fall back to def.draw() in the renderer.
 
   /** Serialize current state for project save */
   serialize() {
