@@ -156,7 +156,7 @@ class CircuitCanvas {
   }
 
   _drawComponents(ctx) {
-    const { COMPONENT_DEFS } = window.ArduinoComponents;
+    const { COMPONENT_DEFS, getComponentClass } = window.ArduinoComponents;
     const sim = window.ArduinoSim;
 
     for (const inst of this.components) {
@@ -176,7 +176,13 @@ class CircuitCanvas {
         ctx.translate(-cx, -cy);
       }
 
-      def.draw(ctx, { ...inst }, sim?.isRunning ? sim : null);
+      // Prefer class-based render() over def.draw()
+      const CompClass = getComponentClass(inst.type);
+      if (CompClass && typeof inst._componentInstance === 'object' && typeof inst._componentInstance.render === 'function') {
+        inst._componentInstance.render(ctx, sim?.isRunning ? sim : null);
+      } else {
+        def.draw(ctx, { ...inst }, sim?.isRunning ? sim : null);
+      }
 
       // Draw pins
       if (this.zoom >= 0.5) {
@@ -2252,7 +2258,21 @@ class CircuitCanvas {
 
   // Update component display based on simulation state and circuit electrical paths
   updateSimState(pinStates) {
+    const { getComponentClass } = window.ArduinoComponents;
+
     for (const inst of this.components) {
+      // ── Class-based component: delegate to update() ──
+      const CompClass = getComponentClass(inst.type);
+      if (CompClass) {
+        if (!inst._componentInstance || inst._componentInstance.type !== inst.type) {
+          inst._componentInstance = new CompClass(inst);
+        }
+        inst._componentInstance.canvas = this;
+        inst._componentInstance.update(this);
+        continue; // skip legacy switch/case
+      }
+
+      // ── Legacy defComp() fallback ──
       switch (inst.type) {
         case 'led':
         case 'led_green':

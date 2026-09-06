@@ -40,13 +40,162 @@ const C = {
 };
 
 /* ══════════════════════════════════════════════════════
-   COMPONENT DEFINITIONS REGISTRY
+   COMPONENT BASE CLASS & REGISTRY
+   ══════════════════════════════════════════════════════ */
+
+/**
+ * Component — base class for all circuit components.
+ *
+ * Every component type should extend this class and override
+ * the standard lifecycle methods. This replaces the giant
+ * switch/case in canvas.js with a clean, maintainable pattern.
+ *
+ * Lifecycle:
+ *   1. constructor(props)  — initial state
+ *   2. getPins()           — pin definitions
+ *   3. update(canvas)      — electrical simulation (called each frame)
+ *   4. render(ctx, sim)    — visual rendering (called each frame)
+ *   5. serialize()         — save state to JSON
+ *   6. deserialize(state)  — restore state from JSON
+ */
+class Component {
+  /**
+   * @param {Object} instance — the circuit instance { id, type, x, y, props, runtimeState }
+   */
+  constructor(instance) {
+    this.inst = instance;
+    this.id = instance.id;
+    this.type = instance.type;
+    this.props = instance.props || {};
+    this.runtimeState = instance.runtimeState || {};
+    /** @type {CircuitCanvas} Set by the canvas before update/render */
+    this.canvas = null;
+  }
+
+  /* ── Standard interface (override in subclasses) ── */
+
+  /** Return pin definitions: [{ id, label, type, x, y, side }] */
+  getPins() { return []; }
+
+  /**
+   * Electrical simulation — called each frame while running.
+   * @param {CircuitCanvas} canvas — access to wires, _tracePinNet, _getConnectedPinNum, etc.
+   */
+  update(canvas) { }
+
+  /**
+   * Visual rendering — called each frame.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {Object|null} sim — simulator instance (null when stopped)
+   */
+  render(ctx, sim) { }
+
+  /** Serialize current state for project save */
+  serialize() {
+    return {
+      id: this.id,
+      type: this.type,
+      x: this.inst.x,
+      y: this.inst.y,
+      rotation: this.inst.rotation || 0,
+      props: { ...this.props },
+      runtimeState: { ...this.runtimeState },
+    };
+  }
+
+  /** Restore state from serialized data */
+  deserialize(state) {
+    if (state.props) this.props = state.props;
+    if (state.runtimeState) this.runtimeState = state.runtimeState;
+    if (state.x !== undefined) this.inst.x = state.x;
+    if (state.y !== undefined) this.inst.y = state.y;
+    if (state.rotation !== undefined) this.inst.rotation = state.rotation;
+  }
+
+  /* ── Convenience helpers for subclasses ── */
+
+  /** Read a connected Arduino pin number. Returns null if not connected. */
+  getConnectedPinNum(pinId) {
+    if (window.CircuitCanvas && typeof window.CircuitCanvas._getConnectedPinNum === 'function') {
+      return window.CircuitCanvas._getConnectedPinNum(this.id, pinId);
+    }
+    return null;
+  }
+
+  /** Trace a pin's net to find voltage sources and ground paths. */
+  tracePinNet(pinId, excludeTypes) {
+    if (window.CircuitCanvas && typeof window.CircuitCanvas._tracePinNet === 'function') {
+      return window.CircuitCanvas._tracePinNet(this.id, pinId, excludeTypes);
+    }
+    return { sources: [], grounds: [] };
+  }
+
+  /** Read pin state from the simulator. */
+  readPin(pinId) {
+    const pinNum = this.getConnectedPinNum(pinId);
+    if (pinNum === null) return 0;
+    const sim = window.ArduinoSim;
+    if (!sim || !sim.pinStates) return 0;
+    return sim.pinStates[`pin_${pinNum}`] || 0;
+  }
+
+  /** Write a value to a connected Arduino pin. */
+  writePin(pinId, value) {
+    const pinNum = this.getConnectedPinNum(pinId);
+    if (pinNum === null) return;
+    const sim = window.ArduinoSim;
+    if (sim && sim.pinStates) {
+      sim.pinStates[`pin_${pinNum}`] = value;
+    }
+  }
+
+  /** Find components wired to a specific pin of this component. */
+  findConnected(pinId, type) {
+    const results = [];
+    if (!window.CircuitCanvas) return results;
+    const canvas = window.CircuitCanvas;
+    for (const w of canvas.wires) {
+      let otherInstId;
+      if (w.from.instId === this.id && w.from.pinId === pinId) {
+        otherInstId = w.to.instId;
+      } else if (w.to.instId === this.id && w.to.pinId === pinId) {
+        otherInstId = w.from.instId;
+      } else {
+        continue;
+      }
+      const comp = canvas.components.find(c => c.id === otherInstId);
+      if (comp && (!type || comp.type === type)) results.push(comp);
+    }
+    return results;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   COMPONENT REGISTRY — maps type → class
    ══════════════════════════════════════════════════════ */
 
 const COMPONENT_DEFS = {};
+const COMPONENT_CLASSES = {};
 
 function defComp(def) {
   COMPONENT_DEFS[def.id] = def;
+}
+
+/** Register a Component subclass for a given type id. */
+function registerComponent(typeId, ComponentClass) {
+  COMPONENT_CLASSES[typeId] = ComponentClass;
+}
+
+/** Get the Component class for a type id, or null. */
+function getComponentClass(typeId) {
+  return COMPONENT_CLASSES[typeId] || null;
+}
+
+/** Create a Component instance from a circuit instance object. */
+function createComponent(inst) {
+  const Cls = COMPONENT_CLASSES[inst.type];
+  if (Cls) return new Cls(inst);
+  return null;
 }
 
 /* ═══════════════ HELPER DRAWING FUNCTIONS ═══════════════ */
@@ -249,7 +398,9 @@ const COMPONENT_CATALOG = [
 
 /* Export */
 window.ArduinoComponents = {
+  Component,
   COMPONENT_DEFS,
+  COMPONENT_CLASSES,
   COMPONENT_CATALOG,
   GRID,
   PIN_TYPE,
@@ -259,4 +410,7 @@ window.ArduinoComponents = {
   hexToRgba,
   resistorBands,
   formatResistance,
+  registerComponent,
+  getComponentClass,
+  createComponent,
 };

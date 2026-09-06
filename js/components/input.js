@@ -220,6 +220,111 @@ defComp({
   }
 });
 
+/* ═══════════════════════════════════════════════════════
+   Potentiometer Component Class — standard interface
+   ═══════════════════════════════════════════════════════ */
+class PotentiometerComponent extends Component {
+  getPins() {
+    return [
+      { id: 'vcc', label: 'VCC', type: PIN_TYPE.POWER, x: 8, y: 60, side: 'bottom' },
+      { id: 'wiper', label: 'OUT', type: PIN_TYPE.ANALOG, x: 25, y: 60, side: 'bottom' },
+      { id: 'gnd', label: 'GND', type: PIN_TYPE.GND, x: 42, y: 60, side: 'bottom' },
+    ];
+  }
+
+  update(canvas) {
+    const vccNet = this.tracePinNet('vcc');
+    const gndNet = this.tracePinNet('gnd');
+    const hasGnd = gndNet.grounds.length > 0;
+
+    if (vccNet.sources.length > 0 && hasGnd) {
+      const src = vccNet.sources[0];
+      const val = this.runtimeState.value !== undefined ? this.runtimeState.value : (this.props.value || 512);
+      const maxVal = this.props.maxValue || 1023;
+      const ratio = Math.max(0, Math.min(1, val / maxVal));
+      const outVoltage = src.voltage * ratio;
+      const adcVal = Math.round((outVoltage / 5.0) * 1023);
+      this.runtimeState.wiper = adcVal;
+      this.writePin('wiper', adcVal);
+    }
+  }
+
+  render(ctx, sim) {
+    drawPotentiometer(ctx, this.inst, sim);
+  }
+}
+
+// Helper draw function for potentiometer
+function drawPotentiometer(ctx, inst, sim) {
+  const { x, y } = inst;
+  const val = (inst.runtimeState && inst.runtimeState.value !== undefined) ? inst.runtimeState.value : (inst.props.value || 512);
+  const pct = val / (inst.props.maxValue || 1023);
+  const angle = -2.2 + pct * 4.4;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1.5;
+  [[8, 60], [25, 60], [42, 60]].forEach(([px, py]) => {
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px, 46);
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = '#2a2a2a';
+  roundRect(ctx, 2, 5, 46, 42, 5);
+  ctx.fill();
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(25, 26, 16, -Math.PI * 0.8 + Math.PI * 0.5, Math.PI * 0.8 + Math.PI * 0.5);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#00979c';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  const startA = -Math.PI * 0.8 + Math.PI * 0.5;
+  ctx.arc(25, 26, 16, startA, startA + pct * Math.PI * 1.6);
+  ctx.stroke();
+
+  ctx.fillStyle = '#444';
+  ctx.beginPath();
+  ctx.arc(25, 26, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#666';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(25, 26);
+  ctx.lineTo(25 + Math.sin(angle) * 8, 26 - Math.cos(angle) * 8);
+  ctx.stroke();
+
+  ctx.fillStyle = '#aaa';
+  ctx.font = 'bold 7px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(val, 25, 10);
+
+  ctx.fillStyle = '#888';
+  ctx.font = '6px sans-serif';
+  ctx.fillText('V', 8, 56);
+  ctx.fillText('W', 25, 56);
+  ctx.fillText('G', 42, 56);
+
+  if (inst.selected) drawSelectionRect(ctx, -3, 2, 56, 65);
+  ctx.restore();
+}
+
+registerComponent('potentiometer', PotentiometerComponent);
+
 /* ─── Joystick ─── */
 defComp({
   id: 'joystick',

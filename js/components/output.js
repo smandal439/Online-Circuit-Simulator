@@ -210,6 +210,98 @@ defComp({
   draw(ctx, inst, sim) { drawLED(ctx, inst, sim); }
 });
 
+/* ═══════════════════════════════════════════════════════
+   LED Component Class — standard interface demonstration
+   Migrates simulation logic from canvas.js switch/case
+   ═══════════════════════════════════════════════════════ */
+class LEDComponent extends Component {
+  getPins() {
+    return [
+      { id: 'anode', label: '+', type: PIN_TYPE.PWM, x: 15, y: 0, side: 'top' },
+      { id: 'cathode', label: '−', type: PIN_TYPE.GND, x: 15, y: 60, side: 'bottom' },
+    ];
+  }
+
+  update(canvas) {
+    const anodeNet = canvas._tracePinNet(this.id, 'anode');
+    const cathodeNet = canvas._tracePinNet(this.id, 'cathode');
+
+    const hasGround = cathodeNet.grounds.length > 0;
+    const bestSource = anodeNet.sources.sort((a, b) => b.voltage - a.voltage)[0] || null;
+
+    if (!hasGround || !bestSource || bestSource.voltage <= 0) {
+      this.runtimeState.val = 0;
+      this.runtimeState.lit = false;
+      this.runtimeState.brightness = 0;
+      this.runtimeState.current_mA = 0;
+      this.runtimeState.overload = false;
+      this.runtimeState.blown = false;
+      this.runtimeState._warnedBlown = false;
+    } else {
+      const bestGround = cathodeNet.grounds.sort((a, b) => a.resistance - b.resistance)[0];
+      const rTotal = Math.max(10, (bestSource.resistance || 0) + (bestGround.resistance || 0) + 25);
+      const vSource = bestSource.voltage;
+      const vf = 2.0;
+      const rawVal = bestSource.rawVal;
+      const isPWM = bestSource.type === 'digital' && rawVal > 1 && rawVal < 255;
+
+      if (isPWM) {
+        const frac = rawVal / 255;
+        const normBrightness = Math.max(0, Math.min(1.0, Math.pow(frac, 0.8)));
+        this.runtimeState.val = rawVal;
+        this.runtimeState.lit = normBrightness > 0.02;
+        this.runtimeState.brightness = normBrightness;
+        this.runtimeState.current_mA = vSource >= vf ? ((vSource - vf) / rTotal) * 1000 : 0;
+      } else if (vSource < vf) {
+        this.runtimeState.val = 0;
+        this.runtimeState.lit = false;
+        this.runtimeState.brightness = 0;
+        this.runtimeState.current_mA = 0;
+      } else {
+        const i_mA = ((vSource - vf) / rTotal) * 1000;
+        this.runtimeState.current_mA = i_mA;
+        const normBrightness = Math.max(0, Math.min(1.0, Math.pow(i_mA / 14.0, 0.55)));
+        this.runtimeState.val = rawVal;
+        this.runtimeState.lit = normBrightness > 0.02;
+        this.runtimeState.brightness = normBrightness;
+      }
+
+      const iLed = this.runtimeState.current_mA || 0;
+      this.runtimeState.overload = iLed > 20;
+      this.runtimeState.blown = iLed > 40;
+
+      if (this.runtimeState.blown) {
+        this.runtimeState.lit = false;
+        this.runtimeState.brightness = 0;
+        this.runtimeState.val = 0;
+        if (!this.runtimeState._warnedBlown) {
+          this.runtimeState._warnedBlown = true;
+          if (window.OutputPanel) {
+            window.OutputPanel.log(
+              `LED (${this.id}) is over-current (~${Math.round(iLed)} mA) without a current-limiting resistor and has blown! Add a 220Ω resistor in series.`,
+              'warn'
+            );
+          }
+        }
+      } else {
+        this.runtimeState._warnedBlown = false;
+      }
+    }
+  }
+
+  render(ctx, sim) {
+    drawLED(ctx, this.inst, sim);
+  }
+}
+
+// Register LED variants with the component registry
+registerComponent('led', LEDComponent);
+registerComponent('led_green', LEDComponent);
+registerComponent('led_blue', LEDComponent);
+registerComponent('led_yellow', LEDComponent);
+registerComponent('led_orange', LEDComponent);
+registerComponent('led_white', LEDComponent);
+
 /* ---------------------------------- Multi-Color LED Array------------------------------ */
 // defComp({
 //   id: 'multi_led_array',
