@@ -114,6 +114,31 @@ class Component {
 
   /* ── Convenience helpers for subclasses ── */
 
+  /** Get the electrical engine instance. */
+  get engine() {
+    return this.canvas?.engine || window.CircuitCanvas?.engine || null;
+  }
+
+  /** Get the net for a specific pin of this component. */
+  getNet(pinId) {
+    return this.engine?.getNetForPin(this.id, pinId) || null;
+  }
+
+  /** Get voltage at a pin of this component. */
+  getVoltage(pinId) {
+    return this.engine?.getVoltageAtPin(this.id, pinId) || 0;
+  }
+
+  /** Get the best voltage source at a pin. */
+  getSource(pinId) {
+    return this.engine?.getSourceAtPin(this.id, pinId) || null;
+  }
+
+  /** Check if a pin has a ground path. */
+  hasGround(pinId) {
+    return this.engine?.hasGroundAtPin(this.id, pinId) || false;
+  }
+
   /** Read a connected Arduino pin number. Returns null if not connected. */
   getConnectedPinNum(pinId) {
     if (window.CircuitCanvas && typeof window.CircuitCanvas._getConnectedPinNum === 'function') {

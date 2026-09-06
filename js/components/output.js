@@ -223,13 +223,11 @@ class LEDComponent extends Component {
   }
 
   update(canvas) {
-    const anodeNet = canvas._tracePinNet(this.id, 'anode');
-    const cathodeNet = canvas._tracePinNet(this.id, 'cathode');
+    // Use new ElectricalEngine API
+    const source = this.getSource('anode');
+    const hasGnd = this.hasGround('cathode');
 
-    const hasGround = cathodeNet.grounds.length > 0;
-    const bestSource = anodeNet.sources.sort((a, b) => b.voltage - a.voltage)[0] || null;
-
-    if (!hasGround || !bestSource || bestSource.voltage <= 0) {
+    if (!hasGnd || !source || source.voltage <= 0) {
       this.runtimeState.val = 0;
       this.runtimeState.lit = false;
       this.runtimeState.brightness = 0;
@@ -238,12 +236,11 @@ class LEDComponent extends Component {
       this.runtimeState.blown = false;
       this.runtimeState._warnedBlown = false;
     } else {
-      const bestGround = cathodeNet.grounds.sort((a, b) => a.resistance - b.resistance)[0];
-      const rTotal = Math.max(10, (bestSource.resistance || 0) + (bestGround.resistance || 0) + 25);
-      const vSource = bestSource.voltage;
+      const rTotal = Math.max(10, (source.resistance || 0) + 25);
+      const vSource = source.voltage;
       const vf = 2.0;
-      const rawVal = bestSource.rawVal;
-      const isPWM = bestSource.type === 'digital' && rawVal > 1 && rawVal < 255;
+      const rawVal = source.rawVal;
+      const isPWM = source.type === 'digital' && rawVal > 1 && rawVal < 255;
 
       if (isPWM) {
         const frac = rawVal / 255;

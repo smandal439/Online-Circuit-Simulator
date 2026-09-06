@@ -17,6 +17,9 @@ class CircuitCanvas {
     this.selectedWire = null;
     this._hasStandalonePower = false;
 
+    /* Electrical engine */
+    this.engine = new ElectricalEngine();
+
     /* Viewport */
     this.panX = 0;
     this.panY = 0;
@@ -2066,6 +2069,8 @@ class CircuitCanvas {
     // Detect standalone power sources so DMM/function-gen update without running Arduino sketch
     const standaloneTypes = new Set(['power_5v', 'power_gnd', 'mb102_power', 'bench_power_supply', 'func_gen']);
     this._hasStandalonePower = this.components.some(c => standaloneTypes.has(c.type));
+    // Rebuild electrical graph
+    this.engine.buildGraph(this.components, this.wires);
     if (this.onCompChanged) this.onCompChanged();
   }
 
@@ -2259,6 +2264,9 @@ class CircuitCanvas {
   // Update component display based on simulation state and circuit electrical paths
   updateSimState(pinStates) {
     const { getComponentClass } = window.ArduinoComponents;
+
+    // Solve electrical graph first
+    this.engine.solve(this);
 
     for (const inst of this.components) {
       // ── Class-based component: delegate to update() ──

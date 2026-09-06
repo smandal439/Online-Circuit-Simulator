@@ -233,16 +233,14 @@ class PotentiometerComponent extends Component {
   }
 
   update(canvas) {
-    const vccNet = this.tracePinNet('vcc');
-    const gndNet = this.tracePinNet('gnd');
-    const hasGnd = gndNet.grounds.length > 0;
+    const source = this.getSource('vcc');
+    const hasGnd = this.hasGround('gnd');
 
-    if (vccNet.sources.length > 0 && hasGnd) {
-      const src = vccNet.sources[0];
+    if (source && hasGnd) {
       const val = this.runtimeState.value !== undefined ? this.runtimeState.value : (this.props.value || 512);
       const maxVal = this.props.maxValue || 1023;
       const ratio = Math.max(0, Math.min(1, val / maxVal));
-      const outVoltage = src.voltage * ratio;
+      const outVoltage = source.voltage * ratio;
       const adcVal = Math.round((outVoltage / 5.0) * 1023);
       this.runtimeState.wiper = adcVal;
       this.writePin('wiper', adcVal);
