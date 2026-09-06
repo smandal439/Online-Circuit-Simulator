@@ -715,12 +715,12 @@ defComp({
   name: 'Arduino Nano R3',
   category: 'Boards',
   icon: '🎛️',
-  desc: 'ATmega328P board — same chip as the Uno in a compact breadboard-friendly form factor',
+  desc: 'ATmega328P board — standard breadboard-friendly form factor',
   width: 230,
   height: 80,
   defaultProps: { label: 'NANO' },
   pins: [
-    // Top Row (Standard Pinout)
+    // Top Row (D13 to VIN)
     { id:'D13', label:'D13', type:PIN_TYPE.DIGITAL, x: 15, y: 12, side:'top' },
     { id:'3V3', label:'3V3', type:PIN_TYPE.POWER,   x: 29, y: 12, side:'top' },
     { id:'REF', label:'REF', type:PIN_TYPE.SIGNAL,  x: 43, y: 12, side:'top' },
@@ -737,7 +737,7 @@ defComp({
     { id:'GND1',label:'GND', type:PIN_TYPE.GND,     x:197, y: 12, side:'top' },
     { id:'VIN', label:'VIN', type:PIN_TYPE.POWER,   x:211, y: 12, side:'top' },
 
-    // Bottom Row (Standard Pinout)
+    // Bottom Row (TX0 to D12)
     { id:'TX0', label:'TX',  type:PIN_TYPE.SIGNAL,  x: 15, y: 68, side:'bottom' },
     { id:'RX0', label:'RX',  type:PIN_TYPE.SIGNAL,  x: 29, y: 68, side:'bottom' },
     { id:'RST2',label:'RST', type:PIN_TYPE.SIGNAL,  x: 43, y: 68, side:'bottom' },
@@ -760,66 +760,367 @@ defComp({
     ctx.save();
     ctx.translate(x, y);
 
-    // PCB body (classic Nano blue)
-    const grad = ctx.createLinearGradient(0, 0, W, H);
-    grad.addColorStop(0, '#1565a7');
-    grad.addColorStop(0.5, '#1b78c2');
-    grad.addColorStop(1, '#0f4f85');
-    ctx.fillStyle = grad;
-    roundRect(ctx, 0, 0, W, H, 6);
+    // --- 1. PCB BOARD (Authentic Arduino Teal/Blue Matte Finish) ---
+    const pcbGrad = ctx.createLinearGradient(0, 0, W, H);
+    pcbGrad.addColorStop(0, '#00878a');
+    pcbGrad.addColorStop(0.5, '#007376');
+    pcbGrad.addColorStop(1, '#005457');
+    ctx.fillStyle = pcbGrad;
+    roundRect(ctx, 0, 0, W, H, 5);
     ctx.fill();
-    ctx.strokeStyle = '#08304f';
-    ctx.lineWidth = 1.5;
+
+    // Board Outline / Edge bevel
+    ctx.strokeStyle = '#003a3c';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
 
-    // Silkscreen frame
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1;
-    roundRect(ctx, 3, 3, W - 6, H - 6, 5);
+    // Silkscreen Inner Framing Line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 0.8;
+    roundRect(ctx, 3, 3, W - 6, H - 6, 4);
     ctx.stroke();
 
-    // ATmega328P chip (centered)
-    ctx.fillStyle = '#151515';
-    roundRect(ctx, 85, 26, 60, 24, 3);
-    ctx.fill();
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    // --- 2. SOLDER PADS & SILKSCREEN LABELS FOR PINS ---
+    const topLabels = ['D13','3V3','REF','A0','A1','A2','A3','A4','A5','A6','A7','5V','RST','GND','VIN'];
+    const botLabels = ['TX','RX','RST','GND','D2','D3','D4','D5','D6','D7','D8','D9','D10','D11','D12'];
 
-    // Chip pin notches
-    ctx.fillStyle = '#333';
-    for (let i = 0; i < 7; i++) {
-      ctx.fillRect(88 + i * 8, 23, 4, 3);
-      ctx.fillRect(88 + i * 8, 50, 4, 3);
+    for (let i = 0; i < 15; i++) {
+      const px = 15 + i * 14;
+
+      // Top Pin Pad
+      drawPinPad(ctx, px, 12);
+      // Top Label
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 6px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(topLabels[i], px, 21);
+
+      // Bottom Pin Pad
+      drawPinPad(ctx, px, 68);
+      // Bottom Label
+      ctx.fillText(botLabels[i], px, 62);
     }
-    ctx.fillStyle = '#cccccc';
-    ctx.font = 'bold 7px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('ATmega328P', 115, 36);
-    ctx.fillText('16 MHz', 115, 44);
 
-    // Mini-USB connector (left edge)
-    ctx.fillStyle = '#b8bcc2';
-    roundRect(ctx, 2, 30, 16, 16, 2);
+    // --- 3. MINI-USB CONNECTOR (Left Edge) ---
+    // Outer Shield
+    const usbGrad = ctx.createLinearGradient(0, 26, 0, 54);
+    usbGrad.addColorStop(0, '#e0e2e5');
+    usbGrad.addColorStop(0.5, '#a3a8b0');
+    usbGrad.addColorStop(1, '#6b7078');
+    ctx.fillStyle = usbGrad;
+    roundRect(ctx, 0, 28, 20, 24, 2);
     ctx.fill();
-    ctx.strokeStyle = '#7d8288';
+    ctx.strokeStyle = '#4a4e54';
+    ctx.lineWidth = 0.8;
     ctx.stroke();
 
-    // Built-in LEDs near D13 corner
-    const lit = sim && sim.pinStates && sim.pinStates.D13;
-    drawLED_on_board(ctx, 30, 14, lit ? '#ffee33' : '#555', 3);
-    drawLED_on_board(ctx, 42, 14, '#ff4d4d', 2.5);
+    // USB Port Opening
+    ctx.fillStyle = '#1c1e21';
+    roundRect(ctx, 0, 33, 14, 14, 1);
+    ctx.fill();
 
-    // Board label
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    // Internal Plastic Tongue
+    ctx.fillStyle = '#3a3d42';
+    ctx.fillRect(0, 38, 10, 4);
+
+    // USB Mounting Solder Tabs
+    ctx.fillStyle = '#b5b9c0';
+    ctx.fillRect(14, 25, 4, 3);
+    ctx.fillRect(14, 52, 4, 3);
+
+    // --- 4. RESET BUTTON ---
+    ctx.fillStyle = '#3a3d40';
+    roundRect(ctx, 28, 33, 12, 14, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+
+    // Silver Button Cap & Plunger
+    ctx.fillStyle = '#c5c9ce';
+    ctx.beginPath();
+    ctx.arc(34, 40, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(34, 40, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- 5. ATMEGA328P IC (Center TQFP-32 Package) ---
+    const chipX = 125;
+    const chipY = 40;
+    const chipS = 22;
+
+    // Chip Pins (8 on each of the 4 sides)
+    ctx.fillStyle = '#b0b5bc';
+    for (let i = 0; i < 6; i++) {
+      const offset = -7.5 + i * 3;
+      // Top & Bottom pins
+      ctx.fillRect(chipX + offset - 0.7, chipY - chipS/2 - 2.5, 1.4, 3);
+      ctx.fillRect(chipX + offset - 0.7, chipY + chipS/2 - 0.5, 1.4, 3);
+      // Left & Right pins
+      ctx.fillRect(chipX - chipS/2 - 2.5, chipY + offset - 0.7, 3, 1.4);
+      ctx.fillRect(chipX + chipS/2 - 0.5, chipY + offset - 0.7, 3, 1.4);
+    }
+
+    // Main Plastic Chip Body
+    const chipGrad = ctx.createLinearGradient(chipX - 11, chipY - 11, chipX + 11, chipY + 11);
+    chipGrad.addColorStop(0, '#2a2d32');
+    chipGrad.addColorStop(1, '#15171a');
+    ctx.fillStyle = chipGrad;
+    roundRect(ctx, chipX - chipS/2, chipY - chipS/2, chipS, chipS, 2);
+    ctx.fill();
+
+    // Pin 1 Indicator Dot
+    ctx.fillStyle = '#555';
+    ctx.beginPath();
+    ctx.arc(chipX - 7, chipY - 7, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Chip Markings
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.font = 'bold 5px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('MEGA328P', chipX, chipY - 1);
+    ctx.fillText('-AU', chipX, chipY + 6);
+
+    // --- 6. 16 MHz CRYSTAL RESONATOR ---
+    ctx.fillStyle = '#d0d4d9';
+    roundRect(ctx, 95, 35, 14, 10, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#7a7e85';
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+    ctx.fillStyle = '#555';
+    ctx.font = 'bold 4.5px sans-serif';
+    ctx.fillText('16.000', 102, 41);
+
+    // --- 7. VOLTAGE REGULATOR (AMS1117-5.0 SOT-223) ---
+    ctx.fillStyle = '#1c1e21';
+    roundRect(ctx, 168, 33, 12, 14, 1);
+    ctx.fill();
+    // Metal Heat Tab
+    ctx.fillStyle = '#b0b5bc';
+    ctx.fillRect(166, 36, 2, 8);
+    // 3 Pins
+    ctx.fillRect(180, 34, 2.5, 2);
+    ctx.fillRect(180, 39, 2.5, 2);
+    ctx.fillRect(180, 44, 2.5, 2);
+
+    // --- 8. STATUS LEDs (ON, L, TX, RX) ---
+    const isD13Lit = sim && sim.pinStates && (sim.pinStates.D13 || sim.pinStates.pin_13);
+
+    // Power LED (Green)
+    drawSMD_LED(ctx, 48, 28, '#22ff44', true, 'ON');
+    // Pin 13 LED (Yellow/Amber)
+    drawSMD_LED(ctx, 48, 40, '#ffaa00', isD13Lit, 'L');
+    // TX LED
+    drawSMD_LED(ctx, 48, 49, '#ffaa00', false, 'TX');
+    // RX LED
+    drawSMD_LED(ctx, 48, 58, '#ffaa00', false, 'RX');
+
+    // --- 9. PASSIVE COMPONENTS (SMD Resistors & Capacitors) ---
+    drawSMD_Component(ctx, 62, 33, '#a57548'); // Tan Capacitor
+    drawSMD_Component(ctx, 62, 42, '#333333'); // Black Resistor
+    drawSMD_Component(ctx, 62, 50, '#333333'); // Black Resistor
+    drawSMD_Component(ctx, 72, 36, '#a57548'); // Tan Capacitor
+    drawSMD_Component(ctx, 72, 46, '#a57548'); // Tan Capacitor
+    drawSMD_Component(ctx, 150, 35, '#333333');
+    drawSMD_Component(ctx, 150, 45, '#a57548');
+
+    // --- 10. 2x3 ICSP HEADER (Right Edge) ---
+    ctx.fillStyle = '#1a1a1a';
+    roundRect(ctx, 192, 31, 14, 18, 1);
+    ctx.fill();
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 3; c++) {
+        ctx.fillStyle = '#d4af37'; // Gold pins
+        ctx.beginPath();
+        ctx.arc(195 + c * 4, 35 + r * 10, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // --- 11. SILKSCREEN BRANDING TEXT ---
+    ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 9px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(inst.props.label || 'NANO', W - 6, H - 6);
+    ctx.textAlign = 'center';
+    ctx.fillText('Arduino', 82, 28);
+    ctx.font = '8px sans-serif';
+    ctx.fillText('NANO', 82, 57);
+
+    ctx.font = 'bold 5px sans-serif';
+    ctx.fillText('ICSP', 199, 28);
 
     if (inst.selected) drawSelectionRect(ctx, -2, -2, W + 4, H + 4);
     ctx.restore();
   }
 });
+
+// --- HELPER DRAWING FUNCTIONS ---
+
+function drawPinPad(ctx, x, y) {
+  // Outer Copper/Gold Ring
+  ctx.fillStyle = '#d4af37';
+  ctx.beginPath();
+  ctx.arc(x, y, 3.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Silver Solder Collar
+  ctx.fillStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Center Drill Hole
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.arc(x, y, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawSMD_LED(ctx, x, y, color, isLit, label) {
+  // Metallic End Caps
+  ctx.fillStyle = '#a0a5ad';
+  ctx.fillRect(x - 3, y - 1.5, 6, 3);
+
+  // LED Body
+  ctx.fillStyle = isLit ? color : '#3a3d40';
+  ctx.fillRect(x - 1.8, y - 1.5, 3.6, 3);
+
+  // Glow Effect when Lit
+  if (isLit) {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - 1, y - 1, 2, 2);
+    ctx.shadowBlur = 0; // Reset
+  }
+
+  // Tiny Silkscreen Label
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 5px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, x + 5, y + 2);
+}
+
+function drawSMD_Component(ctx, x, y, bodyColor) {
+  ctx.fillStyle = '#b0b5bc';
+  ctx.fillRect(x - 2.5, y - 1.2, 5, 2.4);
+  ctx.fillStyle = bodyColor;
+  ctx.fillRect(x - 1.5, y - 1.2, 3, 2.4);
+}
+
+// defComp({
+//   id: 'arduino_nano',
+//   name: 'Arduino Nano R3',
+//   category: 'Boards',
+//   icon: '🎛️',
+//   desc: 'ATmega328P board — same chip as the Uno in a compact breadboard-friendly form factor',
+//   width: 230,
+//   height: 80,
+//   defaultProps: { label: 'NANO' },
+//   pins: [
+//     // Top Row (Standard Pinout)
+//     { id:'D13', label:'D13', type:PIN_TYPE.DIGITAL, x: 15, y: 12, side:'top' },
+//     { id:'3V3', label:'3V3', type:PIN_TYPE.POWER,   x: 29, y: 12, side:'top' },
+//     { id:'REF', label:'REF', type:PIN_TYPE.SIGNAL,  x: 43, y: 12, side:'top' },
+//     { id:'A0',  label:'A0',  type:PIN_TYPE.ANALOG,  x: 57, y: 12, side:'top' },
+//     { id:'A1',  label:'A1',  type:PIN_TYPE.ANALOG,  x: 71, y: 12, side:'top' },
+//     { id:'A2',  label:'A2',  type:PIN_TYPE.ANALOG,  x: 85, y: 12, side:'top' },
+//     { id:'A3',  label:'A3',  type:PIN_TYPE.ANALOG,  x: 99, y: 12, side:'top' },
+//     { id:'A4',  label:'A4',  type:PIN_TYPE.ANALOG,  x:113, y: 12, side:'top' },
+//     { id:'A5',  label:'A5',  type:PIN_TYPE.ANALOG,  x:127, y: 12, side:'top' },
+//     { id:'A6',  label:'A6',  type:PIN_TYPE.ANALOG,  x:141, y: 12, side:'top' },
+//     { id:'A7',  label:'A7',  type:PIN_TYPE.ANALOG,  x:155, y: 12, side:'top' },
+//     { id:'5V',  label:'5V',  type:PIN_TYPE.POWER,   x:169, y: 12, side:'top' },
+//     { id:'RST1',label:'RST', type:PIN_TYPE.SIGNAL,  x:183, y: 12, side:'top' },
+//     { id:'GND1',label:'GND', type:PIN_TYPE.GND,     x:197, y: 12, side:'top' },
+//     { id:'VIN', label:'VIN', type:PIN_TYPE.POWER,   x:211, y: 12, side:'top' },
+
+//     // Bottom Row (Standard Pinout)
+//     { id:'TX0', label:'TX',  type:PIN_TYPE.SIGNAL,  x: 15, y: 68, side:'bottom' },
+//     { id:'RX0', label:'RX',  type:PIN_TYPE.SIGNAL,  x: 29, y: 68, side:'bottom' },
+//     { id:'RST2',label:'RST', type:PIN_TYPE.SIGNAL,  x: 43, y: 68, side:'bottom' },
+//     { id:'GND2',label:'GND', type:PIN_TYPE.GND,     x: 57, y: 68, side:'bottom' },
+//     { id:'D2',  label:'D2',  type:PIN_TYPE.DIGITAL, x: 71, y: 68, side:'bottom' },
+//     { id:'D3',  label:'D3~', type:PIN_TYPE.PWM,     x: 85, y: 68, side:'bottom' },
+//     { id:'D4',  label:'D4',  type:PIN_TYPE.DIGITAL, x: 99, y: 68, side:'bottom' },
+//     { id:'D5',  label:'D5~', type:PIN_TYPE.PWM,     x:113, y: 68, side:'bottom' },
+//     { id:'D6',  label:'D6~', type:PIN_TYPE.PWM,     x:127, y: 68, side:'bottom' },
+//     { id:'D7',  label:'D7',  type:PIN_TYPE.DIGITAL, x:141, y: 68, side:'bottom' },
+//     { id:'D8',  label:'D8',  type:PIN_TYPE.DIGITAL, x:155, y: 68, side:'bottom' },
+//     { id:'D9',  label:'D9~', type:PIN_TYPE.PWM,     x:169, y: 68, side:'bottom' },
+//     { id:'D10', label:'D10~',type:PIN_TYPE.PWM,     x:183, y: 68, side:'bottom' },
+//     { id:'D11', label:'D11~',type:PIN_TYPE.PWM,     x:197, y: 68, side:'bottom' },
+//     { id:'D12', label:'D12', type:PIN_TYPE.DIGITAL, x:211, y: 68, side:'bottom' }
+//   ],
+//   draw(ctx, inst, sim) {
+//     const { x, y, width: W, height: H } = inst;
+
+//     ctx.save();
+//     ctx.translate(x, y);
+
+//     // PCB body (classic Nano blue)
+//     const grad = ctx.createLinearGradient(0, 0, W, H);
+//     grad.addColorStop(0, '#1565a7');
+//     grad.addColorStop(0.5, '#1b78c2');
+//     grad.addColorStop(1, '#0f4f85');
+//     ctx.fillStyle = grad;
+//     roundRect(ctx, 0, 0, W, H, 6);
+//     ctx.fill();
+//     ctx.strokeStyle = '#08304f';
+//     ctx.lineWidth = 1.5;
+//     ctx.stroke();
+
+//     // Silkscreen frame
+//     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+//     ctx.lineWidth = 1;
+//     roundRect(ctx, 3, 3, W - 6, H - 6, 5);
+//     ctx.stroke();
+
+//     // ATmega328P chip (centered)
+//     ctx.fillStyle = '#151515';
+//     roundRect(ctx, 85, 26, 60, 24, 3);
+//     ctx.fill();
+//     ctx.strokeStyle = '#000';
+//     ctx.lineWidth = 1;
+//     ctx.stroke();
+
+//     // Chip pin notches
+//     ctx.fillStyle = '#333';
+//     for (let i = 0; i < 7; i++) {
+//       ctx.fillRect(88 + i * 8, 23, 4, 3);
+//       ctx.fillRect(88 + i * 8, 50, 4, 3);
+//     }
+//     ctx.fillStyle = '#cccccc';
+//     ctx.font = 'bold 7px monospace';
+//     ctx.textAlign = 'center';
+//     ctx.fillText('ATmega328P', 115, 36);
+//     ctx.fillText('16 MHz', 115, 44);
+
+//     // Mini-USB connector (left edge)
+//     ctx.fillStyle = '#b8bcc2';
+//     roundRect(ctx, 2, 30, 16, 16, 2);
+//     ctx.fill();
+//     ctx.strokeStyle = '#7d8288';
+//     ctx.stroke();
+
+//     // Built-in LEDs near D13 corner
+//     const lit = sim && sim.pinStates && sim.pinStates.D13;
+//     drawLED_on_board(ctx, 30, 14, lit ? '#ffee33' : '#555', 3);
+//     drawLED_on_board(ctx, 42, 14, '#ff4d4d', 2.5);
+
+//     // Board label
+//     ctx.fillStyle = 'rgba(255,255,255,0.85)';
+//     ctx.font = 'bold 9px sans-serif';
+//     ctx.textAlign = 'right';
+//     ctx.fillText(inst.props.label || 'NANO', W - 6, H - 6);
+
+//     if (inst.selected) drawSelectionRect(ctx, -2, -2, W + 4, H + 4);
+//     ctx.restore();
+//   }
+// });
 
 // defComp({
 //   id: 'arduino_nano',
