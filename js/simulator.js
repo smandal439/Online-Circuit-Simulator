@@ -487,10 +487,65 @@ class ArduinoSimulator {
           self.pinStates[key] = v;
           self._emitPinChange(key, v);
         },
+        // analogRead(pin) {
+        //   const key = `pin_${pin}`;
+        //   const v = self.pinStates[key];
+        //   return v !== undefined && v !== null && !Number.isNaN(v) ? v : 0;
+        // },
         analogRead(pin) {
           const key = `pin_${pin}`;
+
+          // First use the simulated pin state.
           const v = self.pinStates[key];
-          return v !== undefined && v !== null && !Number.isNaN(v) ? v : 0;
+          if (v !== undefined && v !== null && !Number.isNaN(v)) {
+            return v;
+          }
+
+          // Directly read an analog component connected to this Arduino pin.
+          // This avoids depending on the canvas render/update timing.
+          const canvas = window.CircuitCanvas;
+
+          if (canvas && canvas.components && canvas.wires) {
+            for (const inst of canvas.components) {
+              if (inst.type !== 'potentiometer') continue;
+
+              const wiperWire = canvas.wires.find(w =>
+                (w.from.instId === inst.id && w.from.pinId === 'wiper') ||
+                (w.to.instId === inst.id && w.to.pinId === 'wiper')
+              );
+
+              if (!wiperWire) continue;
+
+              let otherInstId;
+              let otherPinId;
+
+              if (wiperWire.from.instId === inst.id &&
+                wiperWire.from.pinId === 'wiper') {
+                otherInstId = wiperWire.to.instId;
+                otherPinId = wiperWire.to.pinId;
+              } else {
+                otherInstId = wiperWire.from.instId;
+                otherPinId = wiperWire.from.pinId;
+              }
+
+              const other = canvas.components.find(c => c.id === otherInstId);
+
+              if (!other) continue;
+
+              if (other.type === 'arduino_uno' &&
+                canvas._pinToNumber(otherPinId) === Number(pin)) {
+                const value =
+                  inst.runtimeState?.wiper ??
+                  inst.runtimeState?.value ??
+                  inst.props?.value ??
+                  512;
+
+                return Math.max(0, Math.min(1023, Math.round(value)));
+              }
+            }
+          }
+
+          return 0;
         },
 
         /* Timing */
@@ -1509,10 +1564,10 @@ window.loadExamplesFromFiles = async function () {
     'bmp280_altitude', 'dso_oscilloscope', 'simplebme280_basic', 'simplebme280_altitude',
     'max7219', 'ili9341', 'astable_555', 'neopixel_strip_chase', 'ir_obstacle_led',
     'l298n_dc_motor', 'servo_continuous_spin', 'rotary_encoder_counter',
-    'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo','neopixel_8x8_matrix_rainbow_2',
+    'dip_switch_binary', 'hc05_bluetooth_led', 'rotary_encoder_servo', 'neopixel_8x8_matrix_rainbow_2',
     'neopixel_8x8_matrix_rainbow_3',
     'opamp_741_non_inverting', 'vl53l0x_proximity_sensor', 'esp32_i2s_music_player',
-    'esp32_i2s_local_radio_player', 'lcd','read_rfid_card_raw_data','lcd_print_remotely'];
+    'esp32_i2s_local_radio_player', 'lcd', 'read_rfid_card_raw_data', 'lcd_print_remotely'];
   const sketches = [];
   const cacheBust = '?v=' + Date.now();
   for (const name of files) {
