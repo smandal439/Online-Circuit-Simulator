@@ -603,6 +603,9 @@ class App {
           if (!inst.runtimeState) inst.runtimeState = {};
           inst.runtimeState.line1 = '';
           inst.runtimeState.line2 = '';
+          // Reset cursor for this LCD instance so subsequent prints start at (0,0)
+          if (!self._lcdCursors) self._lcdCursors = {};
+          self._lcdCursors[inst.addr] = { col: 0, row: 0 };
         } else if (type === 'lcd_print') {
           if (!inst.runtimeState) inst.runtimeState = {};
           const cursor = (data && data.cursor) || { col: 0, row: 0 };
